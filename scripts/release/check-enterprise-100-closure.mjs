@@ -93,6 +93,7 @@ function failureControl(control, overrides = {}) {
   return {
     id: control.id,
     owner: control.owner,
+    scope: control.scope === 'external' ? 'external' : 'internal',
     evidence: control.evidence,
     status: null,
     sha: null,
@@ -204,6 +205,7 @@ export function evaluateEnterpriseClosure({
     return {
       id: control.id,
       owner: control.owner,
+      scope: control.scope === 'external' ? 'external' : 'internal',
       evidence: control.evidence,
       source: selected.absolutePath,
       digest: selected.digest,
@@ -222,23 +224,44 @@ export function evaluateEnterpriseClosure({
     };
   });
 
-  const blockers = controls
-    .filter((control) => !control.accepted)
+  const internalBlockers = controls
+    .filter((control) => control.scope !== 'external' && !control.accepted)
     .map((control) => `${control.id}:${control.reason}`);
-  const passed = Boolean(expectedSha) && blockers.length === 0;
+  const externalBlockers = controls
+    .filter((control) => control.scope === 'external' && !control.accepted)
+    .map((control) => `${control.id}:${control.reason}`);
+  const blockers = [...internalBlockers, ...externalBlockers];
 
-  if (!expectedSha) blockers.unshift('exact_sha_unavailable');
+  if (!expectedSha) {
+    blockers.unshift('exact_sha_unavailable');
+    internalBlockers.unshift('exact_sha_unavailable');
+  }
+
+  const internalPassed = Boolean(expectedSha) && internalBlockers.length === 0;
+  const passed = internalPassed && externalBlockers.length === 0;
+  const internalControls = controls.filter((control) => control.scope !== 'external');
+  const externalControls = controls.filter((control) => control.scope === 'external');
 
   return {
-    schema: 'risck-comply.enterprise-100-closure-result.v1',
+    schema: 'risck-comply.enterprise-100-closure-result.v2',
     generatedAt: new Date().toISOString(),
     expectedSha,
     requiredDecision: config.requiredDecision,
     decision: passed ? 'GO' : 'NO_GO',
     passed,
+    internalDecision: internalPassed ? 'GO' : 'NO_GO',
+    internalPassed,
+    strictDecision: passed ? 'PASS' : internalPassed ? 'WAITING_EXTERNAL' : 'NO_PASS',
+    strictPassed: passed,
     acceptedControls: controls.filter((control) => control.accepted).length,
     totalControls: controls.length,
+    internalAcceptedControls: internalControls.filter((control) => control.accepted).length,
+    internalTotalControls: internalControls.length,
+    externalAcceptedControls: externalControls.filter((control) => control.accepted).length,
+    externalTotalControls: externalControls.length,
     blockers,
+    internalBlockers,
+    externalBlockers,
     controls,
     truthBoundary: 'Closure credit requires an accepted status, an exact non-conflicting promoted SHA, and any registered semantic evidence validator. External security assurance is independently validated against its exact-SHA assessor/authorization/report/findings/retest contract. Configured evidence roots only make retained proof discoverable; they do not create or upgrade evidence.',
   };
@@ -248,12 +271,24 @@ const result = evaluateEnterpriseClosure();
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`);
 
+const enforcement = String(process.env.ENTERPRISE_CLOSURE_ENFORCEMENT || 'strict').trim().toLowerCase();
 console.log(JSON.stringify({
   decision: result.decision,
+  internalDecision: result.internalDecision,
+  strictDecision: result.strictDecision,
+  enforcement,
   expectedSha: result.expectedSha,
   acceptedControls: result.acceptedControls,
   totalControls: result.totalControls,
+  internalAcceptedControls: result.internalAcceptedControls,
+  internalTotalControls: result.internalTotalControls,
   blockers: result.blockers,
+  internalBlockers: result.internalBlockers,
+  externalBlockers: result.externalBlockers,
 }, null, 2));
 
-if (!result.passed) process.exitCode = 1;
+if (enforcement === 'internal') {
+  if (!result.internalPassed) process.exitCode = 1;
+} else if (!result.passed) {
+  process.exitCode = 1;
+}

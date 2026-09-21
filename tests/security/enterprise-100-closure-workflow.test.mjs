@@ -153,7 +153,8 @@ test('closure execution requires the exact current main SHA rather than merely a
 
 test('closure summaries use valid jq string programs', () => {
   assert.match(workflow, /jq -r '"- Status:/);
-  assert.match(workflow, /jq -r '"- Decision:/);
+  assert.match(workflow, /jq -r '"- Internal decision:/);
+  assert.match(workflow, /Strict decision:/);
   assert.match(workflow, /jq -r '"- Hydrated retained evidence:/);
   assert.match(workflow, /errorCode \/\/ "none"/);
   assert.doesNotMatch(workflow, /\\"none\\"/);
