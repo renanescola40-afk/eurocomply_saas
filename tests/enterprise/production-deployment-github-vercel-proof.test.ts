@@ -219,6 +219,7 @@ describe('exact-SHA Vercel production deployment proof', () => {
       repository: REPOSITORY,
       targetSha: SHA,
       token: 'test-token',
+      healthcheckToken: 'health-token',
       fetchImpl: fixtureFetch({
         deploymentHealthStatus: 302,
         deploymentHealthBodyStatus: 'protected',
