@@ -7,14 +7,25 @@ import { pathToFileURL } from 'node:url';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 
 export function buildEnterpriseFinalAuthority({ targetSha, closure, sourceManifest }) {
-  const sourceComplete = sourceManifest?.status === 'Complete'
+  const exactSha = FULL_SHA.test(targetSha || '');
+
+  const sourceStrictComplete = sourceManifest?.status === 'Complete'
     && sourceManifest?.outcome === 'passed'
     && sourceManifest?.targetSha === targetSha
     && sourceManifest?.collectedProducerCount === sourceManifest?.requiredProducerCount
     && Array.isArray(sourceManifest?.missingProducerIds)
     && sourceManifest.missingProducerIds.length === 0;
 
-  const closureComplete = closure?.decision === 'GO'
+  const sourceInternalComplete = sourceManifest?.internalStatus
+    ? sourceManifest.internalStatus === 'Complete'
+      && sourceManifest?.internalOutcome === 'passed'
+      && sourceManifest?.targetSha === targetSha
+      && sourceManifest?.internalCollectedProducerCount === sourceManifest?.internalRequiredProducerCount
+      && Array.isArray(sourceManifest?.internalMissingProducerIds)
+      && sourceManifest.internalMissingProducerIds.length === 0
+    : sourceStrictComplete;
+
+  const closureStrictComplete = closure?.decision === 'GO'
     && closure?.passed === true
     && closure?.expectedSha === targetSha
     && Array.isArray(closure?.blockers)
@@ -22,25 +33,52 @@ export function buildEnterpriseFinalAuthority({ targetSha, closure, sourceManife
     && Number.isInteger(closure?.acceptedControls)
     && closure.acceptedControls === closure.totalControls;
 
-  const passed = FULL_SHA.test(targetSha || '') && sourceComplete && closureComplete;
-  const blockers = [
-    ...(FULL_SHA.test(targetSha || '') ? [] : ['invalid_target_sha']),
-    ...(sourceComplete ? [] : ['authoritative_domain_sources_incomplete']),
-    ...(closureComplete ? [] : ['enterprise_100_closure_not_go']),
+  const closureInternalComplete = Object.hasOwn(closure || {}, 'internalPassed')
+    ? closure?.internalDecision === 'GO'
+      && closure?.internalPassed === true
+      && closure?.expectedSha === targetSha
+      && Array.isArray(closure?.internalBlockers)
+      && closure.internalBlockers.length === 0
+      && Number.isInteger(closure?.internalAcceptedControls)
+      && closure.internalAcceptedControls === closure.internalTotalControls
+    : closureStrictComplete;
+
+  const internalPassed = exactSha && sourceInternalComplete && closureInternalComplete;
+  const strictPassed = internalPassed && sourceStrictComplete && closureStrictComplete;
+
+  const internalBlockers = [
+    ...(exactSha ? [] : ['invalid_target_sha']),
+    ...(sourceInternalComplete ? [] : ['internal_domain_sources_incomplete']),
+    ...(closureInternalComplete ? [] : ['internal_enterprise_closure_not_go']),
+  ];
+  const strictBlockers = [
+    ...internalBlockers,
+    ...(sourceStrictComplete ? [] : ['strict_domain_sources_incomplete']),
+    ...(closureStrictComplete ? [] : ['strict_enterprise_closure_not_go']),
   ];
 
   return {
-    schema: 'risck-comply.enterprise-final-authority.v1',
+    schema: 'risck-comply.enterprise-final-authority.v2',
     generatedAt: new Date().toISOString(),
     releaseSha: targetSha,
-    status: passed ? 'Complete' : 'Open',
-    outcome: passed ? 'passed' : 'blocked',
-    decision: passed ? 'ENTERPRISE_100: PASS' : 'ENTERPRISE_100: NO_PASS_YET',
-    productionDecision: passed ? 'PRODUCTION_GO: PASS' : 'PRODUCTION_GO: NO_GO',
-    technicalReleaseClosure: passed ? 'TECHNICAL_RELEASE_CLOSURE: PASS' : 'TECHNICAL_RELEASE_CLOSURE: NO_PASS_YET',
-    blockers,
+    status: internalPassed ? 'Complete' : 'Open',
+    outcome: internalPassed ? 'passed' : 'blocked',
+    decision: internalPassed ? 'ENTERPRISE_PRODUCT_READY: PASS' : 'ENTERPRISE_PRODUCT_READY: NO_PASS_YET',
+    enterpriseStrictDecision: strictPassed
+      ? 'ENTERPRISE_STRICT: PASS'
+      : internalPassed
+        ? 'ENTERPRISE_STRICT: WAITING_EXTERNAL'
+        : 'ENTERPRISE_STRICT: NO_PASS_YET',
+    productionDecision: internalPassed ? 'PRODUCTION_GO: PASS' : 'PRODUCTION_GO: NO_GO',
+    technicalReleaseClosure: internalPassed ? 'TECHNICAL_RELEASE_CLOSURE: PASS' : 'TECHNICAL_RELEASE_CLOSURE: NO_PASS_YET',
+    internalPassed,
+    strictPassed,
+    blockers: internalBlockers,
+    strictBlockers,
     acceptedControls: closure?.acceptedControls ?? 0,
     totalControls: closure?.totalControls ?? 0,
+    internalAcceptedControls: closure?.internalAcceptedControls ?? closure?.acceptedControls ?? 0,
+    internalTotalControls: closure?.internalTotalControls ?? closure?.totalControls ?? 0,
     domainSources: sourceManifest?.producers ?? [],
     evidenceIntegrity: {
       exactCurrentMainRequired: true,
@@ -52,9 +90,11 @@ export function buildEnterpriseFinalAuthority({ targetSha, closure, sourceManife
       externalHumanEvidenceCanBeFabricated: false,
       containsSensitiveValues: false,
     },
-    truthBoundary: passed
-      ? 'Enterprise 100 and Production GO are granted only because every configured exact-SHA technical, live billing, live Supabase, Product QA, provider, legal and independent external-security control was accepted from an authorized producer.'
-      : 'Enterprise 100 and Production GO remain withheld until every configured exact-SHA control and every authoritative domain producer is genuinely complete.',
+    truthBoundary: strictPassed
+      ? 'Internal Product Ready, Production GO and strict Enterprise assurance are granted because all exact-SHA internal controls and selected external assurance controls are genuinely complete.'
+      : internalPassed
+        ? 'Internal Product Ready and Production GO are granted from complete exact-SHA internal evidence. Strict Enterprise assurance remains WAITING_EXTERNAL and no missing independent external evidence is fabricated or converted into engineering work.'
+        : 'Internal Product Ready and Production GO remain withheld until every internally controllable exact-SHA control and internal authoritative producer is genuinely complete.',
   };
 }
 
@@ -76,6 +116,8 @@ async function main() {
     productionDecision: result.productionDecision,
     releaseSha: result.releaseSha,
     blockers: result.blockers,
+    strictBlockers: result.strictBlockers,
+    enterpriseStrictDecision: result.enterpriseStrictDecision,
   }, null, 2));
   if (result.outcome !== 'passed') process.exitCode = 2;
 }
