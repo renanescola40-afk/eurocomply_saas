@@ -159,7 +159,11 @@ test('post-approval exact-main revalidation happens before the first secret refe
   assert.ok(publicFinalIndex > revalidationIndex, 'runtime validation must start only after exact-main revalidation');
 });
 
-test('runtime closeout falls back to the canonical production URL when the environment variable is absent', () => {\n  for (const key of ['PRODUCTION_URL', 'RELEASE_PRODUCTION_URL', 'RELEASE_DEPLOYMENT_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL']) {\n    assert.match(workflow, new RegExp(`^\\\\s{6}${key}: \\\\$\\\\{\\\\{ vars\\\\.PRODUCTION_URL \\\\|\\\\| 'https:\\\\/\\\\/www\\\\.risckcomply\\\\.com' \\\\}\\\\}import assert from 'node:assert/strict';
+test('runtime closeout falls back to the canonical production URL when the environment variable is absent', () => {
+  for (const key of ['PRODUCTION_URL', 'RELEASE_PRODUCTION_URL', 'RELEASE_DEPLOYMENT_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL']) {
+    assert.match(
+      workflow,
+      new RegExp(`^\\s{6}${key}: \\$\\{\\{ vars\\.PRODUCTION_URL \\|\\| 'https:\\/\\/www\\.risckcomply\\.com' \\}\\}import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
@@ -320,7 +324,13 @@ test('post-approval exact-main revalidation happens before the first secret refe
   assert.ok(publicFinalIndex > revalidationIndex, 'runtime validation must start only after exact-main revalidation');
 });
 
-, 'm'));\n  }\n});\n\ntest('runtime closeout maps protected aliases into canonical release inputs', () => {
+, 'm'),
+      `${key} must fall back to the canonical production URL`,
+    );
+  }
+});
+
+test('runtime closeout maps protected aliases into canonical release inputs', () => {
   assert.match(workflow, /^\s{10}HEALTHCHECK_TOKEN: \$\{\{ secrets\.READINESS_TOKEN \}\}/m);
   assert.match(workflow, /^\s{10}NEXT_PUBLIC_SUPABASE_URL: \$\{\{ secrets\.SUPABASE_URL \}\}/m);
   assert.match(workflow, /^\s{10}NEXT_PUBLIC_SUPABASE_ANON_KEY: \$\{\{ secrets\.SUPABASE_ANON_KEY \}\}/m);
