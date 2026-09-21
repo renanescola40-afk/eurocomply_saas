@@ -79,13 +79,13 @@ describe('production environment governance boundaries', () => {
 
     const preflight = runtimeCloseoutWorkflow.slice(governanceJob, protectedJob);
     expect(preflight).toContain('GITHUB_TOKEN: ${{ github.token }}');
-    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: enterprise-production-closeout');
+    expect(preflight).toContain('GITHUB_ENVIRONMENT_NAME: Production');
     expect(preflight).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
     expect(preflight).toContain('node scripts/security/check-github-environment-governance.mjs');
     expect(preflight).not.toMatch(/secrets\./);
 
     const protectedBoundary = runtimeCloseoutWorkflow.slice(protectedJob);
     expect(protectedBoundary).toContain('needs: [contract, environment-governance]');
-    expect(protectedBoundary).toContain('environment: enterprise-production-closeout');
+    expect(protectedBoundary).toContain('environment: Production');
   });
 });
