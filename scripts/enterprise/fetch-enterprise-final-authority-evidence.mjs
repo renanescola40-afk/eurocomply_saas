@@ -266,7 +266,7 @@ async function collectProducer({ spec, repository, targetSha, token, root }) {
   };
 }
 
-export async function collectFinalAuthorityEvidence({ repository, targetSha, token, root } = {}) {
+export async function collectFinalAuthorityEvidence({ repository, targetSha, token, root, collectProducerImpl = collectProducer } = {}) {
   if (!/^[^/]+\/[^/]+$/.test(repository || '')) throw new Error('repository must use owner/name');
   if (!FULL_SHA.test(targetSha || '')) throw new Error('TARGET_SHA must be a lowercase full commit SHA');
   if (!token) throw new Error('GITHUB_TOKEN is required');
@@ -275,7 +275,7 @@ export async function collectFinalAuthorityEvidence({ repository, targetSha, tok
   const producers = [];
   for (const spec of FINAL_AUTHORITY_PRODUCERS) {
     try {
-      producers.push(await collectProducer({ spec, repository, targetSha, token, root }));
+      producers.push(await collectProducerImpl({ spec, repository, targetSha, token, root }));
     } catch (error) {
       if (spec.scope !== 'external') throw error;
       producers.push({
