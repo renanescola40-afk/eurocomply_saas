@@ -273,7 +273,24 @@ export async function collectFinalAuthorityEvidence({ repository, targetSha, tok
 
   await mkdir(root, { recursive: true });
   const producers = [];
-  for (const spec of FINAL_AUTHORITY_PRODUCERS) producers.push(await collectProducer({ spec, repository, targetSha, token, root }));
+  for (const spec of FINAL_AUTHORITY_PRODUCERS) {
+    try {
+      producers.push(await collectProducer({ spec, repository, targetSha, token, root }));
+    } catch (error) {
+      if (spec.scope !== 'external') throw error;
+      producers.push({
+        id: spec.id,
+        scope: 'external',
+        status: 'ERROR',
+        workflow: spec.workflowPath,
+        alternativeWorkflows: (spec.alternativeSources || []).map((source) => source.workflowPath),
+        artifactName: spec.artifact(targetSha),
+        evidenceFile: null,
+        errorCode: 'external_producer_collection_error',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
   const missing = producers.filter((producer) => producer.status !== 'COLLECTED');
   const internalProducers = producers.filter((producer) => producer.scope !== 'external');
   const externalProducers = producers.filter((producer) => producer.scope === 'external');
@@ -309,6 +326,8 @@ export async function collectFinalAuthorityEvidence({ repository, targetSha, tok
       firstJsonWinsAccepted: false,
       blockedEvidenceAcceptedFromSuccessfulRun: false,
       sensitiveValuesAccepted: false,
+      externalProducerErrorsCanGrantStrictPass: false,
+      externalProducerErrorsAbortInternalEvaluation: false,
     },
   };
   await writeFile(path.join(root, 'enterprise-final-authority-source.json'), `${JSON.stringify(manifest, null, 2)}\n`);
