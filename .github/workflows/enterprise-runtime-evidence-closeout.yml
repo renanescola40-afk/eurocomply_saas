@@ -71,7 +71,7 @@ jobs:
       - name: Verify enterprise closeout environment governance
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_ENVIRONMENT_NAME: enterprise-production-closeout
+          GITHUB_ENVIRONMENT_NAME: Production
           REQUIRE_PROTECTED_BRANCHES: 'true'
         run: node scripts/security/check-github-environment-governance.mjs
 
@@ -81,7 +81,7 @@ jobs:
     needs: [contract, environment-governance]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    environment: enterprise-production-closeout
+    environment: Production
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       RELEASE_TARGET: production

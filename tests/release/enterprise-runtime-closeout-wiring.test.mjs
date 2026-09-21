@@ -25,6 +25,13 @@ test('runtime closeout calls real producers instead of undefined npm aliases', (
   assert.equal(existsSync(productionObservabilityPath), true);
 });
 
+
+test('runtime closeout reuses the governed Production environment instead of an empty duplicate environment', () => {
+  assert.match(workflow, /GITHUB_ENVIRONMENT_NAME: Production/);
+  assert.match(workflow, /^\s{4}environment: Production$/m);
+  assert.equal(workflow.includes('enterprise-production-closeout'), false);
+});
+
 test('runtime closeout keeps only non-secret release coordinates at job scope', () => {
   const safeJobEnvKeys = [
     'TARGET_SHA',
