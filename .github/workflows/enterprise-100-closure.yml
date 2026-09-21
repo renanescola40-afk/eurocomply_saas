@@ -178,6 +178,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
+          HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
           PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS: '12'
           PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'
         shell: bash
