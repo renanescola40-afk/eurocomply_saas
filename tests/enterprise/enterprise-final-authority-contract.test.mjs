@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
   FINAL_AUTHORITY_PRODUCERS,
+  collectFinalAuthorityEvidence,
   validateAuthoritativeEvidenceDocument,
 } from '../../scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs';
 import { buildEnterpriseFinalAuthority } from '../../scripts/release/write-enterprise-final-authority.mjs';
@@ -65,6 +68,64 @@ test('final authority producers require the five direct domain proofs and no raw
   assert.equal(external?.artifact(SHA), `external-security-assurance-accepted-${SHA}`);
   assert.equal(external?.scope, 'external');
   assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope !== 'external').length, 4);
+});
+
+
+test('external producer collection errors remain strict WAITING_EXTERNAL without aborting internal readiness', async () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'final-authority-external-error-'));
+  const manifest = await collectFinalAuthorityEvidence({
+    repository: 'renanescola40-afk/eurocomply_saas',
+    targetSha: SHA,
+    token: 'test-token',
+    root,
+    collectProducerImpl: async ({ spec }) => {
+      if (spec.scope === 'external') throw new Error('simulated_external_provider_error');
+      return {
+        id: spec.id,
+        scope: 'internal',
+        status: 'COLLECTED',
+        workflow: spec.workflowPath,
+        artifactName: spec.artifact(SHA),
+        evidenceFile: `${spec.id}/evidence.json`,
+      };
+    },
+  });
+
+  assert.equal(manifest.internalStatus, 'Complete');
+  assert.equal(manifest.internalOutcome, 'passed');
+  assert.deepEqual(manifest.internalMissingProducerIds, []);
+  assert.equal(manifest.externalStatus, 'Open');
+  assert.equal(manifest.externalOutcome, 'blocked');
+  assert.deepEqual(manifest.externalMissingProducerIds, ['external-security-assurance']);
+  assert.equal(manifest.status, 'Open');
+  assert.equal(manifest.outcome, 'blocked');
+  const external = manifest.producers.find((producer) => producer.id === 'external-security-assurance');
+  assert.equal(external?.status, 'ERROR');
+  assert.equal(external?.errorCode, 'external_producer_collection_error');
+});
+
+test('internal producer collection errors remain fail-closed and abort authority collection', async () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'final-authority-internal-error-'));
+  await assert.rejects(
+    collectFinalAuthorityEvidence({
+      repository: 'renanescola40-afk/eurocomply_saas',
+      targetSha: SHA,
+      token: 'test-token',
+      root,
+      collectProducerImpl: async ({ spec }) => {
+        if (spec.id === 'billing-product-live-closure') throw new Error('simulated_internal_error');
+        return {
+          id: spec.id,
+          scope: spec.scope === 'external' ? 'external' : 'internal',
+          status: 'COLLECTED',
+          workflow: spec.workflowPath,
+          artifactName: spec.artifact(SHA),
+          evidenceFile: `${spec.id}/evidence.json`,
+        };
+      },
+    }),
+    /simulated_internal_error/,
+  );
 });
 
 test('final authority validates the producer-specific positive evidence contract before collection', () => {
