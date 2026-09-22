@@ -63,7 +63,7 @@ export default async function SecurityCenterPage({ params }: { params: Promise<{
   const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
 
   const content = (
-    <main className="min-h-0 bg-transparent">
+    <div className="min-h-0 bg-transparent">
       <div className="mx-auto max-w-7xl space-y-8">
         <section className="rounded-[2rem] border bg-background/85 p-8 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -132,7 +132,7 @@ export default async function SecurityCenterPage({ params }: { params: Promise<{
               )}
             </section>
       </div>
-    </main>
+    </div>
   );
 
   return (
