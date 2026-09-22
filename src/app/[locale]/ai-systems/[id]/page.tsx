@@ -8,7 +8,7 @@ import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getAiSystem, listAiSystemHistory } from '@/server/queries/ai-systems';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser, listUserOrganizations } from '@/server/queries/organizations';
-import { getOrganizationBillingAuthority, isPlanAtLeast } from '@/server/queries/subscription';
+import { isPlanAtLeast } from '@/server/queries/subscription';
 import { AiSystemEditForm } from './ai-system-edit-form';
 
 type AiSystemDetailPageProps = {
@@ -72,12 +72,11 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
     redirect(`/${locale}/onboarding`);
   }
 
-  const [system, history, memberships, entitlements, authority] = await Promise.all([
+  const [system, history, memberships, entitlements] = await Promise.all([
     getAiSystem(id, organization.id),
     listAiSystemHistory(id, organization.id),
     listUserOrganizations(user.id),
     getOrganizationEntitlements(organization.id),
-    getOrganizationBillingAuthority(organization.id),
   ]);
 
   if (!system) {
@@ -89,7 +88,7 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
     return membershipOrganization?.id === organization.id;
   });
   const shellRole = currentMembership?.role ?? 'member';
-  const canManageAiGovernance = roleHasPermission(shellRole, 'manage_ai_governance');
+  const canManageAiGovernance = roleHasPermission(currentMembership?.role, 'manage_ai_governance');
   const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
   const businessWorkflowsEnabled = entitlements.licensed && isPlanAtLeast(entitlements.plan, 'business');
   const enterpriseEvidenceEnabled = entitlements.licensed && isPlanAtLeast(entitlements.plan, 'enterprise');
@@ -237,7 +236,7 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
       organizationName={organization.name}
       userDisplayName={userDisplayName}
       role={shellRole}
-      selectedPlan={authority?.plan}
+      selectedPlan={entitlements.plan}
     >
       {content}
     </EnterpriseDashboardShell>
