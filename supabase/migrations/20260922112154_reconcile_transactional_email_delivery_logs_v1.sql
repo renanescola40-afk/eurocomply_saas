@@ -65,7 +65,7 @@ create policy "email delivery logs service role update"
   on public.email_delivery_logs for update to service_role using (current_user = 'service_role') with check (current_user = 'service_role');
 
 create policy "email delivery logs service role delete"
-  on public.email_delivery_logs for delete to service_role using (true);
+  on public.email_delivery_logs for delete to service_role using (current_user = 'service_role');
 
 comment on table public.email_delivery_logs is
   'Server-side transactional email send log. Email bodies and secrets are intentionally not stored.';
