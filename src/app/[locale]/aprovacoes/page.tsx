@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation';
 
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
+import { getOrganizationMembership, normalizeOrganizationRole } from '@/server/security/rbac';
 import { listDocuments } from '@/server/queries/documents';
 
 import ApprovalsClient from './approvals-client';
@@ -36,14 +38,23 @@ export default async function ApprovalsPage({ params }: PageProps) {
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const documents = organization ? await listDocuments(organization.id) : [];
-  const entitlements = organization ? await getOrganizationEntitlements(organization.id) : null;
+  if (!organization) {
+    redirect(`/${locale}/onboarding`);
+  }
+
+  const [documents, entitlements, authority, membership] = await Promise.all([
+    listDocuments(organization.id),
+    getOrganizationEntitlements(organization.id),
+    getOrganizationBillingAuthority(organization.id),
+    getOrganizationMembership(user.id, organization.id),
+  ]);
+  const role = normalizeOrganizationRole(membership?.membership?.role);
+  const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
   const lockedCopy = getUpgradeCopy(locale);
 
-  return (
-    <main className="min-h-screen bg-slate-950 px-6 py-6 text-white">
+  const content = (
+    <main className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
-        <DashboardCommandNavigation locale={locale} />
         {entitlements?.approvalWorkflows ? (
           <ApprovalsClient locale={locale} initialDocuments={documents} />
         ) : (
@@ -56,5 +67,17 @@ export default async function ApprovalsPage({ params }: PageProps) {
         )}
       </div>
     </main>
+  );
+
+  return (
+    <EnterpriseDashboardShell
+      locale={locale}
+      organizationName={organization.name}
+      userDisplayName={userDisplayName}
+      role={role}
+      selectedPlan={authority?.plan}
+    >
+      {content}
+    </EnterpriseDashboardShell>
   );
 }
