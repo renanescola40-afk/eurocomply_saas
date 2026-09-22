@@ -53,7 +53,7 @@ export default async function ApprovalsPage({ params }: PageProps) {
   const lockedCopy = getUpgradeCopy(locale);
 
   const content = (
-    <main className="min-h-0 bg-transparent text-white">
+    <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
         {entitlements?.approvalWorkflows ? (
           <ApprovalsClient locale={locale} initialDocuments={documents} />
@@ -66,7 +66,7 @@ export default async function ApprovalsPage({ params }: PageProps) {
           />
         )}
       </div>
-    </main>
+    </div>
   );
 
   return (
