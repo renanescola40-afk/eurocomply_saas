@@ -25,9 +25,9 @@ export default async function AiIncidentsPage({ params }: { params: Promise<{ lo
   ]);
 
   const content = (
-    <main className="min-h-0 bg-transparent">
+    <div className="min-h-0 bg-transparent">
       <AiIncidentsClient locale={locale} initialIncidents={incidents} systems={systems} organizationName={organization.name} />
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
