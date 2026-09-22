@@ -36,6 +36,29 @@ const downloadUnavailableCopy: Record<string, string> = {
   de: 'Datei noch nicht erstellt',
 };
 
+const documentUiCopy: Record<string, {
+  metricsLabel: string;
+  totalRecords: string;
+  approved: string;
+  inReview: string;
+  expiring: string;
+  uploadLabel: string;
+  document: string;
+  category: string;
+  status: string;
+  expires: string;
+  updated: string;
+  actions: string;
+}> = {
+  en: { metricsLabel: 'Document register metrics', totalRecords: 'Total records', approved: 'Approved', inReview: 'In review', expiring: 'Expiring ≤ 30d', uploadLabel: 'Upload compliance document', document: 'Document', category: 'Category', status: 'Status', expires: 'Expires', updated: 'Updated', actions: 'Actions' },
+  pt: { metricsLabel: 'Métricas do registo documental', totalRecords: 'Total de registos', approved: 'Aprovados', inReview: 'Em revisão', expiring: 'A expirar ≤ 30d', uploadLabel: 'Carregar documento de compliance', document: 'Documento', category: 'Categoria', status: 'Estado', expires: 'Expira', updated: 'Atualizado', actions: 'Ações' },
+  es: { metricsLabel: 'Métricas del registro documental', totalRecords: 'Registros totales', approved: 'Aprobados', inReview: 'En revisión', expiring: 'Caducan ≤ 30d', uploadLabel: 'Subir documento de cumplimiento', document: 'Documento', category: 'Categoría', status: 'Estado', expires: 'Caduca', updated: 'Actualizado', actions: 'Acciones' },
+  fr: { metricsLabel: 'Indicateurs du registre documentaire', totalRecords: 'Total des enregistrements', approved: 'Approuvés', inReview: 'En révision', expiring: 'Expiration ≤ 30j', uploadLabel: 'Téléverser un document de conformité', document: 'Document', category: 'Catégorie', status: 'Statut', expires: 'Expiration', updated: 'Mis à jour', actions: 'Actions' },
+  it: { metricsLabel: 'Metriche del registro documenti', totalRecords: 'Record totali', approved: 'Approvati', inReview: 'In revisione', expiring: 'Scadenza ≤ 30g', uploadLabel: 'Carica documento di conformità', document: 'Documento', category: 'Categoria', status: 'Stato', expires: 'Scade', updated: 'Aggiornato', actions: 'Azioni' },
+  de: { metricsLabel: 'Kennzahlen des Dokumentenregisters', totalRecords: 'Datensätze gesamt', approved: 'Genehmigt', inReview: 'In Prüfung', expiring: 'Ablauf ≤ 30T', uploadLabel: 'Compliance-Dokument hochladen', document: 'Dokument', category: 'Kategorie', status: 'Status', expires: 'Läuft ab', updated: 'Aktualisiert', actions: 'Aktionen' },
+};
+
+
 function documentStatusKey(status: string | null | undefined) {
   const normalized = String(status ?? 'pending').toLowerCase();
   if (normalized.includes('approved') || normalized.includes('aprovado')) return 'approved' as const;
@@ -72,6 +95,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
   if (!currentOrganization) redirect(`/${params.locale}/onboarding`);
 
   const copy = getCoreWorkflowCopy(params.locale).documents;
+  const ui = documentUiCopy[params.locale] ?? documentUiCopy.en;
   const documents = await listDocuments(currentOrganization.id);
   const billing = await getOrganizationBillingContext(currentOrganization.id);
   const dashboardBasePath = `/${params.locale}/dashboard/organizations`;
@@ -128,12 +152,12 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">{copy.subtitle(currentOrganization.name)}</p>
         </header>
 
-        <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-800 bg-slate-800 lg:grid-cols-4" aria-label="Document register metrics">
+        <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-800 bg-slate-800 lg:grid-cols-4" aria-label={ui.metricsLabel}>
           {[
-            { label: 'Total records', value: documents.length, icon: FileStack },
-            { label: 'Approved', value: approvedDocuments, icon: CheckCircle2 },
-            { label: 'In review', value: reviewDocuments, icon: ShieldAlert },
-            { label: 'Expiring ≤ 30d', value: expiringDocuments, icon: Clock3 },
+            { label: ui.totalRecords, value: documents.length, icon: FileStack },
+            { label: ui.approved, value: approvedDocuments, icon: CheckCircle2 },
+            { label: ui.inReview, value: reviewDocuments, icon: ShieldAlert },
+            { label: ui.expiring, value: expiringDocuments, icon: Clock3 },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="bg-[#0d1624] px-5 py-4">
               <div className="flex items-center justify-between gap-3">
@@ -146,7 +170,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
         </section>
 
         {canManageDocuments ? (
-          <section className="rounded-xl border border-slate-800 bg-[#0b121e] p-5 sm:p-6" aria-label="Upload compliance document">
+          <section className="rounded-xl border border-slate-800 bg-[#0b121e] p-5 sm:p-6" aria-label={ui.uploadLabel}>
             <PlanGate planId={billing.plan} metric="documents" currentUsage={billing.usage.documents} onUpgradeHref={`${dashboardBasePath}/billing`}>
               <CreateDocumentForm locale={params.locale} onSubmit={uploadDocumentAction} />
             </PlanGate>
@@ -174,12 +198,12 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
               <table className="min-w-[980px] w-full border-collapse text-left">
                 <thead className="bg-[#080e18]">
                   <tr className="border-b border-slate-800 text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-600">
-                    <th className="px-5 py-3 sm:px-6">Document</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Expires</th>
-                    <th className="px-4 py-3">Updated</th>
-                    <th className="px-5 py-3 text-right sm:px-6">Actions</th>
+                    <th className="px-5 py-3 sm:px-6">{ui.document}</th>
+                    <th className="px-4 py-3">{ui.category}</th>
+                    <th className="px-4 py-3">{ui.status}</th>
+                    <th className="px-4 py-3">{ui.expires}</th>
+                    <th className="px-4 py-3">{ui.updated}</th>
+                    <th className="px-5 py-3 text-right sm:px-6">{ui.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
