@@ -80,8 +80,7 @@ export default async function SecurityCenterPage({ params }: { params: Promise<{
           </div>
         </section>
 
-        <>
-            <section className="grid gap-4 lg:grid-cols-2">
+        <section className="grid gap-4 lg:grid-cols-2">
               <article className="rounded-3xl border bg-background p-6 shadow-sm">
                 <div className="flex items-center gap-3"><UsersRound className="h-5 w-5 text-primary" /><p className="text-sm font-medium text-muted-foreground">{t.role}</p></div>
                 <p className="mt-4 text-3xl font-semibold">{formatRole(role)}</p>
@@ -125,14 +124,13 @@ export default async function SecurityCenterPage({ params }: { params: Promise<{
                   {members.map((member) => (
                     <article key={member.id} className="rounded-2xl border bg-muted/30 p-4">
                       <Badge variant="outline" className="rounded-full">{member.role}</Badge>
-                      <p className="mt-3 break-all text-sm font-medium">{member.user_id ?? member.id}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">organization_id: {member.organization_id}</p>
+                      <p className="mt-3 text-sm font-medium">{formatRole(member.role)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{t.members}</p>
                     </article>
                   ))}
                 </div>
               )}
             </section>
-          </>
       </div>
     </main>
   );
