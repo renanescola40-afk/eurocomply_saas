@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation';
 import { CheckCircle2, LockKeyhole, ShieldCheck, UsersRound } from 'lucide-react';
 
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { Badge } from '@/components/ui/badge';
 import { isSupportedLocale } from '@/lib/i18n/locales';
 import { getCurrentUser } from '@/server/queries/auth';
 import { listOrganizationMembers } from '@/server/queries/members';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
 import { getOrganizationMembership, getRolePermissions, normalizeOrganizationRole, ORGANIZATION_PERMISSIONS } from '@/server/security/rbac';
 
 const copy = {
@@ -47,20 +48,23 @@ export default async function SecurityCenterPage({ params }: { params: Promise<{
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const [membership, members] = organization
-    ? await Promise.all([
-        getOrganizationMembership(user.id, organization.id),
-        listOrganizationMembers(organization.id).catch(() => []),
-      ])
-    : [null, []];
+  if (!organization) {
+    redirect(`/${locale}/onboarding`);
+  }
+
+  const [membership, members, authority] = await Promise.all([
+    getOrganizationMembership(user.id, organization.id),
+    listOrganizationMembers(organization.id).catch(() => []),
+    getOrganizationBillingAuthority(organization.id),
+  ]);
   const role = normalizeOrganizationRole(membership?.membership?.role);
   const permissions = getRolePermissions(role);
   const coverage = Math.round((permissions.length / ORGANIZATION_PERMISSIONS.length) * 100);
+  const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage="Access Center" />
-      <div className="mx-auto max-w-7xl space-y-8 px-6 py-8">
+  const content = (
+    <main className="min-h-0 bg-transparent">
+      <div className="mx-auto max-w-7xl space-y-8">
         <section className="rounded-[2rem] border bg-background/85 p-8 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -76,10 +80,7 @@ export default async function SecurityCenterPage({ params }: { params: Promise<{
           </div>
         </section>
 
-        {!organization ? (
-          <section className="rounded-3xl border bg-background p-8 text-muted-foreground">{t.noOrg}</section>
-        ) : (
-          <>
+        <>
             <section className="grid gap-4 lg:grid-cols-2">
               <article className="rounded-3xl border bg-background p-6 shadow-sm">
                 <div className="flex items-center gap-3"><UsersRound className="h-5 w-5 text-primary" /><p className="text-sm font-medium text-muted-foreground">{t.role}</p></div>
@@ -132,8 +133,19 @@ export default async function SecurityCenterPage({ params }: { params: Promise<{
               )}
             </section>
           </>
-        )}
       </div>
     </main>
+  );
+
+  return (
+    <EnterpriseDashboardShell
+      locale={locale}
+      organizationName={organization.name}
+      userDisplayName={userDisplayName}
+      role={role}
+      selectedPlan={authority?.plan}
+    >
+      {content}
+    </EnterpriseDashboardShell>
   );
 }
