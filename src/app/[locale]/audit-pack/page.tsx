@@ -129,7 +129,7 @@ export default async function AuditPackPage({ params }: PageProps) {
     : null;
 
   const content = (
-    <main className="min-h-0 bg-transparent text-white">
+    <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
 
         {!entitlements.executiveReports ? (
@@ -217,7 +217,7 @@ export default async function AuditPackPage({ params }: PageProps) {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
