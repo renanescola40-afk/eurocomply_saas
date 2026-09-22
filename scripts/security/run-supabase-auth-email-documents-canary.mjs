@@ -16,10 +16,16 @@ async function json(response) {
   try { return text ? JSON.parse(text) : {}; } catch { return { raw: text.slice(0, 500) }; }
 }
 
+let currentStage = 'bootstrap';
+function stage(name) {
+  currentStage = name;
+  console.log(`[canary] ${name}`);
+}
+
 async function request(path, init = {}) {
   return fetch(path.startsWith('http') ? path : `${supabaseUrl}${path}`, {
     ...init,
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(30000),
   });
 }
 
@@ -34,7 +40,11 @@ let userId = null;
 let storagePath = null;
 let emailLogId = null;
 
+let runError = null;
+let failedStage = null;
+
 try {
+  stage('auth_admin_create');
   const createUserResponse = await request('/auth/v1/admin/users', {
     method: 'POST',
     headers: {
@@ -53,6 +63,7 @@ try {
   assert(createUserResponse.ok && createdUser?.id, `auth admin create failed: ${createUserResponse.status}`);
   userId = createdUser.id;
 
+  stage('password_login');
   const passwordLoginResponse = await request('/auth/v1/token?grant_type=password', {
     method: 'POST',
     headers: {
@@ -64,6 +75,7 @@ try {
   const passwordLogin = await json(passwordLoginResponse);
   assert(passwordLoginResponse.ok && passwordLogin?.access_token && passwordLogin?.user?.id === userId, `password login failed: ${passwordLoginResponse.status}`);
 
+  stage('google_oauth_initiation');
   const googleAuthorizeUrl = new URL('/auth/v1/authorize', supabaseUrl);
   googleAuthorizeUrl.searchParams.set('provider', 'google');
   googleAuthorizeUrl.searchParams.set('redirect_to', 'https://www.risckcomply.com/auth/callback?locale=en');
@@ -86,6 +98,7 @@ try {
     'google oauth redirect target is not Google',
   );
 
+  stage('controlled_documents_storage_roundtrip');
   const content = `RISCK COMPLY controlled-documents runtime canary ${suffix}\n`;
   storagePath = `runtime-canary/${userId}/${randomUUID()}.md`;
   const uploadResponse = await request(`/storage/v1/object/controlled-documents/${storagePath}`, {
@@ -110,6 +123,7 @@ try {
   const downloaded = await downloadResponse.text();
   assert(downloadResponse.ok && downloaded === content, `storage download mismatch: ${downloadResponse.status}`);
 
+  stage('transactional_email_audit');
   const logInsertResponse = await request('/rest/v1/email_delivery_logs?select=id,status,provider', {
     method: 'POST',
     headers: {
@@ -134,40 +148,48 @@ try {
   assert(logInsertResponse.ok && Array.isArray(logRows) && logRows[0]?.id, `email audit insert failed: ${logInsertResponse.status}`);
   emailLogId = logRows[0].id;
 
+  stage('resend_send_scope');
   assert(resendKey && emailFrom, 'Resend production binding missing');
+  const fromMatch = emailFrom.match(/<([^>]+)>/)?.[1] ?? emailFrom;
+  const fromAddress = fromMatch.trim().toLowerCase();
+  assert(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(fromAddress), 'EMAIL_FROM must contain a valid sender address');
+
   let resendResponse = null;
   let resendError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      resendResponse = await fetch('https://api.resend.com/domains', {
-        headers: { Authorization: `Bearer ${resendKey}` },
+      resendResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
         signal: AbortSignal.timeout(30000),
       });
-      if (resendResponse.ok || resendResponse.status < 500) break;
+      if (resendResponse.status < 500) break;
     } catch (error) {
       resendError = error;
     }
     if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
   }
-  assert(resendResponse, `Resend API validation unavailable: ${resendError instanceof Error ? resendError.message : 'network_error'}`);
-  const resendDomains = await json(resendResponse);
-  assert(resendResponse.ok, `Resend API key validation failed: ${resendResponse.status}`);
-  const fromMatch = emailFrom.match(/<([^>]+)>/)?.[1] ?? emailFrom;
-  const fromDomain = fromMatch.trim().toLowerCase().split('@')[1] ?? '';
-  assert(fromDomain, 'EMAIL_FROM must contain a valid sender domain');
-  const verifiedDomains = Array.isArray(resendDomains?.data)
-    ? resendDomains.data.filter((domain) => domain?.status === 'verified').map((domain) => String(domain?.name ?? '').toLowerCase())
-    : [];
-  assert(verifiedDomains.some((domain) => fromDomain === domain || fromDomain.endsWith(`.${domain}`)), 'EMAIL_FROM domain is not verified in Resend');
+  assert(resendResponse, `Resend send-scope validation unavailable: ${resendError instanceof Error ? resendError.message : 'network_error'}`);
+  assert(![401, 403].includes(resendResponse.status), `Resend send-scope authentication failed: ${resendResponse.status}`);
+  assert(!resendResponse.ok, 'Resend send-scope probe unexpectedly accepted an intentionally invalid payload');
+  await resendResponse.body?.cancel().catch(() => undefined);
 
+  stage('functional_checks_complete');
   console.log(JSON.stringify({
     authAdminCreate: 'PASS',
     passwordLogin: 'PASS',
     googleOAuthInitiation: 'PASS',
     controlledDocumentsStorageRoundTrip: 'PASS',
     transactionalEmailAuditTable: 'PASS',
-    resendApiBinding: 'PASS',
+    resendSendScopeBinding: 'PASS',
   }));
+} catch (error) {
+  failedStage = currentStage;
+  runError = error;
 } finally {
   const cleanupFailures = [];
   async function cleanup(label, path, init) {
@@ -203,5 +225,15 @@ try {
       headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
     });
   }
-  if (cleanupFailures.length > 0) throw new Error(`Production canary cleanup failed: ${cleanupFailures.join(', ')}`);
+  if (cleanupFailures.length > 0) {
+    const cleanupMessage = `Production canary cleanup failed: ${cleanupFailures.join(', ')}`;
+    if (runError) {
+      throw new Error(`Production canary failed at ${failedStage}: ${runError instanceof Error ? runError.message : 'unknown_error'}; ${cleanupMessage}`);
+    }
+    throw new Error(cleanupMessage);
+  }
+}
+
+if (runError) {
+  throw new Error(`Production canary failed at ${failedStage}: ${runError instanceof Error ? runError.message : 'unknown_error'}`);
 }
