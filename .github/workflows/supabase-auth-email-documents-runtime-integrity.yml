@@ -6,12 +6,17 @@ on:
       - main
     paths:
       - 'supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql'
+      - 'supabase/migrations/20260922112907_harden_transactional_email_delivery_log_policies_v1.sql'
       - 'scripts/security/run-supabase-auth-email-documents-canary.mjs'
       - '.github/workflows/supabase-auth-email-documents-runtime-integrity.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: supabase-auth-email-documents-production
+  cancel-in-progress: false
 
 jobs:
   runtime-integrity:
