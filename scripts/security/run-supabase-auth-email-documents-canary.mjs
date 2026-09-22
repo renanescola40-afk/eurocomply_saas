@@ -152,7 +152,6 @@ try {
   assert(resendKey && emailFrom, 'Resend production binding missing');
   const fromMatch = emailFrom.match(/<([^>]+)>/)?.[1] ?? emailFrom;
   const fromAddress = fromMatch.trim().toLowerCase();
-  const fromDomain = fromAddress.split('@')[1] ?? '';
   assert(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(fromAddress), 'EMAIL_FROM must contain a valid sender address');
 
   let resendResponse = null;
