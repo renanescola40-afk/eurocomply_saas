@@ -95,7 +95,7 @@ function DashboardPreview({ locale }: { locale: Locale }) {
   ];
 
   return (
-    <div className="relative mx-auto w-full max-w-[760px]">
+    <div role="img" aria-label={isPt ? 'Pré-visualização ilustrativa e não interativa do produto' : 'Illustrative non-interactive product preview'} data-illustrative-preview="true" className="relative mx-auto w-full max-w-[760px]">
       <div className="absolute -inset-12 -z-10 rounded-full bg-blue-600/10 blur-3xl" />
       <div className="overflow-hidden rounded-2xl border border-blue-400/20 bg-[#09111d]/95 shadow-[0_40px_120px_rgba(0,0,0,.62)]">
         <div className="flex h-12 items-center gap-3 border-b border-slate-800 px-4">
@@ -139,7 +139,7 @@ function DashboardPreview({ locale }: { locale: Locale }) {
             </div>
 
             <div className="mt-3 rounded-lg border border-slate-800 bg-[#0d1624] p-3">
-              <div className="flex items-center justify-between"><p className="text-[10px] font-semibold text-slate-300">{isPt ? 'Ações prioritárias' : 'High priority actions'}</p><span className="text-[9px] text-blue-400">{isPt ? 'Ver todas' : 'View all'}</span></div>
+              <div className="flex items-center justify-between"><p className="text-[10px] font-semibold text-slate-300">{isPt ? 'Ações prioritárias' : 'High priority actions'}</p><span className="text-[9px] text-slate-600">{isPt ? 'Amostra ilustrativa' : 'Illustrative sample'}</span></div>
               <div className="mt-2 grid grid-cols-[70px_1fr_80px] border-y border-slate-800 py-2 text-[8px] uppercase tracking-[0.08em] text-slate-700"><span>Priority</span><span>Action</span><span>Status</span></div>
               {[[isPt ? 'Alta' : 'High', isPt ? 'Completar avaliação de risco' : 'Complete risk assessment', 'In progress'], [isPt ? 'Média' : 'Medium', isPt ? 'Atualizar controlos de dados' : 'Update data governance controls', 'Open']].map((row, index) => <div key={row[1]} className="grid grid-cols-[70px_1fr_80px] border-b border-slate-800/60 py-2 text-[9px]"><span className={index === 0 ? 'text-rose-400' : 'text-amber-400'}>{row[0]}</span><span className="truncate text-slate-400">{row[1]}</span><span className="text-slate-600">{row[2]}</span></div>)}
             </div>
