@@ -1,5 +1,5 @@
 -- Follow-up policy hardening applied to production.
--- Keep backend-only access explicit without broad USING (true) / WITH CHECK (true) policy clauses.
+-- Keep backend-only access explicit with role-bound service policies.
 
 drop policy if exists "email delivery logs service role select" on public.email_delivery_logs;
 drop policy if exists "email delivery logs service role insert" on public.email_delivery_logs;
