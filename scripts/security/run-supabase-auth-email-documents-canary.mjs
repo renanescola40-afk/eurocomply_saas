@@ -176,9 +176,14 @@ try {
     });
   }
   if (storagePath) {
-    await cleanup('storage_object', `/storage/v1/object/controlled-documents/${storagePath}`, {
+    await cleanup('storage_object', '/storage/v1/object/controlled-documents', {
       method: 'DELETE',
-      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prefixes: [storagePath] }),
     });
   }
   if (userId) {
