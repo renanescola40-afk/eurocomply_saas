@@ -445,8 +445,10 @@ export async function buildProductionDeploymentEvidence({
     deployment = immutableAttempt?.deployment ?? null;
     health = immutableAttempt?.health ?? null;
     immutableProtectionObserved = immutableAttempt?.health?.blockedByVercelProtection === true;
+    const immutableAuthBoundaryObserved = [401, 403].includes(Number(immutableAttempt?.health?.status ?? 0));
+    const canonicalFallbackEligible = immutableProtectionObserved || immutableAuthBoundaryObserved;
 
-    if (deployment && immutableProtectionObserved && !String(protectionBypassSecret ?? '').trim()) {
+    if (deployment && canonicalFallbackEligible && !String(protectionBypassSecret ?? '').trim()) {
       const canonicalHealth = await probeCanonicalReleaseHealth({
         publicUrl: EXPECTED_CANONICAL_PRODUCTION_URL,
         targetSha,
@@ -501,6 +503,7 @@ export async function buildProductionDeploymentEvidence({
       productionHealthNoStore: true,
       immutableDeploymentHealthOk: health?.canonicalFallbackUsed !== true,
       immutableDeploymentProtectionObserved: immutableProtectionObserved,
+      immutableDeploymentAuthBoundaryObserved: [401, 403].includes(Number(health?.status ?? 0)) && health?.canonicalFallbackUsed !== true,
       canonicalProductionHealthFallbackUsed: health?.canonicalFallbackUsed === true,
     },
     health: {
@@ -526,7 +529,7 @@ export async function buildProductionDeploymentEvidence({
       protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
-    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. Canonical fallback is accepted only through the authenticated /api/ready/release endpoint when it reports the same exact target SHA and only after the immutable Vercel URL is blocked specifically by Vercel protection; generic public /api/health is never sufficient for exact-SHA substitution. Preview deployments are never accepted as Production authority. Generic commit statuses, arbitrary redirects, SHA-mismatched canonical responses, and unhealthy immutable deployments are never accepted as exact-SHA Production proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
+    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. Canonical fallback is accepted only through the authenticated /api/ready/release endpoint when it reports the same exact target SHA and only after the immutable Vercel URL is blocked by Vercel protection or a Vercel authentication boundary (401/403); generic public /api/health is never sufficient for exact-SHA substitution. Preview deployments are never accepted as Production authority. Generic commit statuses, arbitrary redirects, SHA-mismatched canonical responses, and unhealthy immutable deployments are never accepted as exact-SHA Production proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
   };
 }
 
