@@ -87,13 +87,13 @@ try {
   );
 
   const content = `RISCK COMPLY controlled-documents runtime canary ${suffix}\n`;
-  storagePath = `runtime-canary/${userId}/${randomUUID()}.txt`;
+  storagePath = `runtime-canary/${userId}/${randomUUID()}.md`;
   const uploadResponse = await request(`/storage/v1/object/controlled-documents/${storagePath}`, {
     method: 'POST',
     headers: {
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'text/plain',
+      'Content-Type': 'text/markdown',
       'x-upsert': 'false',
     },
     body: content,
