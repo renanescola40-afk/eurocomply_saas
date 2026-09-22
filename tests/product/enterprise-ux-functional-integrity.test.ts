@@ -4,6 +4,62 @@ import { describe, expect, it } from 'vitest';
 
 const root = process.cwd();
 
+
+function extractOpeningTags(source: string, tagName: string): string[] {
+  const tags: string[] = [];
+  const needle = `<${tagName}`;
+  let cursor = 0;
+
+  while (cursor < source.length) {
+    const start = source.indexOf(needle, cursor);
+    if (start === -1) break;
+
+    let quote: '"' | "'" | '`' | null = null;
+    let escaped = false;
+    let braceDepth = 0;
+    let end = start + needle.length;
+
+    for (; end < source.length; end += 1) {
+      const ch = source[end];
+
+      if (quote) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (ch === quote) quote = null;
+        continue;
+      }
+
+      if (ch === '"' || ch === "'" || ch === '`') {
+        quote = ch;
+        continue;
+      }
+      if (ch === '{') {
+        braceDepth += 1;
+        continue;
+      }
+      if (ch === '}' && braceDepth > 0) {
+        braceDepth -= 1;
+        continue;
+      }
+      if (ch === '>' && braceDepth === 0) {
+        tags.push(source.slice(start, end + 1));
+        cursor = end + 1;
+        break;
+      }
+    }
+
+    if (end >= source.length) break;
+  }
+
+  return tags;
+}
+
 function walk(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -84,8 +140,7 @@ describe('enterprise UX functional integrity', () => {
     for (const relativeRoot of roots) {
       for (const file of walk(path.join(root, relativeRoot))) {
         const source = fs.readFileSync(file, 'utf8');
-        for (const match of source.matchAll(/<button\b[\s\S]*?>/g)) {
-          const tag = match[0];
+        for (const tag of extractOpeningTags(source, 'button')) {
           if (!/type\s*=\s*["']button["']/.test(tag)) continue;
           if (/onClick\s*=/.test(tag)) continue;
           if (/disabled(?:\s|=|>)/.test(tag)) continue;
