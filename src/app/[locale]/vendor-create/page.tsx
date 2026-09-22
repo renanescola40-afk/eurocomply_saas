@@ -7,14 +7,14 @@ export default async function VendorCreatePage({ params }: { params: Promise<{ l
   const locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
 
   const content = (
-    <main className="min-h-0 bg-transparent">
+    <div className="min-h-0 bg-transparent">
       <section className="mx-auto max-w-3xl">
         <h1 className="text-4xl font-semibold tracking-tight">Create vendor record</h1>
         <div className="mt-6">
           <VendorActivationCard locale={locale} />
         </div>
       </section>
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
