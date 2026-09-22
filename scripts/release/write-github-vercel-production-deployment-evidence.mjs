@@ -419,6 +419,7 @@ export async function buildProductionDeploymentEvidence({
   let deployment = null;
   let health = null;
   let immutableProtectionObserved = false;
+  let immutableAuthBoundaryObserved = false;
   const attempts = boundedInteger(maxAttempts, DEFAULT_ATTEMPTS, 1, 60);
   const waitMs = boundedInteger(pollMs, DEFAULT_POLL_MS, 0, 30_000);
 
@@ -445,7 +446,7 @@ export async function buildProductionDeploymentEvidence({
     deployment = immutableAttempt?.deployment ?? null;
     health = immutableAttempt?.health ?? null;
     immutableProtectionObserved = immutableAttempt?.health?.blockedByVercelProtection === true;
-    const immutableAuthBoundaryObserved = [401, 403].includes(Number(immutableAttempt?.health?.status ?? 0));
+    immutableAuthBoundaryObserved = [401, 403].includes(Number(immutableAttempt?.health?.status ?? 0));
     const canonicalFallbackEligible = immutableProtectionObserved || immutableAuthBoundaryObserved;
 
     if (deployment && canonicalFallbackEligible && !String(protectionBypassSecret ?? '').trim()) {
@@ -503,7 +504,7 @@ export async function buildProductionDeploymentEvidence({
       productionHealthNoStore: true,
       immutableDeploymentHealthOk: health?.canonicalFallbackUsed !== true,
       immutableDeploymentProtectionObserved: immutableProtectionObserved,
-      immutableDeploymentAuthBoundaryObserved: [401, 403].includes(Number(health?.status ?? 0)) && health?.canonicalFallbackUsed !== true,
+      immutableDeploymentAuthBoundaryObserved: immutableAuthBoundaryObserved,
       canonicalProductionHealthFallbackUsed: health?.canonicalFallbackUsed === true,
     },
     health: {
@@ -524,6 +525,7 @@ export async function buildProductionDeploymentEvidence({
       vercelStatusActorBound: true,
       liveHealthVerified: true,
       immutableProtectionObserved,
+      immutableAuthBoundaryObserved,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
