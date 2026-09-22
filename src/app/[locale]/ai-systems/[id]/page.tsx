@@ -97,7 +97,7 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
   const requiresRiskWorkflow = system.risk_level === 'high_risk_review' || system.risk_level === 'prohibited_review';
 
   const content = (
-    <main className="min-h-0 bg-transparent text-white">
+    <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -227,7 +227,7 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
           </aside>
         </section>
       </div>
-    </main>
+    </div>
   );
 
   return (
