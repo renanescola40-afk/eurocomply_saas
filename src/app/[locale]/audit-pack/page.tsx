@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Download, FileArchive, Fingerprint, LockKeyhole, ShieldCheck } from 'lucide-react';
 
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { buildAuditEvidencePack } from '@/server/queries/audit-evidence-pack';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -108,7 +108,7 @@ export default async function AuditPackPage({ params }: PageProps) {
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    redirect(`/${locale}/dashboard`);
+    redirect(`/${locale}/onboarding`);
   }
 
   const entitlements = await getOrganizationEntitlements(organization.id);
@@ -128,10 +128,9 @@ export default async function AuditPackPage({ params }: PageProps) {
       })
     : null;
 
-  return (
-    <main className="min-h-screen bg-slate-950 px-6 py-6 text-white">
+  const content = (
+    <main className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
-        <DashboardCommandNavigation locale={locale} />
 
         {!entitlements.executiveReports ? (
           <UpgradeRequiredCard locale={locale} title={t.businessRequired} description={t.description} requiredPlan="Business" />
@@ -220,4 +219,6 @@ export default async function AuditPackPage({ params }: PageProps) {
       </div>
     </main>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }
