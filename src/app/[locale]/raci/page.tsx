@@ -43,7 +43,7 @@ export default async function RaciPage({ params }: PageProps) {
   const lockedCopy = getUpgradeCopy(locale);
 
   const content = (
-    <main className="min-h-0 bg-transparent text-white">
+    <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
         {entitlements?.approvalWorkflows ? (
           <RaciClient locale={locale} />
@@ -56,7 +56,7 @@ export default async function RaciPage({ params }: PageProps) {
           />
         )}
       </div>
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
