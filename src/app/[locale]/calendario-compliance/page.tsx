@@ -26,11 +26,11 @@ export default async function ComplianceCalendarPage({ params, searchParams }: P
   const canUseAiSearch = entitlements?.aiCalendar === 'advanced';
 
   const content = (
-    <main className="min-h-0 bg-transparent text-white">
+    <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
         <ComplianceCalendarClient locale={locale} canUseAiSearch={canUseAiSearch} plan={entitlements?.plan ?? 'essential'} suggestion={suggestion} />
       </div>
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
