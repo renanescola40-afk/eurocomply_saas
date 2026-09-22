@@ -251,6 +251,48 @@ describe('exact-SHA Vercel production deployment proof', () => {
     });
   });
 
+  it('uses authenticated canonical release proof when the immutable deployment returns a Vercel auth boundary', async () => {
+    const evidence = await buildProductionDeploymentEvidence({
+      repository: REPOSITORY,
+      targetSha: SHA,
+      token: 'test-token',
+      healthcheckToken: 'health-token',
+      fetchImpl: fixtureFetch({
+        deploymentHealthStatus: 401,
+        deploymentHealthBodyStatus: 'unauthorized',
+        deploymentHealthNoStore: true,
+        canonicalReleaseSha: SHA,
+        canonicalReleaseStatus: 200,
+      }),
+      sleepImpl: async () => undefined,
+      apiUrl: API,
+      maxAttempts: 1,
+      pollMs: 0,
+    });
+
+    expect(evidence.status).toBe('PASS');
+    expect(evidence.outcome).toBe('passed');
+    expect(evidence.checks).toMatchObject({
+      exactShaProductionDeploymentFound: true,
+      immutableDeploymentHealthOk: false,
+      immutableDeploymentAuthBoundaryObserved: true,
+      canonicalProductionHealthFallbackUsed: true,
+    });
+    expect(evidence.health).toMatchObject({
+      path: '/api/ready/release',
+      status: 200,
+      bodyStatus: 'ok',
+      noStore: true,
+      targetClass: 'canonical_public_production',
+    });
+    expect(evidence.evidenceIntegrity).toMatchObject({
+      exactShaBound: true,
+      githubDeploymentBound: true,
+      immutableAuthBoundaryObserved: true,
+      liveHealthVerified: true,
+    });
+  });
+
   it('keeps exact-SHA health OPEN when canonical release metadata reports a different SHA', async () => {
     const evidence = await buildProductionDeploymentEvidence({
       repository: REPOSITORY,
