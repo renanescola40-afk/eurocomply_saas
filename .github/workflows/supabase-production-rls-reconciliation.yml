@@ -269,7 +269,7 @@ jobs:
             echo '## Supabase production RLS reconciliation'
             echo
             echo "- Release SHA: \`$RELEASE_SHA\`"
-            echo "- Package: `$PACKAGE`"
+            echo "- Package: \`$PACKAGE\`"
             echo "- Mode: \`$MODE\`"
             echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
             echo '- Connection path: Supabase Session Pooler (secret-backed)'
