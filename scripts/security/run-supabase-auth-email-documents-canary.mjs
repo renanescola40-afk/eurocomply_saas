@@ -73,7 +73,18 @@ try {
   });
   const googleLocation = googleResponse.headers.get('location') ?? '';
   assert([301,302,303,307,308].includes(googleResponse.status), `google oauth did not redirect: ${googleResponse.status}`);
-  assert(/google\./i.test(googleLocation) || /accounts\.google\.com/i.test(googleLocation), 'google oauth redirect target is not Google');
+  let googleRedirect;
+  try {
+    googleRedirect = new URL(googleLocation);
+  } catch {
+    throw new Error('google oauth redirect target is not a valid URL');
+  }
+  const googleHost = googleRedirect.hostname.toLowerCase();
+  assert(
+    googleRedirect.protocol === 'https:' &&
+      (googleHost === 'google.com' || googleHost === 'accounts.google.com' || googleHost.endsWith('.google.com')),
+    'google oauth redirect target is not Google',
+  );
 
   const content = `RISCK COMPLY controlled-documents runtime canary ${suffix}\n`;
   storagePath = `runtime-canary/${userId}/${randomUUID()}.txt`;
