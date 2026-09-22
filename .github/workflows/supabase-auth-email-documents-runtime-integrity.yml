@@ -1,0 +1,43 @@
+name: Supabase Auth Email Documents Runtime Integrity
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql'
+      - 'scripts/security/run-supabase-auth-email-documents-canary.mjs'
+      - '.github/workflows/supabase-auth-email-documents-runtime-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-integrity:
+    if: github.repository == 'renanescola40-afk/eurocomply_saas' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify trusted exact-SHA checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run non-destructive production canary
+        run: node scripts/security/run-supabase-auth-email-documents-canary.mjs
