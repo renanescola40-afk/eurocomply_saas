@@ -144,7 +144,7 @@ export default async function EnterpriseReadinessPage({ params }: { params: Prom
   const summary = getEnterpriseReadinessSummary();
 
   const content = (
-    <main className="min-h-0 bg-transparent">
+    <div className="min-h-0 bg-transparent">
       <section className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border bg-background/90 p-8 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -227,7 +227,7 @@ export default async function EnterpriseReadinessPage({ params }: { params: Prom
           </aside>
         </section>
       </section>
-    </main>
+    </div>
   );
 
   return (
