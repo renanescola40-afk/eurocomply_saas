@@ -4,7 +4,7 @@
 import { createServerClient } from '@supabase/ssr';
 import createIntlMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
-import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/routing';
+import { routing, locales, defaultLocale } from '@/lib/i18n/routing';
 import {
   attachRequestIdHeader,
   buildCorrelatedRequestHeaders,
