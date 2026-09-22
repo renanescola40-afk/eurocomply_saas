@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Download, FileCheck2, FileText } from 'lucide-react';
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { buildAiGovernanceReadiness } from '@/server/ai-governance/readiness';
@@ -36,9 +36,15 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const [systems, incidents, entitlements] = organization
-    ? await Promise.all([listAiSystems(organization.id), listAiIncidents(organization.id), getOrganizationEntitlements(organization.id)])
-    : [[], [], null];
+  if (!organization) {
+    redirect(`/${locale}/onboarding`);
+  }
+
+  const [systems, incidents, entitlements] = await Promise.all([
+    listAiSystems(organization.id),
+    listAiIncidents(organization.id),
+    getOrganizationEntitlements(organization.id),
+  ]);
   const canViewExecutiveReports = entitlements ? isPlanAtLeast(entitlements.plan, 'business') : false;
   const readiness = buildAiGovernanceReadiness({ locale, systems, incidents });
   const hasInventory = systems.length > 0;
@@ -51,10 +57,9 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
     { title: 'Vendor assessment memo', description: `${readiness.totals.vendorLinkedSystems} AI system${readiness.totals.vendorLinkedSystems === 1 ? '' : 's'} currently include vendor/model context.`, href: '/vendor-assurance', status: hasInventory ? 'ready' : 'needs inventory' },
   ];
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage="AI Governance" />
-      <section className="mx-auto max-w-7xl px-6 py-8">
+  const content = (
+    <main className="min-h-0 bg-transparent">
+      <section className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
@@ -123,4 +128,6 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
       </section>
     </main>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }
