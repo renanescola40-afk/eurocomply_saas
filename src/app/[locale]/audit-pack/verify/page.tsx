@@ -74,7 +74,7 @@ export default async function AuditPackVerifyPage({ params }: PageProps) {
   }
 
   const content = (
-    <main className="min-h-0 bg-transparent text-white">
+    <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
 
         <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/30">
@@ -104,7 +104,7 @@ export default async function AuditPackVerifyPage({ params }: PageProps) {
 
         <EvidencePackVerifier locale={locale} />
       </div>
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
