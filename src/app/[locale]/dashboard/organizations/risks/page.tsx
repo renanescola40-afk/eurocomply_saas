@@ -22,7 +22,7 @@ type RiskPageCopy = {
 };
 
 const riskPageCopy: Record<string, RiskPageCopy> = {
-  en: { eyebrow: '{copy.eyebrow}', title: 'Risk register', subtitle: '{copy.subtitle}', organization: 'Organization', metricsLabel: 'Risk register metrics', totalRisks: 'Total risks', openRisks: 'Open risks', criticalScore: 'Critical score', averageScore: 'Average score', registerRisk: 'Register risk', registerHelp: 'Create a governed risk record with clear ownership and follow-up.', operationalRegister: 'Operational risk register', liveRecords: '{copy.liveRecords}', empty: '{copy.empty}', risk: 'Risk', category: 'Category', likelihood: 'Likelihood', impact: 'Impact', score: 'Score', status: 'Status', action: 'Action', noDescription: 'No description provided', resourceName: 'risk' },
+  en: { eyebrow: 'Enterprise risk register', title: 'Risk register', subtitle: 'Prioritize compliance and operational risks by likelihood, impact, status and accountable follow-up.', organization: 'Organization', metricsLabel: 'Risk register metrics', totalRisks: 'Total risks', openRisks: 'Open risks', criticalScore: 'Critical score', averageScore: 'Average score', registerRisk: 'Register risk', registerHelp: 'Create a governed risk record with clear ownership and follow-up.', operationalRegister: 'Operational risk register', liveRecords: 'Live organization records ordered by risk score.', empty: 'No risks have been registered yet.', risk: 'Risk', category: 'Category', likelihood: 'Likelihood', impact: 'Impact', score: 'Score', status: 'Status', action: 'Action', noDescription: 'No description provided', resourceName: 'risk' },
   pt: { eyebrow: 'Registo de riscos enterprise', title: 'Registo de riscos', subtitle: 'Priorize riscos de compliance e operacionais por probabilidade, impacto, estado e acompanhamento responsável.', organization: 'Organização', metricsLabel: 'Métricas do registo de riscos', totalRisks: 'Total de riscos', openRisks: 'Riscos abertos', criticalScore: 'Pontuação crítica', averageScore: 'Pontuação média', registerRisk: 'Registar risco', registerHelp: 'Crie um registo de risco governado, com responsabilidade e acompanhamento claros.', operationalRegister: 'Registo de riscos operacional', liveRecords: 'Registos da organização ordenados pela pontuação de risco.', empty: 'Ainda não existem riscos registados.', risk: 'Risco', category: 'Categoria', likelihood: 'Probabilidade', impact: 'Impacto', score: 'Pontuação', status: 'Estado', action: 'Ação', noDescription: 'Sem descrição', resourceName: 'risco' },
   es: { eyebrow: 'Registro de riesgos enterprise', title: 'Registro de riesgos', subtitle: 'Prioriza riesgos operativos y de cumplimiento por probabilidad, impacto, estado y seguimiento responsable.', organization: 'Organización', metricsLabel: 'Métricas del registro de riesgos', totalRisks: 'Riesgos totales', openRisks: 'Riesgos abiertos', criticalScore: 'Puntuación crítica', averageScore: 'Puntuación media', registerRisk: 'Registrar riesgo', registerHelp: 'Crea un registro de riesgo gobernado con responsabilidad y seguimiento claros.', operationalRegister: 'Registro operativo de riesgos', liveRecords: 'Registros de la organización ordenados por puntuación de riesgo.', empty: 'Aún no se han registrado riesgos.', risk: 'Riesgo', category: 'Categoría', likelihood: 'Probabilidad', impact: 'Impacto', score: 'Puntuación', status: 'Estado', action: 'Acción', noDescription: 'Sin descripción', resourceName: 'riesgo' },
   fr: { eyebrow: 'Registre des risques enterprise', title: 'Registre des risques', subtitle: 'Priorisez les risques de conformité et opérationnels selon leur probabilité, impact, statut et suivi responsable.', organization: 'Organisation', metricsLabel: 'Indicateurs du registre des risques', totalRisks: 'Risques totaux', openRisks: 'Risques ouverts', criticalScore: 'Score critique', averageScore: 'Score moyen', registerRisk: 'Enregistrer un risque', registerHelp: 'Créez un risque gouverné avec une responsabilité et un suivi clairement définis.', operationalRegister: 'Registre opérationnel des risques', liveRecords: 'Enregistrements de l’organisation classés par score de risque.', empty: 'Aucun risque n’a encore été enregistré.', risk: 'Risque', category: 'Catégorie', likelihood: 'Probabilité', impact: 'Impact', score: 'Score', status: 'Statut', action: 'Action', noDescription: 'Aucune description', resourceName: 'risque' },
@@ -140,9 +140,9 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
       <div className="w-full space-y-6">
         <header className="flex flex-col gap-5 border-b border-slate-800 pb-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0 max-w-3xl">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">Enterprise risk register</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{copy.eyebrow}</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{copy.title}</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-400">Prioritize compliance and operational risks by likelihood, impact, status and accountable follow-up.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">{copy.subtitle}</p>
             <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">{copy.organization}: {organization.name}</p>
           </div>
           <StepUpCsvExportButton endpoint="/api/reports/risks.csv" filename="risks-report.csv" className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-medium text-slate-300 transition hover:border-blue-500/50 hover:text-white disabled:opacity-60" />
@@ -179,13 +179,13 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
           <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-5 py-4 sm:px-6">
             <div>
               <h2 id="risk-register-title" className="text-sm font-semibold text-slate-100">{copy.operationalRegister}</h2>
-              <p className="mt-1 text-xs text-slate-500">Live organization records ordered by risk score.</p>
+              <p className="mt-1 text-xs text-slate-500">{copy.liveRecords}</p>
             </div>
             <span className="rounded-md border border-slate-800 bg-[#0d1624] px-2.5 py-1 font-mono text-xs font-semibold tabular-nums text-slate-400">{risks.length}</span>
           </div>
 
           {risks.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500" role="status">No risks have been registered yet.</div>
+            <div className="p-8 text-center text-sm text-slate-500" role="status">{copy.empty}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-[980px] w-full border-collapse text-left">
