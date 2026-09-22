@@ -135,10 +135,21 @@ try {
   emailLogId = logRows[0].id;
 
   assert(resendKey && emailFrom, 'Resend production binding missing');
-  const resendResponse = await fetch('https://api.resend.com/domains', {
-    headers: { Authorization: `Bearer ${resendKey}` },
-    signal: AbortSignal.timeout(15000),
-  });
+  let resendResponse = null;
+  let resendError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      resendResponse = await fetch('https://api.resend.com/domains', {
+        headers: { Authorization: `Bearer ${resendKey}` },
+        signal: AbortSignal.timeout(30000),
+      });
+      if (resendResponse.ok || resendResponse.status < 500) break;
+    } catch (error) {
+      resendError = error;
+    }
+    if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+  }
+  assert(resendResponse, `Resend API validation unavailable: ${resendError instanceof Error ? resendError.message : 'network_error'}`);
   const resendDomains = await json(resendResponse);
   assert(resendResponse.ok, `Resend API key validation failed: ${resendResponse.status}`);
   const fromMatch = emailFrom.match(/<([^>]+)>/)?.[1] ?? emailFrom;
