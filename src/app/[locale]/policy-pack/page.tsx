@@ -40,7 +40,7 @@ export default async function PolicyPackPage({ params }: { params: Promise<{ loc
   const highRiskSystems = systems.filter((system) => system.risk_level === 'high_risk_review' || system.risk_level === 'prohibited_review');
 
   const content = (
-    <main className="min-h-0 bg-transparent">
+    <div className="min-h-0 bg-transparent">
       <section className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -99,7 +99,7 @@ export default async function PolicyPackPage({ params }: { params: Promise<{ loc
           </section>
         </div>
       </section>
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
