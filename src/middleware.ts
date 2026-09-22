@@ -200,35 +200,12 @@ function appendSafeAuthQuery(url: URL, req: NextRequest) {
 }
 
 function detectLocale(req: NextRequest): string {
+  // English is the product default. Only an explicit user locale preference
+  // may override it; geography and browser headers must not silently switch
+  // the SaaS into another language.
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
     return cookieLocale;
-  }
-
-  const country =
-    req.headers.get('CF-IPCountry') ??
-    req.headers.get('x-vercel-ip-country') ??
-    req.headers.get('cf-ipcountry') ??
-    '';
-
-  if (country && COUNTRY_TO_LOCALE[country]) {
-    return COUNTRY_TO_LOCALE[country];
-  }
-
-  const acceptLanguage = req.headers.get('Accept-Language') ?? '';
-  const browserLocales = acceptLanguage
-    .split(',')
-    .map((l) => l.split(';')[0].trim().toLowerCase().replace('_', '-'))
-    .filter(Boolean);
-
-  for (const browserLocale of browserLocales) {
-    if (locales.includes(browserLocale as 'en')) {
-      return browserLocale;
-    }
-    const base = browserLocale.split('-')[0];
-    if (locales.includes(base as 'en')) {
-      return base;
-    }
   }
 
   return defaultLocale;
