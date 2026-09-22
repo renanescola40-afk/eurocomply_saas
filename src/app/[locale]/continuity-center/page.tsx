@@ -1,7 +1,7 @@
 import { Activity, CheckCircle2, Cloud, Database, Download, FileCheck2, RotateCcw, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 import { CONTINUITY_CONTROLS, getContinuitySummary } from '@/server/governance/continuity-policy';
 
@@ -115,10 +115,9 @@ export default async function ContinuityCenterPage({ params }: { params: Promise
   const t = copy[locale];
   const summary = getContinuitySummary();
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage={t.title} />
-      <div className="mx-auto max-w-7xl space-y-8 px-6 py-10">
+  const content = (
+    <div className="min-h-0 bg-transparent">
+      <div className="mx-auto max-w-7xl space-y-8">
         <section className="rounded-[2rem] border bg-card/90 p-8 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
@@ -198,6 +197,8 @@ export default async function ContinuityCenterPage({ params }: { params: Promise
           </ul>
         </section>
       </div>
-    </main>
+    </div>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }

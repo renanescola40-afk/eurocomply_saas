@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowLeft, FileCheck2 } from 'lucide-react';
 
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { EvidencePackVerifier } from './evidence-pack-verifier';
@@ -73,10 +73,9 @@ export default async function AuditPackVerifyPage({ params }: PageProps) {
     redirect(`/${locale}/dashboard`);
   }
 
-  return (
-    <main className="min-h-screen bg-slate-950 px-6 py-6 text-white">
+  const content = (
+    <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
-        <DashboardCommandNavigation locale={locale} />
 
         <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/30">
           <Link href={`/${locale}/audit-pack`} className="inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white">
@@ -105,6 +104,8 @@ export default async function AuditPackVerifyPage({ params }: PageProps) {
 
         <EvidencePackVerifier locale={locale} />
       </div>
-    </main>
+    </div>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }
