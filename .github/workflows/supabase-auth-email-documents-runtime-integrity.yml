@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   runtime-integrity:
+    if: github.repository == 'renanescola40-afk/eurocomply_saas' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: Production
     timeout-minutes: 10
@@ -26,8 +27,17 @@ jobs:
       EMAIL_FROM: ${{ vars.EMAIL_FROM }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify trusted exact-SHA checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Run non-destructive production canary
         run: node scripts/security/run-supabase-auth-email-documents-canary.mjs
