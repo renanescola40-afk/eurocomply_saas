@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -35,13 +35,16 @@ export default async function RaciPage({ params }: PageProps) {
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const entitlements = organization ? await getOrganizationEntitlements(organization.id) : null;
+  if (!organization) {
+    redirect(`/${locale}/onboarding`);
+  }
+
+  const entitlements = await getOrganizationEntitlements(organization.id);
   const lockedCopy = getUpgradeCopy(locale);
 
-  return (
-    <main className="min-h-screen bg-slate-950 px-6 py-6 text-white">
+  const content = (
+    <main className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
-        <DashboardCommandNavigation locale={locale} />
         {entitlements?.approvalWorkflows ? (
           <RaciClient locale={locale} />
         ) : (
@@ -55,4 +58,6 @@ export default async function RaciPage({ params }: PageProps) {
       </div>
     </main>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }
