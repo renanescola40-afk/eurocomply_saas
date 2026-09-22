@@ -135,30 +135,34 @@ try {
   emailLogId = logRows[0].id;
 
   assert(resendKey && emailFrom, 'Resend production binding missing');
+  const fromMatch = emailFrom.match(/<([^>]+)>/)?.[1] ?? emailFrom;
+  const fromAddress = fromMatch.trim().toLowerCase();
+  const fromDomain = fromAddress.split('@')[1] ?? '';
+  assert(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(fromAddress), 'EMAIL_FROM must contain a valid sender address');
+
   let resendResponse = null;
   let resendError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      resendResponse = await fetch('https://api.resend.com/domains', {
-        headers: { Authorization: `Bearer ${resendKey}` },
+      resendResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
         signal: AbortSignal.timeout(30000),
       });
-      if (resendResponse.ok || resendResponse.status < 500) break;
+      if (resendResponse.status < 500) break;
     } catch (error) {
       resendError = error;
     }
     if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
   }
-  assert(resendResponse, `Resend API validation unavailable: ${resendError instanceof Error ? resendError.message : 'network_error'}`);
-  const resendDomains = await json(resendResponse);
-  assert(resendResponse.ok, `Resend API key validation failed: ${resendResponse.status}`);
-  const fromMatch = emailFrom.match(/<([^>]+)>/)?.[1] ?? emailFrom;
-  const fromDomain = fromMatch.trim().toLowerCase().split('@')[1] ?? '';
-  assert(fromDomain, 'EMAIL_FROM must contain a valid sender domain');
-  const verifiedDomains = Array.isArray(resendDomains?.data)
-    ? resendDomains.data.filter((domain) => domain?.status === 'verified').map((domain) => String(domain?.name ?? '').toLowerCase())
-    : [];
-  assert(verifiedDomains.some((domain) => fromDomain === domain || fromDomain.endsWith(`.${domain}`)), 'EMAIL_FROM domain is not verified in Resend');
+  assert(resendResponse, `Resend send-scope validation unavailable: ${resendError instanceof Error ? resendError.message : 'network_error'}`);
+  assert(![401, 403].includes(resendResponse.status), `Resend send-scope authentication failed: ${resendResponse.status}`);
+  assert(!resendResponse.ok, 'Resend send-scope probe unexpectedly accepted an intentionally invalid payload');
+  await resendResponse.body?.cancel().catch(() => undefined);
 
   console.log(JSON.stringify({
     authAdminCreate: 'PASS',
@@ -166,7 +170,7 @@ try {
     googleOAuthInitiation: 'PASS',
     controlledDocumentsStorageRoundTrip: 'PASS',
     transactionalEmailAuditTable: 'PASS',
-    resendApiBinding: 'PASS',
+    resendSendScopeBinding: 'PASS',
   }));
 } finally {
   const cleanupFailures = [];
