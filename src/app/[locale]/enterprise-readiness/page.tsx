@@ -1,7 +1,12 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, Download, ShieldCheck, Target } from 'lucide-react';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
+import { getCurrentUser } from '@/server/queries/auth';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getOrganizationBillingAuthority } from '@/server/queries/subscription';
+import { getOrganizationMembership, normalizeOrganizationRole } from '@/server/security/rbac';
 import { getEnterpriseReadinessSummary } from '@/server/governance/enterprise-readiness';
 
 const COPY: Record<SupportedLocale, {
@@ -122,12 +127,25 @@ export default async function EnterpriseReadinessPage({ params }: { params: Prom
   const { locale: rawLocale } = await params;
   const locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
   const copy = COPY[locale];
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect(`/${locale}/login`);
+  }
+  const organization = await getCurrentOrganizationForUser(user.id);
+  if (!organization) {
+    redirect(`/${locale}/onboarding`);
+  }
+  const [authority, membership] = await Promise.all([
+    getOrganizationBillingAuthority(organization.id),
+    getOrganizationMembership(user.id, organization.id),
+  ]);
+  const role = normalizeOrganizationRole(membership?.membership?.role);
+  const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
   const summary = getEnterpriseReadinessSummary();
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} />
-      <section className="mx-auto max-w-7xl px-6 py-10">
+  const content = (
+    <main className="min-h-0 bg-transparent">
+      <section className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border bg-background/90 p-8 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -210,5 +228,17 @@ export default async function EnterpriseReadinessPage({ params }: { params: Prom
         </section>
       </section>
     </main>
+  );
+
+  return (
+    <EnterpriseDashboardShell
+      locale={locale}
+      organizationName={organization.name}
+      userDisplayName={userDisplayName}
+      role={role}
+      selectedPlan={authority?.plan}
+    >
+      {content}
+    </EnterpriseDashboardShell>
   );
 }
