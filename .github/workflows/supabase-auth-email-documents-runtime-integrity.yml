@@ -1,0 +1,31 @@
+name: Supabase Auth Email Documents Runtime Integrity
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql'
+      - 'scripts/security/run-supabase-auth-email-documents-canary.mjs'
+      - '.github/workflows/supabase-auth-email-documents-runtime-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-integrity:
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run non-destructive production canary
+        run: node scripts/security/run-supabase-auth-email-documents-canary.mjs
