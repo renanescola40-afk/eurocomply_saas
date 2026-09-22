@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ClipboardCheck, CheckCircle2, CircleAlert, Download, FileText, ShieldCheck } from 'lucide-react';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 import { getSecurityQuestionnaireSummary, SECURITY_QUESTIONNAIRE_ITEMS } from '@/server/governance/security-questionnaire';
 
@@ -122,10 +122,9 @@ export default async function SecurityQuestionnairePage({ params }: { params: Pr
   const copy = COPY[locale];
   const summary = getSecurityQuestionnaireSummary();
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} />
-      <section className="mx-auto max-w-7xl px-6 py-10">
+  const content = (
+    <main className="min-h-0 bg-transparent">
+      <section className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border bg-background/90 p-8 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -206,4 +205,6 @@ export default async function SecurityQuestionnairePage({ params }: { params: Pr
       </section>
     </main>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }
