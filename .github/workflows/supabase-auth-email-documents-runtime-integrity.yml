@@ -1,7 +1,9 @@
 name: Supabase Auth Email Documents Runtime Integrity
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
       - 'supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql'
       - 'scripts/security/run-supabase-auth-email-documents-canary.mjs'
