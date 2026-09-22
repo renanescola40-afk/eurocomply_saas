@@ -54,7 +54,7 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
   const t = copy[locale] ?? copy.en;
 
   const content = (
-    <main className="mx-auto max-w-7xl space-y-6 bg-transparent">
+    <div className="mx-auto max-w-7xl space-y-6 bg-transparent">
       <section className="rounded-2xl border border-slate-800 bg-[#0b121e] p-6 shadow-sm">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{t.eyebrow}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-100">{t.title}</h1>
@@ -95,7 +95,7 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
