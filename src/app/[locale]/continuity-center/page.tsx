@@ -116,7 +116,7 @@ export default async function ContinuityCenterPage({ params }: { params: Promise
   const summary = getContinuitySummary();
 
   const content = (
-    <main className="min-h-0 bg-transparent">
+    <div className="min-h-0 bg-transparent">
       <div className="mx-auto max-w-7xl space-y-8">
         <section className="rounded-[2rem] border bg-card/90 p-8 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -197,7 +197,7 @@ export default async function ContinuityCenterPage({ params }: { params: Promise
           </ul>
         </section>
       </div>
-    </main>
+    </div>
   );
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
