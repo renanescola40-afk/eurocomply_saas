@@ -23,7 +23,7 @@ async function request(path, init = {}) {
   });
 }
 
-assert(/^https:\/\//.test(supabaseUrl), 'NEXT_PUBLIC_SUPABASE_URL must be HTTPS');
+assert(/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseUrl), 'NEXT_PUBLIC_SUPABASE_URL must be a canonical HTTPS Supabase project URL');
 assert(anonKey, 'NEXT_PUBLIC_SUPABASE_ANON_KEY missing');
 assert(serviceRoleKey, 'SUPABASE_SERVICE_ROLE_KEY missing');
 
@@ -128,8 +128,15 @@ try {
     headers: { Authorization: `Bearer ${resendKey}` },
     signal: AbortSignal.timeout(15000),
   });
+  const resendDomains = await json(resendResponse);
   assert(resendResponse.ok, `Resend API key validation failed: ${resendResponse.status}`);
-  await resendResponse.body?.cancel().catch(() => undefined);
+  const fromMatch = emailFrom.match(/<([^>]+)>/)?.[1] ?? emailFrom;
+  const fromDomain = fromMatch.trim().toLowerCase().split('@')[1] ?? '';
+  assert(fromDomain, 'EMAIL_FROM must contain a valid sender domain');
+  const verifiedDomains = Array.isArray(resendDomains?.data)
+    ? resendDomains.data.filter((domain) => domain?.status === 'verified').map((domain) => String(domain?.name ?? '').toLowerCase())
+    : [];
+  assert(verifiedDomains.some((domain) => fromDomain === domain || fromDomain.endsWith(`.${domain}`)), 'EMAIL_FROM domain is not verified in Resend');
 
   console.log(JSON.stringify({
     authAdminCreate: 'PASS',
@@ -140,31 +147,34 @@ try {
     resendApiBinding: 'PASS',
   }));
 } finally {
+  const cleanupFailures = [];
+  async function cleanup(label, path, init) {
+    try {
+      const response = await request(path, init);
+      if (!response.ok) cleanupFailures.push(`${label}:${response.status}`);
+      await response.body?.cancel().catch(() => undefined);
+    } catch (error) {
+      cleanupFailures.push(`${label}:${error instanceof Error ? error.message : 'request_failed'}`);
+    }
+  }
+
   if (emailLogId) {
-    await request(`/rest/v1/email_delivery_logs?id=eq.${encodeURIComponent(emailLogId)}`, {
+    await cleanup('email_log', `/rest/v1/email_delivery_logs?id=eq.${encodeURIComponent(emailLogId)}`, {
       method: 'DELETE',
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-    }).catch(() => undefined);
+      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+    });
   }
   if (storagePath) {
-    await request(`/storage/v1/object/controlled-documents/${storagePath}`, {
+    await cleanup('storage_object', `/storage/v1/object/controlled-documents/${storagePath}`, {
       method: 'DELETE',
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-    }).catch(() => undefined);
+      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+    });
   }
   if (userId) {
-    await request(`/auth/v1/admin/users/${userId}`, {
+    await cleanup('auth_user', `/auth/v1/admin/users/${userId}`, {
       method: 'DELETE',
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-    }).catch(() => undefined);
+      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+    });
   }
+  if (cleanupFailures.length > 0) throw new Error(`Production canary cleanup failed: ${cleanupFailures.join(', ')}`);
 }
