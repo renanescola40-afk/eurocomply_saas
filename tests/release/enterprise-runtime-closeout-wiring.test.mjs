@@ -116,9 +116,9 @@ test('runtime closeout supplies only the canonical self-serve Stripe prices requ
 
 test('protected secret mappings are injected only into their consuming steps', () => {
   const secretMappings = [
-    ['HEALTHCHECK_TOKEN', 'READINESS_TOKEN'],
-    ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'],
-    ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY'],
+    ['HEALTHCHECK_TOKEN', 'HEALTHCHECK_TOKEN || secrets.READINESS_TOKEN'],
+    ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL'],
+    ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY'],
     ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
     ['TEST_USER_A_EMAIL', 'TEST_USER_A_EMAIL'],
     ['TEST_USER_A_PASSWORD', 'TEST_USER_A_PASSWORD'],
@@ -131,17 +131,24 @@ test('protected secret mappings are injected only into their consuming steps', (
     ['SENTRY_AUTH_TOKEN', 'SENTRY_AUTH_TOKEN'],
   ];
 
-  for (const [envName, secretName] of secretMappings) {
+  for (const [envName, secretExpr] of secretMappings) {
+    const escaped = secretExpr.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\  for (const [envName, secretName] of secretMappings) {
     assert.match(
       workflow,
       new RegExp(`^\\s{10}${envName}: \\$\\{\\{ secrets\\.${secretName} \\}\\}`, 'm'),
+      `${envName} must remain a step-local GitHub secret mapping`,
+    );
+  }');
+    assert.match(
+      workflow,
+      new RegExp(`^\\s{10}${envName}: \\$\\{\\{ secrets\\.${escaped} \\}\\}`, 'm'),
       `${envName} must remain a step-local GitHub secret mapping`,
     );
   }
 
   assert.match(
     workflow,
-    /^\s{10}SENTRY_DSN: \$\{\{ secrets\.SENTRY_DSN \}\}/m,
+    /^\s{10}SENTRY_DSN: \$\{\{ secrets\.SENTRY_DSN \|\| secrets\.NEXT_PUBLIC_SENTRY_DSN \}\}/m,
   );
   assert.match(
     workflow,
@@ -160,9 +167,9 @@ test('post-approval exact-main revalidation happens before the first secret refe
 });
 
 test('runtime closeout maps protected aliases into canonical release inputs', () => {
-  assert.match(workflow, /^\s{10}HEALTHCHECK_TOKEN: \$\{\{ secrets\.READINESS_TOKEN \}\}/m);
-  assert.match(workflow, /^\s{10}NEXT_PUBLIC_SUPABASE_URL: \$\{\{ secrets\.SUPABASE_URL \}\}/m);
-  assert.match(workflow, /^\s{10}NEXT_PUBLIC_SUPABASE_ANON_KEY: \$\{\{ secrets\.SUPABASE_ANON_KEY \}\}/m);
+  assert.match(workflow, /^\s{10}HEALTHCHECK_TOKEN: \$\{\{ secrets\.HEALTHCHECK_TOKEN \|\| secrets\.READINESS_TOKEN \}\}/m);
+  assert.match(workflow, /^\s{10}NEXT_PUBLIC_SUPABASE_URL: \$\{\{ secrets\.NEXT_PUBLIC_SUPABASE_URL \|\| secrets\.SUPABASE_URL \}\}/m);
+  assert.match(workflow, /^\s{10}NEXT_PUBLIC_SUPABASE_ANON_KEY: \$\{\{ secrets\.NEXT_PUBLIC_SUPABASE_ANON_KEY \|\| secrets\.SUPABASE_ANON_KEY \}\}/m);
   assert.match(workflow, /^\s{6}RELEASE_PRODUCTION_URL: \$\{\{ vars\.PRODUCTION_URL \|\| 'https:\/\/www\.risckcomply\.com' \}\}/m);
   assert.match(workflow, /^\s{6}RELEASE_RUN_OBSERVABILITY_SMOKE: 'true'/m);
 });
@@ -214,4 +221,16 @@ test('authenticated production evidence contract is fail-closed, form-scoped and
   assert.match(authenticated, /cookiesStored: false/);
   assert.match(authenticated, /accessTokensStored: false/);
   assert.match(authenticated, /screenshotsStored: false/);
+});
+
+
+test('runtime closeout supports the same protected Vercel rollback auth boundary as the production gate', () => {
+  assert.match(
+    workflow,
+    /^\s{10}VERCEL_AUTOMATION_BYPASS_SECRET: \$\{\{ secrets\.VERCEL_AUTOMATION_BYPASS_SECRET \}\}/m,
+  );
+  assert.match(
+    workflow,
+    /^\s{10}VERCEL_TRUSTED_OIDC_TOKEN: \$\{\{ secrets\.VERCEL_TRUSTED_OIDC_TOKEN \}\}/m,
+  );
 });
