@@ -5,7 +5,7 @@ const workflow = readFileSync('.github/workflows/saml-sso-runtime-proof.yml', 'u
 const runtime = readFileSync('scripts/identity/run-saml-sso-runtime-proof.mjs', 'utf8');
 const validator = readFileSync('scripts/identity/check-saml-sso-runtime-evidence.mjs', 'utf8');
 const laneContracts = readFileSync('scripts/enterprise/runtime-lane-contracts.mjs', 'utf8');
-const manifest = readFileSync('docs/security/evidence/enterprise-runtime-campaign-manifest.json', 'utf8');
+const manifest = JSON.parse(readFileSync('docs/security/evidence/enterprise-runtime-campaign-manifest.json', 'utf8')) as { workflows: Array<{ id: string; workflow: string; required: boolean; classification?: string }> };
 
 describe('SAML SSO runtime proof megapack', () => {
   it('uses protected exact-main execution and immutable redacted evidence', () => {
@@ -95,12 +95,17 @@ describe('SAML SSO runtime proof megapack', () => {
     }
   });
 
-  it('adds SAML SSO as a mandatory exact-SHA runtime campaign lane', () => {
+  it('registers SAML SSO as a conditional exact-SHA runtime campaign lane', () => {
     expect(laneContracts).toContain("'IAM-SAML'");
     expect(laneContracts).toContain("workflow: 'saml-sso-runtime-proof.yml'");
     expect(laneContracts).toContain("artifactPrefix: 'saml-sso-runtime-proof-'");
     expect(laneContracts).toContain("requiredEvidenceFiles: Object.freeze(['saml-sso-runtime-validation.json'])");
-    expect(manifest).toContain('"id":"IAM-SAML"');
-    expect(manifest).toContain('"workflow":"saml-sso-runtime-proof.yml"');
+    const lane = manifest.workflows.find((item) => item.id === 'IAM-SAML');
+    expect(lane).toMatchObject({
+      id: 'IAM-SAML',
+      workflow: 'saml-sso-runtime-proof.yml',
+      required: false,
+      classification: 'conditional_when_configured',
+    });
   });
 });
