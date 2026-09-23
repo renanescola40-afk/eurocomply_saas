@@ -4,6 +4,7 @@ import https from 'node:https';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { findExactShaVercelProductionDeployment } from './write-github-vercel-production-deployment-evidence.mjs';
+import { shouldAcceptProtectedRollback } from './rollback-protection-policy.mjs';
 
 const evidencePath = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
 const timeoutMs = Number(process.env.RELEASE_SMOKE_TIMEOUT_MS || 10000);
@@ -160,10 +161,12 @@ async function rollbackCheck(data) {
     providerBoundExactSha = Boolean(deployment?.publicUrl && sameHost(deployment.publicUrl, url));
   }
   const authBoundaryObserved = isVercelAuthenticationBoundary(res);
-  const protectedValidatedFallback = !directHealthOk
-    && authBoundaryObserved
-    && providerBoundExactSha
-    && process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
+  const protectedValidatedFallback = !directHealthOk && shouldAcceptProtectedRollback({
+    directHealthOk,
+    authBoundaryObserved,
+    providerBoundExactSha,
+    targetValidationProof: process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true',
+  });
   return check('rollbackTargetConfigured', directHealthOk || protectedValidatedFallback, {
     source: data.rollback.name,
     networkVerified: true,
