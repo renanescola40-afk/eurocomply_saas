@@ -185,9 +185,6 @@ function readAutomaticRollbackAttestation() {
   }
 }
 
-const automaticAttestation = readAutomaticRollbackAttestation();
-const automaticAttested = automaticResolution && automaticAttestation?.passed === true;
-
 const targetUrlConfig = firstConfigured([
   'RELEASE_ROLLBACK_TARGET_URL',
   'RELEASE_ROLLBACK_TARGET',
@@ -212,6 +209,8 @@ const targetSha = automaticResolution ? '' : (targetShaConfig?.value || '');
 const currentSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.RELEASE_CURRENT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || '';
 const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null;
 const currentShaConfigured = shaPattern.test(currentSha);
+const automaticAttestation = readAutomaticRollbackAttestation();
+const automaticAttested = automaticResolution && automaticAttestation?.passed === true;
 const targetShaConfigured = automaticResolution ? automaticAttested : shaPattern.test(targetSha);
 const targetDiffersFromCurrentRelease = automaticResolution
   ? automaticAttested
