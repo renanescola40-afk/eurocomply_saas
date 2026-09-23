@@ -14,13 +14,15 @@ function assert(condition, message) {
 
 export function validateSupabaseCurrentProductionStateSource(
   evidence,
-  { expectedSha, expectedRunId },
+  { expectedSha, expectedRunId, expectedProjectDigest },
 ) {
   const sha = String(expectedSha ?? '').trim().toLowerCase();
   const runId = String(expectedRunId ?? '').trim();
+  const projectDigest = String(expectedProjectDigest ?? '').trim();
 
   assert(FULL_SHA.test(sha), 'expected SHA is invalid');
   assert(RUN_ID.test(runId), 'expected current-state run ID is invalid');
+  assert(SHA256.test(projectDigest), 'expected Production project digest is invalid');
   assert(evidence?.schema === 'risck-comply.supabase-current-production-state.v1', 'current-state schema is invalid');
   assert(evidence?.evidenceItem === 'supabase-current-production-state-read-only', 'current-state evidenceItem is invalid');
   assert(evidence?.status === 'Complete' && evidence?.outcome === 'passed', 'current-state authority must be Complete/passed');
@@ -30,6 +32,7 @@ export function validateSupabaseCurrentProductionStateSource(
   assert(evidence?.githubActions?.commitSha === sha, 'current-state GitHub commit SHA mismatch');
   assert(evidence?.githubActions?.branch === 'main', 'current-state GitHub branch must be main');
   assert(SHA256.test(String(evidence?.productionProjectDigest ?? '')), 'current-state Production project digest is invalid');
+  assert(evidence.productionProjectDigest === projectDigest, 'current-state Production project digest mismatch');
 
   const ledger = evidence?.migrationLedger;
   assert(Number.isInteger(ledger?.count) && ledger.count > 0, 'current-state migration ledger count is invalid');
@@ -86,10 +89,10 @@ export function validateSupabaseCurrentProductionStateSource(
 }
 
 async function main(argv) {
-  const [evidencePath, expectedSha, expectedRunId] = argv;
-  assert(evidencePath && expectedSha && expectedRunId, 'usage: validate-supabase-current-state-source.mjs <evidence.json> <expected-sha> <run-id>');
+  const [evidencePath, expectedSha, expectedRunId, expectedProjectDigest] = argv;
+  assert(evidencePath && expectedSha && expectedRunId && expectedProjectDigest, 'usage: validate-supabase-current-state-source.mjs <evidence.json> <expected-sha> <run-id> <expected-project-digest>');
   const evidence = JSON.parse(await readFile(evidencePath, 'utf8'));
-  process.stdout.write(`${JSON.stringify(validateSupabaseCurrentProductionStateSource(evidence, { expectedSha, expectedRunId }))}\n`);
+  process.stdout.write(`${JSON.stringify(validateSupabaseCurrentProductionStateSource(evidence, { expectedSha, expectedRunId, expectedProjectDigest }))}\n`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
