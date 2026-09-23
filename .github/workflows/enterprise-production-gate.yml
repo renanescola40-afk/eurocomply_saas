@@ -228,6 +228,8 @@ jobs:
       MALWARE_SCANNER_CLAMAV_PORT: ${{ vars.MALWARE_SCANNER_CLAMAV_PORT || secrets.MALWARE_SCANNER_CLAMAV_PORT }}
       MALWARE_SCANNER_TIMEOUT_MS: ${{ vars.MALWARE_SCANNER_TIMEOUT_MS || secrets.MALWARE_SCANNER_TIMEOUT_MS }}
       GITHUB_TOKEN: ${{ github.token }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      VERCEL_TRUSTED_OIDC_TOKEN: ${{ secrets.VERCEL_TRUSTED_OIDC_TOKEN }}
       RETAINED_PROOF_SOURCE_WORKFLOW: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name || '' }}
       RETAINED_PROOF_SOURCE_WORKFLOW_PATH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.path || '' }}
       RETAINED_PROOF_SOURCE_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || '' }}
