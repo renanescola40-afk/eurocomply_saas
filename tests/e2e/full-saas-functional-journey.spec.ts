@@ -100,7 +100,7 @@ test.describe('full SaaS functional E2E closure', () => {
 
       await page.goto('/en/ai-systems', { waitUntil: 'domcontentloaded' });
       await expectHealthyPage(page, 'AI inventory write');
-      await page.getByRole('textbox', { name: 'System name', exact: true }).fill(uniqueName);
+      await page.getByPlaceholder(/system name/i).fill(uniqueName);
       await page.getByPlaceholder(/example: summarises/i).fill('Synthetic disposable QA assistant used to validate persisted inventory classification and reassessment.');
       await page.getByRole('button', { name: /classify and save/i }).click();
       await expect(page.getByText(uniqueName, { exact: true })).toBeVisible({ timeout: 20_000 });
