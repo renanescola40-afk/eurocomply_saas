@@ -129,15 +129,21 @@ test.describe('full SaaS functional E2E closure', () => {
       await expectHealthyPage(page, 'AI inventory write');
       await page.getByPlaceholder(/system name/i).fill(uniqueName);
       await page.getByPlaceholder(/example: summarises/i).fill('Synthetic disposable QA assistant used to validate persisted inventory classification and reassessment.');
+      const createResponsePromise = page.waitForResponse((response) =>
+        response.request().method() === 'POST'
+        && new URL(response.url()).pathname === '/api/ai-systems'
+      );
       await page.getByRole('button', { name: /classify and save/i }).click();
-      const createdCard = page.locator('article').filter({ hasText: uniqueName }).first();
-      await expect(createdCard).toBeVisible({ timeout: 20_000 });
+      const createResponse = await createResponsePromise;
+      expect(createResponse.ok(), 'inventory POST should succeed before persistence is checked').toBe(true);
+      const createdPayload = await createResponse.json();
+      expect(createdPayload?.system?.name).toBe(uniqueName);
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      const persistedCard = page.locator('article').filter({ hasText: uniqueName }).first();
-      await expect(persistedCard).toBeVisible();
+      const persistedRow = page.locator('tbody tr').filter({ hasText: uniqueName }).first();
+      await expect(persistedRow).toBeVisible({ timeout: 20_000 });
 
-      await persistedCard.getByRole('link', { name: /review|detail/i }).click();
+      await persistedRow.getByRole('link', { name: /open detail/i }).click();
       await expectHealthyPage(page, 'AI assessment detail');
       await page.getByLabel(/system name/i).fill(updatedName);
       await page.getByLabel(/lifecycle status/i).selectOption('retired');
@@ -148,6 +154,9 @@ test.describe('full SaaS functional E2E closure', () => {
       await page.getByRole('button', { name: /save reassessment/i }).click();
       const response = await reassessmentResponse;
       expect(response.ok(), 'reassessment PATCH should succeed before persistence is checked').toBe(true);
+      const reassessmentPayload = await response.json();
+      expect(reassessmentPayload?.system?.name).toBe(updatedName);
+      expect(reassessmentPayload?.system?.lifecycle_status).toBe('retired');
       await expect(page.getByRole('status')).toContainText(/reassessed and saved/i);
 
       await page.reload({ waitUntil: 'domcontentloaded' });
