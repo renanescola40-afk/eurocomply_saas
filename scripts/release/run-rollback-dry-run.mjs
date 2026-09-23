@@ -133,15 +133,38 @@ const automaticEvidencePath = String(
   process.env.RELEASE_ROLLBACK_AUTOMATIC_EVIDENCE_PATH
     || 'artifacts/release/public-ga-rollback-resolution.json',
 ).trim();
+const expectedRepository = String(process.env.GITHUB_REPOSITORY || '').trim();
+const expectedRunId = String(process.env.GITHUB_RUN_ID || '').trim();
+const expectedRunAttempt = String(process.env.GITHUB_RUN_ATTEMPT || '').trim();
+const expectedWorkflow = String(process.env.GITHUB_WORKFLOW || '').trim();
+const expectedProjectDigest = String(process.env.RELEASE_ROLLBACK_EXPECTED_PROJECT_DIGEST || '').trim();
+const expectedCurrentDeploymentDigest = String(process.env.RELEASE_ROLLBACK_EXPECTED_CURRENT_DEPLOYMENT_DIGEST || '').trim();
+const digestPattern = /^sha256:[a-f0-9]{64}$/;
 
 function readAutomaticRollbackAttestation() {
   if (!automaticResolution) return null;
   try {
     const evidence = JSON.parse(readFileSync(automaticEvidencePath, 'utf8'));
+    const provenance = evidence?.provenance;
+    const provenanceMatches = currentShaConfigured
+      && Boolean(expectedRepository)
+      && Boolean(expectedRunId)
+      && Boolean(expectedWorkflow)
+      && digestPattern.test(expectedProjectDigest)
+      && digestPattern.test(expectedCurrentDeploymentDigest)
+      && provenance?.releaseSha === currentSha.toLowerCase()
+      && provenance?.repository === expectedRepository
+      && provenance?.githubRunId === expectedRunId
+      && provenance?.githubRunAttempt === (expectedRunAttempt || null)
+      && provenance?.githubWorkflow === expectedWorkflow
+      && provenance?.projectDigest === expectedProjectDigest
+      && provenance?.currentDeploymentDigest === expectedCurrentDeploymentDigest;
+
     const passed = evidence?.schema === 'risck-comply.public-ga-rollback-resolution.v3'
       && evidence?.status === 'Complete'
       && evidence?.outcome === 'passed'
       && evidence?.resolutionMode === 'automatic'
+      && provenanceMatches
       && evidence?.policy?.exactProjectRequired === true
       && evidence?.policy?.exactCurrentReleaseExcluded === true
       && evidence?.policy?.previousDeploymentRequired === true
@@ -154,10 +177,11 @@ function readAutomaticRollbackAttestation() {
       && evidence?.evidenceIntegrity?.containsSensitiveValues === false
       && evidence?.evidenceIntegrity?.selectedRollbackIdentifiersStored === false
       && evidence?.evidenceIntegrity?.rawDeploymentUrlStored === false
-      && evidence?.evidenceIntegrity?.tokenStored === false;
-    return { passed, path: automaticEvidencePath };
+      && evidence?.evidenceIntegrity?.tokenStored === false
+      && evidence?.evidenceIntegrity?.provenanceContainsRawProviderIdentifiers === false;
+    return { passed, path: automaticEvidencePath, provenanceMatches };
   } catch {
-    return { passed: false, path: automaticEvidencePath };
+    return { passed: false, path: automaticEvidencePath, provenanceMatches: false };
   }
 }
 
@@ -213,6 +237,7 @@ const checks = [
   createCheck('rollbackTargetUrlConfigured', automaticResolution ? automaticAttested : Boolean(targetUrlConfig?.value), {
     source: automaticResolution ? 'automatic-provider-attestation' : targetUrlConfig?.name ?? null,
     resolutionMode,
+    provenanceMatches: automaticResolution ? automaticAttestation?.provenanceMatches === true : null,
   }),
   createCheck('rollbackTargetUrlValid', automaticResolution ? automaticAttested : Boolean(targetUrl), {
     source: automaticResolution ? 'automatic-provider-attestation' : targetUrlConfig?.name ?? null,
