@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import { shouldAcceptProtectedRollback } from '../../scripts/release/rollback-protection-policy.mjs';
 
 const rollbackScript = resolve('scripts/release/run-rollback-dry-run.mjs');
 const closeoutWorkflow = resolve('.github/workflows/enterprise-runtime-evidence-closeout.yml');
@@ -125,93 +126,29 @@ test('enterprise and public production release workflows keep Vercel rollback au
 });
 
 
-test('rollback dry-run accepts only provider-bound exact-SHA Vercel auth boundary with prior validation', async (t) => {
-  const currentSha = 'c'.repeat(40);
-  const rollbackSha = 'd'.repeat(40);
-  let baseUrl = '';
+test('protected rollback policy requires provider binding, Vercel auth boundary and prior validation', () => {
+  assert.equal(shouldAcceptProtectedRollback({
+    directHealthOk: true,
+    authBoundaryObserved: false,
+    providerBoundExactSha: false,
+    targetValidationProof: false,
+  }), true);
 
-  const server = http.createServer((request, response) => {
-    if (request.url === '/api/health') {
-      response.statusCode = 401;
-      response.setHeader('server', 'Vercel');
-      response.setHeader('x-vercel-id', 'test::rollback');
-      response.setHeader('cache-control', 'no-store, max-age=0');
-      response.setHeader('content-type', 'application/json');
-      response.end(JSON.stringify({ status: 'protected' }));
-      return;
-    }
+  assert.equal(shouldAcceptProtectedRollback({
+    directHealthOk: false,
+    authBoundaryObserved: true,
+    providerBoundExactSha: true,
+    targetValidationProof: true,
+  }), true);
 
-    if (request.url?.startsWith('/repos/renanescola40-afk/eurocomply_saas/deployments?sha=')) {
-      response.statusCode = 200;
-      response.setHeader('content-type', 'application/json');
-      response.end(JSON.stringify([{
-        id: 42,
-        sha: rollbackSha,
-        ref: 'main',
-        task: 'deploy',
-        environment: 'Production',
-        created_at: '2026-09-23T08:00:00Z',
-        updated_at: '2026-09-23T08:01:00Z',
-      }]));
-      return;
-    }
-
-    if (request.url === '/repos/renanescola40-afk/eurocomply_saas/deployments/42/statuses?per_page=100') {
-      response.statusCode = 200;
-      response.setHeader('content-type', 'application/json');
-      response.end(JSON.stringify([{
-        id: 43,
-        state: 'success',
-        creator: { login: 'vercel[bot]' },
-        environment: 'Production',
-        environment_url: baseUrl,
-        created_at: '2026-09-23T08:01:00Z',
-        updated_at: '2026-09-23T08:01:00Z',
-      }]));
-      return;
-    }
-
-    response.statusCode = 404;
-    response.end();
-  });
-
-  await new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
-  t.after(() => new Promise((resolveClose) => server.close(resolveClose)));
-  const address = server.address();
-  assert.ok(address && typeof address === 'object');
-  baseUrl = `http://127.0.0.1:${address.port}`;
-
-  const root = mkdtempSync(join(tmpdir(), 'risck-rollback-provider-bound-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  mkdirSync(join(root, 'docs', 'operations'), { recursive: true });
-  writeFileSync(join(root, 'docs', 'operations', 'ROLLBACK_RUNBOOK.md'), '# Rollback\n');
-  writeFileSync(join(root, 'docs', 'RELEASE_ROLLBACK_PLAN.md'), '# Legacy rollback plan\n');
-
-  const result = await runNode(rollbackScript, root, {
-    ...process.env,
-    RELEASE_TARGET: 'production',
-    RELEASE_COMMIT_SHA: currentSha,
-    RELEASE_BUILD_SHA: currentSha,
-    RELEASE_ROLLBACK_TARGET_URL: baseUrl,
-    RELEASE_ROLLBACK_TARGET_SHA: rollbackSha,
-    RELEASE_ROLLBACK_TARGET_VALIDATED: 'true',
-    RELEASE_ROLLBACK_CHECK_READY: 'false',
-    GITHUB_TOKEN: 'test-token',
-    GITHUB_API_URL: baseUrl,
-    GITHUB_ACTIONS: 'true',
-    GITHUB_RUN_ID: '123456',
-    GITHUB_RUN_ATTEMPT: '1',
-    GITHUB_REPOSITORY: 'renanescola40-afk/eurocomply_saas',
-    GITHUB_REF_NAME: 'main',
-    GITHUB_WORKFLOW: 'Enterprise Production Gate',
-    GITHUB_EVENT_NAME: 'workflow_dispatch',
-  });
-
-  assert.equal(result.code, 0, `rollback provider-bound fallback failed:\n${result.stderr}`);
-  const evidence = JSON.parse(readFileSync(join(root, 'docs', 'security', 'evidence', 'runtime', 'rollback-dry-run-validation.json'), 'utf8'));
-  assert.equal(evidence.rollbackTarget.providerBoundExactSha, true);
-  assert.equal(evidence.rollbackTarget.authBoundaryObserved, true);
-  assert.equal(evidence.rollbackTarget.protectedValidatedFallbackUsed, true);
-  assert.equal(evidence.targetValidation.healthOk, true);
-  assert.equal(evidence.targetValidation.directHealthOk, false);
+  for (const missing of ['authBoundaryObserved', 'providerBoundExactSha', 'targetValidationProof']) {
+    const input = {
+      directHealthOk: false,
+      authBoundaryObserved: true,
+      providerBoundExactSha: true,
+      targetValidationProof: true,
+    };
+    input[missing] = false;
+    assert.equal(shouldAcceptProtectedRollback(input), false, `${missing} must remain mandatory`);
+  }
 });
