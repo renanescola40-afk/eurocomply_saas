@@ -28,7 +28,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithEmail: (email: string, password: string, metadata?: SignupMetadata) => Promise<{ error: Error | null }>;
+  signUpWithEmail: (email: string, password: string, metadata?: SignupMetadata) => Promise<{ error: Error | null; session: Session | null }>;
   signInWithGoogle: (options?: OAuthOptions) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUpWithEmail = useCallback(async (email: string, password: string, metadata?: SignupMetadata) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     });
-    return { error: error ? toError(error) : null };
+    return { error: error ? toError(error) : null, session: data.session ?? null };
   }, []);
 
   const signInWithGoogle = useCallback(async (options?: OAuthOptions) => {
