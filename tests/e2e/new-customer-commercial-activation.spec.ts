@@ -1,13 +1,27 @@
 import { expect, test } from '@playwright/test';
 
 const storageState = process.env.E2E_NEW_CUSTOMER_STORAGE_STATE;
+const newCustomerEmail = process.env.E2E_NEW_CUSTOMER_EMAIL;
+const newCustomerPassword = process.env.E2E_NEW_CUSTOMER_PASSWORD;
 const allowSyntheticWrites = process.env.E2E_ALLOW_SYNTHETIC_APP_WRITES === 'true';
+const customerSessionConfigured = Boolean(storageState || (newCustomerEmail && newCustomerPassword));
 
 test.describe('new customer commercial activation', () => {
-  test.skip(!storageState || !allowSyntheticWrites, 'Requires E2E_NEW_CUSTOMER_STORAGE_STATE and E2E_ALLOW_SYNTHETIC_APP_WRITES=true on disposable QA.');
+  test.skip(!customerSessionConfigured || !allowSyntheticWrites, 'Requires a disposable pre-onboarding customer and E2E_ALLOW_SYNTHETIC_APP_WRITES=true.');
   if (storageState) test.use({ storageState });
 
   test('checkout selection → onboarding write → payment gate preserves the selected plan', async ({ page }) => {
+    if (!storageState) {
+      await page.goto('/en/login?next=%2Fen%2Fcheckout%3Fplan%3Dprofessional', { waitUntil: 'domcontentloaded' });
+      const emailInput = page.getByRole('textbox', { name: 'Work email', exact: true });
+      const form = page.locator('form').filter({ has: emailInput });
+      await emailInput.fill(newCustomerEmail!);
+      await form.getByLabel('Password', { exact: true }).fill(newCustomerPassword!);
+      await Promise.all([
+        page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000, waitUntil: 'domcontentloaded' }),
+        form.locator('button[type="submit"]').click(),
+      ]);
+    }
     const organizationName = `QA Activation ${Date.now()}`;
     const aiSystemName = `QA First AI ${Date.now()}`;
 
