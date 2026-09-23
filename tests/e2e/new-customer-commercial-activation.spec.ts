@@ -43,11 +43,11 @@ test.describe('new customer commercial activation', () => {
     await page.getByLabel('AI system name').fill(aiSystemName);
     await page.getByLabel('Owner team').fill('QA Governance');
     await page.getByLabel('Use case').fill('Synthetic QA assistant used only to validate the controlled onboarding activation workflow.');
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
 
     // risk → readiness → documents → tasks → team → plan
     for (let index = 0; index < 5; index += 1) {
-      await page.getByRole('button', { name: 'Continue' }).click();
+      await page.getByRole('button', { name: 'Continue', exact: true }).click();
     }
 
     await page.getByRole('button', { name: 'Generate readiness score' }).click();
