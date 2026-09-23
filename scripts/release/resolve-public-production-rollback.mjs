@@ -52,6 +52,10 @@ function deploymentIdOf(item) {
   return String(item?.uid || item?.id || '').trim();
 }
 
+function hasNoStore(headers) {
+  return /\bno-store\b/i.test(String(headers?.get?.('cache-control') || ''));
+}
+
 function shaOf(item) {
   return String(item?.meta?.githubCommitSha || '').trim().toLowerCase();
 }
@@ -197,7 +201,7 @@ export async function protectedHealthProbe(baseUrl, oidcToken, timeoutMs) {
     }
 
     return {
-      passed: body?.status === 'ok',
+      passed: body?.status === 'ok' && hasNoStore(response.headers),
     };
   } catch {
     return {
@@ -266,7 +270,7 @@ async function directHealthProbe(baseUrl, timeoutMs) {
     }
 
     return {
-      passed: response.status === 200 && body?.status === 'ok',
+      passed: response.status === 200 && body?.status === 'ok' && hasNoStore(response.headers),
       status: response.status,
       protectionBlocked: [302, 401, 403].includes(response.status),
     };
@@ -380,6 +384,7 @@ function writeSuccessEvidence() {
       rollbackCandidateValidated: true,
       providerIdentityValidated: true,
       healthEndpointValidated: true,
+      healthNoStoreValidated: true,
     },
     failure: null,
     evidenceIntegrity: {
@@ -420,6 +425,7 @@ function writeFailureEvidence() {
       rollbackCandidateValidated: false,
       providerIdentityValidated: false,
       healthEndpointValidated: false,
+      healthNoStoreValidated: false,
     },
     failure: 'rollback_validation_failed',
     evidenceIntegrity: {
