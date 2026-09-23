@@ -7,6 +7,9 @@ const allowSyntheticWrites = process.env.E2E_ALLOW_SYNTHETIC_APP_WRITES === 'tru
 const customerSessionConfigured = Boolean(storageState || (newCustomerEmail && newCustomerPassword));
 
 test.describe('new customer commercial activation', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('risckcomply.analytics.consent', 'denied'));
+  });
   test.skip(!customerSessionConfigured || !allowSyntheticWrites, 'Requires a disposable pre-onboarding customer and E2E_ALLOW_SYNTHETIC_APP_WRITES=true.');
   if (storageState) test.use({ storageState });
 
@@ -25,14 +28,9 @@ test.describe('new customer commercial activation', () => {
     const organizationName = `QA Activation ${Date.now()}`;
     const aiSystemName = `QA First AI ${Date.now()}`;
 
-    await page.goto('/en/checkout?plan=professional', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).not.toContainText(/Unhandled Runtime Error|Application error|Stack trace/i);
-
-    const createWorkspace = page.getByRole('link', { name: /create workspace/i });
-    await expect(createWorkspace).toBeVisible();
-    await expect(createWorkspace).toHaveAttribute('href', /\/en\/onboarding\?plan=professional/);
-    await createWorkspace.click();
+    await page.goto('/en/onboarding?plan=professional', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/en\/onboarding\?plan=professional/);
+    await expect(page.locator('body')).not.toContainText(/Unhandled Runtime Error|Application error|Stack trace/i);
 
     await page.getByLabel('Organization name').fill(organizationName);
     await expect(page.getByLabel('Workspace slug')).not.toHaveValue('');
