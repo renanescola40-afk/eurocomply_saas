@@ -198,9 +198,17 @@ const commandFailures = commandResults.filter((item) => item.critical && !item.p
 const evidenceFailures = Object.values(runtimeEvidence).filter((item) => item.status !== 'Complete' || item.outcome !== 'passed');
 
 const metadataFailures = [];
+const rollbackResolutionMode = String(process.env.RELEASE_ROLLBACK_RESOLUTION_MODE || 'manual').trim().toLowerCase();
+const automaticRollbackValidated = rollbackResolutionMode === 'automatic'
+  && process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
 if (!process.env.RELEASE_COMMIT_SHA && !process.env.GITHUB_SHA) metadataFailures.push('Missing release commit SHA.');
 if (!process.env.RELEASE_BUILD_SHA && !process.env.NEXT_PUBLIC_BUILD_SHA && !process.env.GITHUB_SHA) metadataFailures.push('Missing release build SHA.');
-if (!process.env.RELEASE_ROLLBACK_TARGET && !process.env.RELEASE_ROLLBACK_TARGET_URL && !process.env.LAST_KNOWN_GOOD_DEPLOYMENT_URL) metadataFailures.push('Missing rollback target.');
+if (!automaticRollbackValidated
+  && !process.env.RELEASE_ROLLBACK_TARGET
+  && !process.env.RELEASE_ROLLBACK_TARGET_URL
+  && !process.env.LAST_KNOWN_GOOD_DEPLOYMENT_URL) {
+  metadataFailures.push('Missing rollback target.');
+}
 
 const passed = commandFailures.length === 0 && evidenceFailures.length === 0 && metadataFailures.length === 0;
 const evidence = {

@@ -169,6 +169,38 @@ function removeStaleEvidence(root) {
   rmSync(join(root, SCORECARD_EVIDENCE_PATH), { force: true });
 }
 
+function writeOpenSupabaseRlsPlaceholder(root, targetSha, sourceContract = {}) {
+  const output = join(root, SOURCE_EVIDENCE_PATH);
+  const generatedAt = new Date().toISOString();
+  const sourceGate = typeof sourceContract?.productionGate === 'string'
+    && sourceContract.productionGate.toLowerCase().includes('production')
+    ? sourceContract.productionGate
+    : 'Enterprise production remains blocked until exact-SHA Supabase Live RLS Validation completes successfully.';
+  const evidence = {
+    evidenceItem: 'supabase-live-rls-validation',
+    status: 'Open',
+    outcome: 'no_go',
+    generatedAt,
+    reviewedAt: generatedAt,
+    reviewer: 'RISCK COMPLY release automation',
+    runner: 'exact-sha-evidence-hydrator',
+    targetSha,
+    summary: `No successful exact-SHA Supabase Live RLS Validation exists for ${targetSha}; enterprise production remains blocked.`,
+    productionGate: sourceGate,
+    controlsVerified: [],
+    evidenceIntegrity: {
+      placeholderOnly: true,
+      realRuntimeEvidenceAttached: false,
+      containsSensitiveValues: false,
+      credentialsStored: false,
+      exactShaBound: false,
+      sourceRunBound: false,
+    },
+  };
+  mkdirSync(dirname(output), { recursive: true });
+  writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+}
+
 export async function fetchSupabaseRlsEvidence({
   root,
   repository,
@@ -207,7 +239,8 @@ export async function fetchSupabaseRlsEvidence({
   const run = selectExactShaRun(runs, targetSha, sourceRunId);
   if (!run) {
     if (required) throw new Error('exact_sha_runtime_run_missing');
-    console.log(`Supabase RLS evidence remains open: no successful exact-SHA runtime run for ${targetSha}.`);
+    writeOpenSupabaseRlsPlaceholder(root, targetSha, sourceContract);
+    console.log(`Supabase RLS evidence remains open: no successful exact-SHA runtime run for ${targetSha}; fail-closed placeholder written.`);
     return { found: false, targetSha };
   }
   if (run.path !== WORKFLOW_PATH) throw new Error('runtime_workflow_path_invalid');

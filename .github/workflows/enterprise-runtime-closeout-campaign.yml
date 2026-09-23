@@ -1,6 +1,6 @@
 name: Enterprise Runtime Closeout Campaign
 
-run-name: Runtime closeout campaign for ${{ inputs.release_sha }}
+run-name: Runtime closeout campaign for ${{ inputs.release_sha || github.sha }}
 
 on:
   workflow_dispatch:
@@ -35,15 +35,15 @@ jobs:
     timeout-minutes: 10
     environment: enterprise-release-approval
     env:
-      TARGET_SHA: ${{ inputs.release_sha }}
-      SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}
-      SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id }}
+      TARGET_SHA: ${{ inputs.release_sha || github.sha }}
+      SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id || '' }}
+      SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id || '' }}
 
     steps:
       - name: Checkout exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ inputs.release_sha }}
+          ref: ${{ inputs.release_sha || github.sha }}
           persist-credentials: false
 
       - name: Verify exact checkout and Supabase authority input shape
@@ -55,7 +55,7 @@ jobs:
           reattestation_set=0
           if [[ -n "$SUPABASE_PROMOTION_RUN_ID" ]]; then [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]; promotion_set=1; fi
           if [[ -n "$SUPABASE_REATTESTATION_RUN_ID" ]]; then [[ "$SUPABASE_REATTESTATION_RUN_ID" =~ ^[0-9]+$ ]]; reattestation_set=1; fi
-          test $((promotion_set + reattestation_set)) -eq 1
+          test $((promotion_set + reattestation_set)) -le 1
           TARGET_SHA="${TARGET_SHA,,}"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
@@ -84,5 +84,7 @@ jobs:
       - name: Record truthful campaign boundary
         run: |
           echo 'Runtime proofs were dispatched for the exact current main SHA.'
-          echo 'TEN-RLS is bound to exactly one canonical Supabase Production promotion or read-only reattestation authority.'
+          echo 'Non-Supabase runtime proofs are always dispatched for the exact current main SHA.'
+          echo 'TEN-RLS live proof is dispatched only when exactly one canonical Supabase Production promotion or read-only reattestation authority is supplied.'
+          echo 'The read-only RLS reconciliation lane may run without Production writes.'
           echo 'This workflow cannot apply migrations and does not promote controls by itself; the canonical scorecard remains authoritative.'

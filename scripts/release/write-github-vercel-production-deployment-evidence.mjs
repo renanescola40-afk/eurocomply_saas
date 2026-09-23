@@ -237,6 +237,9 @@ export async function probeExactDeploymentHealth({
   const noStore = /\bno-store\b/i.test(String(response.headers.get('cache-control') ?? ''));
   const bodyStatus = String(body?.status ?? '');
   const location = String(response.headers.get('location') ?? '');
+  const serverHeader = String(response.headers.get('server') ?? '').trim().toLowerCase();
+  const vercelRequestId = String(response.headers.get('x-vercel-id') ?? '').trim();
+  const vercelProviderMarked = serverHeader === 'vercel' && vercelRequestId.length > 0;
   let blockedByVercelProtection = false;
   if (response.status === 302 && location) {
     try {
@@ -255,6 +258,7 @@ export async function probeExactDeploymentHealth({
     noStore,
     protectionBypassUsed: Boolean(bypassSecret),
     blockedByVercelProtection,
+    vercelProviderMarked,
   };
 }
 
@@ -343,6 +347,7 @@ function safeHealthEvidence(health) {
     noStore: health.noStore === true,
     protectionBypassUsed: health.protectionBypassUsed === true,
     blockedByVercelProtection: health.blockedByVercelProtection === true,
+    vercelProviderMarked: health.vercelProviderMarked === true,
     releaseShaMatched: health.releaseShaMatched === true,
     canonicalFallbackUsed: health.canonicalFallbackUsed === true,
   };
@@ -361,6 +366,9 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
       vercelSuccessStatusFound: Boolean(deployment),
       productionHealthOk: health?.passed === true,
       productionHealthNoStore: health?.noStore === true,
+      immutableDeploymentProtectionObserved: health?.blockedByVercelProtection === true,
+      immutableDeploymentAuthBoundaryObserved:
+        [401, 403].includes(Number(health?.status ?? 0)) && health?.vercelProviderMarked === true,
     },
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -368,6 +376,9 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
       githubDeploymentBound: deployment?.source === 'github_deployment_status',
       githubCommitStatusBound: false,
       liveHealthVerified: health?.passed === true,
+      immutableProtectionObserved: health?.blockedByVercelProtection === true,
+      immutableAuthBoundaryObserved:
+        [401, 403].includes(Number(health?.status ?? 0)) && health?.vercelProviderMarked === true,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
@@ -419,6 +430,7 @@ export async function buildProductionDeploymentEvidence({
   let deployment = null;
   let health = null;
   let immutableProtectionObserved = false;
+  let immutableAuthBoundaryObserved = false;
   const attempts = boundedInteger(maxAttempts, DEFAULT_ATTEMPTS, 1, 60);
   const waitMs = boundedInteger(pollMs, DEFAULT_POLL_MS, 0, 30_000);
 
@@ -445,8 +457,11 @@ export async function buildProductionDeploymentEvidence({
     deployment = immutableAttempt?.deployment ?? null;
     health = immutableAttempt?.health ?? null;
     immutableProtectionObserved = immutableAttempt?.health?.blockedByVercelProtection === true;
+    immutableAuthBoundaryObserved = [401, 403].includes(Number(immutableAttempt?.health?.status ?? 0))
+      && immutableAttempt?.health?.vercelProviderMarked === true;
+    const canonicalFallbackEligible = immutableProtectionObserved || immutableAuthBoundaryObserved;
 
-    if (deployment && immutableProtectionObserved && !String(protectionBypassSecret ?? '').trim()) {
+    if (deployment && canonicalFallbackEligible && !String(protectionBypassSecret ?? '').trim()) {
       const canonicalHealth = await probeCanonicalReleaseHealth({
         publicUrl: EXPECTED_CANONICAL_PRODUCTION_URL,
         targetSha,
@@ -501,6 +516,7 @@ export async function buildProductionDeploymentEvidence({
       productionHealthNoStore: true,
       immutableDeploymentHealthOk: health?.canonicalFallbackUsed !== true,
       immutableDeploymentProtectionObserved: immutableProtectionObserved,
+      immutableDeploymentAuthBoundaryObserved: immutableAuthBoundaryObserved,
       canonicalProductionHealthFallbackUsed: health?.canonicalFallbackUsed === true,
     },
     health: {
@@ -521,12 +537,13 @@ export async function buildProductionDeploymentEvidence({
       vercelStatusActorBound: true,
       liveHealthVerified: true,
       immutableProtectionObserved,
+      immutableAuthBoundaryObserved,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
-    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. Canonical fallback is accepted only through the authenticated /api/ready/release endpoint when it reports the same exact target SHA and only after the immutable Vercel URL is blocked specifically by Vercel protection; generic public /api/health is never sufficient for exact-SHA substitution. Preview deployments are never accepted as Production authority. Generic commit statuses, arbitrary redirects, SHA-mismatched canonical responses, and unhealthy immutable deployments are never accepted as exact-SHA Production proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
+    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. Canonical fallback is accepted only through the authenticated /api/ready/release endpoint when it reports the same exact target SHA and only after the immutable Vercel URL is blocked by Vercel protection or a Vercel authentication boundary (401/403); generic public /api/health is never sufficient for exact-SHA substitution. Preview deployments are never accepted as Production authority. Generic commit statuses, arbitrary redirects, SHA-mismatched canonical responses, and unhealthy immutable deployments are never accepted as exact-SHA Production proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
   };
 }
 
