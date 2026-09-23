@@ -188,7 +188,7 @@ jobs:
               },
               truthBoundary:"Complete proves the current exact-SHA Production Supabase project was observed read-only, the live migration ledger was captured read-only, canonical schema/security postconditions passed and existing-actor tenant isolation passed without a Production mutation. It does not prove historical migration promotion lineage, human-reviewed migration bytes, remote-before/after transition or backup/restore."
             }' > "$EVIDENCE_DIR/current-production-state.json"
-          node scripts/security/validate-supabase-current-state-source.mjs             "$EVIDENCE_DIR/current-production-state.json" "$TARGET_SHA" "${GITHUB_RUN_ID}"
+          node scripts/security/validate-supabase-current-state-source.mjs             "$EVIDENCE_DIR/current-production-state.json" "$TARGET_SHA" "${GITHUB_RUN_ID}" "$PRODUCTION_PROJECT_DIGEST"
       - name: Reject retained sensitive evidence
         shell: bash
         run: |
