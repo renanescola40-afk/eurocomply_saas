@@ -122,23 +122,23 @@ test.describe('full SaaS functional E2E closure', () => {
       await expect(page.getByLabel(/lifecycle status/i)).toHaveValue('retired');
     });
 
-    test('document upload exposes a real signed download action and cleans up', async ({ page }) => {
+    test('generated document persists, exposes a real signed download action and cleans up', async ({ page }) => {
       test.skip(!allowSyntheticWrites, 'Synthetic writes require E2E_ALLOW_SYNTHETIC_APP_WRITES=true on disposable QA.');
       test.setTimeout(90_000);
       if (!ownerStorageState) await loginWithCredentials(page, ownerEmail!, ownerPassword!);
 
       const documentName = `QA Full Journey evidence ${Date.now()}`;
-      await page.goto('/en/dashboard/organizations/documents', { waitUntil: 'domcontentloaded' });
-      await expectHealthyPage(page, 'document register');
+      await page.goto('/en/dashboard/organizations/templates', { waitUntil: 'domcontentloaded' });
+      await expectHealthyPage(page, 'document template library');
 
-      await page.getByLabel('Name').fill(documentName);
-      await page.getByLabel('Category').fill('E2E evidence');
-      await page.getByLabel('File').setInputFiles({
-        name: 'full-journey-evidence.pdf',
-        mimeType: 'application/pdf',
-        buffer: Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<<>>\n%%EOF\n'),
-      });
-      await page.getByRole('button', { name: 'Upload document' }).click();
+      const templateCard = page.locator('article').filter({ hasText: /Task \+ document/i }).first();
+      await expect(templateCard).toBeVisible();
+      await templateCard.getByText('Generate evidence document', { exact: true }).click();
+      await templateCard.getByLabel('Document title').fill(documentName);
+      await Promise.all([
+        page.waitForURL(/\/en\/dashboard\/organizations\/documents(?:\?|$)/, { timeout: 30_000, waitUntil: 'domcontentloaded' }),
+        templateCard.getByRole('button', { name: 'Generate evidence document' }).click(),
+      ]);
       await expect(page.getByText(documentName, { exact: true })).toBeVisible({ timeout: 20_000 });
 
       await page.reload({ waitUntil: 'domcontentloaded' });
