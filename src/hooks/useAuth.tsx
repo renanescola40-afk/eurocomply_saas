@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     });
-    return { error: error ? toError(error) : null, session: data.session ?? null };
+    return { error: error ? toError(error) : null, session: data?.session ?? null };
   }, []);
 
   const signInWithGoogle = useCallback(async (options?: OAuthOptions) => {
