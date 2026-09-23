@@ -301,7 +301,7 @@ jobs:
               --dir source-current-state
             current_state="$(find source-current-state -type f -name 'current-production-state.json' -print -quit)"
             test -n "$current_state"
-            node scripts/security/validate-supabase-current-state-source.mjs "$current_state" "$TARGET_SHA" "$AUTHORITY_RUN_ID"
+            node scripts/security/validate-supabase-current-state-source.mjs "$current_state" "$TARGET_SHA" "$AUTHORITY_RUN_ID" "$EXPECTED_SUPABASE_PROJECT_DIGEST"
           else
             exit 1
           fi
