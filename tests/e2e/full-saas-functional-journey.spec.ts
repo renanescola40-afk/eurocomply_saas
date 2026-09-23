@@ -59,7 +59,7 @@ test.describe('full SaaS functional E2E closure', () => {
 
     await page.getByLabel('Work email').fill(email);
     await page.getByLabel('Password').fill(password);
-    await page.getByRole('button', { name: 'Create account' }).click();
+    await page.getByRole('button', { name: 'Create account', exact: true }).click();
 
     await expect.poll(async () => {
       const onOnboarding = /\/en\/onboarding(?:\?|$)/.test(new URL(page.url()).pathname + new URL(page.url()).search);
@@ -128,13 +128,14 @@ test.describe('full SaaS functional E2E closure', () => {
       await page.getByPlaceholder(/system name/i).fill(uniqueName);
       await page.getByPlaceholder(/example: summarises/i).fill('Synthetic disposable QA assistant used to validate persisted inventory classification and reassessment.');
       await page.getByRole('button', { name: /classify and save/i }).click();
-      await expect(page.getByText(uniqueName, { exact: true })).toBeVisible({ timeout: 20_000 });
+      const createdCard = page.locator('article').filter({ hasText: uniqueName }).first();
+      await expect(createdCard).toBeVisible({ timeout: 20_000 });
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.getByText(uniqueName, { exact: true })).toBeVisible();
+      const persistedCard = page.locator('article').filter({ hasText: uniqueName }).first();
+      await expect(persistedCard).toBeVisible();
 
-      const card = page.locator('article').filter({ hasText: uniqueName }).first();
-      await card.getByRole('link', { name: /review|detail/i }).click();
+      await persistedCard.getByRole('link', { name: /review|detail/i }).click();
       await expectHealthyPage(page, 'AI assessment detail');
       await page.getByLabel(/system name/i).fill(updatedName);
       await page.getByLabel(/lifecycle status/i).selectOption('retired');
@@ -158,11 +159,11 @@ test.describe('full SaaS functional E2E closure', () => {
 
       const templateCard = page.locator('article').filter({ hasText: /Task \+ document/i }).first();
       await expect(templateCard).toBeVisible();
-      await templateCard.getByText('Generate evidence document', { exact: true }).click();
+      await templateCard.locator('summary').filter({ hasText: /^Generate evidence document$/ }).click();
       await templateCard.getByLabel('Document title').fill(documentName);
       await Promise.all([
         page.waitForURL(/\/en\/dashboard\/organizations\/documents(?:\?|$)/, { timeout: 30_000, waitUntil: 'domcontentloaded' }),
-        templateCard.getByRole('button', { name: 'Generate evidence document' }).click(),
+        templateCard.getByRole('button', { name: 'Generate evidence document', exact: true }).click(),
       ]);
       await expect(page.getByText(documentName, { exact: true })).toBeVisible({ timeout: 20_000 });
 
