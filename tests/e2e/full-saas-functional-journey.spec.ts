@@ -55,6 +55,7 @@ test.describe('full SaaS functional E2E closure', () => {
   });
 
   test('real account creation reaches onboarding or the explicit email-verification handoff', async ({ page }) => {
+    test.skip(!allowSyntheticWrites, 'Real signup mutation requires the disposable synthetic-write auth runtime.');
     const email = `full-journey-signup-${Date.now()}@example.test`;
     const password = 'Rc!FullJourneySignup9a';
     await page.goto('/en/signup?plan=professional&next=%2Fen%2Fonboarding%3Fplan%3Dprofessional', { waitUntil: 'domcontentloaded' });
