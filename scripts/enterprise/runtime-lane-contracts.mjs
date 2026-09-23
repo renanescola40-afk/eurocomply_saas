@@ -43,8 +43,10 @@ export function resolveLaneInputs(inputs, {
   const resolved = {};
   const promotionRunId = String(supabasePromotionRunId || process.env.SUPABASE_PROMOTION_RUN_ID || '').trim();
   const reattestationRunId = String(supabaseReattestationRunId || process.env.SUPABASE_REATTESTATION_RUN_ID || '').trim();
+  const currentStateRunId = String(supabaseCurrentStateRunId || process.env.SUPABASE_CURRENT_STATE_RUN_ID || '').trim();
   const promotionSet = /^\d+$/.test(promotionRunId);
   const reattestationSet = /^\d+$/.test(reattestationRunId);
+  const currentStateSet = /^\d+$/.test(currentStateRunId);
   const usesSupabaseAuthority = Object.values(inputs ?? {}).some((value) => [
     SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER,
     SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER,
