@@ -366,6 +366,9 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
       vercelSuccessStatusFound: Boolean(deployment),
       productionHealthOk: health?.passed === true,
       productionHealthNoStore: health?.noStore === true,
+      immutableDeploymentProtectionObserved: health?.blockedByVercelProtection === true,
+      immutableDeploymentAuthBoundaryObserved:
+        [401, 403].includes(Number(health?.status ?? 0)) && health?.vercelProviderMarked === true,
     },
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -373,6 +376,9 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
       githubDeploymentBound: deployment?.source === 'github_deployment_status',
       githubCommitStatusBound: false,
       liveHealthVerified: health?.passed === true,
+      immutableProtectionObserved: health?.blockedByVercelProtection === true,
+      immutableAuthBoundaryObserved:
+        [401, 403].includes(Number(health?.status ?? 0)) && health?.vercelProviderMarked === true,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
