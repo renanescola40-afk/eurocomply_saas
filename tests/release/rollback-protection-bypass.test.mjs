@@ -123,3 +123,81 @@ test('enterprise and public production release workflows keep Vercel rollback au
     assert.match(workflow, /VERCEL_AUTOMATION_BYPASS_SECRET:[\s\S]*npm run release:production-final/);
   }
 });
+
+
+test('rollback dry-run accepts only a complete provider-attested automatic rollback proof', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'risck-rollback-auto-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+
+  mkdirSync(join(root, 'docs', 'operations'), { recursive: true });
+  mkdirSync(join(root, 'artifacts', 'release'), { recursive: true });
+  writeFileSync(join(root, 'docs', 'operations', 'ROLLBACK_RUNBOOK.md'), '# Rollback\n');
+  writeFileSync(join(root, 'docs', 'RELEASE_ROLLBACK_PLAN.md'), '# Legacy rollback plan\n');
+
+  writeFileSync(
+    join(root, 'artifacts', 'release', 'public-ga-rollback-resolution.json'),
+    JSON.stringify({
+      schema: 'risck-comply.public-ga-rollback-resolution.v3',
+      status: 'Complete',
+      outcome: 'passed',
+      resolutionMode: 'automatic',
+      policy: {
+        exactProjectRequired: true,
+        exactCurrentReleaseExcluded: true,
+        previousDeploymentRequired: true,
+        deploymentStateRequired: 'READY',
+        deploymentTargetRequired: 'production',
+      },
+      checks: {
+        rollbackCandidateValidated: true,
+        providerIdentityValidated: true,
+        healthEndpointValidated: true,
+        healthNoStoreValidated: true,
+      },
+      evidenceIntegrity: {
+        containsSensitiveValues: false,
+        selectedRollbackIdentifiersStored: false,
+        rawDeploymentUrlStored: false,
+        tokenStored: false,
+      },
+    }),
+  );
+
+  const currentSha = 'c'.repeat(40);
+  const result = await runNode(rollbackScript, root, {
+    ...process.env,
+    RELEASE_TARGET: 'enterprise',
+    RELEASE_COMMIT_SHA: currentSha,
+    RELEASE_BUILD_SHA: currentSha,
+    RELEASE_ROLLBACK_RESOLUTION_MODE: 'automatic',
+    RELEASE_ROLLBACK_TARGET_VALIDATED: 'true',
+    RELEASE_ROLLBACK_CHECK_READY: 'false',
+    GITHUB_ACTIONS: 'true',
+    GITHUB_RUN_ID: '654321',
+    GITHUB_RUN_ATTEMPT: '1',
+    GITHUB_REPOSITORY: 'renanescola40-afk/eurocomply_saas',
+    GITHUB_REF_NAME: 'main',
+    GITHUB_WORKFLOW: 'Enterprise Production Gate',
+    GITHUB_EVENT_NAME: 'workflow_dispatch',
+  });
+
+  assert.equal(result.code, 0, `automatic rollback dry-run failed:\n${result.stderr}`);
+
+  const evidence = JSON.parse(readFileSync(
+    join(root, 'docs', 'security', 'evidence', 'runtime', 'rollback-dry-run-validation.json'),
+    'utf8',
+  ));
+
+  assert.equal(evidence.status, 'Complete');
+  assert.equal(evidence.outcome, 'passed');
+  assert.equal(evidence.dryRun.mutatesProduction, false);
+  assert.equal(evidence.dryRun.commandMode, 'automatic-provider-attestation-validation');
+  assert.equal(evidence.targetValidation.passed, true);
+  assert.equal(evidence.targetValidation.targetConfigured, true);
+  assert.equal(evidence.targetValidation.targetShaConfigured, true);
+  assert.equal(evidence.targetValidation.targetDiffersFromCurrentRelease, true);
+  assert.equal(evidence.targetValidation.healthOk, true);
+  assert.equal(evidence.targetValidation.healthNoStore, true);
+  assert.equal(evidence.rollbackTarget.identifiersResolvedWithoutPersistence, true);
+  assert.equal(evidence.evidenceIntegrity.rollbackTargetStored, false);
+});
