@@ -51,6 +51,31 @@ test.describe('full SaaS functional E2E closure', () => {
     await expect(page.getByRole('link', { name: /privacy policy/i })).toBeVisible();
   });
 
+  test('real account creation reaches onboarding or the explicit email-verification handoff', async ({ page }) => {
+    const email = `full-journey-signup-${Date.now()}@example.test`;
+    const password = 'Rc!FullJourneySignup9a';
+    await page.goto('/en/signup?plan=professional&next=%2Fen%2Fonboarding%3Fplan%3Dprofessional', { waitUntil: 'domcontentloaded' });
+    await expectHealthyPage(page, 'signup mutation');
+
+    await page.getByLabel('Work email').fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByRole('button', { name: 'Create account' }).click();
+
+    await expect.poll(async () => {
+      const onOnboarding = /\/en\/onboarding(?:\?|$)/.test(new URL(page.url()).pathname + new URL(page.url()).search);
+      const verificationVisible = await page.getByRole('heading', { name: /verify your email/i }).isVisible().catch(() => false);
+      return onOnboarding || verificationVisible;
+    }, { timeout: 20_000 }).toBe(true);
+
+    if (page.url().includes('/en/onboarding')) {
+      await expectHealthyPage(page, 'post-signup onboarding');
+      expect(page.url()).toContain('plan=professional');
+    } else {
+      await expect(page.getByRole('heading', { name: /verify your email/i })).toBeVisible();
+      await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible();
+    }
+  });
+
   test.describe('licensed owner journey', () => {
     test.skip(!ownerSessionConfigured, 'Provide E2E_OWNER_STORAGE_STATE or disposable owner email/password credentials.');
 
