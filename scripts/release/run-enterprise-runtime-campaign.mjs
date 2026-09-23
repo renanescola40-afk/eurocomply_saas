@@ -254,6 +254,7 @@ function createLaneResult(lane) {
     id: lane.id,
     workflow: lane.workflow,
     required: lane.required === true,
+    classification: lane.classification,
     status: 'blocked',
     conclusion: null,
     run_id: null,
@@ -269,6 +270,23 @@ function sanitizeFailure(error) {
   return message.replaceAll(token, '[REDACTED]').slice(0, 240);
 }
 
+function laneExecutionDecision(lane) {
+  if (lane.classification === 'core_required') return { execute: true, reason: null };
+  if (lane.classification === 'conditional_when_configured') {
+    const enabled = lane.id === 'IAM-SCIM'
+      ? process.env.ENABLE_SCIM_RUNTIME_PROOF === 'true'
+      : lane.id === 'IAM-SAML'
+        ? (process.env.ENABLE_SAML_RUNTIME_PROOF === 'true' || process.env.ENABLE_SAML_SSO_RUNTIME_PROOF === 'true')
+        : false;
+    return { execute: enabled, reason: enabled ? null : 'optional_feature_not_configured' };
+  }
+  if (lane.classification === 'external_assurance') {
+    const enabled = process.env.INCLUDE_EXTERNAL_ASSURANCE === 'true';
+    return { execute: enabled, reason: enabled ? null : 'human_external_assurance_not_requested' };
+  }
+  throw new Error(`Unsupported runtime lane classification: ${lane.classification || 'missing'}`);
+}
+
 async function prepareLane(lane) {
   const prepared = {
     lane,
@@ -278,6 +296,13 @@ async function prepareLane(lane) {
     preparationFailed: false,
   };
   try {
+    const decision = laneExecutionDecision(lane);
+    if (!decision.execute) {
+      prepared.preparationFailed = true;
+      prepared.result.source = 'not_dispatched';
+      prepared.result.reason = decision.reason;
+      return prepared;
+    }
     let run = mayReuseExactShaRuns ? await findRun(lane.workflow, 0, { allowExisting: true }) : null;
     if (run?.status === 'completed' && run?.conclusion !== 'success') run = null;
     if (!run) {
