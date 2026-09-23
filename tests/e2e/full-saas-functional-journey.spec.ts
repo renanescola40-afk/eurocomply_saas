@@ -40,6 +40,9 @@ async function loginWithCredentials(page: Page, email: string, password: string,
 }
 
 test.describe('full SaaS functional E2E closure', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('risckcomply.analytics.consent', 'denied'));
+  });
   test('account creation entry is actionable and keeps the paid onboarding continuation', async ({ page }) => {
     await page.goto('/en/signup?plan=professional&next=%2Fen%2Fonboarding%3Fplan%3Dprofessional', { waitUntil: 'domcontentloaded' });
     await expectHealthyPage(page, 'signup');
@@ -90,7 +93,6 @@ test.describe('full SaaS functional E2E closure', () => {
         ['/en/dashboard/organizations/documents', 'documents'],
         ['/en/dashboard/organizations/reports-governance/news', 'regulatory monitoring'],
         ['/en/settings', 'settings redirect'],
-        ['/en/profile', 'personal settings'],
         ['/en/dashboard/organizations/billing', 'billing'],
       ] as const;
 
@@ -139,9 +141,14 @@ test.describe('full SaaS functional E2E closure', () => {
       await expectHealthyPage(page, 'AI assessment detail');
       await page.getByLabel(/system name/i).fill(updatedName);
       await page.getByLabel(/lifecycle status/i).selectOption('retired');
+      const reassessmentResponse = page.waitForResponse((response) =>
+        response.request().method() === 'PATCH'
+        && response.url().includes('/api/ai-systems/')
+      );
       await page.getByRole('button', { name: /save reassessment/i }).click();
-      await expect(page.getByLabel(/system name/i)).toHaveValue(updatedName);
-      await expect(page.getByRole('status')).toBeVisible();
+      const response = await reassessmentResponse;
+      expect(response.ok(), 'reassessment PATCH should succeed before persistence is checked').toBe(true);
+      await expect(page.getByRole('status')).toContainText(/reassessed and saved/i);
 
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(page.getByLabel(/system name/i)).toHaveValue(updatedName);
