@@ -192,7 +192,7 @@ function writeOpenSupabaseRlsPlaceholder(root, targetSha, sourceContract = {}) {
       '.github/workflows/supabase-live-rls-validation.yml',
     ],
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
-    completionRule: 'Run and validate Supabase Live RLS Validation successfully for the exact current main SHA.',
+    completionRule: 'run and validate Supabase Live RLS Validation successfully for the exact current main SHA.',
     controlsVerified: [],
     evidenceIntegrity: {
       placeholderOnly: true,
