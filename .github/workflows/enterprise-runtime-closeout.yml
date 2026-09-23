@@ -23,7 +23,12 @@ on:
         default: ''
         type: string
       supabase_reattestation_run_id:
-        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with promotion)
+        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with other authorities)
+        required: false
+        default: ''
+        type: string
+      supabase_current_state_run_id:
+        description: Successful exact-SHA Supabase Current Production State Read-Only run ID (mutually exclusive with other authorities)
         required: false
         default: ''
         type: string
@@ -49,6 +54,7 @@ jobs:
       RECOVERY_ROLLBACK_CONFIRMATION: ${{ inputs.recovery_rollback_confirmation }}
       SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}
       SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id }}
+      SUPABASE_CURRENT_STATE_RUN_ID: ${{ inputs.supabase_current_state_run_id }}
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
       ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
@@ -67,9 +73,11 @@ jobs:
           [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
           promotion_set=0
           reattestation_set=0
+          current_state_set=0
           if [[ -n "$SUPABASE_PROMOTION_RUN_ID" ]]; then [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]; promotion_set=1; fi
           if [[ -n "$SUPABASE_REATTESTATION_RUN_ID" ]]; then [[ "$SUPABASE_REATTESTATION_RUN_ID" =~ ^[0-9]+$ ]]; reattestation_set=1; fi
-          test $((promotion_set + reattestation_set)) -eq 1
+          if [[ -n "$SUPABASE_CURRENT_STATE_RUN_ID" ]]; then [[ "$SUPABASE_CURRENT_STATE_RUN_ID" =~ ^[0-9]+$ ]]; current_state_set=1; fi
+          test $((promotion_set + reattestation_set + current_state_set)) -eq 1
 
       - name: Check out exact release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
