@@ -6,6 +6,7 @@ import { validateSupabaseCurrentProductionStateSource } from '../../scripts/secu
 
 const SHA = 'a'.repeat(40);
 const RUN_ID = '24680';
+const PROJECT_DIGEST = 'sha256:' + 'b'.repeat(64);
 
 function validEvidence() {
   return {
@@ -15,7 +16,7 @@ function validEvidence() {
     outcome: 'passed',
     authorityMode: 'current_production_state_read_only',
     targetSha: SHA,
-    productionProjectDigest: 'sha256:' + 'b'.repeat(64),
+    productionProjectDigest: PROJECT_DIGEST,
     migrationLedger: { count: 12, head: '20260923000000', sha256: 'sha256:' + 'c'.repeat(64) },
     githubActions: { repository: 'renanescola40-afk/eurocomply_saas', branch: 'main', runId: RUN_ID, commitSha: SHA },
     checks: {
@@ -34,21 +35,30 @@ function validEvidence() {
 }
 
 test('accepts canonical exact-SHA read-only current Production state authority', () => {
-  const result = validateSupabaseCurrentProductionStateSource(validEvidence(), { expectedSha: SHA, expectedRunId: RUN_ID });
+  const result = validateSupabaseCurrentProductionStateSource(validEvidence(), { expectedSha: SHA, expectedRunId: RUN_ID, expectedProjectDigest: PROJECT_DIGEST });
   assert.equal(result.status, 'Complete');
   assert.equal(result.authorityMode, 'current_production_state_read_only');
+});
+
+test('rejects current-state evidence from a different Production project', () => {
+  const evidence = validEvidence();
+  evidence.productionProjectDigest = 'sha256:' + 'd'.repeat(64);
+  assert.throws(
+    () => validateSupabaseCurrentProductionStateSource(evidence, { expectedSha: SHA, expectedRunId: RUN_ID, expectedProjectDigest: PROJECT_DIGEST }),
+    /project digest mismatch/,
+  );
 });
 
 test('rejects current-state evidence that claims historical promotion lineage', () => {
   const evidence = validEvidence();
   evidence.checks.historicalPromotionVerified = true;
-  assert.throws(() => validateSupabaseCurrentProductionStateSource(evidence, { expectedSha: SHA, expectedRunId: RUN_ID }), /historicalPromotionVerified/);
+  assert.throws(() => validateSupabaseCurrentProductionStateSource(evidence, { expectedSha: SHA, expectedRunId: RUN_ID, expectedProjectDigest: PROJECT_DIGEST }), /historicalPromotionVerified/);
 });
 
 test('rejects current-state evidence that does not prove read-only tenant isolation', () => {
   const evidence = validEvidence();
   evidence.checks.noProductionMutation = false;
-  assert.throws(() => validateSupabaseCurrentProductionStateSource(evidence, { expectedSha: SHA, expectedRunId: RUN_ID }), /noProductionMutation/);
+  assert.throws(() => validateSupabaseCurrentProductionStateSource(evidence, { expectedSha: SHA, expectedRunId: RUN_ID, expectedProjectDigest: PROJECT_DIGEST }), /noProductionMutation/);
 });
 
 test('workflow is protected exact-SHA bound and mutation-free by contract', async () => {
