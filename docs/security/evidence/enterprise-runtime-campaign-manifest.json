@@ -55,8 +55,8 @@
         "release_sha": "${RELEASE_SHA}",
         "promotion_run_id": "${SUPABASE_PROMOTION_RUN_ID}",
         "reattestation_run_id": "${SUPABASE_REATTESTATION_RUN_ID}",
-        "confirmation": "${SUPABASE_RLS_CONFIRMATION}",
-        "current_state_run_id": "${SUPABASE_CURRENT_STATE_RUN_ID}"
+        "current_state_run_id": "${SUPABASE_CURRENT_STATE_RUN_ID}",
+        "confirmation": "${SUPABASE_RLS_CONFIRMATION}"
       },
       "classification": "core_required"
     },
