@@ -3,8 +3,6 @@ name: Enterprise Runtime Closeout Campaign
 run-name: Runtime closeout campaign for ${{ inputs.release_sha || github.sha }}
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       release_sha:
