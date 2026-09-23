@@ -307,7 +307,9 @@ jobs:
           test "${E2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED:-}" = 'true'
           test "${E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED:-}" = 'true'
           rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
-          if ! # These suites share disposable identities and exercise sign-out/session lifecycle.\n          # Serial execution prevents one journey from revoking or racing another journey's session.\n          npx playwright test tests/e2e/new-customer-commercial-activation.spec.ts tests/e2e/full-saas-functional-journey.spec.ts tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --workers=1 --reporter=line,github,json --retries=1; then
+          # These suites share disposable identities and exercise sign-out/session lifecycle.
+          # Serial execution prevents one journey from revoking or racing another journey's session.
+          if ! npx playwright test tests/e2e/new-customer-commercial-activation.spec.ts tests/e2e/full-saas-functional-journey.spec.ts tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --workers=1 --reporter=line,github,json --retries=1; then
             app_healthy=false
             auth_healthy=false
             if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then
