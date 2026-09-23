@@ -128,6 +128,13 @@ test('enterprise and public production release workflows keep Vercel rollback au
 
 test('protected rollback policy requires provider binding, Vercel auth boundary and prior validation', () => {
   assert.equal(shouldAcceptProtectedRollback({
+    directHealthOk: false,
+    authBoundaryObserved: false,
+    providerBoundExactSha: false,
+    targetValidationProof: false,
+  }), false);
+
+  assert.equal(shouldAcceptProtectedRollback({
     directHealthOk: true,
     authBoundaryObserved: false,
     providerBoundExactSha: false,
