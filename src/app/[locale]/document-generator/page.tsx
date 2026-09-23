@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Download, FileCheck2, FileText } from 'lucide-react';
+import { PrintableReportButton } from '@/components/documents/printable-report-button';
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
 import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { Badge } from '@/components/ui/badge';
@@ -69,7 +70,7 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
             </div>
             <div className="flex flex-wrap gap-3">
               {canViewExecutiveReports ? (
-                <Button asChild className="rounded-full"><Link href="#generated-report">{t.print}<Download className="h-4 w-4" /></Link></Button>
+                <PrintableReportButton label={t.print} />
               ) : (
                 <Button asChild className="rounded-full"><Link href={`/${locale}/pricing`}>Upgrade to print report<Download className="h-4 w-4" /></Link></Button>
               )}
