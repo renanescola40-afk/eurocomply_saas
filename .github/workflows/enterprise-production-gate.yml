@@ -168,6 +168,8 @@ jobs:
           grep -Fq "id-token: write" .github/workflows/enterprise-production-gate.yml
           grep -Fq "resolve-public-production-rollback.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "RELEASE_ROLLBACK_RESOLUTION_MODE: automatic" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "RELEASE_ROLLBACK_EXPECTED_PROJECT_DIGEST" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "RELEASE_ROLLBACK_EXPECTED_CURRENT_DEPLOYMENT_DIGEST" .github/workflows/enterprise-production-gate.yml
           grep -Fq "cancel-in-progress: true" .github/workflows/enterprise-production-gate.yml
           grep -Fq "deployments: read" .github/workflows/enterprise-production-gate.yml
           grep -Fq "check-github-environment-governance.mjs" .github/workflows/enterprise-production-gate.yml
@@ -232,9 +234,6 @@ jobs:
       MALWARE_SCANNER_CLAMAV_PORT: ${{ vars.MALWARE_SCANNER_CLAMAV_PORT || secrets.MALWARE_SCANNER_CLAMAV_PORT }}
       MALWARE_SCANNER_TIMEOUT_MS: ${{ vars.MALWARE_SCANNER_TIMEOUT_MS || secrets.MALWARE_SCANNER_TIMEOUT_MS }}
       GITHUB_TOKEN: ${{ github.token }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       RETAINED_PROOF_SOURCE_WORKFLOW: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name || '' }}
       RETAINED_PROOF_SOURCE_WORKFLOW_PATH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.path || '' }}
       RETAINED_PROOF_SOURCE_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || '' }}
@@ -263,6 +262,10 @@ jobs:
       - name: Resolve exact-SHA Vercel production deployment
         id: current_vercel
         shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
           test -n "$VERCEL_TOKEN"
@@ -280,6 +283,9 @@ jobs:
         env:
           RELEASE_SHA: ${{ env.TARGET_SHA }}
           CURRENT_VERCEL_DEPLOYMENT_ID: ${{ steps.current_vercel.outputs.id }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: node scripts/release/resolve-public-production-rollback.mjs
 
       - name: Hydrate retained exact-SHA runtime proofs
@@ -293,11 +299,17 @@ jobs:
             echo
             jq -r '"- Target SHA: `\(.targetSha)`\n- Hydrated producers: \(.hydratedProducerCount)/\(.producerCount)\n- Missing producers: \(.missingProducerCount)\n- Trigger source: \(.sourceWorkflowPath // .sourceWorkflowName // "direct gate")"' "$manifest"
           } >> "$GITHUB_STEP_SUMMARY"
-      - run: node scripts/release/check-enterprise-release-env.mjs
+      - name: Validate enterprise release environment with resolved rollback
+        env:
+          RELEASE_ROLLBACK_RESOLUTION_MODE: automatic
+          RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ steps.rollback_resolver.outputs.validated }}
+        run: node scripts/release/check-enterprise-release-env.mjs
       - name: Run protected production final validation
         env:
           RELEASE_ROLLBACK_RESOLUTION_MODE: automatic
           RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ steps.rollback_resolver.outputs.validated }}
+          RELEASE_ROLLBACK_EXPECTED_PROJECT_DIGEST: ${{ steps.rollback_resolver.outputs.project_digest }}
+          RELEASE_ROLLBACK_EXPECTED_CURRENT_DEPLOYMENT_DIGEST: ${{ steps.rollback_resolver.outputs.current_deployment_digest }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           VERCEL_TRUSTED_OIDC_TOKEN: ${{ secrets.VERCEL_TRUSTED_OIDC_TOKEN }}
         run: npm run release:production-final
