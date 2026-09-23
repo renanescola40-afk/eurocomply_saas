@@ -4,6 +4,7 @@ import https from 'node:https';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { findExactShaVercelProductionDeployment } from './write-github-vercel-production-deployment-evidence.mjs';
+import { shouldAcceptProtectedRollback } from './rollback-protection-policy.mjs';
 
 const evidencePath = 'docs/security/evidence/runtime/rollback-dry-run-validation.json';
 const shaPattern = /^[a-f0-9]{40}$/i;
@@ -241,10 +242,12 @@ if (targetUrl) {
   });
   const directHealthOk = rollbackHealth.status === 200 && rollbackHealth.body?.status === 'ok';
   const authBoundaryObserved = isVercelAuthenticationBoundary(rollbackHealth);
-  const protectedValidatedFallback = !directHealthOk
-    && authBoundaryObserved
-    && providerBoundExactSha
-    && targetValidationProof;
+  const protectedValidatedFallback = !directHealthOk && shouldAcceptProtectedRollback({
+    directHealthOk,
+    authBoundaryObserved,
+    providerBoundExactSha,
+    targetValidationProof,
+  });
   checks.push(createCheck('rollbackTargetHealthOk', directHealthOk || protectedValidatedFallback, {
     ...safeResponseSummary(rollbackHealth),
     providerBoundExactSha,
@@ -289,7 +292,12 @@ if (targetUrl && runReadyCheck && readinessToken) {
 
 const directHealthOk = rollbackHealth?.status === 200 && rollbackHealth?.body?.status === 'ok';
 const authBoundaryObserved = isVercelAuthenticationBoundary(rollbackHealth);
-const protectedValidatedFallback = Boolean(!directHealthOk && authBoundaryObserved && providerBoundExactSha && targetValidationProof);
+const protectedValidatedFallback = Boolean(!directHealthOk && shouldAcceptProtectedRollback({
+  directHealthOk,
+  authBoundaryObserved,
+  providerBoundExactSha,
+  targetValidationProof,
+}));
 const healthOk = Boolean(directHealthOk || protectedValidatedFallback);
 const healthNoStore = Boolean(rollbackHealth && hasNoStore(rollbackHealth.headers));
 const readyOk = runReadyCheck
