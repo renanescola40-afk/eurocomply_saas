@@ -167,21 +167,20 @@ test.describe('full SaaS functional E2E closure', () => {
       await expect(page.getByText(documentName, { exact: true })).toBeVisible({ timeout: 20_000 });
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      const documentCard = page.locator('article').filter({ hasText: documentName }).first();
-      await expect(documentCard.getByRole('button', { name: /download/i })).toBeVisible();
+      const documentRow = page.locator('tbody tr').filter({ hasText: documentName }).first();
+      await expect(documentRow).toBeVisible();
+      await expect(documentRow.getByRole('button', { name: /download/i })).toBeVisible();
 
-      const appOrigin = new URL(page.url()).origin;
-      const signedNavigation = page.waitForURL(
-        (url) => url.origin !== appOrigin || /\/storage\/v1\/object\//.test(url.pathname),
-        { timeout: 20_000, waitUntil: 'commit' },
-      ).catch(() => null);
-      await documentCard.getByRole('button', { name: /download/i }).click();
-      expect(await signedNavigation, 'download should leave the app for a signed artifact URL').not.toBeNull();
+      const downloadPromise = page.waitForEvent('download', { timeout: 20_000 });
+      await documentRow.getByRole('button', { name: /download/i }).click();
+      const download = await downloadPromise;
+      expect(await download.suggestedFilename(), 'signed download should expose a concrete artifact filename').toBeTruthy();
 
       await page.goto('/en/dashboard/organizations/documents', { waitUntil: 'domcontentloaded' });
-      const cleanupCard = page.locator('article').filter({ hasText: documentName }).first();
+      const cleanupRow = page.locator('tbody tr').filter({ hasText: documentName }).first();
+      await expect(cleanupRow).toBeVisible();
       page.once('dialog', (dialog) => void dialog.accept());
-      await cleanupCard.getByRole('button', { name: 'Delete' }).click();
+      await cleanupRow.getByRole('button', { name: 'Delete' }).click();
       await expect(page.getByText(documentName, { exact: true })).toHaveCount(0);
     });
 
