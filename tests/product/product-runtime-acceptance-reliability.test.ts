@@ -37,8 +37,8 @@ describe('Product runtime acceptance reliability contracts', () => {
     expect(workflow).toContain('Product QA application did not become ready within the bounded startup window.');
   });
 
-  it('keeps browser retry bounded while activating the existing first-retry Playwright trace contract', () => {
-    expect(workflow).toContain('--project=chromium --reporter=line,github,json --retries=1');
+  it('keeps browser retry bounded and executes shared disposable journeys serially', () => {
+    expect(workflow).toContain('--project=chromium --workers=1 --reporter=line,github,json --retries=1');
     expect(workflow).not.toContain('--retries=2');
     expect(workflow).not.toContain('--retries=3');
     expect(runtimeAcceptance).toContain('test.setTimeout(180_000)');

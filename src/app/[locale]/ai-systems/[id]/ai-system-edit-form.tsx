@@ -116,10 +116,16 @@ export function AiSystemEditForm({
     setNotice(null);
 
     try {
+      const submitted = new FormData(event.currentTarget);
+      const submittedForm: FormState = {
+        ...form,
+        name: String(submitted.get('name') ?? form.name),
+        lifecycleStatus: String(submitted.get('lifecycleStatus') ?? form.lifecycleStatus),
+      };
       const response = await fetch(`/api/ai-systems/${system.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(submittedForm),
       });
 
       const payload = await response.json().catch(() => ({}));
@@ -181,7 +187,7 @@ export function AiSystemEditForm({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <input required value={form.name} onChange={(event) => update('name', event.target.value)} placeholder={t.systemName} aria-label={t.systemName} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+          <input name="name" required value={form.name} onChange={(event) => update('name', event.target.value)} placeholder={t.systemName} aria-label={t.systemName} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
           <input value={form.ownerTeam} onChange={(event) => update('ownerTeam', event.target.value)} placeholder={t.ownerTeam} aria-label={t.ownerTeam} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
           <input value={form.category} onChange={(event) => update('category', event.target.value)} placeholder={t.category} aria-label={t.category} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
           <input value={form.countryMarket} onChange={(event) => update('countryMarket', event.target.value)} placeholder={t.countryMarket} aria-label={t.countryMarket} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
@@ -190,7 +196,7 @@ export function AiSystemEditForm({
           <select value={form.role} onChange={(event) => update('role', event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" aria-label={t.organizationRole}>
             {roleOptions.map((option) => <option key={option} value={option}>{t.roleLabels[option]}</option>)}
           </select>
-          <select value={form.lifecycleStatus} onChange={(event) => update('lifecycleStatus', event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" aria-label={t.lifecycleStatus}>
+          <select name="lifecycleStatus" value={form.lifecycleStatus} onChange={(event) => update('lifecycleStatus', event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" aria-label={t.lifecycleStatus}>
             {statusOptions.map((option) => <option key={option} value={option}>{t.statusLabels[option]}</option>)}
           </select>
           <select value={form.riskDomain} onChange={(event) => update('riskDomain', event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40 md:col-span-2" aria-label={t.riskDomain}>
