@@ -8,8 +8,8 @@ describe('enterprise runtime closeout campaign', () => {
   it('keeps TEN-RLS authority optional for non-Supabase closure and exclusive when supplied', () => {
     expect(workflow).toContain('supabase_promotion_run_id:');
     expect(workflow).toContain('supabase_reattestation_run_id:');
-    expect(workflow).toContain('SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id }}');
-    expect(workflow).toContain('SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id }}');
+    expect(workflow).toContain("SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id || '' }}");
+    expect(workflow).toContain("SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id || '' }}");
     expect(workflow).toContain('test $((promotion_set + reattestation_set)) -le 1');
     expect(dispatcher).toContain("'.github/workflows/supabase-forward-reconciliation-production-promotion.yml'");
     expect(dispatcher).toContain("'.github/workflows/supabase-forward-production-reattestation.yml'");
@@ -41,8 +41,8 @@ describe('enterprise runtime closeout campaign', () => {
     expect(dispatcher).toContain("authorityRun.event !== 'workflow_dispatch'");
     expect(dispatcher).toContain("authorityRun.conclusion !== 'success'");
     expect(workflow).toContain('environment: enterprise-release-approval');
-    expect(workflow).toContain('push:');
-    expect(workflow).toContain('branches: [main]');
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).not.toContain('branches: [main]');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('contents: write');
   });
