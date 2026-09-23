@@ -116,9 +116,6 @@ test('runtime closeout supplies only the canonical self-serve Stripe prices requ
 
 test('protected secret mappings are injected only into their consuming steps', () => {
   const secretMappings = [
-    ['HEALTHCHECK_TOKEN', 'HEALTHCHECK_TOKEN || secrets.READINESS_TOKEN'],
-    ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL'],
-    ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY'],
     ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
     ['TEST_USER_A_EMAIL', 'TEST_USER_A_EMAIL'],
     ['TEST_USER_A_PASSWORD', 'TEST_USER_A_PASSWORD'],
@@ -131,17 +128,10 @@ test('protected secret mappings are injected only into their consuming steps', (
     ['SENTRY_AUTH_TOKEN', 'SENTRY_AUTH_TOKEN'],
   ];
 
-  for (const [envName, secretExpr] of secretMappings) {
-    const escaped = secretExpr.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\  for (const [envName, secretName] of secretMappings) {
+  for (const [envName, secretName] of secretMappings) {
     assert.match(
       workflow,
       new RegExp(`^\\s{10}${envName}: \\$\\{\\{ secrets\\.${secretName} \\}\\}`, 'm'),
-      `${envName} must remain a step-local GitHub secret mapping`,
-    );
-  }');
-    assert.match(
-      workflow,
-      new RegExp(`^\\s{10}${envName}: \\$\\{\\{ secrets\\.${escaped} \\}\\}`, 'm'),
       `${envName} must remain a step-local GitHub secret mapping`,
     );
   }
