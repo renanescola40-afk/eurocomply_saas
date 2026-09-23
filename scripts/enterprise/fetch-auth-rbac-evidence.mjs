@@ -148,10 +148,19 @@ function writeOpenAuthRbacPlaceholder(root, targetSha) {
     primaryAuthStack: 'supabase-auth',
     scope: 'final-auth-rbac-tenant-isolation-review',
     summary: `No successful exact-SHA Auth/RBAC runtime proof exists for ${targetSha}; enterprise production remains blocked.`,
-    redactionConfirmation: 'Redaction confirmed: this placeholder contains no credentials, tokens, cookies or customer identifiers.',
+    redactionConfirmation: 'Redaction confirmed for runtime evidence.',
     releaseDecision: 'No-Go',
     targetSha,
     productionGate: 'blocked until exact-SHA Auth/RBAC runtime evidence is produced',
+    evidenceLocations: [
+      '.github/workflows/auth-rbac-runtime-proof.yml',
+    ],
+    completionRule: 'Complete only after a successful exact-SHA Auth/RBAC runtime proof is produced and validated.',
+    blockingEvidence: {
+      reason: 'exact_sha_runtime_run_missing',
+      requiredWorkflow: '.github/workflows/auth-rbac-runtime-proof.yml',
+      targetSha,
+    },
     goNoGo: {
       status: 'NO_GO',
       reason: 'exact_sha_runtime_run_missing',
