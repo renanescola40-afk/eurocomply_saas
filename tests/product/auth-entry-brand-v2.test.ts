@@ -44,6 +44,6 @@ describe('auth entry brand V2', () => {
     const auth = read('src/hooks/useAuth.tsx');
 
     expect(auth).toContain('const { data, error } = await supabase.auth.signUp');
-    expect(auth).toContain('session: data.session ?? null');
+    expect(auth).toContain('session: data?.session ?? null');
   });
 });
