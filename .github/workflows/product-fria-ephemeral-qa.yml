@@ -13,6 +13,7 @@ on:
       - 'scripts/recovery/**'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'tests/e2e/full-saas-functional-journey.spec.ts'
+      - 'tests/e2e/new-customer-commercial-activation.spec.ts'
       - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
@@ -56,6 +57,7 @@ on:
       - 'scripts/recovery/**'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'tests/e2e/full-saas-functional-journey.spec.ts'
+      - 'tests/e2e/new-customer-commercial-activation.spec.ts'
       - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
@@ -298,12 +300,14 @@ jobs:
           test -n "${E2E_FRIA_APPROVER_PASSWORD:-}"
           test -n "${E2E_UNLICENSED_OWNER_EMAIL:-}"
           test -n "${E2E_UNLICENSED_OWNER_PASSWORD:-}"
+          test -n "${E2E_NEW_CUSTOMER_EMAIL:-}"
+          test -n "${E2E_NEW_CUSTOMER_PASSWORD:-}"
           test "${E2E_ALLOW_SYNTHETIC_APP_WRITES:-}" = 'true'
           test "${E2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED:-}" = 'true'
           test "${E2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED:-}" = 'true'
           test "${E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED:-}" = 'true'
           rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
-          if ! # These suites share disposable identities and exercise sign-out/session lifecycle.\n          # Serial execution prevents one journey from revoking or racing another journey's session.\n          npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts tests/e2e/full-saas-functional-journey.spec.ts --project=chromium --workers=1 --reporter=line,github,json --retries=1; then
+          if ! # These suites share disposable identities and exercise sign-out/session lifecycle.\n          # Serial execution prevents one journey from revoking or racing another journey's session.\n          npx playwright test tests/e2e/new-customer-commercial-activation.spec.ts tests/e2e/full-saas-functional-journey.spec.ts tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --workers=1 --reporter=line,github,json --retries=1; then
             app_healthy=false
             auth_healthy=false
             if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then
