@@ -27,7 +27,7 @@ describe('runtime evidence hydration remains fail closed when exact-SHA producer
     expect(rlsFetcher).toContain('sourceRunBound: false');
     expect(rlsFetcher).toContain("redactionConfirmation: 'Redaction confirmed for runtime evidence.'");
     expect(rlsFetcher).toContain('evidenceLocations: [');
-    expect(rlsFetcher).toContain('completionRule:');
+    expect(rlsFetcher).toContain("completionRule: 'run and validate Supabase Live RLS Validation successfully for the exact current main SHA.'");
   });
 
   it('keeps exact-SHA runtime evidence mandatory for a real Complete result', () => {
