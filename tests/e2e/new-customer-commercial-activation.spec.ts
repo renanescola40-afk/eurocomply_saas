@@ -37,7 +37,7 @@ test.describe('new customer commercial activation', () => {
 
     // create organization → country → company type → sector → AI usage → first AI system
     for (let index = 0; index < 5; index += 1) {
-      await page.getByRole('button', { name: 'Continue' }).click();
+      await page.getByRole('button', { name: 'Continue', exact: true }).click();
     }
 
     await page.getByLabel('AI system name').fill(aiSystemName);
