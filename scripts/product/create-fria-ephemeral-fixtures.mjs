@@ -78,6 +78,7 @@ async function main() {
   const reviewer = await createUser(admin, 'reviewer', suffix);
   const approver = await createUser(admin, 'approver', suffix);
   const unlicensedOwner = await createUser(admin, 'unlicensed-owner', suffix);
+  const newCustomer = await createUser(admin, 'new-customer', suffix);
 
   // Prove that the exact disposable browser credentials are accepted by the same
   // loopback GoTrue instance before Product UI acceptance starts. This intentionally
@@ -85,6 +86,7 @@ async function main() {
   await verifyPasswordGrant(url, anonKey, owner, 'owner');
   await verifyPasswordGrant(url, anonKey, approver, 'approver');
   await verifyPasswordGrant(url, anonKey, unlicensedOwner, 'unlicensed_owner');
+  await verifyPasswordGrant(url, anonKey, newCustomer, 'new_customer');
 
   const onboardingCompletedAt = new Date(Date.now() - 60_000).toISOString();
   const organization = await insertOne(admin, 'organizations', {
@@ -239,13 +241,15 @@ async function main() {
   exportEnv('E2E_FRIA_APPROVER_PASSWORD', approver.password);
   exportEnv('E2E_UNLICENSED_OWNER_EMAIL', unlicensedOwner.email);
   exportEnv('E2E_UNLICENSED_OWNER_PASSWORD', unlicensedOwner.password);
+  exportEnv('E2E_NEW_CUSTOMER_EMAIL', newCustomer.email);
+  exportEnv('E2E_NEW_CUSTOMER_PASSWORD', newCustomer.password);
   appendFileSync(
     process.env.GITHUB_ENV,
     'E2E_ALLOW_SYNTHETIC_APP_WRITES=true\nE2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED=true\nE2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED=true\nE2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED=true\n',
     'utf8',
   );
 
-  process.stdout.write('Disposable licensed and unlicensed Product identities, password grants, tenant authority boundaries and Evidence Vault schema verified on loopback Supabase.\n');
+  process.stdout.write('Disposable licensed, unlicensed and pre-onboarding Product identities, password grants, tenant authority boundaries and Evidence Vault schema verified on loopback Supabase.\n');
 }
 
 main().catch((error) => {
