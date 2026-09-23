@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import { shouldAcceptProtectedRollback } from '../../scripts/release/rollback-protection-policy.mjs';
 
 const rollbackScript = resolve('scripts/release/run-rollback-dry-run.mjs');
 const closeoutWorkflow = resolve('.github/workflows/enterprise-runtime-evidence-closeout.yml');
@@ -313,4 +314,39 @@ test('rollback dry-run rejects a stale automatic rollback attestation from anoth
   assert.equal(evidence.status, 'Open');
   assert.equal(evidence.outcome, 'failed');
   assert.equal(evidence.targetValidation.passed, false);
+});
+
+
+test('protected rollback policy requires provider binding, Vercel auth boundary and prior validation', () => {
+  assert.equal(shouldAcceptProtectedRollback({
+    directHealthOk: false,
+    authBoundaryObserved: false,
+    providerBoundExactSha: false,
+    targetValidationProof: false,
+  }), false);
+
+  assert.equal(shouldAcceptProtectedRollback({
+    directHealthOk: true,
+    authBoundaryObserved: false,
+    providerBoundExactSha: false,
+    targetValidationProof: false,
+  }), true);
+
+  assert.equal(shouldAcceptProtectedRollback({
+    directHealthOk: false,
+    authBoundaryObserved: true,
+    providerBoundExactSha: true,
+    targetValidationProof: true,
+  }), true);
+
+  for (const missing of ['authBoundaryObserved', 'providerBoundExactSha', 'targetValidationProof']) {
+    const input = {
+      directHealthOk: false,
+      authBoundaryObserved: true,
+      providerBoundExactSha: true,
+      targetValidationProof: true,
+    };
+    input[missing] = false;
+    assert.equal(shouldAcceptProtectedRollback(input), false, `${missing} must remain mandatory`);
+  }
 });

@@ -3,6 +3,8 @@ import http from 'node:http';
 import https from 'node:https';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { findExactShaVercelProductionDeployment } from './write-github-vercel-production-deployment-evidence.mjs';
+import { shouldAcceptProtectedRollback } from './rollback-protection-policy.mjs';
 
 const evidencePath = 'docs/security/evidence/runtime/rollback-dry-run-validation.json';
 const shaPattern = /^[a-f0-9]{40}$/i;
@@ -43,6 +45,31 @@ function headerValue(headers, name) {
 
 function hasNoStore(headers) {
   return /\bno-store\b/i.test(headerValue(headers, 'cache-control'));
+}
+
+function isVercelAuthenticationBoundary(response) {
+  if (Number(response?.status || 0) !== 302) return false;
+  const server = headerValue(response?.headers || {}, 'server').trim().toLowerCase();
+  const requestId = headerValue(response?.headers || {}, 'x-vercel-id').trim();
+  if (server !== 'vercel' || !requestId) return false;
+
+  const location = headerValue(response?.headers || {}, 'location');
+  try {
+    const redirect = new URL(location);
+    return redirect.protocol === 'https:'
+      && redirect.hostname === 'vercel.com'
+      && redirect.pathname === '/sso-api';
+  } catch {
+    return false;
+  }
+}
+
+function sameHost(left, right) {
+  try {
+    return new URL(left).hostname === new URL(right).hostname;
+  } catch {
+    return false;
+  }
 }
 
 function safeResponseSummary(response) {
@@ -268,6 +295,22 @@ const checks = [
 ];
 
 let rollbackHealth = null;
+let providerDeployment = null;
+let providerBoundExactSha = false;
+const githubToken = String(process.env.GITHUB_TOKEN || '').trim();
+const repository = String(process.env.GITHUB_REPOSITORY || '').trim();
+const githubApiUrl = String(process.env.GITHUB_API_URL || 'https://api.github.com').trim();
+
+if (!automaticResolution && targetUrl && targetShaConfigured && githubToken && repository) {
+  providerDeployment = await findExactShaVercelProductionDeployment({
+    repository,
+    targetSha: targetSha.toLowerCase(),
+    token: githubToken,
+    apiUrl: githubApiUrl,
+  });
+  providerBoundExactSha = Boolean(providerDeployment?.publicUrl && sameHost(providerDeployment.publicUrl, targetUrl));
+}
+
 if (automaticResolution) {
   checks.push(createCheck('rollbackTargetHealthOk', automaticAttested, {
     source: automaticAttestation?.path ?? automaticEvidencePath,
@@ -281,7 +324,21 @@ if (automaticResolution) {
   rollbackHealth = await request(route(targetUrl, '/api/health'), {
     headers: vercelProtectionHeaders,
   });
-  checks.push(createCheck('rollbackTargetHealthOk', rollbackHealth.status === 200 && rollbackHealth.body?.status === 'ok', safeResponseSummary(rollbackHealth)));
+  const directHealthOk = rollbackHealth.status === 200 && rollbackHealth.body?.status === 'ok';
+  const authBoundaryObserved = isVercelAuthenticationBoundary(rollbackHealth);
+  const protectedValidatedFallback = !directHealthOk && shouldAcceptProtectedRollback({
+    directHealthOk,
+    authBoundaryObserved,
+    providerBoundExactSha,
+    targetValidationProof,
+  });
+
+  checks.push(createCheck('rollbackTargetHealthOk', directHealthOk || protectedValidatedFallback, {
+    ...safeResponseSummary(rollbackHealth),
+    providerBoundExactSha,
+    authBoundaryObserved,
+    protectedValidatedFallback,
+  }));
   checks.push(createCheck('rollbackTargetHealthNoStore', hasNoStore(rollbackHealth.headers), safeResponseSummary(rollbackHealth)));
 } else {
   checks.push(createCheck('rollbackTargetHealthOk', false, { skipped: true, reason: 'missing_valid_rollback_target_url' }));
@@ -318,7 +375,21 @@ if (!automaticResolution && targetUrl && runReadyCheck && readinessToken) {
   }, false));
 }
 
-const healthOk = automaticResolution ? automaticAttested : rollbackHealth?.status === 200 && rollbackHealth?.body?.status === 'ok';
+const directHealthOk = automaticResolution
+  ? automaticAttested
+  : rollbackHealth?.status === 200 && rollbackHealth?.body?.status === 'ok';
+const authBoundaryObserved = automaticResolution ? false : isVercelAuthenticationBoundary(rollbackHealth);
+const protectedValidatedFallback = Boolean(
+  !automaticResolution
+  && !directHealthOk
+  && shouldAcceptProtectedRollback({
+    directHealthOk,
+    authBoundaryObserved,
+    providerBoundExactSha,
+    targetValidationProof,
+  }),
+);
+const healthOk = automaticResolution ? automaticAttested : Boolean(directHealthOk || protectedValidatedFallback);
 const healthNoStore = automaticResolution ? automaticAttested : Boolean(rollbackHealth && hasNoStore(rollbackHealth.headers));
 const readyOk = runReadyCheck
   ? rollbackReady?.status === 200 && rollbackReady?.body?.status === 'ready'
@@ -368,6 +439,9 @@ const evidence = {
     protectionBypassUsed: Boolean(vercelProtectionBypassSecret),
     trustedOidcUsed: Boolean(vercelTrustedOidcToken),
     protectionAuthMode: vercelProtectionAuthMode,
+    providerBoundExactSha: automaticResolution ? false : providerBoundExactSha,
+    authBoundaryObserved: automaticResolution ? false : authBoundaryObserved,
+    protectedValidatedFallbackUsed: automaticResolution ? false : protectedValidatedFallback,
     health: rollbackHealth ? safeResponseSummary(rollbackHealth) : null,
     readinessChecked: Boolean(rollbackReady),
     readiness: rollbackReady ? safeResponseSummary(rollbackReady) : null,
@@ -384,7 +458,11 @@ const evidence = {
     targetShaConfigured,
     targetDiffersFromCurrentRelease,
     healthOk,
+    directHealthOk,
     healthNoStore,
+    providerBoundExactSha: automaticResolution ? false : providerBoundExactSha,
+    authBoundaryObserved: automaticResolution ? false : authBoundaryObserved,
+    protectedValidatedFallbackUsed: automaticResolution ? false : protectedValidatedFallback,
     readyCheckRequired: runReadyCheck,
     readyOk,
     readyNoStore,
