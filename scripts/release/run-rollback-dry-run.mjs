@@ -52,7 +52,6 @@ function isVercelAuthenticationBoundary(response) {
   const server = headerValue(response?.headers || {}, 'server').trim().toLowerCase();
   const requestId = headerValue(response?.headers || {}, 'x-vercel-id').trim();
   const providerMarked = server === 'vercel' && requestId.length > 0;
-  if ([401, 403].includes(status) && providerMarked) return true;
   if (status !== 302) return false;
   const location = headerValue(response?.headers || {}, 'location');
   try {
