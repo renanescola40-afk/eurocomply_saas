@@ -3,6 +3,7 @@ import http from 'node:http';
 import https from 'node:https';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { findExactShaVercelProductionDeployment } from './write-github-vercel-production-deployment-evidence.mjs';
 
 const evidencePath = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
 const timeoutMs = Number(process.env.RELEASE_SMOKE_TIMEOUT_MS || 10000);
@@ -34,7 +35,28 @@ function group(body, name) { return Array.isArray(body?.environment) ? body.envi
 function groupOk(body, name) { const item = group(body, name); return item?.configured === true && item?.missingCount === 0; }
 function loginRedirect(location) { if (!location) return false; try { const url = location.startsWith('http') ? new URL(location) : new URL(location, 'https://example.invalid'); return url.pathname === `/${locale}/login` && url.searchParams.has('next'); } catch { return location.includes(`/${locale}/login`) && location.includes('next='); } }
 function targets() { return [...new Set(['RELEASE_DEPLOYMENT_URL', 'DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'VERCEL_URL'].map((name) => process.env[name]).concat((process.env.RELEASE_SMOKE_URLS || '').split(',')).map(norm).filter(Boolean))]; }
-function meta() { return { commit: first(['RELEASE_COMMIT_SHA', 'GITHUB_SHA', 'VERCEL_GIT_COMMIT_SHA']), build: first(['RELEASE_BUILD_SHA', 'NEXT_PUBLIC_BUILD_SHA', 'NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA', 'VERCEL_GIT_COMMIT_SHA', 'GITHUB_SHA']), rollback: first(['RELEASE_ROLLBACK_TARGET_URL', 'RELEASE_ROLLBACK_TARGET', 'ROLLBACK_TARGET_URL', 'ROLLBACK_TARGET', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL', 'VERCEL_ROLLBACK_DEPLOYMENT_URL']) }; }
+function meta() { return {
+  commit: first(['RELEASE_COMMIT_SHA', 'GITHUB_SHA', 'VERCEL_GIT_COMMIT_SHA']),
+  build: first(['RELEASE_BUILD_SHA', 'NEXT_PUBLIC_BUILD_SHA', 'NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA', 'VERCEL_GIT_COMMIT_SHA', 'GITHUB_SHA']),
+  rollback: first(['RELEASE_ROLLBACK_TARGET_URL', 'RELEASE_ROLLBACK_TARGET', 'ROLLBACK_TARGET_URL', 'ROLLBACK_TARGET', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL', 'VERCEL_ROLLBACK_DEPLOYMENT_URL']),
+  rollbackSha: first(['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'ROLLBACK_TARGET_SHA', 'ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA']),
+}; }
+function isVercelAuthenticationBoundary(res) {
+  const status = Number(res?.status || 0);
+  const server = h(res?.headers || {}, 'server').trim().toLowerCase();
+  const requestId = h(res?.headers || {}, 'x-vercel-id').trim();
+  const providerMarked = server === 'vercel' && requestId.length > 0;
+  if ([401, 403].includes(status) && providerMarked) return true;
+  if (status !== 302) return false;
+  const location = h(res?.headers || {}, 'location');
+  try {
+    const redirect = new URL(location);
+    return providerMarked && redirect.protocol === 'https:' && redirect.hostname === 'vercel.com' && redirect.pathname === '/sso-api';
+  } catch {
+    return false;
+  }
+}
+function sameHost(left, right) { try { return new URL(left).hostname === new URL(right).hostname; } catch { return false; } }
 function shouldFollow(currentUrl, nextUrl, mode) { if (!nextUrl) return { follow: false, reason: 'invalid_location' }; if (mode === false) return { follow: false, reason: 'disabled' }; if (mode === true) return { follow: true, reason: 'standard' }; const current = new URL(currentUrl); const canonical = current.pathname === nextUrl.pathname && current.search === nextUrl.search && current.origin !== nextUrl.origin; return { follow: mode === 'canonical' && canonical, reason: canonical ? 'canonical_host' : 'target_redirect' }; }
 
 function request(url, options = {}, redirects = []) {
@@ -123,12 +145,34 @@ async function rollbackCheck(data) {
   if (!value) return check('rollbackTargetConfigured', false, { configured: false, resolutionMode: 'manual' });
   if (!url) return check('rollbackTargetConfigured', false, { source: data.rollback.name, networkVerified: false, resolutionMode: 'manual' });
   const res = await request(route(url, '/api/health'), { accept: 'application/json' });
-  return check('rollbackTargetConfigured', res.status === 200 && res.body?.status === 'ok', {
+  const directHealthOk = res.status === 200 && res.body?.status === 'ok';
+  const rollbackSha = String(data.rollbackSha?.value || '').trim().toLowerCase();
+  const githubToken = String(process.env.GITHUB_TOKEN || '').trim();
+  const repository = String(process.env.GITHUB_REPOSITORY || '').trim();
+  let providerBoundExactSha = false;
+  if (/^[a-f0-9]{40}$/.test(rollbackSha) && githubToken && repository) {
+    const deployment = await findExactShaVercelProductionDeployment({
+      repository,
+      targetSha: rollbackSha,
+      token: githubToken,
+      apiUrl: String(process.env.GITHUB_API_URL || 'https://api.github.com').trim(),
+    });
+    providerBoundExactSha = Boolean(deployment?.publicUrl && sameHost(deployment.publicUrl, url));
+  }
+  const authBoundaryObserved = isVercelAuthenticationBoundary(res);
+  const protectedValidatedFallback = !directHealthOk
+    && authBoundaryObserved
+    && providerBoundExactSha
+    && process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
+  return check('rollbackTargetConfigured', directHealthOk || protectedValidatedFallback, {
     source: data.rollback.name,
     networkVerified: true,
     resolutionMode: 'manual',
     targetStatus: res.status,
     targetBodyStatus: res.body?.status || null,
+    providerBoundExactSha,
+    authBoundaryObserved,
+    protectedValidatedFallback,
   });
 }
 
