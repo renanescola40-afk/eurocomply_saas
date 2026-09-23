@@ -112,7 +112,9 @@ jobs:
           node --test tests/enterprise/enterprise-promotion-closeout.test.mjs
           node --test tests/enterprise/final-assurance-proof.test.mjs
           node --test tests/enterprise/final-eleven-closeout.test.mjs
+          node --test tests/security/supabase-live-rls-authority-binding.test.mjs
           node --test tests/security/supabase-live-rls-reattestation-authority.test.mjs
+          node --test tests/security/supabase-current-production-state-read-only.test.mjs
           npx vitest run tests/security/recovery-resilience-proof.test.ts
 
       - name: Execute enterprise runtime campaign
