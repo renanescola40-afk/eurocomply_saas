@@ -237,6 +237,9 @@ export async function probeExactDeploymentHealth({
   const noStore = /\bno-store\b/i.test(String(response.headers.get('cache-control') ?? ''));
   const bodyStatus = String(body?.status ?? '');
   const location = String(response.headers.get('location') ?? '');
+  const serverHeader = String(response.headers.get('server') ?? '').trim().toLowerCase();
+  const vercelRequestId = String(response.headers.get('x-vercel-id') ?? '').trim();
+  const vercelProviderMarked = serverHeader === 'vercel' && vercelRequestId.length > 0;
   let blockedByVercelProtection = false;
   if (response.status === 302 && location) {
     try {
@@ -255,6 +258,7 @@ export async function probeExactDeploymentHealth({
     noStore,
     protectionBypassUsed: Boolean(bypassSecret),
     blockedByVercelProtection,
+    vercelProviderMarked,
   };
 }
 
@@ -343,6 +347,7 @@ function safeHealthEvidence(health) {
     noStore: health.noStore === true,
     protectionBypassUsed: health.protectionBypassUsed === true,
     blockedByVercelProtection: health.blockedByVercelProtection === true,
+    vercelProviderMarked: health.vercelProviderMarked === true,
     releaseShaMatched: health.releaseShaMatched === true,
     canonicalFallbackUsed: health.canonicalFallbackUsed === true,
   };
@@ -446,7 +451,8 @@ export async function buildProductionDeploymentEvidence({
     deployment = immutableAttempt?.deployment ?? null;
     health = immutableAttempt?.health ?? null;
     immutableProtectionObserved = immutableAttempt?.health?.blockedByVercelProtection === true;
-    immutableAuthBoundaryObserved = [401, 403].includes(Number(immutableAttempt?.health?.status ?? 0));
+    immutableAuthBoundaryObserved = [401, 403].includes(Number(immutableAttempt?.health?.status ?? 0))
+      && immutableAttempt?.health?.vercelProviderMarked === true;
     const canonicalFallbackEligible = immutableProtectionObserved || immutableAuthBoundaryObserved;
 
     if (deployment && canonicalFallbackEligible && !String(protectionBypassSecret ?? '').trim()) {
