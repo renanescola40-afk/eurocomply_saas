@@ -8,6 +8,8 @@ import test from 'node:test';
 
 const rollbackScript = resolve('scripts/release/run-rollback-dry-run.mjs');
 const closeoutWorkflow = resolve('.github/workflows/enterprise-runtime-evidence-closeout.yml');
+const enterpriseGateWorkflow = resolve('.github/workflows/enterprise-production-gate.yml');
+const publicFinalWorkflow = resolve('.github/workflows/public-production-final.yml');
 
 function runNode(script, cwd, env) {
   return new Promise((resolveRun) => {
@@ -107,4 +109,17 @@ test('runtime closeout keeps the Vercel automation bypass secret step-local', ()
     workflow,
     /Run public production final validation[\s\S]*VERCEL_AUTOMATION_BYPASS_SECRET:[\s\S]*npm run release:production-final/,
   );
+});
+
+
+test('enterprise and public production release workflows keep Vercel rollback auth step-local', () => {
+  for (const workflowPath of [enterpriseGateWorkflow, publicFinalWorkflow]) {
+    const workflow = readFileSync(workflowPath, 'utf8');
+    assert.match(
+      workflow,
+      /^\s{10}VERCEL_AUTOMATION_BYPASS_SECRET: \$\{\{ secrets\.VERCEL_AUTOMATION_BYPASS_SECRET \}\}/m,
+    );
+    assert.doesNotMatch(workflow, /^\s{6}VERCEL_AUTOMATION_BYPASS_SECRET:/m);
+    assert.match(workflow, /VERCEL_AUTOMATION_BYPASS_SECRET:[\s\S]*npm run release:production-final/);
+  }
 });

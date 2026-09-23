@@ -542,6 +542,7 @@ async function main() {
       ? 'Protected exact-SHA provider probes verified Production GitHub, Vercel, Supabase, Stripe and Sentry configuration, including transactional-email, malware-scanner and metric-snapshot runtime controls, without storing provider values.'
       : 'One or more protected production provider probes did not meet the fail-closed acceptance criteria.',
     valuesRedacted: true,
+    environmentsChecked: ['production'],
     runtimeContext: {
       repository: env('GITHUB_REPOSITORY'),
       branch: env('GITHUB_REF_NAME'),

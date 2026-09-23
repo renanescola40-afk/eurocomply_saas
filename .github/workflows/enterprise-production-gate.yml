@@ -265,7 +265,11 @@ jobs:
             jq -r '"- Target SHA: `\(.targetSha)`\n- Hydrated producers: \(.hydratedProducerCount)/\(.producerCount)\n- Missing producers: \(.missingProducerCount)\n- Trigger source: \(.sourceWorkflowPath // .sourceWorkflowName // "direct gate")"' "$manifest"
           } >> "$GITHUB_STEP_SUMMARY"
       - run: node scripts/release/check-enterprise-release-env.mjs
-      - run: npm run release:production-final
+      - name: Run protected production final validation
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          VERCEL_TRUSTED_OIDC_TOKEN: ${{ secrets.VERCEL_TRUSTED_OIDC_TOKEN }}
+        run: npm run release:production-final
       - run: node scripts/release/verify-enterprise-evidence-bundle.mjs
       - name: Write exact-SHA Vercel production deployment evidence
         if: always()

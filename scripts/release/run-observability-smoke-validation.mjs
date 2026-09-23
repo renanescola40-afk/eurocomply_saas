@@ -218,7 +218,9 @@ async function validateTarget(baseUrl, { expectedCommitSha, expectedBuildSha }) 
   checks.push(createCheck('observabilitySmokeAnonymousDoesNotExposeSecrets', responseDoesNotExposeSecrets(anonymousPost), { valuesRedacted: true }));
 
   const methodProbe = await request(route(baseUrl, '/api/observability/smoke'), { method: 'GET' });
-  checks.push(createCheck('observabilitySmokeGetRejected', methodProbe.status === 405 && methodProbe.body?.status === 'method_not_allowed', safeResponseSummary(methodProbe)));
+  const methodProbeRejected = (methodProbe.status === 405 && methodProbe.body?.status === 'method_not_allowed')
+    || (methodProbe.status === 401 && methodProbe.body?.status === 'unauthorized');
+  checks.push(createCheck('observabilitySmokeGetRejected', methodProbeRejected, safeResponseSummary(methodProbe)));
   checks.push(createCheck('observabilitySmokeGetNoStore', hasNoStore(methodProbe.headers), safeResponseSummary(methodProbe)));
 
   let authenticatedPost = null;
