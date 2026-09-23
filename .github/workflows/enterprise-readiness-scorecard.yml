@@ -255,7 +255,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if test -f docs/security/evidence/runtime/supabase-live-rls-validation.json; then
+          evidence=docs/security/evidence/runtime/supabase-live-rls-validation.json
+          if test -f "$evidence" \
+            && test "$(jq -r '.status // "Open"' "$evidence")" = "Complete" \
+            && test "$(jq -r '.outcome // "not_verified"' "$evidence")" = "passed"; then
             ENTERPRISE_EXPECTED_SHA="$ASSESSED_SHA" node scripts/security/write-supabase-rls-scorecard-evidence.mjs
             ENTERPRISE_EXPECTED_SHA="$ASSESSED_SHA" node scripts/security/check-supabase-rls-scorecard-evidence.mjs
           else

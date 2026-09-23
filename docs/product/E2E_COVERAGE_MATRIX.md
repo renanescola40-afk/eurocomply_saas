@@ -54,10 +54,10 @@ The route-quality gate checks for stable coverage labels as a fail-closed docume
 | --- | --- | --- |
 | Login redirect | Public auth/continuation coverage in `tests/e2e/product-critical-journeys.spec.ts` | Covered |
 | Protected route no-store | Anonymous protected redirects assert cache-safe behavior | Covered |
-| Onboarding complete | Completion mutation requires disposable QA execution | **Open** |
+| Onboarding complete | `tests/e2e/new-customer-commercial-activation.spec.ts` executes licensed disposable onboarding through readiness generation; runtime remains fixture-gated | Executable, fixture-gated |
 | Dashboard load | Role-specific authenticated storage states | Executable, fixture-gated |
 | Create AI system | Explicit synthetic app-write opt-in on disposable paid-owner fixture | Executable, write-gated |
-| Create task/document | Disposable mutation fixtures are still required | **Open** |
+| Create task/document | `authenticated-commercial-acceptance.spec.ts` covers disposable task/document CRUD; full journey adds persisted document upload + signed-download navigation + cleanup | Executable, write-gated |
 | Billing CTA | Public purchase route plus role-aware authenticated billing controls | Covered / fixture-gated |
 | Trust/security pages | Public trust/security route smoke | Covered |
 | Mobile smoke | 390x844 purchase/auth overflow and public conversion smoke | Covered |
@@ -67,7 +67,7 @@ The route-quality gate checks for stable coverage labels as a fail-closed docume
 | Checkout without plan | Missing-plan checkout remains a controlled route state | Covered |
 | Synthetic data policy | Synthetic writes are restricted to disposable QA fixtures and explicit opt-in | Enforced |
 | E2E_AUTH_STORAGE_STATE | General seeded-fixture contract retained for route-quality compatibility; commercial acceptance uses role-specific storage states | Fixture contract |
-| E2E_ALLOW_SYNTHETIC_ONBOARDING_WRITE | Reserved explicit opt-in boundary for disposable onboarding writes; onboarding completion is not claimed as executed here | **Open / not runtime proof** |
+| E2E_ALLOW_SYNTHETIC_ONBOARDING_WRITE | Legacy explicit opt-in boundary retained; current commercial activation proof uses the disposable new-customer fixture plus `E2E_ALLOW_SYNTHETIC_APP_WRITES=true` | Fixture contract |
 | E2E_ALLOW_SYNTHETIC_APP_WRITES | Explicit opt-in required for disposable product writes | Enforced |
 
 ## Authenticated fixture contract
@@ -142,3 +142,23 @@ npm run test:e2e tests/e2e/authenticated-commercial-acceptance.spec.ts
 ## Remaining QA gap
 
 Final Product/Commercial PASS still requires actual disposable-fixture execution for role-specific authenticated flows, onboarding completion/mutations, task/document mutations, and the provider-backed Stripe success-return path. Skipped fixture-gated tests are capability, not proof of runtime PASS.
+
+
+## Full functional journey closure
+
+`tests/e2e/full-saas-functional-journey.spec.ts` is the canonical fan-in for the user-facing product spine:
+
+`signup → workspace → AI inventory/classification → assessment surface → documents/download → regulatory monitoring → settings/profile → billing → logout/login`.
+
+Acceptance rules in this suite:
+
+- no runtime/framework error text;
+- no `/undefined` navigation;
+- no placeholder `href="#"` links on traversed product surfaces;
+- enabled visible buttons require an accessible name;
+- inventory create/reassessment must survive reload;
+- document upload must survive reload and expose a signed-download navigation before cleanup;
+- printable report must invoke the browser print pipeline, not a same-page placeholder anchor;
+- logout must clear product access and credential login must restore it.
+
+The suite is deliberately split between read-only route-spine proof and explicit disposable synthetic-write proof. Production customer data is never required or modified. A PASS may only be claimed when the relevant fixture-gated tests execute on the assessed SHA rather than skip.
