@@ -25,17 +25,43 @@ async function expectHealthyPage(page: Page, label: string) {
   expect(unnamedEnabledButtons, `${label} should not expose enabled unnamed buttons`).toEqual([]);
 }
 
+async function waitForInteractivePage(page: Page) {
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForLoadState('networkidle', { timeout: 20_000 });
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
+}
+
+async function gotoStable(page: Page, url: string) {
+  let response;
+  try {
+    response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+  } catch (error) {
+    if (!String(error).includes('net::ERR_ABORTED')) throw error;
+    response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+  }
+  await waitForInteractivePage(page);
+  return response;
+}
+
 async function loginWithCredentials(page: Page, email: string, password: string, next = '/en/dashboard/organizations') {
-  await page.goto(`/en/login?next=${encodeURIComponent(next)}`, { waitUntil: 'domcontentloaded' });
+  await gotoStable(page, `/en/login?next=${encodeURIComponent(next)}`);
   const emailInput = page.getByRole('textbox', { name: 'Work email', exact: true });
   const form = page.locator('form').filter({ has: emailInput });
+  const passwordInput = form.getByLabel('Password', { exact: true });
+  const submit = form.locator('button[type="submit"]');
   await expect(form).toHaveCount(1);
+  await expect(submit).toBeEnabled();
   await emailInput.fill(email);
-  await form.getByLabel('Password', { exact: true }).fill(password);
+  await passwordInput.fill(password);
+  await expect(emailInput).toHaveValue(email);
+  await expect(passwordInput).toHaveValue(password);
   await Promise.all([
     page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000, waitUntil: 'domcontentloaded' }),
-    form.locator('button[type="submit"]').click(),
+    submit.click(),
   ]);
+  await waitForInteractivePage(page);
   await expectHealthyPage(page, 'credential login');
 }
 
@@ -98,7 +124,7 @@ test.describe('full SaaS functional E2E closure', () => {
       ] as const;
 
       for (const [route, label] of routeSpine) {
-        const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
+        const response = await gotoStable(page, route);
         expect(response?.status(), `${label} should not 404`).not.toBe(404);
         expect(response?.status(), `${label} should not server-error`).toBeLessThan(500);
         await expectHealthyPage(page, label);
@@ -145,9 +171,14 @@ test.describe('full SaaS functional E2E closure', () => {
       await expect(persistedRow).toBeVisible({ timeout: 20_000 });
 
       await persistedRow.getByRole('link', { name: /open detail/i }).click();
+      await waitForInteractivePage(page);
       await expectHealthyPage(page, 'AI assessment detail');
-      await page.getByLabel(/system name/i).fill(updatedName);
-      await page.getByLabel(/lifecycle status/i).selectOption('retired');
+      const systemNameInput = page.getByLabel(/system name/i);
+      const lifecycleInput = page.getByLabel(/lifecycle status/i);
+      await systemNameInput.fill(updatedName);
+      await lifecycleInput.selectOption('retired');
+      await expect(systemNameInput).toHaveValue(updatedName);
+      await expect(lifecycleInput).toHaveValue('retired');
       const reassessmentResponse = page.waitForResponse((response) =>
         response.request().method() === 'PATCH'
         && response.url().includes('/api/ai-systems/')
@@ -155,6 +186,9 @@ test.describe('full SaaS functional E2E closure', () => {
       await page.getByRole('button', { name: /save reassessment/i }).click();
       const response = await reassessmentResponse;
       expect(response.ok(), 'reassessment PATCH should succeed before persistence is checked').toBe(true);
+      const submittedPatch = response.request().postDataJSON() as { name?: string; lifecycleStatus?: string } | null;
+      expect(submittedPatch?.name, 'reassessment request must carry the current form name').toBe(updatedName);
+      expect(submittedPatch?.lifecycleStatus, 'reassessment request must carry the current lifecycle state').toBe('retired');
       const reassessmentPayload = await response.json();
       expect(reassessmentPayload?.system?.name).toBe(updatedName);
       expect(reassessmentPayload?.system?.lifecycle_status).toBe('retired');

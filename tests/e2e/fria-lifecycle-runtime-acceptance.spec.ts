@@ -96,6 +96,26 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
   expect(page.url(), `${label} should not fall back to checkout`).not.toContain('/checkout');
 }
 
+async function waitForInteractivePage(page: Page) {
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForLoadState('networkidle', { timeout: 20_000 });
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
+}
+
+async function gotoStable(page: Page, url: string) {
+  let response;
+  try {
+    response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+  } catch (error) {
+    if (!String(error).includes('net::ERR_ABORTED')) throw error;
+    response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+  }
+  await waitForInteractivePage(page);
+  return response;
+}
+
 async function expectNoHorizontalOverflow(page: Page, label: string) {
   const dimensions = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
@@ -107,30 +127,42 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
 }
 
 async function loginWithDisposableCredentials(page: Page, email: string, password: string) {
-  await page.goto('/en/login?next=/en/dashboard/organizations', { waitUntil: 'domcontentloaded' });
+  await gotoStable(page, '/en/login?next=/en/dashboard/organizations');
   const credentialEmail = page.getByRole('textbox', { name: 'Work email', exact: true });
   const credentialForm = page.locator('form').filter({ has: credentialEmail });
+  const passwordInput = credentialForm.getByLabel('Password', { exact: true });
+  const submit = credentialForm.locator('button[type="submit"]');
   await expect(credentialForm, 'credential login form should be uniquely addressable beside Enterprise SSO').toHaveCount(1);
+  await expect(submit).toBeEnabled();
   await credentialEmail.fill(email);
-  await credentialForm.getByLabel('Password', { exact: true }).fill(password);
+  await passwordInput.fill(password);
+  await expect(credentialEmail).toHaveValue(email);
+  await expect(passwordInput).toHaveValue(password);
   await Promise.all([
-    page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000, waitUntil: 'domcontentloaded' }),
-    credentialForm.locator('button[type="submit"]').click(),
+    page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000, waitUntil: 'domcontentloaded' }),
+    submit.click(),
   ]);
+  await waitForInteractivePage(page);
   await expectHealthyAuthenticatedPage(page, 'disposable authenticated session');
 }
 
 async function loginUnlicensedWithDisposableCredentials(page: Page, email: string, password: string) {
-  await page.goto('/en/login?next=/en/dashboard/organizations/billing', { waitUntil: 'domcontentloaded' });
+  await gotoStable(page, '/en/login?next=/en/dashboard/organizations/billing');
   const credentialEmail = page.getByRole('textbox', { name: 'Work email', exact: true });
   const credentialForm = page.locator('form').filter({ has: credentialEmail });
+  const passwordInput = credentialForm.getByLabel('Password', { exact: true });
+  const submit = credentialForm.locator('button[type="submit"]');
   await expect(credentialForm, 'unlicensed credential login form should remain uniquely addressable').toHaveCount(1);
+  await expect(submit).toBeEnabled();
   await credentialEmail.fill(email);
-  await credentialForm.getByLabel('Password', { exact: true }).fill(password);
+  await passwordInput.fill(password);
+  await expect(credentialEmail).toHaveValue(email);
+  await expect(passwordInput).toHaveValue(password);
   await Promise.all([
-    page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000, waitUntil: 'domcontentloaded' }),
-    credentialForm.locator('button[type="submit"]').click(),
+    page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000, waitUntil: 'domcontentloaded' }),
+    submit.click(),
   ]);
+  await waitForInteractivePage(page);
   await expectHealthyPublicPage(page, 'unlicensed authenticated session');
   expect(page.url()).not.toContain('/login');
 }
