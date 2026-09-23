@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHash } from 'node:crypto';
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -323,6 +324,23 @@ function githubOutput(name, value) {
   appendFileSync(output, `${name}=${value}\n`);
 }
 
+function safeDigest(value) {
+  return `sha256:${createHash('sha256').update(String(value || '')).digest('hex')}`;
+}
+
+function buildProvenance({ releaseSha, repository, projectId, currentDeploymentId }) {
+  return {
+    repository,
+    releaseSha,
+    projectDigest: safeDigest(projectId),
+    currentDeploymentDigest: safeDigest(currentDeploymentId),
+    githubRunId: String(process.env.GITHUB_RUN_ID || '').trim() || null,
+    githubRunAttempt: String(process.env.GITHUB_RUN_ATTEMPT || '').trim() || null,
+    githubWorkflow: String(process.env.GITHUB_WORKFLOW || '').trim() || null,
+    githubEventName: String(process.env.GITHUB_EVENT_NAME || '').trim() || null,
+  };
+}
+
 const SAFE_FAILURE_CODES = new Set([
   'missing_vercel_token',
   'missing_vercel_org_id',
@@ -364,7 +382,7 @@ function safeFailureCode(error) {
   return SAFE_FAILURE_CODES.has(code) ? code : 'unexpected_resolver_failure';
 }
 
-function writeSuccessEvidence() {
+function writeSuccessEvidence(provenance) {
   const evidence = {
     schema: 'risck-comply.public-ga-rollback-resolution.v3',
     status: 'Complete',
@@ -386,6 +404,7 @@ function writeSuccessEvidence() {
       healthEndpointValidated: true,
       healthNoStoreValidated: true,
     },
+    provenance,
     failure: null,
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -398,6 +417,7 @@ function writeSuccessEvidence() {
       rawProcessExitCodeStored: false,
       tokenStored: false,
       networkDerivedFieldsStored: false,
+      provenanceContainsRawProviderIdentifiers: false,
     },
   };
 
@@ -460,6 +480,13 @@ export async function runResolver() {
 
   if (!isSha(releaseSha)) throw new ResolverError('invalid_release_sha');
   if (!isDeploymentId(currentDeploymentId)) throw new ResolverError('invalid_current_deployment_id');
+
+  const provenance = buildProvenance({
+    releaseSha,
+    repository,
+    projectId,
+    currentDeploymentId,
+  });
 
   let transport = null;
   let oidcToken = null;
@@ -545,9 +572,11 @@ export async function runResolver() {
       throw new ResolverError('previous_ready_production_candidate_unhealthy');
     }
 
-    writeSuccessEvidence();
+    writeSuccessEvidence(provenance);
     githubOutput('validated', 'true');
     githubOutput('transport', transport);
+    githubOutput('project_digest', provenance.projectDigest);
+    githubOutput('current_deployment_digest', provenance.currentDeploymentDigest);
     console.log('Previous production rollback candidate passed provider identity and health validation.');
     console.log(`Wrote ${EVIDENCE_PATH}`);
     return;
