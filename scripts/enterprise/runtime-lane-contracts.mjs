@@ -2,14 +2,21 @@ const RELEASE_SHA_PLACEHOLDER = '${RELEASE_SHA}';
 const RECOVERY_CONFIRMATION_PLACEHOLDER = '${RECOVERY_ROLLBACK_CONFIRMATION}';
 const SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER = '${SUPABASE_PROMOTION_RUN_ID}';
 const SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER = '${SUPABASE_REATTESTATION_RUN_ID}';
+const SUPABASE_CURRENT_STATE_RUN_ID_PLACEHOLDER = '${SUPABASE_CURRENT_STATE_RUN_ID}';
 const SUPABASE_RLS_CONFIRMATION_PLACEHOLDER = '${SUPABASE_RLS_CONFIRMATION}';
+
+export const RUNTIME_LANE_REQUIREMENT_CLASSES = Object.freeze({
+  'IAM-RBAC':'core_required','IAM-LIFECYCLE':'core_required','IAM-SCIM':'conditional_when_configured','IAM-SAML':'conditional_when_configured',
+  'TEN-RLS':'core_required','FINAL-TECHNICAL':'core_required','PLATFORM':'core_required','DATA':'core_required','INCIDENT':'core_required','TRUST':'core_required',
+  'RECOVERY':'core_required','PRODUCTION':'core_required','REPOSITORY':'core_required','STEP-UP':'core_required','ASSURANCE':'external_assurance',
+});
 
 export const RUNTIME_LANE_CONTRACTS = Object.freeze({
   'IAM-RBAC': Object.freeze({ workflow: 'auth-rbac-runtime-proof.yml', artifactPrefix: 'auth-rbac-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER }), requiredEvidenceFiles: Object.freeze(['auth-rbac-validation.json']), controlsVerified: Object.freeze(['IAM-01','IAM-02','IAM-03','IAM-04','IAM-05','IAM-06','TEN-01']) }),
   'IAM-LIFECYCLE': Object.freeze({ workflow: 'identity-access-lifecycle-proof.yml', artifactPrefix: 'identity-access-lifecycle-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_IDENTITY_LIFECYCLE_PROOF' }), requiredEvidenceFiles: Object.freeze(['identity-access-lifecycle-validation.json']), controlsVerified: Object.freeze(['IAM-07','IAM-09','IAM-10']) }),
   'IAM-SCIM': Object.freeze({ workflow: 'scim-runtime-proof.yml', artifactPrefix: 'scim-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_SCIM_RUNTIME_PROOF' }), requiredEvidenceFiles: Object.freeze(['scim-runtime-validation.json']), controlsVerified: Object.freeze(['IAM-09']) }),
   'IAM-SAML': Object.freeze({ workflow: 'saml-sso-runtime-proof.yml', artifactPrefix: 'saml-sso-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_SAML_SSO_RUNTIME_PROOF' }), requiredEvidenceFiles: Object.freeze(['saml-sso-runtime-validation.json']), controlsVerified: Object.freeze(['IAM-09']) }),
-  'TEN-RLS': Object.freeze({ workflow: 'supabase-live-rls-validation.yml', artifactPrefix: 'supabase-live-rls-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, promotion_run_id: SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER, reattestation_run_id: SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER, confirmation: SUPABASE_RLS_CONFIRMATION_PLACEHOLDER }), requiredEvidenceFiles: Object.freeze(['supabase-live-rls-validation.json','supabase-rls-validation.json']), controlsVerified: Object.freeze(['TEN-02','TEN-03','TEN-04','TEN-05','TEN-06']) }),
+  'TEN-RLS': Object.freeze({ workflow: 'supabase-live-rls-validation.yml', artifactPrefix: 'supabase-live-rls-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, promotion_run_id: SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER, reattestation_run_id: SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER, current_state_run_id: SUPABASE_CURRENT_STATE_RUN_ID_PLACEHOLDER, confirmation: SUPABASE_RLS_CONFIRMATION_PLACEHOLDER }), requiredEvidenceFiles: Object.freeze(['supabase-live-rls-validation.json','supabase-rls-validation.json']), controlsVerified: Object.freeze(['TEN-02','TEN-03','TEN-04','TEN-05','TEN-06']) }),
   'FINAL-TECHNICAL': Object.freeze({ workflow: 'final-technical-controls-proof.yml', artifactPrefix: 'final-technical-controls-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_FINAL_TECHNICAL_PROOF' }), requiredEvidenceFiles: Object.freeze(['final-technical-controls-validation.json']), controlsVerified: Object.freeze(['TEN-10','OPS-03']) }),
   PLATFORM: Object.freeze({ workflow: 'platform-providers-runtime-proof.yml', artifactPrefix: 'platform-providers-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER }), requiredEvidenceFiles: Object.freeze(['platform-providers-validation.json']), controlsVerified: Object.freeze(['PLT-02','PLT-03','PLT-04','PLT-05','PLT-06','PLT-07','PLT-08','PLT-09','PLT-10','OPS-06']) }),
   DATA: Object.freeze({ workflow: 'data-governance-runtime-proof.yml', artifactPrefix: 'data-governance-runtime-proof-', inputs: Object.freeze({ release_sha: RELEASE_SHA_PLACEHOLDER, confirmation: 'EXECUTE_DATA_GOVERNANCE_PROOF' }), requiredEvidenceFiles: Object.freeze(['data-governance-validation.json']), controlsVerified: Object.freeze(['TEN-09']) }),
@@ -31,6 +38,7 @@ export function resolveLaneInputs(inputs, {
   recoveryRollbackConfirmation = '',
   supabasePromotionRunId = '',
   supabaseReattestationRunId = '',
+  supabaseCurrentStateRunId = '',
 } = {}) {
   const resolved = {};
   const promotionRunId = String(supabasePromotionRunId || process.env.SUPABASE_PROMOTION_RUN_ID || '').trim();
@@ -40,10 +48,11 @@ export function resolveLaneInputs(inputs, {
   const usesSupabaseAuthority = Object.values(inputs ?? {}).some((value) => [
     SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER,
     SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER,
+    SUPABASE_CURRENT_STATE_RUN_ID_PLACEHOLDER,
     SUPABASE_RLS_CONFIRMATION_PLACEHOLDER,
   ].includes(value));
-  if (usesSupabaseAuthority && promotionSet === reattestationSet) {
-    fail('Exactly one of SUPABASE_PROMOTION_RUN_ID or SUPABASE_REATTESTATION_RUN_ID must be a numeric canonical Supabase authority run ID');
+  if (usesSupabaseAuthority && [promotionSet, reattestationSet, currentStateSet].filter(Boolean).length !== 1) {
+    fail('Exactly one canonical Supabase authority run ID must be supplied: promotion, reattestation, or current-state read-only');
   }
 
   for (const [key, value] of Object.entries(inputs ?? {})) {
@@ -52,9 +61,12 @@ export function resolveLaneInputs(inputs, {
     else if (value === RECOVERY_CONFIRMATION_PLACEHOLDER) resolved[key] = recoveryRollbackConfirmation;
     else if (value === SUPABASE_PROMOTION_RUN_ID_PLACEHOLDER) resolved[key] = promotionSet ? promotionRunId : '';
     else if (value === SUPABASE_REATTESTATION_RUN_ID_PLACEHOLDER) resolved[key] = reattestationSet ? reattestationRunId : '';
+    else if (value === SUPABASE_CURRENT_STATE_RUN_ID_PLACEHOLDER) resolved[key] = currentStateSet ? currentStateRunId : '';
     else if (value === SUPABASE_RLS_CONFIRMATION_PLACEHOLDER) resolved[key] = promotionSet
       ? 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
-      : 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF';
+      : reattestationSet
+        ? 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF'
+        : 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF';
     else if (typeof value === 'string' || typeof value === 'boolean') resolved[key] = value;
     else fail(`unsupported workflow input value for ${key}`);
   }
@@ -70,7 +82,10 @@ export function validateRuntimeCampaignManifest(manifest) {
     const contract = RUNTIME_LANE_CONTRACTS[lane.id];
     if (!contract || seen.has(lane.id)) fail(`invalid or duplicate runtime campaign lane: ${lane.id ?? 'missing'}`);
     seen.add(lane.id);
-    if (lane.required !== true) fail(`runtime campaign lane ${lane.id} must be required`);
+    const expectedClass = RUNTIME_LANE_REQUIREMENT_CLASSES[lane.id];
+    if (lane.classification !== expectedClass) fail(`runtime campaign lane ${lane.id} classification drift`);
+    const expectedRequired = expectedClass === 'core_required';
+    if (lane.required !== expectedRequired) fail(`runtime campaign lane ${lane.id} required flag drift`);
     if (lane.workflow !== contract.workflow) fail(`runtime campaign workflow drift for ${lane.id}`);
     if (lane.artifact_prefix !== contract.artifactPrefix) fail(`runtime campaign artifact prefix drift for ${lane.id}`);
     if (JSON.stringify(lane.inputs ?? {}) !== JSON.stringify(contract.inputs)) fail(`runtime campaign inputs drift for ${lane.id}`);
