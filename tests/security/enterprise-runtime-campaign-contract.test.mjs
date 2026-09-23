@@ -69,7 +69,7 @@ test('full closeout retains destructive confirmation and keeps core-required lan
   assert.doesNotMatch(closeoutWorkflow, /PARTIAL_SAFE_EVIDENCE_PROMOTED/);
 
   assert.match(promoter, /resolvedProfile === FULL_RUNTIME_PROFILE/);
-  assert.match(promoter, /if \(!incremental\) fail\(`runtime lane \$\{result\.id\} is not complete\/success`\)/);
+  assert.match(promoter, /if \(!incremental && result\.required !== false\) fail\(`runtime lane \$\{result\.id\} is not complete\/success`\)/);
 });
 
 test('safe bootstrap excludes destructive lanes and accepts only truthful complete or partial promotion', () => {
