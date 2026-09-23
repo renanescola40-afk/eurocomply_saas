@@ -141,23 +141,24 @@ jobs:
 
       - name: Run public production final validation
         env:
-          HEALTHCHECK_TOKEN: ${{ secrets.READINESS_TOKEN }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN || secrets.READINESS_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN || secrets.NEXT_PUBLIC_SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          VERCEL_TRUSTED_OIDC_TOKEN: ${{ secrets.VERCEL_TRUSTED_OIDC_TOKEN }}
         run: npm run release:production-final
 
       - name: Run authenticated production journey smoke
         env:
-          HEALTHCHECK_TOKEN: ${{ secrets.READINESS_TOKEN }}
+          HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN || secrets.READINESS_TOKEN }}
           TEST_USER_A_EMAIL: ${{ secrets.TEST_USER_A_EMAIL }}
           TEST_USER_A_PASSWORD: ${{ secrets.TEST_USER_A_PASSWORD }}
           TEST_USER_B_EMAIL: ${{ secrets.TEST_USER_B_EMAIL }}
@@ -166,7 +167,7 @@ jobs:
 
       - name: Promote canonical production observability evidence
         env:
-          HEALTHCHECK_TOKEN: ${{ secrets.READINESS_TOKEN }}
+          HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN || secrets.READINESS_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: node scripts/release/run-production-observability-validation.mjs
