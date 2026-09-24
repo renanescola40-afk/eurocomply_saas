@@ -2,6 +2,7 @@ import 'server-only';
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { writeAuditLog } from '@/lib/security/audit-log';
 
 export class TenantMfaError extends Error {
   status: 403 | 503;
@@ -74,4 +75,24 @@ export async function requireTenantMfaForOrganization(organizationId: string) {
     throw new TenantMfaError('tenant_mfa_required', 403);
   }
   return state;
+}
+
+
+export async function recordTenantMfaDenial(organizationId: string, userId: string | null | undefined, surface: string) {
+  try {
+    await writeAuditLog({
+      action: 'security.failure',
+      organizationId,
+      actorUserId: userId ?? null,
+      entityType: 'tenant_mfa_policy',
+      entityId: organizationId,
+      metadata: {
+        securityEvent: 'tenant_mfa.denied',
+        reason: 'aal2_required',
+        surface,
+      },
+    });
+  } catch {
+    // Authorization remains denied even if best-effort denial telemetry is unavailable.
+  }
 }
