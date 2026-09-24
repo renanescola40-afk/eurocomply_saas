@@ -97,6 +97,14 @@ const STALE_TRUST_PHRASES = [
   'RISCK COMPLY has not yet completed an independent penetration test',
   'A third-party penetration test has not yet been completed',
   'A third-party penetration test has not completed',
+  'tamper-evident/WORM audit storage is not yet implemented',
+  'SSO/SAML and tenant-enforced MFA implementation',
+  'Audit log export and tamper-evident retention',
+  'FINAL_DATA_ROOM_INDEX_2026-09-12.md',
+  '# Data retention policy draft',
+  'Define how long EuroComply retains',
+  'Minimum 12 months draft target',
+  '30-90 days draft target',
 ];
 
 const failures = [];
@@ -145,6 +153,56 @@ for (const relativePath of CANONICAL_SECURITY_AUTHORITY_FILES) {
   if (PERSONAL_MAILBOX_PATTERN.test(content)) {
     failures.push(`${relativePath}: personal free-mail address must not be a current public security-reporting authority`);
   }
+}
+
+const canonicalReadme = contents.get('docs/trust/README.md') ?? '';
+const questionnaire = contents.get('docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md') ?? '';
+
+const consistencyRules = [
+  {
+    label: 'tamper-evident audit status',
+    pass:
+      canonicalReadme.includes('tamper-evident audit hash chain and signed audit evidence export are implemented')
+      && canonicalReadme.includes('External WORM/legally immutable storage is not currently claimed')
+      && questionnaire.includes('tamper-evident audit hash chain and signed evidence export')
+      && questionnaire.includes('External WORM/legally immutable storage is not currently claimed'),
+  },
+  {
+    label: 'tenant-wide MFA boundary',
+    pass:
+      canonicalReadme.includes('Tenant-wide mandatory MFA for every workspace user is not currently claimed as complete')
+      && questionnaire.includes('Tenant-wide mandatory MFA for every workspace user is not currently claimed as complete'),
+  },
+  {
+    label: 'SSO buyer activation boundary',
+    pass:
+      canonicalReadme.includes('Activation requires buyer-specific IdP/domain configuration and end-to-end validation')
+      && questionnaire.includes('Activation requires buyer-specific IdP/domain configuration and end-to-end validation'),
+  },
+  {
+    label: 'restore/RTO/RPO boundary',
+    pass:
+      canonicalReadme.includes('a real data-bearing restore and measured RTO/RPO remain unproven')
+      && questionnaire.includes('measured RPO/RTO are not yet proven'),
+  },
+  {
+    label: 'current-release tenant isolation boundary',
+    pass:
+      canonicalReadme.includes('Exact-current-release production isolation must be freshly revalidated')
+      && questionnaire.includes('production evidence must be collected'),
+  },
+  {
+    label: 'certification non-claims',
+    pass:
+      canonicalReadme.includes('not currently ISO 27001 certified')
+      && canonicalReadme.includes('does not currently have a SOC 2 Type I or Type II report')
+      && questionnaire.includes('not currently ISO 27001 certified')
+      && questionnaire.includes('does not currently have a SOC 2 Type I or Type II report'),
+  },
+];
+
+for (const rule of consistencyRules) {
+  if (!rule.pass) failures.push(`canonical trust consistency failure: ${rule.label}`);
 }
 
 console.log('RISCK COMPLY enterprise Trust Center package check');
