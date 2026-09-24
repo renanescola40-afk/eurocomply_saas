@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
+  exactShaProducerSnapshot,
   productionGateAlreadyCoversEvidence,
   relevantProductionGateRuns,
 } from '../../scripts/release/stabilize-enterprise-readiness-scorecard.mjs';
@@ -18,6 +19,42 @@ const producerNames = [
 const retainedFanInNames = ['Auth RBAC Tenant Proof','Supabase Live RLS Validation','RISCK COMPLY Upload Security CI','Audit Chain Runtime Proof','Production Runtime Proof','Production Provider Runtime Proof','Branch Protection Runtime Proof','Step-Up Runtime Proof','Stripe Runtime Evidence Promotion','Public Production Final'];
 
 describe('enterprise readiness scorecard terminal stabilizer', () => {
+  it('freezes a same-SHA producer horizon so later workflow storms cannot move the current terminal target', () => {
+    const targetSha = 'a'.repeat(40);
+    const cutoff = Date.parse('2026-09-24T08:00:00Z');
+    const runs = [
+      {
+        id: 1,
+        name: 'CI',
+        head_sha: targetSha,
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2026-09-24T07:59:00Z',
+        updated_at: '2026-09-24T07:59:30Z',
+      },
+      {
+        id: 2,
+        name: 'P0 Progress',
+        head_sha: targetSha,
+        status: 'in_progress',
+        conclusion: null,
+        created_at: '2026-09-24T08:00:10Z',
+        updated_at: '2026-09-24T08:00:20Z',
+      },
+      {
+        id: 3,
+        name: 'CodeQL',
+        head_sha: targetSha,
+        status: 'in_progress',
+        conclusion: null,
+        created_at: '2026-09-24T08:00:20Z',
+        updated_at: '2026-09-24T08:00:30Z',
+      },
+    ];
+
+    expect(exactShaProducerSnapshot(runs, targetSha, cutoff).map((run) => run.id)).toEqual([1]);
+  });
+
   it('is syntactically valid JavaScript', () => {
     expect(() => execFileSync(process.execPath, ['--check', scriptPath])).not.toThrow();
   });
