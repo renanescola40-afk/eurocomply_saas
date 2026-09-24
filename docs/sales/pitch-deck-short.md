@@ -6,7 +6,7 @@ Use this as an 8-slide first-call deck. Keep the visual style dark, premium and 
 
 **RISCK COMPLY**
 
-The European compliance control room for risks, documents, vendors and audit evidence.
+AI governance and EU AI Act readiness — from inventory to review-ready evidence.
 
 ## Slide 2 — Problem
 
@@ -33,20 +33,21 @@ Manual process creates hidden cost:
 
 RISCK COMPLY centralizes:
 
-- Risk register.
-- Controlled documents.
-- Vendor reviews.
-- Compliance actions.
-- Activity history.
-- Ownership and deadlines.
+- AI system inventory and ownership.
+- Risk/classification and assessment context.
+- Governance documents and evidence.
+- Provider/vendor context.
+- Review actions and monitoring.
+- Activity/audit evidence.
+- Procurement and buyer-review preparation.
 
 ## Slide 5 — Product pillars
 
-1. Risk control — severity, owners, status and mitigation.
-2. Document control — review cycles, versions and accountability.
-3. Vendor control — criticality, DPA status and evidence gaps.
-4. Audit readiness — activity history, evidence packs and reporting.
-5. Enterprise trust — precise answers for buyer review.
+1. AI inventory — use cases, owners, providers and lifecycle.
+2. Risk and assessment — structured classification, review and actions.
+3. Governance evidence — documents, policies and accountable ownership.
+4. Audit/readiness — activity history, evidence packs and monitoring.
+5. Enterprise trust — security questionnaire, architecture and procurement materials.
 
 ## Slide 6 — Buyer value
 
@@ -74,8 +75,15 @@ European companies need clearer control across privacy, vendors, internal polici
 
 Spreadsheets can start the process, but they do not scale ownership, evidence, workflow or visibility.
 
-## Slide 8 — CTA
+## Slide 8 — Commercial path and CTA
+
+Public reference: Essential €49/month, Professional €149/month, Business €399/month and Enterprise from €990/month by contract. No free trial is currently offered.
 
 **Book a 30-minute workflow mapping session.**
 
 We will map current process, critical documents, vendor review flow, risk ownership and the first 3 use cases for RISCK COMPLY.
+
+
+## Presenter guardrails
+
+Do not add customer logos, ARR, testimonials, certification badges, “clean pentest” language or guaranteed compliance unless attributable evidence exists. Pricing must remain aligned with the canonical billing catalog.
