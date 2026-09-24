@@ -56,6 +56,24 @@ export default function TenantMfaEnrollment({ locale, nextPath }: { locale: stri
     setError('');
     setMessage('Creating your MFA factor…');
 
+    const existing = await supabase.auth.mfa.listFactors();
+    if (existing.error) {
+      setError('Could not inspect existing MFA factors.');
+      setLoading(false);
+      return;
+    }
+
+    for (const stale of existing.data?.totp ?? []) {
+      if (stale.status !== 'verified') {
+        const removal = await supabase.auth.mfa.unenroll({ factorId: stale.id });
+        if (removal.error) {
+          setError('Could not reset an incomplete MFA enrollment.');
+          setLoading(false);
+          return;
+        }
+      }
+    }
+
     const { data, error: enrollError } = await supabase.auth.mfa.enroll({
       factorType: 'totp',
       friendlyName: 'RISCK COMPLY workspace MFA',
