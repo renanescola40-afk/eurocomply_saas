@@ -1,7 +1,7 @@
 # RISCK COMPLY — Universal Buyer Readiness Terminal Index
 
 Date: 2026-09-24  
-Release truth: `3599ad36e8549474021a669e0f1ad427421df4b7`  
+Release truth: `e170529f7bb537242b79461052cb32ecbb0f8ea0`  
 Scope: SMB, mid-market, enterprise and strategic-acquirer/M&A diligence.  
 Status: `INTERNAL_CANONICAL_SHARE_POLICY`
 
