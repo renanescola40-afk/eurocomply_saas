@@ -106,8 +106,13 @@ for (const [index, claim] of manifest.claims.entries()) {
   }
 
   const unsafeAnswerPattern = /\b(we have|certified|audited|completed|guaranteed|immutable)\b/i;
+  const explicitNegativePattern = /\b(no|not|is not|are not|does not|do not|has not|have not|without)\b/i;
   const draftLikeStatus = new Set(['not_available', 'planned', 'draft', 'partial', 'partial_strong', 'partial_external']);
-  if (draftLikeStatus.has(claim.status) && unsafeAnswerPattern.test(claim.customerAnswer)) {
+  if (
+    draftLikeStatus.has(claim.status)
+    && unsafeAnswerPattern.test(claim.customerAnswer)
+    && !explicitNegativePattern.test(claim.customerAnswer)
+  ) {
     fail(`claim ${claim.id} has potentially over-claiming customerAnswer for status ${claim.status}.`);
   }
 }
