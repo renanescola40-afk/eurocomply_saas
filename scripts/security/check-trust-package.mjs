@@ -22,6 +22,10 @@ const REQUIRED_FILES = [
   'docs/trust/SECURITY_FAQ.md',
   'docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md',
   'docs/trust/PROCUREMENT_CHECKLIST.md',
+  'docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md',
+  'docs/trust/README.md',
+  'docs/trust/PENTEST_READINESS.md',
+  'docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md',
   'src/app/[locale]/trust/page.tsx',
   'src/app/[locale]/security/page.tsx',
   'src/app/[locale]/status/page.tsx',
@@ -47,6 +51,10 @@ const REQUIRED_PHRASES = new Map([
   ['docs/trust/SECURITY_FAQ.md', ['SOC 2', 'ISO 27001', SECURITY_EMAIL, STATUS_URL]],
   ['docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md', ['Procurement checklist', 'designed to support', SECURITY_EMAIL, STATUS_URL]],
   ['docs/trust/PROCUREMENT_CHECKLIST.md', ['Enterprise procurement checklist', 'Authentication', 'RBAC', 'RLS', 'Audit logs', 'Data retention', 'Responsible disclosure', SECURITY_EMAIL, STATUS_URL]],
+  ['docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md', ['DPA / GDPR Article 28', 'SCC / international transfers', 'Retention / deletion', 'Data residency', 'AI Act documentation', 'GDPR documentation', 'PROCUREMENT_INTERNAL_READY=PASS']],
+  ['docs/trust/README.md', ['Independent security assessment', 'DPA', 'Subprocessors', 'Retention / deletion']],
+  ['docs/trust/PENTEST_READINESS.md', ['THIRD_PARTY_BLACK_BOX_ASSESSMENT_COMPLETE', 'CLEAN_RETEST_OPEN', '2026-09-12']],
+  ['docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md', ['third-party black-box web application assessment', 'Article 28 DPA', 'Category-specific retention']],
   ['src/app/[locale]/trust/page.tsx', ['TrustCenterPage', 'applyVerifiedTrustAuthority', "getLocalizedTrustCenterPage('trust'" ]],
   ['src/app/[locale]/security/page.tsx', ['TrustCenterPage', 'applyVerifiedTrustAuthority', "getLocalizedTrustCenterPage('security'" ]],
   ['src/app/[locale]/status/page.tsx', ['VerifiedStatusPage']],
@@ -85,6 +93,12 @@ const FALSE_CLAIM_PATTERNS = [
 
 const SAFE_NEGATION_CONTEXT = /(not currently|does not currently|must not|do not|unless|non-claim|non-claims|not claimed|não afirma|no afirma|ne revendique pas|non dichiara|beansprucht derzeit weder)/i;
 
+const STALE_TRUST_PHRASES = [
+  'RISCK COMPLY has not yet completed an independent penetration test',
+  'A third-party penetration test has not yet been completed',
+  'A third-party penetration test has not completed',
+];
+
 const failures = [];
 const contents = new Map();
 
@@ -107,6 +121,10 @@ for (const relativePath of REQUIRED_FILES) {
 
   for (const phrase of REQUIRED_PHRASES.get(relativePath) ?? []) {
     if (!content.includes(phrase)) failures.push(`${relativePath}: missing required phrase "${phrase}"`);
+  }
+
+  for (const stalePhrase of STALE_TRUST_PHRASES) {
+    if (content.includes(stalePhrase)) failures.push(`${relativePath}: stale trust statement "${stalePhrase}"`);
   }
 
   content.split('\n').forEach((line, index) => {

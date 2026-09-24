@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   appendFileSync,
   cpSync,
@@ -173,6 +173,77 @@ function run(command, args, options = {}) {
     stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
     ...options,
   });
+}
+
+export function classifySupabaseStartInfrastructureFailure(output) {
+  const text = String(output ?? '').toLowerCase();
+  if (
+    text.includes('toomanyrequests')
+    || text.includes('too many requests')
+    || text.includes('rate limit')
+    || /(?:^|\D)429(?:\D|$)/.test(text)
+  ) return 'GHCR_RATE_LIMIT';
+  return null;
+}
+
+function boundedSleep(milliseconds) {
+  const delay = Number(milliseconds);
+  if (!Number.isFinite(delay) || delay <= 0) return;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
+}
+
+function recordInfrastructureBlocked(code, attempts) {
+  if (process.env.GITHUB_ENV) {
+    appendFileSync(process.env.GITHUB_ENV, `RECOVERY_INFRASTRUCTURE_STATUS=InfrastructureBlocked\nRECOVERY_INFRASTRUCTURE_CODE=${code}\nRECOVERY_INFRASTRUCTURE_ATTEMPTS=${attempts}\n`, 'utf8');
+  }
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      `## Ephemeral Supabase infrastructure\n\n- Status: InfrastructureBlocked\n- Code: ${code}\n- Attempts: ${attempts}\n- Product/security proof credited: no\n\n`,
+      'utf8',
+    );
+  }
+}
+
+export function startSupabaseDatabaseWithBoundedRetry(
+  workDir,
+  {
+    attempts = 3,
+    delaysMs = [5_000, 15_000],
+    spawnImpl = spawnSync,
+    sleepImpl = boundedSleep,
+  } = {},
+) {
+  const totalAttempts = Math.max(1, Math.min(Number(attempts) || 1, 3));
+  let lastInfrastructureCode = null;
+
+  for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
+    const result = spawnImpl(
+      'supabase',
+      ['--workdir', workDir, 'db', 'start'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    if (!result?.error && result?.status === 0) {
+      if (result.stdout) process.stdout.write(String(result.stdout));
+      if (result.stderr) process.stderr.write(String(result.stderr));
+      return { attempts: attempt, infrastructureCode: null };
+    }
+
+    const diagnostic = [result?.stdout, result?.stderr, result?.error?.message].filter(Boolean).join('\n');
+    lastInfrastructureCode = classifySupabaseStartInfrastructureFailure(diagnostic);
+    if (!lastInfrastructureCode) {
+      throw new Error('Supabase disposable database start failed with a non-transient error');
+    }
+
+    if (attempt < totalAttempts) {
+      const delay = delaysMs[Math.min(attempt - 1, delaysMs.length - 1)] ?? 15_000;
+      process.stderr.write(`Supabase image registry transient failure (${lastInfrastructureCode}); bounded retry ${attempt}/${totalAttempts}.\n`);
+      sleepImpl(delay);
+    }
+  }
+
+  recordInfrastructureBlocked(lastInfrastructureCode || 'UNKNOWN_PROVIDER_FAILURE', totalAttempts);
+  throw new Error(`InfrastructureBlocked:${lastInfrastructureCode || 'UNKNOWN_PROVIDER_FAILURE'}`);
 }
 
 function listeningTcpPorts() {
@@ -421,7 +492,7 @@ function start(mode = 'restore-target') {
     const configured = configureRecoveryDatabase(readFileSync(configPath, 'utf8'), hostPort);
     writeFileSync(configPath, configured, { mode: 0o600 });
 
-    run('supabase', ['--workdir', workDir, 'db', 'start']);
+    startSupabaseDatabaseWithBoundedRetry(workDir);
 
     let status = '';
     try {

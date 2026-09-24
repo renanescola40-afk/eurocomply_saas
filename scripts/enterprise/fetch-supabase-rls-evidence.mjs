@@ -174,12 +174,13 @@ function writeOpenSupabaseRlsPlaceholder(root, targetSha, sourceContract = {}) {
   const generatedAt = new Date().toISOString();
   const sourceGate = typeof sourceContract?.productionGate === 'string'
     && sourceContract.productionGate.toLowerCase().includes('production')
+    && sourceContract.productionGate.toLowerCase().includes('blocked')
     ? sourceContract.productionGate
     : 'Enterprise production remains blocked until exact-SHA Supabase Live RLS Validation completes successfully.';
   const evidence = {
     evidenceItem: 'supabase-live-rls-validation',
     status: 'Open',
-    outcome: 'no_go',
+    outcome: 'not_run',
     generatedAt,
     reviewedAt: generatedAt,
     reviewer: 'RISCK COMPLY release automation',
@@ -187,6 +188,11 @@ function writeOpenSupabaseRlsPlaceholder(root, targetSha, sourceContract = {}) {
     targetSha,
     summary: `No successful exact-SHA Supabase Live RLS Validation exists for ${targetSha}; enterprise production remains blocked.`,
     productionGate: sourceGate,
+    evidenceLocations: [
+      '.github/workflows/supabase-live-rls-validation.yml',
+    ],
+    redactionConfirmation: 'Redaction confirmed for runtime evidence.',
+    completionRule: 'run and validate Supabase Live RLS Validation successfully for the exact current main SHA.',
     controlsVerified: [],
     evidenceIntegrity: {
       placeholderOnly: true,

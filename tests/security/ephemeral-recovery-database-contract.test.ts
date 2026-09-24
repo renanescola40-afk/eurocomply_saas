@@ -13,6 +13,8 @@ import {
   buildProjectId,
   buildRecoveryDbUrl,
   classifyPublishedBinding,
+  classifySupabaseStartInfrastructureFailure,
+  startSupabaseDatabaseWithBoundedRetry,
   configurePostgresMajorVersion,
   configureRecoveryDatabase,
   databaseUrlUsesPort,
@@ -63,10 +65,52 @@ describe('ephemeral Supabase recovery database contract', () => {
     expect(manager).toContain("writeFileSync(recoveryPostgresVersionPinPath(workDir), `${normalized}\\n`, { mode: 0o600 })");
     expect(manager).toContain("run('supabase', ['--workdir', workDir, 'init', '--force'])");
     expect(manager.indexOf('writeRecoveryPostgresImagePin(workDir)'))
-      .toBeLessThan(manager.indexOf("run('supabase', ['--workdir', workDir, 'db', 'start'])"));
+      .toBeLessThan(manager.indexOf('startSupabaseDatabaseWithBoundedRetry(workDir)'));
     expect(manager).toContain("run('docker', ['inspect', '--format', '{{.Config.Image}}', containerName]");
     expect(manager).toContain('observedPostgresImageVersion !== expectedPostgresImageVersion');
     expect(manager).toContain("appendGithubEnv('RECOVERY_SUPABASE_POSTGRES_VERSION', expectedPostgresImageVersion)");
+  });
+
+
+  it('retries only recognized registry rate limits and remains fail-closed after exhaustion', () => {
+    expect(classifySupabaseStartInfrastructureFailure('toomanyrequests: retry-after 10')).toBe('GHCR_RATE_LIMIT');
+    expect(classifySupabaseStartInfrastructureFailure('HTTP 429 Too Many Requests')).toBe('GHCR_RATE_LIMIT');
+    expect(classifySupabaseStartInfrastructureFailure('schema migration failed')).toBeNull();
+
+    let calls = 0;
+    const sleeps: number[] = [];
+    const success = startSupabaseDatabaseWithBoundedRetry('/tmp/example', {
+      attempts: 3,
+      delaysMs: [1, 2],
+      spawnImpl: () => {
+        calls += 1;
+        if (calls < 3) return { status: 1, stdout: '', stderr: 'toomanyrequests' } as never;
+        return { status: 0, stdout: '', stderr: '' } as never;
+      },
+      sleepImpl: (ms) => sleeps.push(ms),
+    });
+    expect(success.attempts).toBe(3);
+    expect(sleeps).toEqual([1, 2]);
+
+    expect(() => startSupabaseDatabaseWithBoundedRetry('/tmp/example', {
+      attempts: 3,
+      delaysMs: [0, 0],
+      spawnImpl: () => ({ status: 1, stdout: '', stderr: 'toomanyrequests' }) as never,
+      sleepImpl: () => {},
+    })).toThrow('InfrastructureBlocked:GHCR_RATE_LIMIT');
+
+    let nonTransientCalls = 0;
+    expect(() => startSupabaseDatabaseWithBoundedRetry('/tmp/example', {
+      attempts: 3,
+      spawnImpl: () => {
+        nonTransientCalls += 1;
+        return { status: 1, stdout: '', stderr: 'schema migration failed' } as never;
+      },
+      sleepImpl: () => {},
+    })).toThrow('non-transient');
+    expect(nonTransientCalls).toBe(1);
+    expect(manager).toContain('RECOVERY_INFRASTRUCTURE_STATUS=InfrastructureBlocked');
+    expect(manager).toContain('Product/security proof credited: no');
   });
 
   it('selects a bounded deterministic free port and skips occupied candidates', () => {

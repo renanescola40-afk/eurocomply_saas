@@ -185,7 +185,7 @@ type SignupAuthFormProps = {
 
 function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUrl }: SignupAuthFormProps) {
   const router = useRouter();
-  const { loading, user, signInWithGoogle, signUpWithEmail } = useAuth();
+  const { loading, signInWithGoogle, signUpWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [pendingVerification, setPendingVerification] = useState(false);
@@ -226,7 +226,7 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
       return;
     }
 
-    if (user) {
+    if (result.session) {
       router.replace(continuationHref);
       return;
     }

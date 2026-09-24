@@ -12,7 +12,7 @@ export type SecurityQuestionnaireAnswer = {
 
 export type SecurityQuestionnairePack = {
   product: 'RISCK COMPLY';
-  version: '2026-07';
+  version: '2026-09';
   generatedAt: string;
   disclosure: string;
   answers: SecurityQuestionnaireAnswer[];
@@ -96,24 +96,49 @@ const answers: SecurityQuestionnaireAnswer[] = [
     id: 'SUP-01',
     category: 'suppliers',
     question: 'Are subprocessors disclosed?',
-    answer: 'Yes. A public provider list describes purpose, data categories and region boundaries. Actual enabled providers must be confirmed for the deployed environment.',
+    answer: 'Yes. A public provider list describes purpose, data categories and region boundaries. Actual enabled providers and account-specific facts must remain current for the deployed environment.',
     status: 'implemented',
     evidence: ['/subprocessors', '/trust/procurement-pack'],
+  },
+  {
+    id: 'DATA-03',
+    category: 'data-protection',
+    question: 'Is a Data Processing Addendum available?',
+    answer: 'RISCK COMPLY maintains an Article 28 DPA review structure and control matrix. It is not represented as an effective signed DPA until the applicable party, annex, provider and incorporation facts are closed.',
+    status: 'configuration-bound',
+    evidence: ['/dpa', '/data-processing', '/trust/procurement-pack'],
+  },
+  {
+    id: 'DATA-04',
+    category: 'data-protection',
+    question: 'Where is customer data hosted and how are international transfers handled?',
+    answer: 'The primary Production Supabase project is evidenced in eu-west-1 (Ireland). Other active providers may process or access data from additional locations, so RISCK COMPLY does not make a blanket EU-only processing claim. Transfer mechanisms are tracked provider-by-provider.',
+    status: 'configuration-bound',
+    evidence: ['/subprocessors', '/transfers', '/data-processing'],
+  },
+  {
+    id: 'DATA-05',
+    category: 'data-protection',
+    question: 'How is retention and deletion handled?',
+    answer: 'RISCK COMPLY uses category-specific retention criteria and supports controlled export/deletion workflows. Exact contractual periods and provider backup/log lifecycle effects remain data-category, provider and agreement specific.',
+    status: 'implemented',
+    evidence: ['/privacy', '/data-processing', '/dpa'],
   },
   {
     id: 'TEST-01',
     category: 'operations',
     question: 'Has an independent penetration test been completed?',
-    answer: 'No completed independent penetration test is claimed unless a dated report and remediation evidence are available for the relevant release.',
+    answer: 'A third-party black-box web application assessment was completed on 2026-09-12 and a confidential attributable report was received. The original TLS High findings have technical remediation evidence; a clean independent retest/terminal assurance remains open.',
     status: 'evidence-required',
-    evidence: ['/security'],
+    evidence: ['/security', '/trust/procurement-pack'],
+    caveat: 'Do not describe the assessment as a clean pentest pass, authenticated tenant-isolation proof, SOC 2/ISO certification, or terminal independent assurance.',
   },
 ];
 
 export function getSecurityQuestionnairePack(now = new Date()): SecurityQuestionnairePack {
   return {
     product: 'RISCK COMPLY',
-    version: '2026-07',
+    version: '2026-09',
     generatedAt: now.toISOString(),
     disclosure: 'Public due-diligence answers only. No tenant data, customer evidence, secrets or contractual commitments are included.',
     answers: answers.map((answer) => ({ ...answer, evidence: [...answer.evidence] })),

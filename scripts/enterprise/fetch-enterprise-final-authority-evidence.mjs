@@ -36,7 +36,7 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
   }),
   Object.freeze({
     id: 'billing-product-live-closure',
-    scope: 'internal',
+    scope: 'external',
     workflow: 'final-billing-product-live-closeout.yml',
     workflowPath: '.github/workflows/final-billing-product-live-closeout.yml',
     artifact: (sha) => `final-billing-product-live-closeout-${sha}`,

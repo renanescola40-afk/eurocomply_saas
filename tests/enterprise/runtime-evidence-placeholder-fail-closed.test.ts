@@ -11,16 +11,23 @@ describe('runtime evidence hydration remains fail closed when exact-SHA producer
     expect(authFetcher).toContain("outcome: 'no_go'");
     expect(authFetcher).toContain('placeholderOnly: true');
     expect(authFetcher).toContain('realRuntimeEvidenceAttached: false');
+    expect(authFetcher).toContain("redactionConfirmation: 'Redaction confirmed for runtime evidence.'");
+    expect(authFetcher).toContain('evidenceLocations: [');
+    expect(authFetcher).toContain('completionRule:');
+    expect(authFetcher).toContain('blockingEvidence: {');
   });
 
   it('writes an Open Supabase RLS placeholder without manufacturing live proof', () => {
     expect(rlsFetcher).toContain('writeOpenSupabaseRlsPlaceholder(root, targetSha, sourceContract)');
     expect(rlsFetcher).toContain("status: 'Open'");
-    expect(rlsFetcher).toContain("outcome: 'no_go'");
+    expect(rlsFetcher).toContain("outcome: 'not_run'");
     expect(rlsFetcher).toContain('placeholderOnly: true');
     expect(rlsFetcher).toContain('realRuntimeEvidenceAttached: false');
     expect(rlsFetcher).toContain('exactShaBound: false');
     expect(rlsFetcher).toContain('sourceRunBound: false');
+    expect(rlsFetcher).toContain("redactionConfirmation: 'Redaction confirmed for runtime evidence.'");
+    expect(rlsFetcher).toContain('evidenceLocations: [');
+    expect(rlsFetcher).toContain("completionRule: 'run and validate Supabase Live RLS Validation successfully for the exact current main SHA.'");
   });
 
   it('keeps exact-SHA runtime evidence mandatory for a real Complete result', () => {

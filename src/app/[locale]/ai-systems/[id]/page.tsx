@@ -59,6 +59,9 @@ function getEnterpriseReadinessCopy(locale: string) {
   return locale === 'pt' ? copy.pt : copy.en;
 }
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 export default async function AiSystemDetailPage({ params }: AiSystemDetailPageProps) {
   const { locale, id } = await params;
   const user = await getCurrentUser();
