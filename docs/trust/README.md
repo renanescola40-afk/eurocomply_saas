@@ -37,3 +37,6 @@ Status: draft operational trust package. This repository material documents curr
 ## Rule for customer communication
 
 Do not claim ISO 27001, SOC 2, a clean pentest pass, external WORM immutability, 24/7 monitoring, contractual SLA, live failover, a measured provider restore/RTO/RPO, current-release tenant-isolation proof, or tenant-wide MFA as universally enabled across all customer tenants. Tenant-wide MFA capability may be described as implemented and tenant-configurable. Tamper-evident hash-chain protection and signed audit export may be described only within their implemented evidence boundary.
+
+---
+Evidence refresh marker: 2026-09-24 terminal exact-SHA promotion cycle.
