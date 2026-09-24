@@ -76,8 +76,11 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
       - name: Validate campaign contracts
-        run: npx --yes vitest run tests/enterprise/runtime-closeout-campaign.test.ts
+        run: npx vitest run tests/enterprise/runtime-closeout-campaign.test.ts
 
       - name: Dispatch protected proof workflows
         env:
