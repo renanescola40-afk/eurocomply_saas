@@ -83,7 +83,7 @@ const BLOCKED_METADATA_KEYS = [
 ];
 
 function isMissingAuditEventsTable(error: SupabaseError) {
-  return error.code === '42P01' || error.code === 'PGRST205' || /audit_events/i.test(error.message ?? '');
+  return error.code === '42P01' || error.code === 'PGRST205';
 }
 
 function isMissingAuditChainColumns(error: SupabaseError) {
@@ -449,32 +449,48 @@ export async function createAuditEvent(input: AuditEventInput) {
 
 const AUDIT_EXPORT_PAGE_SIZE = 500;
 
+type AuditExportCursor = {
+  createdAt: string;
+  id: string;
+};
+
+function auditCursorFilter(cursor: AuditExportCursor) {
+  return `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`;
+}
+
 async function listAuditEventsPage(
   supabase: SupabaseAdminClient,
   organizationId: string,
-  from: number,
-  to: number,
+  cursor: AuditExportCursor | null,
 ): Promise<{ rows: AuditEventRecord[]; legacy: boolean }> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('audit_events')
     .select(AUDIT_EVENT_COLUMNS)
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
-    .range(from, to);
+    .limit(AUDIT_EXPORT_PAGE_SIZE);
+
+  if (cursor) query = query.or(auditCursorFilter(cursor));
+
+  const { data, error } = await query;
 
   if (!error) {
     return { rows: data ?? [], legacy: false };
   }
 
   if (isMissingAuditChainColumns(error)) {
-    const { data: legacyData, error: legacyError } = await supabase
+    let legacyQuery = supabase
       .from('audit_events')
       .select(LEGACY_AUDIT_EVENT_COLUMNS)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
-      .range(from, to);
+      .limit(AUDIT_EXPORT_PAGE_SIZE);
+
+    if (cursor) legacyQuery = legacyQuery.or(auditCursorFilter(cursor));
+
+    const { data: legacyData, error: legacyError } = await legacyQuery;
 
     if (!legacyError) {
       return {
@@ -492,6 +508,10 @@ async function listAuditEventsPage(
       };
     }
 
+    if (isMissingAuditEventsTable(legacyError)) {
+      return { rows: [], legacy: true };
+    }
+
     throw new Error(`audit_event_export_legacy_query_failed:${legacyError.code ?? 'unknown'}`);
   }
 
@@ -502,6 +522,22 @@ async function listAuditEventsPage(
   throw new Error(`audit_event_export_query_failed:${error.code ?? 'unknown'}`);
 }
 
+export async function countAuditEvents(organizationId: string): Promise<number> {
+  const supabase = tryCreateAdminClient();
+  if (!supabase) {
+    throw new Error('audit_event_count_admin_client_unavailable');
+  }
+
+  const { count, error } = await supabase
+    .from('audit_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', organizationId);
+
+  if (!error) return count ?? 0;
+  if (isMissingAuditEventsTable(error)) return 0;
+  throw new Error(`audit_event_count_query_failed:${error.code ?? 'unknown'}`);
+}
+
 export async function listAllAuditEventsForExport(organizationId: string): Promise<AuditEventRecord[]> {
   const supabase = tryCreateAdminClient();
   if (!supabase) {
@@ -509,23 +545,20 @@ export async function listAllAuditEventsForExport(organizationId: string): Promi
   }
 
   const events: AuditEventRecord[] = [];
-  let from = 0;
+  let cursor: AuditExportCursor | null = null;
 
   while (true) {
-    const page = await listAuditEventsPage(
-      supabase,
-      organizationId,
-      from,
-      from + AUDIT_EXPORT_PAGE_SIZE - 1,
-    );
-
+    const page = await listAuditEventsPage(supabase, organizationId, cursor);
     events.push(...page.rows);
 
-    if (page.rows.length < AUDIT_EXPORT_PAGE_SIZE) {
-      break;
+    if (page.rows.length < AUDIT_EXPORT_PAGE_SIZE) break;
+
+    const last = page.rows.at(-1);
+    if (!last?.created_at || !last?.id) {
+      throw new Error('audit_event_export_cursor_missing');
     }
 
-    from += AUDIT_EXPORT_PAGE_SIZE;
+    cursor = { createdAt: last.created_at, id: last.id };
   }
 
   return events;
