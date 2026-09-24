@@ -53,17 +53,19 @@ async function get(path) {
     'User-Agent': 'risck-comply-ruleset-proof',
   };
 
-  let authenticatedPayload = null;
+  const rulesetDetail = /^\/repos\/[^/]+\/[^/]+\/rulesets\/\d+$/.test(path);
+
   if (githubToken) {
     const authenticated = await fetch(`https://api.github.com${path}`, {
       headers: { ...baseHeaders, Authorization: `Bearer ${githubToken}` },
     });
     if (authenticated.ok) {
-      authenticatedPayload = await authenticated.json();
-      const rulesetDetail = /^\\/repos\\/[^/]+\\/[^/]+\\/rulesets\\/\\d+$/.test(path);
+      const authenticatedPayload = await authenticated.json();
       if (!rulesetDetail || Array.isArray(authenticatedPayload?.bypass_actors)) {
         return authenticatedPayload;
       }
+      // A redacted detail response is not combined with another API snapshot.
+      // Fall through and use the anonymous response as one complete observation.
     } else if (![401, 403, 404].includes(authenticated.status)) {
       throw new Error(`authenticated GitHub API ${authenticated.status}: ${path}`);
     }
@@ -71,19 +73,9 @@ async function get(path) {
 
   const publicResponse = await fetch(`https://api.github.com${path}`, { headers: baseHeaders });
   if (!publicResponse.ok) {
-    if (authenticatedPayload) return authenticatedPayload;
     throw new Error(`public GitHub API ${publicResponse.status}: ${path}`);
   }
-  const publicPayload = await publicResponse.json();
-
-  // GitHub Actions tokens can return a redacted ruleset detail without bypass_actors.
-  // For public repositories, re-read that same ruleset through the public endpoint so
-  // bypass visibility is proven from GitHub rather than inferred.
-  if (authenticatedPayload && Array.isArray(publicPayload?.bypass_actors)) {
-    return { ...authenticatedPayload, bypass_actors: publicPayload.bypass_actors };
-  }
-
-  return publicPayload;
+  return publicResponse.json();
 }
 
 const listed = await get(`/repos/${owner}/${repo}/rulesets`);
