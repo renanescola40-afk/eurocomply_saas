@@ -21,9 +21,10 @@ Source main at branch start: `1792aaa1cc9614ebb1a2d87954ccc63b2ad8065f`
 | Audit evidence-pack export | PASS_INTERNAL |
 | Audit tamper evidence | PASS_INTERNAL — hash-chain; WORM not claimed |
 | MFA | PASS_INTERNAL for protected step-up/AAL2 scope; tenant-wide mandatory policy not claimed |
-| SSO/SAML | WAITING_PROVIDER_FACT / customer-ready runtime evidence |
-| Backup restore | WAITING_PROVIDER_FACT / safe restore execution evidence |
-| DR measured RTO/RPO | WAITING_PROVIDER_FACT / execution evidence |
+| SSO/SAML | PASS_INTERNAL — runtime implemented; WAITING_BUYER for IdP/domain activation + E2E validation |
+| Backup restore | PASS_INTERNAL_REHEARSAL / WAITING_PROVIDER_FACT for safe customer-data restore evidence |
+| DR tabletop | PASS_INTERNAL — non-destructive tabletop completed 2026-09-24 |
+| DR measured RTO/RPO | WAITING_PROVIDER_FACT / technical execution evidence |
 | Independent clean pentest/retest | WAITING_EXTERNAL_SECURITY |
 | ISO 27001 certification | WAITING_EXTERNAL_SECURITY |
 | SOC 2 audit | WAITING_EXTERNAL_SECURITY |
