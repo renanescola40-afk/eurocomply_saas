@@ -8,7 +8,7 @@ import { getTenantMfaSessionState } from '@/server/security/tenant-mfa';
 
 type Props = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; setup?: string }>;
 };
 
 function safeNextPath(value: string | undefined, locale: string) {
@@ -35,7 +35,9 @@ export default async function TenantMfaPage({ params, searchParams }: Props) {
   const state = await getTenantMfaSessionState(organization.id);
   const nextPath = safeNextPath(query.next, safeLocale);
 
-  if (!state.required || state.satisfied) {
+  const setupRequested = query.setup === '1';
+
+  if ((!state.required && !setupRequested) || (state.satisfied && !setupRequested)) {
     redirect(nextPath);
   }
 
