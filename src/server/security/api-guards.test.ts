@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   assertOrganizationPermission: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
   buildRateLimitSubjectFromRequest: vi.fn(),
+  evaluateTenantMfaRequirement: vi.fn(),
 }));
 
 vi.mock('@/server/queries/auth', () => ({
@@ -23,6 +24,11 @@ vi.mock('@/server/security/rbac', async () => {
     assertOrganizationPermission: mocks.assertOrganizationPermission,
   };
 });
+
+vi.mock('@/server/security/tenant-mfa', () => ({
+  evaluateTenantMfaRequirement: mocks.evaluateTenantMfaRequirement,
+  TenantMfaControlUnavailableError: class TenantMfaControlUnavailableError extends Error {},
+}));
 
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
@@ -69,6 +75,7 @@ describe('central API security guards', () => {
       route: subject.route ?? '/api/test',
     }));
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60_000 });
+    mocks.evaluateTenantMfaRequirement.mockResolvedValue({ required: false, currentLevel: null, satisfied: true });
   });
 
   it('blocks requests without login', async () => {
@@ -91,6 +98,22 @@ describe('central API security guards', () => {
       code: 'organization_membership_required',
       status: 403,
     });
+  });
+
+  it('blocks tenant access when mandatory MFA is enabled but the session is aal1', async () => {
+    mocks.evaluateTenantMfaRequirement.mockResolvedValue({ required: true, currentLevel: 'aal1', satisfied: false });
+
+    await expect(
+      requireOrganizationAccess({ userId: 'user_a', organizationId: 'org_a' }),
+    ).rejects.toMatchObject({ code: 'mfa_required', status: 403 });
+  });
+
+  it('allows tenant access when mandatory MFA is enabled and the session is aal2', async () => {
+    mocks.evaluateTenantMfaRequirement.mockResolvedValue({ required: true, currentLevel: 'aal2', satisfied: true });
+
+    await expect(
+      requireOrganizationAccess({ userId: 'user_a', organizationId: 'org_a' }),
+    ).resolves.toMatchObject({ organizationId: 'org_a', userId: 'user_a' });
   });
 
   it('blocks viewer users from admin actions', async () => {
