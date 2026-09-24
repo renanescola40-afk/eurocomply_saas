@@ -50,6 +50,7 @@ jobs:
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: node scripts/security/generate-branch-protection-ruleset-evidence.mjs
 
