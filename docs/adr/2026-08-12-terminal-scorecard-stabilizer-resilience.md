@@ -62,6 +62,14 @@ This change does not:
 - bypass exact-SHA validation;
 - weaken branch protection or release gates.
 
+### 6. Freeze one invocation horizon and hand off newer producer work
+
+Each stabilizer invocation freezes the material upstream producer horizon at script start for freshness calculations. This prevents a same-SHA workflow storm from continuously moving the cutoff inside one bounded run.
+
+The frozen horizon is **not** a fail-open exemption. If any material upstream producer is created after that horizon, the current stabilizer invocation exits without dispatching either the Production Gate or the scorecard and records `superseded-by-new-producer`. The later producer completion triggers a newer exact-SHA stabilizer invocation, and exact-SHA concurrency coalesces the handoff.
+
+A Production Gate intentionally dispatched by the current stabilizer is excluded from this supersession test and is still required to reach a terminal evaluated state before scorecard dispatch. This preserves the rule that no terminal scorecard may be dispatched while newer material upstream work is outstanding or unaccounted for.
+
 ## Consequences
 
 Expected benefits:
@@ -74,5 +82,6 @@ Expected benefits:
 Trade-offs:
 
 - the terminal scorecard is intentionally delayed by at least 90 seconds after the final observed material producer completion;
+- an invocation that observes newer material upstream work hands off without dispatch rather than extending its own moving horizon;
 - manual recovery remains available but is not treated as evidence by itself;
 - GitHub infrastructure failures can still block closure after bounded retries, which is intentional fail-closed behavior.
