@@ -125,6 +125,7 @@ export default async function AuditPackPage({ params }: PageProps) {
         userId: user.id,
         role: permission.role,
         entitlements,
+        mode: 'summary',
       })
     : null;
 
