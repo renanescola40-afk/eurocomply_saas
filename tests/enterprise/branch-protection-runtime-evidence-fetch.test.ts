@@ -222,7 +222,8 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(producer).toContain('contents: read');
     expect(producer).not.toContain('contents: write');
     expect(producer).not.toContain('pull_request_target');
-    expect(producer).toContain('BRANCH_PROTECTION_READ_TOKEN');
+    expect(producer).not.toContain('BRANCH_PROTECTION_READ_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}');
+    expect(builder).toContain("{ label: 'public-read', token: '' }");
     expect(producer).toContain('check-generated-branch-protection-evidence.mjs');
 
     expect(p0).toContain('- RISCK COMPLY Upload Security CI');
