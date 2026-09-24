@@ -446,6 +446,91 @@ export async function createAuditEvent(input: AuditEventInput) {
   return { persisted: false, reason: 'transactional_append_unavailable' as const };
 }
 
+
+const AUDIT_EXPORT_PAGE_SIZE = 500;
+
+async function listAuditEventsPage(
+  supabase: SupabaseAdminClient,
+  organizationId: string,
+  from: number,
+  to: number,
+): Promise<{ rows: AuditEventRecord[]; legacy: boolean }> {
+  const { data, error } = await supabase
+    .from('audit_events')
+    .select(AUDIT_EVENT_COLUMNS)
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .range(from, to);
+
+  if (!error) {
+    return { rows: data ?? [], legacy: false };
+  }
+
+  if (isMissingAuditChainColumns(error)) {
+    const { data: legacyData, error: legacyError } = await supabase
+      .from('audit_events')
+      .select(LEGACY_AUDIT_EVENT_COLUMNS)
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, to);
+
+    if (!legacyError) {
+      return {
+        rows: (legacyData ?? []).map((event) => ({
+          id: event.id,
+          organization_id: event.organization_id,
+          actor_user_id: event.actor_user_id ?? null,
+          action: event.action,
+          entity_type: event.entity_type,
+          entity_id: event.entity_id,
+          metadata: event.metadata,
+          created_at: event.created_at,
+        })),
+        legacy: true,
+      };
+    }
+
+    throw new Error(`audit_event_export_legacy_query_failed:${legacyError.code ?? 'unknown'}`);
+  }
+
+  if (isMissingAuditEventsTable(error)) {
+    return { rows: [], legacy: false };
+  }
+
+  throw new Error(`audit_event_export_query_failed:${error.code ?? 'unknown'}`);
+}
+
+export async function listAllAuditEventsForExport(organizationId: string): Promise<AuditEventRecord[]> {
+  const supabase = tryCreateAdminClient();
+  if (!supabase) {
+    throw new Error('audit_event_export_admin_client_unavailable');
+  }
+
+  const events: AuditEventRecord[] = [];
+  let from = 0;
+
+  while (true) {
+    const page = await listAuditEventsPage(
+      supabase,
+      organizationId,
+      from,
+      from + AUDIT_EXPORT_PAGE_SIZE - 1,
+    );
+
+    events.push(...page.rows);
+
+    if (page.rows.length < AUDIT_EXPORT_PAGE_SIZE) {
+      break;
+    }
+
+    from += AUDIT_EXPORT_PAGE_SIZE;
+  }
+
+  return events;
+}
+
 export async function listAuditEvents(organizationId: string, limit = 100): Promise<AuditEventRecord[]> {
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
