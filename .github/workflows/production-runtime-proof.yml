@@ -36,11 +36,7 @@ jobs:
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           test "$GITHUB_REF_NAME" = "main"
-          main_sha="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          main_sha="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
           test "$main_sha" = "${TARGET_SHA,,}"
       - name: Check out exact trusted release SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -90,11 +86,7 @@ jobs:
             echo "RELEASE_COMMIT_SHA=$TARGET_SHA"
             echo "RELEASE_BUILD_SHA=$TARGET_SHA"
           } >> "$GITHUB_ENV"
-          MAIN_SHA="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          MAIN_SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
           test "$MAIN_SHA" = "$TARGET_SHA"
 
       - name: Checkout exact release SHA

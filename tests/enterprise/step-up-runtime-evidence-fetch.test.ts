@@ -169,6 +169,7 @@ describe('Step-Up exact-SHA runtime evidence handoff', () => {
     expect(workflow).toContain('actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0');
     expect(workflow).toContain('actions/setup-node@820762786026740c76f36085b0efc47a31fe5020');
     expect(workflow).toContain('npm ci --ignore-scripts');
-    expect(workflow).toContain('/commits/main');
+    expect(workflow).toContain('git ls-remote');
+    expect(workflow).toContain('refs/heads/main');
   });
 });
