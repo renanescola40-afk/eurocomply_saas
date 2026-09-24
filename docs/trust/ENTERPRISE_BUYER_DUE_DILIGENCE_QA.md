@@ -14,7 +14,7 @@ This document is a buyer-safe factual answer set. It does not create certificati
 | RLS / tenant isolation | Forced RLS, tenant-scoped authorization and cross-tenant security controls are implemented; production claims remain exact-release evidence-bound. | PASS_INTERNAL / runtime evidence bound |
 | RBAC | Organization-scoped RBAC/server guards are implemented. | PASS_INTERNAL |
 | Authentication | Supabase Auth with protected administration and step-up security controls. | PASS_INTERNAL |
-| MFA | Step-up MFA/AAL2 protects platform administration and high-risk actions. Tenant-wide mandatory MFA for every workspace user is not claimed as complete. | PASS_INTERNAL_WITH_BOUNDARY |
+| MFA | Step-up MFA/AAL2 protects platform administration/high-risk actions, and a tenant-configurable mandatory MFA policy can require AAL2 across workspace pages, shared API/RBAC authorities and tenant-scoped RLS access. The capability is implemented; per-customer activation remains configuration-specific. | PASS_INTERNAL |
 | SSO/SAML | SAML SSO runtime is implemented and present in production schema/RPCs. Activation requires buyer-specific IdP/domain configuration and end-to-end IdP validation. | PASS_INTERNAL / WAITING_BUYER |
 | Audit logs | Tenant-scoped audit events, hash-chain verification and signed evidence-pack export exist. | PASS_INTERNAL |
 | Audit immutability | Tamper-evident hash chain: yes. External WORM/immutable storage: not claimed. | PASS_INTERNAL_WITH_BOUNDARY |
