@@ -216,14 +216,21 @@ export async function requirePermission(options: RequirePermissionOptions): Prom
   });
 
   if (!result.ok) {
+    const code: ApiSecurityError['code'] =
+      result.error === 'organization_membership_required'
+        ? 'organization_membership_required'
+        : result.error === 'mfa_required'
+          ? 'mfa_required'
+          : result.status === 503
+            ? 'security_control_unavailable'
+            : 'permission_denied';
+
     throw new ApiSecurityError({
-      code: result.error === 'organization_membership_required' ? 'organization_membership_required' : 'permission_denied',
+      code,
       message: result.message ?? 'Permission denied.',
       status: result.status === 503 ? 503 : 403,
     });
   }
-
-  await requireTenantMfaForApi(options.userId, organizationId);
 
   return result;
 }
