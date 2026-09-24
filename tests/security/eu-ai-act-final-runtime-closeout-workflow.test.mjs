@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/eu-ai-act-final-runtime-closeout.yml', 'utf8');
-const platformProof = readFileSync('scripts/compliance/build-platform-controls-runtime-proof.mjs', 'utf8');
+const platformProof = readFileSync('scripts/security/generate-branch-protection-ruleset-evidence.mjs', 'utf8');
 
 describe('EU AI Act final runtime closeout workflow', () => {
   it('uses read-only permissions and immutable action pins', () => {
@@ -26,13 +26,15 @@ describe('EU AI Act final runtime closeout workflow', () => {
   });
 
   it('uses an exact-SHA, ruleset-aware platform proof without widening workflow permissions', () => {
-    expect(workflow).toContain('node scripts/compliance/build-platform-controls-runtime-proof.mjs');
+    expect(workflow).toContain('node scripts/security/generate-branch-protection-ruleset-evidence.mjs');
+    expect(workflow).toContain('node scripts/security/check-generated-branch-protection-evidence.mjs');
     expect(workflow).toContain('tests/security/platform-controls-runtime-proof.test.mjs');
-    expect(platformProof).toContain('/branches/main/protection');
-    expect(platformProof).toContain('/rules/branches/main');
-    expect(platformProof).toContain("selectedMode: selected?.mode ?? 'none'");
-    expect(platformProof).toContain('Unverified controls:');
+    expect(platformProof).toContain('/rulesets');
+    expect(platformProof).toContain('bypassVisibilityComplete');
+    expect(platformProof).toContain('bypassActorCount');
+    expect(platformProof).toContain('missingRequiredChecks');
     expect(workflow).not.toContain('administration: read');
+    expect(workflow).toContain('waiting for deployment producer');
   });
 
   it('keeps qualified human review outside automated promotion', () => {
