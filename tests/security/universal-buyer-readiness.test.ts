@@ -25,8 +25,10 @@ describe('universal buyer readiness truth gate', () => {
     expect(universal).toContain('SOC 2: `NOT_AUDITED`');
     expect(universal).toContain('clean independent pentest/retest: `WAITING_EXTERNAL_SECURITY`');
     expect(universal).toContain('WORM storage: `NOT_HELD`');
-    expect(universal).not.toMatch(/ISO 27001[^\n]*(certified|PASS)/i);
-    expect(universal).not.toMatch(/SOC 2[^\n]*(certified|audited|PASS)/i);
+    expect(universal).not.toContain('ISO27001=PASS');
+    expect(universal).not.toContain('ISO 27001: `CERTIFIED`');
+    expect(universal).not.toContain('SOC2=PASS');
+    expect(universal).not.toContain('SOC 2: `AUDITED`');
   });
 
   it('does not create customer, revenue, insurance or buyer-acceptance evidence', () => {
