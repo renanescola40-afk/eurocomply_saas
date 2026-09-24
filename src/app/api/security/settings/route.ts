@@ -17,6 +17,7 @@ type SecuritySettingsInput = {
   stepUpProviderMode: string;
   allowedIdpAcrValues: string[];
   allowedIdpAmrValues: string[];
+  requireMfaForAllUsers: boolean | null;
 };
 
 type StoredSecuritySettings = {
@@ -25,6 +26,7 @@ type StoredSecuritySettings = {
   step_up_provider_mode: string;
   allowed_idp_acr_values: string[] | null;
   allowed_idp_amr_values: string[] | null;
+  require_mfa_for_all_users: boolean;
 };
 
 function isBoundedStringList(value: unknown): value is string[] {
@@ -40,11 +42,13 @@ function parseSecuritySettingsInput(value: unknown): SecuritySettingsInput | nul
   if (typeof input.stepUpProviderMode !== 'string' || !PROVIDER_MODES.has(input.stepUpProviderMode)) return null;
   if (input.allowedIdpAcrValues !== undefined && !isBoundedStringList(input.allowedIdpAcrValues)) return null;
   if (input.allowedIdpAmrValues !== undefined && !isBoundedStringList(input.allowedIdpAmrValues)) return null;
+  if (input.requireMfaForAllUsers !== undefined && typeof input.requireMfaForAllUsers !== 'boolean') return null;
 
   return {
     stepUpProviderMode: input.stepUpProviderMode,
     allowedIdpAcrValues: input.allowedIdpAcrValues?.map((entry) => entry.trim()) ?? [],
     allowedIdpAmrValues: input.allowedIdpAmrValues?.map((entry) => entry.trim()) ?? [],
+    requireMfaForAllUsers: typeof input.requireMfaForAllUsers === 'boolean' ? input.requireMfaForAllUsers : null,
   };
 }
 
@@ -107,12 +111,20 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const { data: previousSettings, error: previousSettingsError } = await supabase
       .from('organization_security_settings')
-      .select('organization_id, require_step_up_for_critical_actions, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values')
+      .select('organization_id, require_step_up_for_critical_actions, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values, require_mfa_for_all_users')
       .eq('organization_id', organization.id)
       .maybeSingle<StoredSecuritySettings>();
 
     if (previousSettingsError) {
       return noStoreJson({ error: 'security_settings_read_failed' }, { status: 503 });
+    }
+
+    const requireMfaForAllUsers = nextSettings.requireMfaForAllUsers
+      ?? previousSettings?.require_mfa_for_all_users
+      ?? false;
+
+    if (previousSettings?.require_mfa_for_all_users !== requireMfaForAllUsers) {
+      changes.push('require_mfa_for_all_users');
     }
 
     const { error } = await supabase
@@ -124,6 +136,7 @@ export async function POST(request: NextRequest) {
           step_up_provider_mode: nextSettings.stepUpProviderMode,
           allowed_idp_acr_values: nextSettings.allowedIdpAcrValues,
           allowed_idp_amr_values: nextSettings.allowedIdpAmrValues,
+          require_mfa_for_all_users: requireMfaForAllUsers,
         },
         { onConflict: 'organization_id' },
       );
@@ -144,6 +157,7 @@ export async function POST(request: NextRequest) {
         stepUpAction: 'change_security_settings',
         stepUpVerifiedAt: stepUp.assessment.verifiedAt,
         stepUpTokenType: 'signed_hmac',
+        requireMfaForAllUsers,
       },
     });
 
@@ -173,6 +187,7 @@ export async function POST(request: NextRequest) {
         stepUpProviderMode: nextSettings.stepUpProviderMode,
         allowedIdpAcrValueCount: nextSettings.allowedIdpAcrValues.length,
         allowedIdpAmrValueCount: nextSettings.allowedIdpAmrValues.length,
+        requireMfaForAllUsers,
       },
       stepUp: publicStepUpSummary(stepUp.assessment),
     });
