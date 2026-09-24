@@ -73,6 +73,38 @@ export const resolveCommercialProductAccess = cache(async (): Promise<Commercial
   }
 });
 
+export async function requireAuthenticatedOrganizationMfaPageAccess(input: {
+  locale: string;
+  pathname: string;
+}) {
+  const user = await getCurrentUser();
+  const safeNext = input.pathname || `/${input.locale}/dashboard/organizations`;
+
+  if (!user) {
+    redirect(`/${input.locale}/login?next=${encodeURIComponent(safeNext)}`);
+  }
+
+  const organization = await getCurrentOrganizationForUser(user.id);
+  if (!organization?.id) {
+    redirect(`/${input.locale}/onboarding`);
+  }
+
+  try {
+    const mfa = await getTenantMfaSessionState(organization.id);
+    if (mfa.required && !mfa.satisfied) {
+      await recordTenantMfaDenial(organization.id, user.id, 'authenticated_organization_page');
+      redirect(`/${input.locale}/mfa?next=${encodeURIComponent(safeNext)}`);
+    }
+  } catch (error) {
+    if (error instanceof TenantMfaError) {
+      redirect(`/${input.locale}/mfa?error=security_control_unavailable`);
+    }
+    throw error;
+  }
+
+  return { user, organization };
+}
+
 export async function requireLicensedCommercialPageAccess(input: {
   locale: string;
   pathname: string;
