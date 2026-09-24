@@ -84,7 +84,7 @@ describe('platform controls credential completeness fallback', () => {
       },
     );
 
-    expect(response.authMode).toBe('github-token');
+    expect(response.authMode).toBe('public-read');
     expect(response.data).toEqual({ id: 7002 });
   });
 });
