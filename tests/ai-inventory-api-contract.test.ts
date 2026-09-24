@@ -60,7 +60,11 @@ describe('AI inventory API contracts', () => {
     expect(source).toContain('nextActions: result.classification.nextActions');
     expect(source).toContain("action: 'ai_system_reassessed'");
     expect(source).toContain('previousRiskLevel: existing.risk_level');
-    expect(source).toContain('return noStoreJson({ system, history, roleAssessment: result.roleAssessment })');
+    expect(source).toContain('const persistedSystem = await getAiSystem(system.id, organization.id)');
+    expect(source).toContain("persistedSystem.name !== body.name");
+    expect(source).toContain("persistedSystem.lifecycle_status !== result.lifecycleStatus");
+    expect(source).toContain("throw new Error('ai_system_reassessment_persistence_mismatch')");
+    expect(source).toContain('return noStoreJson({ system: persistedSystem, history, roleAssessment: result.roleAssessment })');
   });
 
   it('uses a backend-only atomic reassessment RPC with tenant and version locking', () => {

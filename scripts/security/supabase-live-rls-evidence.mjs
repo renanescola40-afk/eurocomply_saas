@@ -98,12 +98,31 @@ export function tableCoverageFrom(testCases = []) {
 function requirePassed(tests, table, operation, errors) {
   if (!hasPassed(tests, table, operation)) errors.push(`missing live RLS operation coverage: ${table}:${operation}`);
 }
-function validatePromotionLineage(evidence, errors) {
-  const contract = loadForwardManifestContract();
+function validateAuthorityEvidence(evidence, errors) {
   if (evidence?.schema !== LIVE_RLS_EVIDENCE_SCHEMA) errors.push(`schema must be ${LIVE_RLS_EVIDENCE_SCHEMA}`);
+  const authority = evidence?.authorityEvidence;
+  if (!authority || typeof authority !== 'object' || Array.isArray(authority)) {
+    errors.push('authorityEvidence is required');
+    return;
+  }
+  if (!['promotion', 'reattestation', 'current_state'].includes(String(authority.mode ?? ''))) {
+    errors.push('authorityEvidence.mode is invalid');
+    return;
+  }
+  if (!/^\d+$/.test(String(authority.runId ?? ''))) errors.push('authorityEvidence.runId must be numeric');
+
+  if (authority.mode === 'current_state') {
+    if (authority.currentProductionStateVerified !== true) errors.push('authorityEvidence.currentProductionStateVerified must be true');
+    if (authority.historicalPromotionVerified !== false) errors.push('authorityEvidence.historicalPromotionVerified must be false');
+    if (evidence?.promotionLineage != null) errors.push('promotionLineage must be absent for current_state authority');
+    return;
+  }
+
+  if (authority.historicalPromotionVerified !== true) errors.push('authorityEvidence.historicalPromotionVerified must be true');
+  const contract = loadForwardManifestContract();
   const lineage = evidence?.promotionLineage;
   if (!lineage || typeof lineage !== 'object' || Array.isArray(lineage)) {
-    errors.push('promotionLineage is required');
+    errors.push('promotionLineage is required for promotion or reattestation authority');
     return;
   }
   if (!/^\d+$/.test(String(lineage.promotionRunId ?? ''))) errors.push('promotionLineage.promotionRunId must be numeric');
@@ -118,7 +137,7 @@ function validatePromotionLineage(evidence, errors) {
 export function validatePassingEvidence(evidence) {
   const errors = [];
   if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) return { valid: false, errors: ['evidence must be an object'] };
-  validatePromotionLineage(evidence, errors);
+  validateAuthorityEvidence(evidence, errors);
   if (evidence.evidenceItem !== 'supabase-live-rls-validation') errors.push('unexpected evidence item');
   if (evidence.status !== 'Complete') errors.push('status must be Complete');
   if (evidence.outcome !== 'passed') errors.push('outcome must be passed');
@@ -159,22 +178,36 @@ export function buildEvidencePayload({
   const githubActions = githubActionsProvenanceFromEnv();
   const contract = loadForwardManifestContract();
   const passing = status === 'Complete' && outcome === 'passed';
+  const authorityMode = String(process.env.AUTHORITY_MODE ?? 'promotion').trim();
+  const authorityRunId = String(process.env.AUTHORITY_RUN_ID ?? process.env.PROMOTION_RUN_ID ?? '').trim();
+  const currentStateAuthority = authorityMode === 'current_state';
+  const promotionLineage = currentStateAuthority ? null : {
+    promotionRunId: String(process.env.PROMOTION_RUN_ID ?? '').trim(),
+    changeSet: String(process.env.PROMOTION_CHANGE_SET ?? '').trim(),
+    selectedMigrationCount: Number(process.env.PROMOTION_SELECTED_MIGRATION_COUNT ?? 0),
+    selectionDigest: String(process.env.PROMOTION_SELECTION_DIGEST ?? '').trim(),
+    manifestMatchVerified: process.env.PROMOTION_MANIFEST_MATCH_VERIFIED === 'true',
+    remoteAfterEqualsBeforePlusSelected: process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED === 'true',
+    unauthorizedMigrationApplied: process.env.PROMOTION_UNAUTHORIZED_MIGRATION_APPLIED === 'true',
+    productionPromotionVerified: process.env.PROMOTION_PRODUCTION_VERIFIED === 'true',
+  };
   return {
     schema: LIVE_RLS_EVIDENCE_SCHEMA,
     evidenceItem: 'supabase-live-rls-validation', status, outcome, timestamp, generatedAt: timestamp,
     runner, reviewer, reviewedAt: timestamp, commandUsed: command, commitSha,
-    promotionLineage: {
-      promotionRunId: String(process.env.PROMOTION_RUN_ID ?? '').trim(),
-      changeSet: String(process.env.PROMOTION_CHANGE_SET ?? '').trim(),
-      selectedMigrationCount: Number(process.env.PROMOTION_SELECTED_MIGRATION_COUNT ?? 0),
-      selectionDigest: String(process.env.PROMOTION_SELECTION_DIGEST ?? '').trim(),
-      manifestMatchVerified: process.env.PROMOTION_MANIFEST_MATCH_VERIFIED === 'true',
-      remoteAfterEqualsBeforePlusSelected: process.env.PROMOTION_REMOTE_TRANSITION_VERIFIED === 'true',
-      unauthorizedMigrationApplied: process.env.PROMOTION_UNAUTHORIZED_MIGRATION_APPLIED === 'true',
-      productionPromotionVerified: process.env.PROMOTION_PRODUCTION_VERIFIED === 'true',
+    authorityEvidence: {
+      mode: authorityMode,
+      runId: authorityRunId,
+      currentProductionStateVerified: currentStateAuthority,
+      historicalPromotionVerified: !currentStateAuthority,
     },
+    ...(promotionLineage ? { promotionLineage } : {}),
     supabaseProjectReference: redactProjectReferenceFromUrl(supabaseUrl), supabaseProjectReferenceRedacted: true,
-    summary: passing ? `Live Supabase RLS proof passed and is bound to governed forward promotion ${contract.changeSet} (${contract.count} migrations).` : 'Live Supabase RLS validation did not pass.',
+    summary: passing
+      ? currentStateAuthority
+        ? 'Live Supabase RLS proof passed and is bound to exact-SHA current Production state authority without claiming historical promotion lineage.'
+        : `Live Supabase RLS proof passed and is bound to governed forward promotion lineage ${contract.changeSet} (${contract.count} migrations).`
+      : 'Live Supabase RLS validation did not pass.',
     redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings and access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
     productionGate: passing ? 'eligible for production only if every other P0 runtime gate passes' : 'blocked',
@@ -183,14 +216,14 @@ export function buildEvidencePayload({
       'Licensed same-tenant product access is preserved', 'Unlicensed and anonymous paid-product access is denied',
       'Server-owned commercial mutations remain unavailable to browser clients', 'Regulatory updates are backend-only',
       'Live inventory helper remains service-role-only', 'Evidence Vault browser and Storage bypass boundaries are fail-closed',
-      'Evidence is bound to the exact current governed Production promotion manifest',
+      currentStateAuthority ? 'Evidence is bound to exact current Production state without historical promotion claims' : 'Evidence is bound to the exact current governed Production promotion manifest',
     ] : [],
     customerTenantTables, globalReferenceTables, criticalTables, optionalTables, tablesReviewed,
     testsRun: testCases.map((test) => `${test.table}:${test.operation}`),
     testsPassed: testCases.filter((test) => test.passed === true).map((test) => `${test.table}:${test.operation}`),
     testsFailed: testCases.filter((test) => test.passed !== true).map((test) => `${test.table}:${test.operation}`),
     testCases, failures, serviceRolePaths, registerUpdated,
-    completionRule: `Only ${runner} may mark this evidence Complete after a successful promotion-bound live run.`,
+    completionRule: currentStateAuthority ? `Only ${runner} may mark this evidence Complete after a successful exact-SHA current-state-authority live run.` : `Only ${runner} may mark this evidence Complete after a successful promotion-lineage-bound live run.`,
     nextReviewDue: null,
     ...(githubActions ? { githubActions } : {}),
     ...extra,

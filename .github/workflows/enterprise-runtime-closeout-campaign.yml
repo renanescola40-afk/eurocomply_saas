@@ -15,7 +15,12 @@ on:
         default: ''
         type: string
       supabase_reattestation_run_id:
-        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with promotion)
+        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with other authorities)
+        required: false
+        default: ''
+        type: string
+      supabase_current_state_run_id:
+        description: Successful exact-SHA Supabase Current Production State Read-Only run ID (mutually exclusive with other authorities)
         required: false
         default: ''
         type: string
@@ -38,6 +43,7 @@ jobs:
       TARGET_SHA: ${{ inputs.release_sha || github.sha }}
       SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id || '' }}
       SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id || '' }}
+      SUPABASE_CURRENT_STATE_RUN_ID: ${{ inputs.supabase_current_state_run_id || '' }}
 
     steps:
       - name: Checkout exact release SHA
@@ -53,9 +59,11 @@ jobs:
           [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           promotion_set=0
           reattestation_set=0
+          current_state_set=0
           if [[ -n "$SUPABASE_PROMOTION_RUN_ID" ]]; then [[ "$SUPABASE_PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]; promotion_set=1; fi
           if [[ -n "$SUPABASE_REATTESTATION_RUN_ID" ]]; then [[ "$SUPABASE_REATTESTATION_RUN_ID" =~ ^[0-9]+$ ]]; reattestation_set=1; fi
-          test $((promotion_set + reattestation_set)) -le 1
+          if [[ -n "$SUPABASE_CURRENT_STATE_RUN_ID" ]]; then [[ "$SUPABASE_CURRENT_STATE_RUN_ID" =~ ^[0-9]+$ ]]; current_state_set=1; fi
+          test $((promotion_set + reattestation_set + current_state_set)) -le 1
           TARGET_SHA="${TARGET_SHA,,}"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
@@ -85,6 +93,6 @@ jobs:
         run: |
           echo 'Runtime proofs were dispatched for the exact current main SHA.'
           echo 'Non-Supabase runtime proofs are always dispatched for the exact current main SHA.'
-          echo 'TEN-RLS live proof is dispatched only when exactly one canonical Supabase Production promotion or read-only reattestation authority is supplied.'
+          echo 'TEN-RLS live proof is dispatched only when exactly one canonical Supabase Promotion, reattestation, or current-state read-only authority is supplied.'
           echo 'The read-only RLS reconciliation lane may run without Production writes.'
           echo 'This workflow cannot apply migrations and does not promote controls by itself; the canonical scorecard remains authoritative.'

@@ -18,6 +18,10 @@ test('campaign defines the complete exact manifest-driven lane registry', async 
   assert.equal(manifest.schema_version, 2);
   assert.deepEqual(manifest.workflows.map((lane) => lane.id), EXPECTED_RUNTIME_LANES);
   assert.equal(validateRuntimeCampaignManifest(manifest), true);
+  assert.equal(manifest.workflows.find((lane) => lane.id === 'IAM-SCIM').classification, 'conditional_when_configured');
+  assert.equal(manifest.workflows.find((lane) => lane.id === 'IAM-SAML').classification, 'conditional_when_configured');
+  assert.equal(manifest.workflows.find((lane) => lane.id === 'ASSURANCE').classification, 'external_assurance');
+  assert.equal(manifest.workflows.find((lane) => lane.id === 'TEN-RLS').classification, 'core_required');
   for (const lane of manifest.workflows) {
     const contract = RUNTIME_LANE_CONTRACTS[lane.id];
     assert.equal(lane.workflow, contract.workflow);
@@ -56,7 +60,7 @@ test('dispatcher supports concurrent safe exact-SHA campaigns with bounded trust
   assert.match(promoter, /blockedLanes/);
 });
 
-test('full closeout retains destructive confirmation and remains all-or-nothing', () => {
+test('full closeout retains destructive confirmation and keeps core-required lanes fail-closed', () => {
   assert.match(closeoutWorkflow, /RUN_ENTERPRISE_RUNTIME_CLOSEOUT/);
   assert.match(closeoutWorkflow, /EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK/);
   assert.match(closeoutWorkflow, /environment: production-enterprise-closeout/);
@@ -65,7 +69,7 @@ test('full closeout retains destructive confirmation and remains all-or-nothing'
   assert.doesNotMatch(closeoutWorkflow, /PARTIAL_SAFE_EVIDENCE_PROMOTED/);
 
   assert.match(promoter, /resolvedProfile === FULL_RUNTIME_PROFILE/);
-  assert.match(promoter, /if \(!incremental\) fail\(`runtime lane \$\{result\.id\} is not complete\/success`\)/);
+  assert.match(promoter, /if \(!incremental && result\.required !== false\) fail\(`runtime lane \$\{result\.id\} is not complete\/success`\)/);
 });
 
 test('safe bootstrap excludes destructive lanes and accepts only truthful complete or partial promotion', () => {
