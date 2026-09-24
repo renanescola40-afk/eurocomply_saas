@@ -1,6 +1,6 @@
 import { listAiIncidents, type AiIncidentRecord } from '@/server/queries/ai-incidents';
 import { listAiSystems, type AiSystemRecord } from '@/server/queries/ai-systems';
-import { listAuditEvents, type AuditEventRecord } from '@/server/queries/audit-events';
+import { listAllAuditEventsForExport, type AuditEventRecord } from '@/server/queries/audit-events';
 import { listDocuments } from '@/server/queries/documents';
 import { listRisks } from '@/server/queries/risks';
 import { listVendors } from '@/server/queries/vendors';
@@ -208,7 +208,7 @@ export async function buildAuditEvidencePack({
     listRisks(organization.id),
     listAiSystems(organization.id),
     listAiIncidents(organization.id),
-    listAuditEvents(organization.id, 100),
+    listAllAuditEventsForExport(organization.id),
   ]);
 
   const documents = normalizeRows<EvidenceDocument>(documentsRaw);
