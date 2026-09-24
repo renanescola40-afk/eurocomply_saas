@@ -1,6 +1,8 @@
 name: P0 Branch Protection Evidence
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       release_sha:
@@ -16,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_SHA: ${{ inputs.release_sha }}
+  RELEASE_SHA: ${{ inputs.release_sha || github.sha }}
 
 jobs:
   branch-protection-evidence:
@@ -33,7 +35,7 @@ jobs:
       - name: Checkout exact release SHA
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_sha }}
+          ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -51,13 +53,13 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_TOKEN: ${{ github.token }}
-          RELEASE_SHA: ${{ inputs.release_sha }}
+          RELEASE_SHA: ${{ env.RELEASE_SHA }}
         run: node scripts/security/generate-branch-protection-ruleset-evidence.mjs
 
       - name: Validate exact-SHA branch protection evidence contract
         if: always()
         env:
-          ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
+          ENTERPRISE_EXPECTED_SHA: ${{ env.RELEASE_SHA }}
           BRANCH_PROTECTION_EVIDENCE_PATH: p0-evidence/branch-protection-main.generated.json
         run: node scripts/security/check-generated-branch-protection-evidence.mjs
 
@@ -65,7 +67,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: p0-branch-protection-evidence-${{ inputs.release_sha }}
+          name: p0-branch-protection-evidence-${{ env.RELEASE_SHA }}
           path: p0-evidence/branch-protection-main.generated.json
           retention-days: 90
           if-no-files-found: error

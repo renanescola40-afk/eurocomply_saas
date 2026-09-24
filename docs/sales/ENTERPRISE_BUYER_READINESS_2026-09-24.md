@@ -4,7 +4,7 @@ Date: 2026-09-24
 Scope: demo, pricing, onboarding, sales deck, security questionnaire, architecture diagram, product one-pager, procurement pack and controlled data room.  
 Status: `ENTERPRISE_BUYER_READINESS_INTERNAL=PASS`
 
-This document is the canonical index for customer/buyer enablement. It closes internally controllable preparation; it does not invent customer logos, revenue, buyer interest, certifications, legal approval, production evidence, or counterparty acceptance.
+This document is the canonical enterprise index for customer/buyer enablement. The cross-segment SMB, mid-market, enterprise and Big Tech/M&A sharing authority is `docs/trust/UNIVERSAL_BUYER_READINESS_2026-09-24.md`. It closes internally controllable preparation; it does not invent customer logos, revenue, buyer interest, certifications, legal approval, production evidence, or counterparty acceptance.
 
 ## Buyer journey
 
@@ -20,6 +20,7 @@ This document is the canonical index for customer/buyer enablement. It closes in
 | 8. Architecture review | `docs/trust/ARCHITECTURE_OVERVIEW.md` | PASS | Current architecture and trust boundaries; no certification implication. |
 | 9. Procurement | `/{locale}/trust/procurement-pack` + `docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md` | PASS_INTERNAL | Internal diligence pack; buyer acceptance remains external. |
 | 10. Data room | `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-24.md` | PASS_CONTROLLED_INDEX | Safe index only; confidential evidence remains controlled outside public repo. |
+| 11. Strategic/M&A diligence | `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md` + OSS license diligence | PASS_INTERNAL_INDEX | Source/raw evidence remains NDA/late-stage controlled. |
 
 ## Canonical commercial truth
 
@@ -114,6 +115,10 @@ ARCHITECTURE_REVIEW_PACKAGE=PASS
 PRODUCT_ONE_PAGER=PASS
 PROCUREMENT_PACK=PASS_INTERNAL
 CONTROLLED_DATA_ROOM_INDEX=PASS_INTERNAL
+UNIVERSAL_BUYER_SHARE_POLICY=PASS_INTERNAL
+BIG_TECH_MA_DATA_ROOM_INDEX=PASS_INTERNAL
+IP_SOFTWARE_DILIGENCE_INDEX=PASS_INTERNAL
+OPEN_SOURCE_LICENSE_INVENTORY=PASS_INTERNAL
 CUSTOMER_LOGOS_TESTIMONIALS=NOT_CLAIMED
 BUYER_ACCEPTANCE=EXTERNAL
 SIGNED_ENTERPRISE_CONTRACT=EXTERNAL
