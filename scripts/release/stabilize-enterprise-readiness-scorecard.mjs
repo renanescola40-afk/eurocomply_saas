@@ -88,8 +88,21 @@ export function exactShaProducerRuns(runs, targetSha) {
   );
 }
 
-export function exactShaUpstreamProducerRuns(runs, targetSha) {
+export function exactShaProducerSnapshot(runs, targetSha, cutoffMs) {
+  const cutoff = Number(cutoffMs);
+  if (!Number.isFinite(cutoff) || cutoff <= 0) {
+    throw new Error('producer snapshot cutoff must be a positive epoch timestamp');
+  }
   return exactShaProducerRuns(runs, targetSha).filter(
+    (run) => createdTimestampMs(run) <= cutoff,
+  );
+}
+
+export function exactShaUpstreamProducerRuns(runs, targetSha, cutoffMs = Number.POSITIVE_INFINITY) {
+  const sourceRuns = Number.isFinite(cutoffMs)
+    ? exactShaProducerSnapshot(runs, targetSha, cutoffMs)
+    : exactShaProducerRuns(runs, targetSha);
+  return sourceRuns.filter(
     (run) => run?.name !== ENTERPRISE_PRODUCTION_GATE_NAME,
   );
 }
@@ -348,12 +361,16 @@ async function waitForTerminalProductionGate(
 export async function stabilize({ now = () => Date.now() } = {}) {
   const repository = validateRepository(process.env.GITHUB_REPOSITORY);
   const targetSha = validateSha(process.env.TARGET_SHA);
+  // Freeze the material-producer horizon for this invocation. Same-SHA workflow
+  // storms that start after this stabilizer run began are handled by their own
+  // newer stabilizer invocation instead of moving this run's terminal target.
+  const producerSnapshotCutoffMs = now();
   let settledRuns = null;
   let upstreamCutoffMs = 0;
 
   for (let attempt = 1; attempt <= MAX_SETTLE_ATTEMPTS; attempt += 1) {
     const runs = await listExactShaRuns(repository, targetSha);
-    const upstreamProducers = exactShaUpstreamProducerRuns(runs, targetSha);
+    const upstreamProducers = exactShaUpstreamProducerRuns(runs, targetSha, producerSnapshotCutoffMs);
 
     if (upstreamProducers.length === 0 || hasActiveProducer(upstreamProducers)) {
       if (attempt < MAX_SETTLE_ATTEMPTS) await sleep(SETTLE_INTERVAL_MS);
@@ -386,7 +403,7 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   }
 
   let refreshedRuns = await listExactShaRuns(repository, targetSha);
-  let refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha);
+  let refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha, producerSnapshotCutoffMs);
   if (hasActiveProducer(refreshedUpstream)) {
     throw new Error('A material evidence producer became active after the quiet-state check; refusing to dispatch');
   }
@@ -411,7 +428,7 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   });
 
   refreshedRuns = await listExactShaRuns(repository, targetSha);
-  refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha);
+  refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha, producerSnapshotCutoffMs);
   if (hasActiveProducer(refreshedUpstream)) {
     throw new Error('A material evidence producer became active while the production gate was settling; refusing to dispatch');
   }
@@ -435,8 +452,15 @@ export async function stabilize({ now = () => Date.now() } = {}) {
     return { dispatched: false, reason: 'main-advanced', targetSha };
   }
 
-  const allProducers = exactShaProducerRuns(refreshedRuns, targetSha);
-  const producerCutoffMs = latestProducerTimestamp(allProducers);
+  const snapshotProducers = exactShaProducerSnapshot(
+    refreshedRuns,
+    targetSha,
+    producerSnapshotCutoffMs,
+  );
+  const producerCutoffMs = Math.max(
+    latestProducerTimestamp(snapshotProducers),
+    timestampMs(terminalGate),
+  );
   if (scorecardAlreadyCoversEvidence(refreshedRuns, targetSha, producerCutoffMs)) {
     writeOutput('dispatched', false);
     writeOutput('reason', 'scorecard-current');
