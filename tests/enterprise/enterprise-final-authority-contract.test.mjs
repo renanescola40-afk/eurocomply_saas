@@ -304,6 +304,7 @@ test('Enterprise closure contract has 16 unique controls and requires every dire
   assert.equal(config.controls.length, 16);
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(byId.get('billing-product-live-closure')?.evidence, 'final-billing-product-live-closeout.json');
+  assert.equal(byId.get('billing-product-live-closure')?.scope, 'external');
   assert.equal(byId.get('supabase-production-acceptance')?.evidence, 'production-acceptance.json');
   assert.equal(byId.get('product-commercial-qa')?.evidence, 'fria-runtime-evidence.json');
   assert.equal(byId.get('production-provider-runtime')?.evidence, 'production-secrets-provider-stores.json');
@@ -312,7 +313,7 @@ test('Enterprise closure contract has 16 unique controls and requires every dire
   assert.equal(byId.get('legal-publication')?.scope, 'external');
   assert.equal(byId.get('final-go-no-go')?.scope, 'external');
   assert.equal(byId.get('enterprise-runtime-closeout')?.scope, 'internal');
-  assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 13);
-  assert.equal(config.controls.filter((control) => control.scope === 'external').length, 3);
+  assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 12);
+  assert.equal(config.controls.filter((control) => control.scope === 'external').length, 4);
   assert.equal(byId.get('enterprise-runtime-closeout')?.evidence, 'enterprise-runtime-closeout.json');
 });
