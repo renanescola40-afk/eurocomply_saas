@@ -89,6 +89,7 @@ export function buildCredentialCandidates(dedicatedToken, githubToken) {
     seen.add(token);
     candidates.push({ label, token });
   }
+  candidates.push({ label: 'public-read', token: '' });
   return candidates;
 }
 
