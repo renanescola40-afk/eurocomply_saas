@@ -32,9 +32,14 @@
   "credentialFallback": {
     "order": [
       "BRANCH_PROTECTION_READ_TOKEN",
-      "GITHUB_TOKEN"
+      "GITHUB_TOKEN",
+      "PUBLIC_READ_ONLY"
     ],
-    "retryableAuthorizationStatuses": [401, 403, 404],
+    "retryableAuthorizationStatuses": [
+      401,
+      403,
+      404
+    ],
     "tokenValuesRetainedInEvidence": false,
     "missingBypassActorVisibilityFailsClosed": true
   },
@@ -51,8 +56,12 @@
       "require_up_to_date_branch",
       "required_status_check_inventory"
     ],
-    "non_fast_forward": ["block_force_pushes"],
-    "deletion": ["block_deletions"]
+    "non_fast_forward": [
+      "block_force_pushes"
+    ],
+    "deletion": [
+      "block_deletions"
+    ]
   },
   "invalidatesOn": [
     "main branch SHA change",

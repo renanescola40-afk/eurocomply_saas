@@ -1,0 +1,18 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260924142553
+--   provider name: tenant_mfa_app_private_rls_authority
+--
+-- Canonical repository source representing the same migration body:
+--   canonical source version: 20260924143500
+--   local source: supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql
+--   local source SHA-256: 3b1ac221a69a1ebd0501897cd1dc18e3b0c59c6f2ab5c284d17c7adb1bbbf353
+--
+-- Owner-authorized read-only inspection of supabase_migrations.schema_migrations
+-- confirmed the provider ledger version/name and retained SQL statements. Those
+-- statements correspond to the canonical app_private tenant-MFA RLS authority
+-- migration above; only the provider ledger timestamp differs.
+--
+-- This file binds only the observed remote identity to the reviewed local source.
+-- No DDL. No SQL execution. No migration-history repair. No database write.

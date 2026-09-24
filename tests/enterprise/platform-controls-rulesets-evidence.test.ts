@@ -171,9 +171,11 @@ describe('repository rulesets platform-control evidence fallback', () => {
   it('deduplicates credential candidates without persisting token values in evidence metadata', () => {
     expect(buildCredentialCandidates('same-token', 'same-token')).toEqual([
       { label: 'dedicated-read-token', token: 'same-token' },
+      { label: 'public-read', token: '' },
     ]);
     expect(buildCredentialCandidates('', 'github-actions-token')).toEqual([
       { label: 'github-token', token: 'github-actions-token' },
+      { label: 'public-read', token: '' },
     ]);
   });
 
