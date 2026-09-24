@@ -38,6 +38,8 @@ describe('tenant-wide mandatory MFA contract', () => {
     expect(routePolicy).toContain("'/mfa'");
     expect(mfaPage).toContain('getCurrentUser()');
     expect(mfaPage).toContain('getCurrentOrganizationForUser(user.id)');
+    expect(enrollment).toContain('supabase.auth.mfa.listFactors');
+    expect(enrollment).toContain('supabase.auth.mfa.unenroll');
     expect(enrollment).toContain('supabase.auth.mfa.enroll');
     expect(enrollment).toContain('supabase.auth.mfa.challenge');
     expect(enrollment).toContain('supabase.auth.mfa.verify');
