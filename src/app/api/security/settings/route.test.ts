@@ -104,13 +104,17 @@ describe('security settings payload integrity', () => {
     mocks.createAdminClient.mockReturnValue({ from });
 
     const response = await POST(
-      buildRequest(JSON.stringify({ stepUpProviderMode: 'enterprise_idp', allowedIdpAcrValues: ['urn:example:loa:2'] })),
+      buildRequest(JSON.stringify({
+        requireMfaForAllUsers: true,
+        stepUpProviderMode: 'enterprise_idp',
+        allowedIdpAcrValues: ['urn:example:loa:2'],
+      })),
     );
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(select).toHaveBeenCalledWith(
-      'organization_id, require_step_up_for_critical_actions, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values',
+      'organization_id, require_step_up_for_critical_actions, require_mfa_for_all_users, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values',
     );
     expect(eq).toHaveBeenCalledWith('organization_id', 'org_a');
     expect(maybeSingle).toHaveBeenCalled();
@@ -118,6 +122,7 @@ describe('security settings payload integrity', () => {
       expect.objectContaining({
         organization_id: 'org_a',
         require_step_up_for_critical_actions: true,
+        require_mfa_for_all_users: true,
         step_up_provider_mode: 'enterprise_idp',
         allowed_idp_acr_values: ['urn:example:loa:2'],
       }),
@@ -126,6 +131,10 @@ describe('security settings payload integrity', () => {
     expect(mocks.createAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'security_settings_changed', organizationId: 'org_a' }),
     );
-    expect(body).toMatchObject({ changed: true, auditPersisted: true });
+    expect(body).toMatchObject({
+      changed: true,
+      auditPersisted: true,
+      settings: { requireMfaForAllUsers: true },
+    });
   });
 });
