@@ -35,13 +35,13 @@ Use these labels in procurement answers:
 
 ## Explicit non-claims
 
-RISCK COMPLY is not currently ISO 27001 certified. RISCK COMPLY does not currently have a SOC 2 Type I or Type II report. A third-party penetration test has not completed. Audit events include hash-chain integrity controls, but the product must not be described as WORM-backed or externally immutable unless separate storage and evidence exist. Formal backup restore and disaster recovery exercises have not yet been completed.
+RISCK COMPLY is not currently ISO 27001 certified and does not currently have a SOC 2 Type I or Type II report. A third-party black-box web application assessment was completed on 2026-09-12 and an attributable confidential report was received. The original TLS 1.0/1.1 High findings have subsequent technical remediation and external validation evidence, but a clean independent retest/terminal assurance remains open; the assessment must not be described as blanket authenticated tenant-isolation proof or a clean pentest pass. Audit events include hash-chain integrity controls, but the product must not be described as WORM-backed or externally immutable unless separate storage and evidence exist. Formal backup restore and disaster recovery claims remain evidence-bound.
 
 ## Customer-safe language
 
 Use: "RISCK COMPLY is designed to support enterprise security review with authenticated workspaces, organization-scoped RBAC, Supabase RLS migrations, audit events, managed-provider safeguards, and release evidence gates. Current certifications and external assurance artifacts are disclosed separately."
 
-Do not use: "SOC 2 compliant", "ISO 27001 certified", "pentested", "end-to-end encrypted", "GDPR compliant", "immutable audit log", or "24/7 monitored" unless corresponding approved evidence is attached.
+Do not use: "SOC 2 compliant", "ISO 27001 certified", "clean pentest pass", "end-to-end encrypted", "GDPR compliant", "immutable audit log", or "24/7 monitored" unless corresponding approved evidence is attached.
 
 ## Responsible disclosure
 
