@@ -18,6 +18,11 @@ describe('security settings payload validation', () => {
     expect(source).toContain('invalid_security_settings_payload');
   });
 
+  it('rejects a non-boolean tenant-wide MFA policy value', () => {
+    expect(source).toContain("typeof input.requireMfaForAllUsers !== 'boolean'");
+    expect(source).toContain('require_mfa_for_all_users');
+  });
+
   it('preserves privileged mutation controls and durable audit compensation', () => {
     expect(source).toContain("permission: 'manage_settings'");
     expect(source).toContain("action: 'change_security_settings'");

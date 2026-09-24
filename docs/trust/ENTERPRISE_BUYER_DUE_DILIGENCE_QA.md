@@ -14,11 +14,11 @@ This document is a buyer-safe factual answer set. It does not create certificati
 | RLS / tenant isolation | Forced RLS, tenant-scoped authorization and cross-tenant security controls are implemented; production claims remain exact-release evidence-bound. | PASS_INTERNAL / runtime evidence bound |
 | RBAC | Organization-scoped RBAC/server guards are implemented. | PASS_INTERNAL |
 | Authentication | Supabase Auth with protected administration and step-up security controls. | PASS_INTERNAL |
-| MFA | Step-up MFA/AAL2 protects platform administration and high-risk actions. Tenant-wide mandatory MFA for every workspace user is not claimed as complete. | PASS_INTERNAL_WITH_BOUNDARY |
+| MFA | Step-up MFA/AAL2 protects platform administration/high-risk actions, and a tenant-configurable mandatory MFA policy can require AAL2 across workspace pages, shared API/RBAC authorities and tenant-scoped RLS access. The capability is implemented; per-customer activation remains configuration-specific. | PASS_INTERNAL |
 | SSO/SAML | SAML SSO runtime is implemented and present in production schema/RPCs. Activation requires buyer-specific IdP/domain configuration and end-to-end IdP validation. | PASS_INTERNAL / WAITING_BUYER |
 | Audit logs | Tenant-scoped audit events, hash-chain verification and signed evidence-pack export exist. | PASS_INTERNAL |
 | Audit immutability | Tamper-evident hash chain: yes. External WORM/immutable storage: not claimed. | PASS_INTERNAL_WITH_BOUNDARY |
-| Backups | An isolated recovery/schema rehearsal environment is evidenced; it is not proof of customer-data restore. A safe data-restore exercise is still required before measured restore claims. | PASS_INTERNAL_REHEARSAL / WAITING_PROVIDER_FACT |
+| Backups | An isolated data-bearing recovery snapshot is evidenced and representative row-count/ID-digest lineage matches the bounded production snapshot. The provider restore mechanism and measured RTO/RPO remain unverified. | PASS_INTERNAL_DATA_RECOVERY_EVIDENCE / WAITING_PROVIDER_TIMED_RESTORE |
 | DR | A non-destructive DR tabletop was completed on 2026-09-24. Live failover was not executed and measured RTO/RPO remain evidence-bound. | PASS_INTERNAL_TABLETOP / measured evidence pending |
 | Incident response | Intake, severity, containment, evidence preservation, communication, recovery and postmortem/CAPA workflow are documented. No 24/7 staffed-response claim is made. | PASS_INTERNAL |
 | Privacy/GDPR | ROPA, Art. 13/14 matrix, DSR controls, transfer register, provider register and technical/privacy controls exist. Final legal publication/contract facts remain separately governed. | PASS_INTERNAL |

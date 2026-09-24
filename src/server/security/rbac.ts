@@ -1,6 +1,7 @@
 import { noStoreJson } from '@/server/security/no-store';
 import { normalizeOrganizationRole, roleHasPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
 import type { SubscriptionPlan } from '@/server/queries/subscription';
+import { requireTenantMfaForOrganization, TenantMfaError } from '@/server/security/tenant-mfa';
 
 export {
   getOrganizationPermissionMatrix,
@@ -278,6 +279,27 @@ export async function assertOrganizationPermission({
     minimumPlan,
   });
   if (commercialAuthorityDenied) return commercialAuthorityDenied;
+
+  try {
+    await requireTenantMfaForOrganization(organizationId);
+  } catch (error) {
+    if (error instanceof TenantMfaError) {
+      const result: PermissionCheckDenied = {
+        ok: false,
+        status: error.status,
+        error: error.code,
+        message: error.code === 'tenant_mfa_required'
+          ? 'Multi-factor authentication is required by the organization policy.'
+          : 'Could not verify the organization multi-factor authentication policy.',
+        role,
+        rawRole: membership.role,
+        permission,
+      };
+      await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+      return result;
+    }
+    throw error;
+  }
 
   return {
     ok: true,

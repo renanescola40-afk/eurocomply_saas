@@ -105,6 +105,8 @@ const STALE_TRUST_PHRASES = [
   'Define how long EuroComply retains',
   'Minimum 12 months draft target',
   '30-90 days draft target',
+  'it contains no restored customer/application rows',
+  'a real data-bearing restore and measured RTO/RPO remain unproven',
 ];
 
 const failures = [];
@@ -170,8 +172,10 @@ const consistencyRules = [
   {
     label: 'tenant-wide MFA boundary',
     pass:
-      canonicalReadme.includes('Tenant-wide mandatory MFA for every workspace user is not currently claimed as complete')
-      && questionnaire.includes('Tenant-wide mandatory MFA for every workspace user is not currently claimed as complete'),
+      canonicalReadme.includes('tenant-wide policy that requires an AAL2 session for all workspace access')
+      && canonicalReadme.includes('not claimed as enabled for every customer')
+      && questionnaire.includes('Yes, as a tenant-configurable policy')
+      && questionnaire.includes('not represented as enabled for every customer tenant by default'),
   },
   {
     label: 'SSO buyer activation boundary',
@@ -182,14 +186,16 @@ const consistencyRules = [
   {
     label: 'restore/RTO/RPO boundary',
     pass:
-      canonicalReadme.includes('a real data-bearing restore and measured RTO/RPO remain unproven')
-      && questionnaire.includes('measured RPO/RTO are not yet proven'),
+      canonicalReadme.includes('data-bearing snapshot whose representative tenant/application row counts and deterministic ID digests match the bounded production lineage')
+      && canonicalReadme.includes('measured RTO/RPO are not independently evidenced')
+      && questionnaire.includes('A data-bearing isolated recovery snapshot is evidenced')
+      && questionnaire.includes('measured RPO/RTO are not independently evidenced'),
   },
   {
     label: 'current-release tenant isolation boundary',
     pass:
-      canonicalReadme.includes('Exact-current-release production isolation must be freshly revalidated')
-      && questionnaire.includes('production evidence must be collected'),
+      canonicalReadme.includes('Any statement that a specific production release is proven must be backed by exact-release runtime evidence')
+      && questionnaire.includes('Production-proof claims are release-bound'),
   },
   {
     label: 'certification non-claims',

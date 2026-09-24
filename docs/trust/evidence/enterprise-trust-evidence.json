@@ -77,22 +77,29 @@
     {
       "id": "mandatory-mfa",
       "question": "Do you support mandatory MFA?",
-      "status": "partial_strong",
-      "customerAnswer": "Step-up MFA/AAL2 is implemented for protected platform-administration and high-risk actions. Tenant-wide mandatory MFA policy enforcement for every workspace user is not currently represented as complete.",
+      "status": "implemented_evidence_bound",
+      "customerAnswer": "RISCK COMPLY implements step-up MFA/AAL2 for protected platform-administration and high-risk actions plus a tenant-configurable mandatory MFA policy that can require AAL2 for all workspace access. The capability is implemented; activation for a specific customer tenant is configuration-specific.",
       "evidence": [
         "src/server/security/platform-admin.ts",
-        "src/server/security/step-up-provider.ts",
-        "docs/security/STEP_UP_ROLLOUT_MATRIX.md",
-        "docs/security/evidence/runtime/step-up-mfa-validation.json",
+        "src/server/security/tenant-mfa.ts",
+        "src/server/security/commercial-access.ts",
+        "src/server/security/api-guards.ts",
+        "src/server/security/rbac.ts",
+        "src/app/[locale]/mfa/page.tsx",
+        "src/components/security/tenant-mfa-enrollment.tsx",
+        "src/components/security/tenant-mfa-policy-card.tsx",
+        "supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+        "supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+        "tests/security/tenant-wide-mfa-contract.test.ts",
         "docs/trust/SSO_MFA_ENTERPRISE_PLAN.md"
       ],
       "blockers": [
-        "Tenant-wide organization policy enforcement is not evidenced as complete.",
-        "Exact-release protected runtime MFA proof remains evidence-bound."
+        "Exact-release application deployment must remain current before describing a specific release as production-proven.",
+        "Whether a particular customer tenant has mandatory MFA enabled is a tenant-specific configuration fact."
       ],
       "nextActions": [
-        "Retain step-up/AAL2 claims for protected actions only.",
-        "Treat tenant-wide mandatory MFA as a separate enterprise identity capability until implemented and runtime-proven."
+        "Keep exact-release runtime evidence current.",
+        "State customer-specific activation only from the actual tenant configuration; do not generalize capability into universal adoption."
       ]
     },
     {
@@ -117,21 +124,19 @@
     {
       "id": "tenant-segregation",
       "question": "Is tenant segregation proven?",
-      "status": "partial_strong",
-      "customerAnswer": "RISCK COMPLY has organization-scoped authorization controls and RLS/security checks. Production evidence and live RLS validation should be provided before claiming proven tenant isolation.",
+      "status": "implemented_evidence_bound",
+      "customerAnswer": "Organization-scoped authorization and RLS tenant-isolation controls are implemented. A specific production release should be described as production-proven only when exact-release negative cross-tenant runtime evidence is current for that release.",
       "evidence": [
-        "src/server/authz.ts",
-        "scripts/security/check-rls.mjs",
-        "scripts/security/check-api-guards.mjs"
+        "scripts/security/run-supabase-live-tenant-isolation.mjs",
+        "scripts/security/run-supabase-live-tenant-isolation-v4.mjs",
+        "docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md",
+        "docs/security/evidence/runtime/supabase-live-rls-validation.json"
       ],
       "blockers": [
-        "Live RLS evidence must be generated against the production Supabase project.",
-        "Cross-tenant negative tests need to be stored as evidence."
+        "Production-proof disclosure is release-bound; the exact-release runtime artifact must be current for the release being disclosed."
       ],
       "nextActions": [
-        "Run RLS live check with SUPABASE_ACCESS_TOKEN.",
-        "Store tenant isolation test evidence.",
-        "Add cross-tenant regression tests to CI where safe."
+        "Generate or revalidate exact-release negative cross-tenant runtime evidence whenever the production release changes before making a production-proven claim."
       ]
     },
     {
@@ -154,18 +159,18 @@
     {
       "id": "backup-restore-tested",
       "question": "Is backup restore tested?",
-      "status": "partial_strong",
-      "customerAnswer": "An isolated recovery/schema rehearsal environment is evidenced. It does not contain restored customer/application rows, so a customer-data backup restore and measured recovery objectives are not yet proven.",
+      "status": "implemented_evidence_bound",
+      "customerAnswer": "An isolated data-bearing recovery snapshot is evidenced. Representative tenant/application row counts and deterministic ID digests match the bounded production lineage. The provider restore mechanism and measured recovery objectives are not independently evidenced.",
       "evidence": [
         "docs/trust/BACKUP_RESTORE_EVIDENCE_2026-09-24.md",
         "docs/trust/BACKUP_RESTORE_TEST_PLAN.md"
       ],
       "blockers": [
-        "Customer/application data restore has not been proven in the isolated recovery project.",
+        "The provider restore/duplicate mechanism that produced the isolated recovery project is not independently attested in the retained evidence.",
         "Measured restore duration and RPO are not available."
       ],
       "nextActions": [
-        "Use a provider-supported isolated data-restore exercise when safe and retain timestamps plus integrity checks."
+        "When measured recovery objectives are required, run a timed provider-supported isolated restore and retain the requested recovery point, start/ready timestamps and integrity checks."
       ]
     },
     {
