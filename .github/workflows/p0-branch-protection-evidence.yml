@@ -113,7 +113,7 @@ jobs:
               generatedAt,
               reviewedAt: generatedAt,
               reviewer: 'RISCK COMPLY protected release automation',
-              source: 'github-api-branch-protection-workflow',
+              source: 'github-public-branch-ruleset-workflow',
               policy_document: 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md',
               summary,
               failures,
@@ -150,16 +150,47 @@ jobs:
               },
             });
 
+            const publicJson = async (url) => {
+              const response = await fetch(url, {
+                headers: {
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  'User-Agent': 'risck-comply-branch-protection-proof',
+                },
+              });
+              if (!response.ok) {
+                throw new Error(`public_github_read_failed:${response.status}:${url}`);
+              }
+              return response.json();
+            };
+
             let currentMainSha;
+            let ruleset;
             try {
-              const mainBranch = await github.rest.repos.getBranch({ owner, repo, branch });
-              currentMainSha = String(mainBranch.data.commit.sha || '').toLowerCase();
+              const mainBranch = await publicJson(`${context.apiUrl}/repos/${owner}/${repo}/branches/${branch}`);
+              currentMainSha = String(mainBranch.commit?.sha || '').toLowerCase();
+
+              const rulesets = await publicJson(`${context.apiUrl}/repos/${owner}/${repo}/rulesets`);
+              const candidates = rulesets.filter((candidate) =>
+                candidate.enforcement === 'active' && candidate.target === 'branch'
+              );
+
+              for (const candidate of candidates) {
+                const detail = await publicJson(`${context.apiUrl}/repos/${owner}/${repo}/rulesets/${candidate.id}`);
+                const includesMain = detail.conditions?.ref_name?.include?.includes('refs/heads/main');
+                const excludesMain = detail.conditions?.ref_name?.exclude?.includes('refs/heads/main');
+                if (includesMain && !excludesMain) {
+                  ruleset = detail;
+                  break;
+                }
+              }
             } catch (error) {
               const evidence = baseEvidence({
                 status: 'Open',
                 outcome: 'blocked',
-                summary: 'The current main head could not be read through the GitHub API.',
-                failures: [`main_head_read_failed:${error.status || 'unknown'}`],
+                summary: 'Public GitHub branch/ruleset evidence could not be read.',
+                currentMainSha: currentMainSha || null,
+                failures: [String(error?.message || error)],
               });
               writeEvidence(evidence);
               core.setFailed(evidence.summary);
@@ -179,44 +210,47 @@ jobs:
               return;
             }
 
-            let protection;
-            try {
-              protection = (await github.rest.repos.getBranchProtection({ owner, repo, branch })).data;
-            } catch (error) {
+            if (!ruleset) {
               const evidence = baseEvidence({
                 status: 'Open',
                 outcome: 'blocked',
-                summary: 'GitHub branch protection for main could not be read through the GitHub API.',
+                summary: 'No active public GitHub ruleset applies to refs/heads/main.',
                 currentMainSha,
-                failures: [`branch_protection_read_failed:${error.status || 'unknown'}`],
+                failures: ['active_main_ruleset_not_found'],
               });
               writeEvidence(evidence);
               core.setFailed(evidence.summary);
               return;
             }
 
-            const contexts = protection.required_status_checks?.contexts ?? [];
-            const checks = protection.required_status_checks?.checks?.map((check) => check.context) ?? [];
-            const configuredChecks = [...new Set([...contexts, ...checks])];
+            const pullRequestRule = ruleset.rules?.find((rule) => rule.type === 'pull_request');
+            const statusRule = ruleset.rules?.find((rule) => rule.type === 'required_status_checks');
+            const configuredChecks = [
+              ...new Set(
+                statusRule?.parameters?.required_status_checks
+                  ?.map((check) => check.context)
+                  .filter(Boolean) ?? []
+              ),
+            ];
             const configured = new Set(configuredChecks);
             const matchedRequiredChecks = Object.fromEntries(requiredChecks.map((check) => {
               const accepted = [check, ...(aliases[check] ?? [])];
               return [check, accepted.filter((name) => configured.has(name))];
             }));
             const missingChecks = requiredChecks.filter((check) => matchedRequiredChecks[check].length === 0);
-            const requirePullRequest = Boolean(protection.required_pull_request_reviews);
+            const pullRequest = pullRequestRule?.parameters ?? {};
             const branchProtection = {
-              protect_branch: true,
-              require_pull_request: requirePullRequest,
-              required_approving_reviews: protection.required_pull_request_reviews?.required_approving_review_count ?? 0,
-              require_code_owner_review: Boolean(protection.required_pull_request_reviews?.require_code_owner_reviews),
-              dismiss_stale_reviews: Boolean(protection.required_pull_request_reviews?.dismiss_stale_reviews),
-              require_conversation_resolution: Boolean(protection.required_conversation_resolution),
-              require_status_checks: Boolean(protection.required_status_checks),
-              require_up_to_date_branch: Boolean(protection.required_status_checks?.strict),
-              block_force_pushes: protection.allow_force_pushes?.enabled === false,
-              block_deletions: protection.allow_deletions?.enabled === false,
-              restrict_direct_pushes: Boolean(protection.restrictions) || requirePullRequest,
+              protect_branch: ruleset.enforcement === 'active',
+              require_pull_request: Boolean(pullRequestRule),
+              required_approving_reviews: pullRequest.required_approving_review_count ?? 0,
+              require_code_owner_review: Boolean(pullRequest.require_code_owner_review),
+              dismiss_stale_reviews: Boolean(pullRequest.dismiss_stale_reviews_on_push),
+              require_conversation_resolution: Boolean(pullRequest.required_review_thread_resolution),
+              require_status_checks: Boolean(statusRule),
+              require_up_to_date_branch: Boolean(statusRule?.parameters?.strict_required_status_checks_policy),
+              block_force_pushes: Boolean(ruleset.rules?.some((rule) => rule.type === 'non_fast_forward')),
+              block_deletions: Boolean(ruleset.rules?.some((rule) => rule.type === 'deletion')),
+              restrict_direct_pushes: Boolean(pullRequestRule) && (ruleset.bypass_actors?.length ?? 0) === 0,
             };
             const requiredFlags = [
               'protect_branch',
