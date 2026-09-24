@@ -20,7 +20,7 @@ Source main at branch start: `1792aaa1cc9614ebb1a2d87954ccc63b2ad8065f`
 | Incident response documentation | PASS_INTERNAL |
 | Audit evidence-pack export | PASS_INTERNAL |
 | Audit tamper evidence | PASS_INTERNAL — hash-chain; WORM not claimed |
-| MFA | PASS_INTERNAL for protected step-up/AAL2 scope; tenant-wide mandatory policy not claimed |
+| MFA | PASS_INTERNAL — protected step-up/AAL2 plus tenant-configurable tenant-wide AAL2 policy implemented and live QA validated |
 | SSO/SAML | PASS_INTERNAL — runtime implemented; WAITING_BUYER for IdP/domain activation + E2E validation |
 | Backup restore | PASS_INTERNAL_REHEARSAL / WAITING_PROVIDER_FACT for safe customer-data restore evidence |
 | DR tabletop | PASS_INTERNAL — non-destructive tabletop completed 2026-09-24 |
@@ -38,7 +38,7 @@ Source main at branch start: `1792aaa1cc9614ebb1a2d87954ccc63b2ad8065f`
 - pentest status corrected from “not completed” to completed assessment + clean retest pending;
 - audit export corrected from roadmap-only to implemented signed evidence-pack export;
 - audit immutability language corrected to tamper-evident hash chain without WORM claim;
-- MFA language corrected to implemented protected step-up/AAL2 without overclaiming tenant-wide mandatory MFA;
+- MFA language reconciled to implemented protected step-up/AAL2 plus tenant-configurable tenant-wide AAL2 policy, without claiming universal customer activation;
 - subprocessor and retention statuses reconciled to current registers and workflows;
 - canonical buyer due-diligence Q&A added;
 - canonical first-48-hours disclosure handoff added.
