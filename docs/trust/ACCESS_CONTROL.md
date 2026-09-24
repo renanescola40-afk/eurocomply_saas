@@ -54,7 +54,7 @@ Application RBAC and Supabase RLS are complementary. RBAC is used in server-side
 
 ## Enterprise gaps
 
-Enterprise SSO/SAML is planned but not currently available. Tenant-enforced MFA is planned but not currently available as an organization policy. Fine-grained custom roles are not currently documented as available beyond the implemented Trust Center RBAC model, and legacy owner/admin/member-only flows must be treated as migration gaps until they explicitly use the shared RBAC helper.
+Enterprise SAML SSO runtime is implemented and production schema/RPCs are present; buyer-specific IdP/domain activation and end-to-end validation remain external. Tenant-wide MFA for every login is not claimed as an organization policy, while step-up MFA/AAL2 is enforced for protected administration and high-risk actions. Fine-grained custom roles are not currently documented as available beyond the implemented Trust Center RBAC model, and legacy owner/admin/member-only flows must be treated as migration gaps until they explicitly use the shared RBAC helper.
 
 ## Customer-safe answer
 
