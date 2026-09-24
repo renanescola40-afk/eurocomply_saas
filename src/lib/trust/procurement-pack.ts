@@ -97,10 +97,17 @@ export const procurementControls: ProcurementControl[] = [
   },
   {
     id: 'certifications',
-    title: 'Independent certifications and testing',
+    title: 'Independent certifications',
+    status: 'not-claimed',
+    summary: 'No SOC 2 or ISO 27001 certification is claimed without current, dated and attributable certification evidence.',
+    evidence: ['No unsupported certification badge', 'Evidence-bound public claims', 'Contract review before reliance'],
+  },
+  {
+    id: 'security-assessment',
+    title: 'Independent security assessment',
     status: 'evidence-required',
-    summary: 'No SOC 2 or ISO 27001 certification is claimed. A third-party black-box assessment was completed on 2026-09-12; original TLS Highs have technical remediation evidence, while a clean independent retest/terminal assurance remains open.',
-    evidence: ['Evidence-bound public claims', 'Confidential third-party assessment reference', 'Retest/terminal assurance boundary'],
+    summary: 'A third-party black-box assessment was completed on 2026-09-12; original TLS Highs have technical remediation evidence, while a clean independent retest/terminal assurance remains open.',
+    evidence: ['Confidential third-party assessment reference', 'TLS remediation evidence', 'Retest/terminal assurance boundary'],
   },
 ];
 
