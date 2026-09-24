@@ -3,6 +3,8 @@ name: Enterprise Runtime Closeout Campaign
 run-name: Runtime closeout campaign for ${{ inputs.release_sha || github.sha }}
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       release_sha:
@@ -30,7 +32,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: enterprise-runtime-closeout-${{ inputs.release_sha }}
+  group: enterprise-runtime-closeout-${{ inputs.release_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -44,6 +46,7 @@ jobs:
       SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id || '' }}
       SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id || '' }}
       SUPABASE_CURRENT_STATE_RUN_ID: ${{ inputs.supabase_current_state_run_id || '' }}
+      CAMPAIGN_TRIGGER_EVENT: ${{ github.event_name }}
 
     steps:
       - name: Checkout exact release SHA
@@ -92,6 +95,8 @@ jobs:
       - name: Record truthful campaign boundary
         run: |
           echo 'Runtime proofs were dispatched for the exact current main SHA.'
+          echo 'Push-triggered campaigns do not redispatch proof workflows that already receive the same main push.'
+          echo 'Push-triggered runs dispatch only workflow_dispatch-only exact-SHA proof producers after main advances.'
           echo 'Non-Supabase runtime proofs are always dispatched for the exact current main SHA.'
           echo 'TEN-RLS live proof is dispatched only when exactly one canonical Supabase Promotion, reattestation, or current-state read-only authority is supplied.'
           echo 'The read-only RLS reconciliation lane may run without Production writes.'

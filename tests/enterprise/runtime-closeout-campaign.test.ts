@@ -37,7 +37,7 @@ describe('enterprise runtime closeout campaign', () => {
     expect(dispatcher).not.toContain('APPLY_MIGRATIONS');
   });
 
-  it('binds dispatches to exact current main and protected approval', () => {
+  it('binds manual and automatic dispatches to exact current main and protected approval', () => {
     expect(dispatcher).toContain('/^[a-f0-9]{40}$/');
     expect(dispatcher).toContain("github('/commits/main')");
     expect(dispatcher).toContain('main.sha !== targetSha');
@@ -47,7 +47,17 @@ describe('enterprise runtime closeout campaign', () => {
     expect(dispatcher).toContain("authorityRun.conclusion !== 'success'");
     expect(workflow).toContain('environment: enterprise-release-approval');
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).not.toContain('branches: [main]');
+    expect(workflow).toContain('push:');
+    expect(workflow).toContain('branches: [main]');
+    expect(workflow).toContain('group: enterprise-runtime-closeout-${{ inputs.release_sha || github.sha }}');
+    expect(workflow).toContain("CAMPAIGN_TRIGGER_EVENT: ${{ github.event_name }}");
+    expect(dispatcher).toContain("campaignTriggerEvent === 'push'");
+    expect(dispatcher).toContain("'auth-rbac-runtime-proof.yml'");
+    expect(dispatcher).toContain("'distributed-rate-limit-runtime-proof.yml'");
+    expect(dispatcher).toContain("'production-runtime-proof.yml'");
+    expect(dispatcher).toContain("'audit-chain-runtime-proof.yml'");
+    expect(dispatcher).toContain('directPushProofs');
+    expect(dispatcher).toContain('!directPushProofs.has(workflow.file)');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('contents: write');
   });
