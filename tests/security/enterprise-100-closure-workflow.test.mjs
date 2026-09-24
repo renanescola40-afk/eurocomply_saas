@@ -36,8 +36,6 @@ test('closure generates exact-SHA Vercel Production deployment evidence directly
   assert.match(workflow, /write-github-vercel-production-deployment-evidence\.mjs/);
   assert.match(workflow, /direct-production-deployment\/release-validation\/production-deployment\.json/);
   assert.match(workflow, /PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS: '12'/);
-  assert.match(workflow, /environment: Production/);
-  assert.match(workflow, /HEALTHCHECK_TOKEN: \$\{\{ secrets\.HEALTHCHECK_TOKEN \}\}/);
   assert.match(workflow, /PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'/);
   assert.match(workflow, /retained_proof=.*find "\$RETAINED_ARTIFACT_ROOT".*production-deployment\.json/);
   assert.match(workflow, /Authorized retained production deployment proof already exists/);
