@@ -295,6 +295,8 @@ test('writer grants internal Product Ready while strict assurance waits for the 
   assert.equal(result.decision, 'ENTERPRISE_PRODUCT_READY: PASS');
   assert.equal(result.enterpriseStrictDecision, 'ENTERPRISE_STRICT: WAITING_EXTERNAL');
   assert.equal(result.productionDecision, 'PRODUCTION_GO: PASS');
+  assert.equal(result.productionDecisionScope, 'TECHNICAL_RELEASE_ONLY');
+  assert.equal(result.realBillingLifecycle, 'WAITING_REAL_CUSTOMER');
   assert.deepEqual(result.blockers, []);
   assert.ok(result.strictBlockers.includes('strict_domain_sources_incomplete'));
   assert.ok(result.strictBlockers.includes('strict_enterprise_closure_not_go'));
