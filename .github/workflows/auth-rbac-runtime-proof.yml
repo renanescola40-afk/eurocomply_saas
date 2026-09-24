@@ -72,11 +72,7 @@ jobs:
           set -euo pipefail
           OBSERVED_SHA="$(git rev-parse HEAD)"
           test "$OBSERVED_SHA" = "$TARGET_SHA"
-          MAIN_SHA="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          MAIN_SHA="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
           test "$MAIN_SHA" = "$TARGET_SHA"
 
       - name: Set up Node.js
