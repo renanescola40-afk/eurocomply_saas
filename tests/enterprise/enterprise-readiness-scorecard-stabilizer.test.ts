@@ -52,7 +52,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
       },
     ];
 
-    expect(exactShaProducerSnapshot(runs, targetSha, cutoff).map((run) => run.id)).toEqual([1]);
+    expect(exactShaProducerSnapshot(runs, targetSha, cutoff).map((run: { id?: number }) => run.id)).toEqual([1]);
   });
 
   it('is syntactically valid JavaScript', () => {
