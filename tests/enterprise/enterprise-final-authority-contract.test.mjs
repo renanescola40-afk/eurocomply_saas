@@ -67,7 +67,8 @@ test('final authority producers require the five direct domain proofs and no raw
   const external = FINAL_AUTHORITY_PRODUCERS.find((producer) => producer.id === 'external-security-assurance');
   assert.equal(external?.artifact(SHA), `external-security-assurance-accepted-${SHA}`);
   assert.equal(external?.scope, 'external');
-  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope !== 'external').length, 4);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope !== 'external').length, 3);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 2);
 });
 
 
@@ -96,7 +97,7 @@ test('external producer collection errors remain strict WAITING_EXTERNAL without
   assert.deepEqual(manifest.internalMissingProducerIds, []);
   assert.equal(manifest.externalStatus, 'Open');
   assert.equal(manifest.externalOutcome, 'blocked');
-  assert.deepEqual(manifest.externalMissingProducerIds, ['external-security-assurance']);
+  assert.deepEqual(manifest.externalMissingProducerIds.sort(), ['billing-product-live-closure', 'external-security-assurance']);
   assert.equal(manifest.status, 'Open');
   assert.equal(manifest.outcome, 'blocked');
   const external = manifest.producers.find((producer) => producer.id === 'external-security-assurance');
@@ -113,7 +114,7 @@ test('internal producer collection errors remain fail-closed and abort authority
       token: 'test-token',
       root,
       collectProducerImpl: async ({ spec }) => {
-        if (spec.id === 'billing-product-live-closure') throw new Error('simulated_internal_error');
+        if (spec.id === 'production-provider-runtime') throw new Error('simulated_internal_error');
         return {
           id: spec.id,
           scope: spec.scope === 'external' ? 'external' : 'internal',
@@ -208,16 +209,21 @@ test('writer emits Enterprise 100 and Production GO only when closure and source
   assert.equal(result.technicalReleaseClosure, 'TECHNICAL_RELEASE_CLOSURE: PASS');
 });
 
-test('writer fails closed when any direct domain authority is missing', () => {
+test('writer fails closed when an internal direct domain authority is missing', () => {
   const result = buildEnterpriseFinalAuthority({
     targetSha: SHA,
     closure: {
       decision: 'GO',
       passed: true,
+      internalDecision: 'GO',
+      internalPassed: true,
       expectedSha: SHA,
       blockers: [],
+      internalBlockers: [],
       acceptedControls: 16,
       totalControls: 16,
+      internalAcceptedControls: 12,
+      internalTotalControls: 12,
     },
     sourceManifest: {
       status: 'Open',
@@ -225,7 +231,17 @@ test('writer fails closed when any direct domain authority is missing', () => {
       targetSha: SHA,
       collectedProducerCount: 4,
       requiredProducerCount: 5,
-      missingProducerIds: ['billing-product-live-closure'],
+      missingProducerIds: ['production-provider-runtime'],
+      internalStatus: 'Open',
+      internalOutcome: 'blocked',
+      internalCollectedProducerCount: 2,
+      internalRequiredProducerCount: 3,
+      internalMissingProducerIds: ['production-provider-runtime'],
+      externalStatus: 'Complete',
+      externalOutcome: 'passed',
+      externalCollectedProducerCount: 2,
+      externalRequiredProducerCount: 2,
+      externalMissingProducerIds: [],
       producers: [],
     },
   });
@@ -245,31 +261,37 @@ test('writer grants internal Product Ready while strict assurance waits for the 
       strictDecision: 'WAITING_EXTERNAL',
       strictPassed: false,
       expectedSha: SHA,
-      blockers: ['external-security-assurance:evidence_missing'],
+      blockers: [
+        'billing-product-live-closure:evidence_missing',
+        'external-security-assurance:evidence_missing',
+      ],
       internalBlockers: [],
-      externalBlockers: ['external-security-assurance:evidence_missing'],
-      acceptedControls: 15,
+      externalBlockers: [
+        'billing-product-live-closure:evidence_missing',
+        'external-security-assurance:evidence_missing',
+      ],
+      acceptedControls: 14,
       totalControls: 16,
-      internalAcceptedControls: 15,
-      internalTotalControls: 15,
+      internalAcceptedControls: 12,
+      internalTotalControls: 12,
     },
     sourceManifest: {
       status: 'Open',
       outcome: 'blocked',
       targetSha: SHA,
-      collectedProducerCount: 4,
+      collectedProducerCount: 3,
       requiredProducerCount: 5,
-      missingProducerIds: ['external-security-assurance'],
+      missingProducerIds: ['billing-product-live-closure', 'external-security-assurance'],
       internalStatus: 'Complete',
       internalOutcome: 'passed',
-      internalCollectedProducerCount: 4,
-      internalRequiredProducerCount: 4,
+      internalCollectedProducerCount: 3,
+      internalRequiredProducerCount: 3,
       internalMissingProducerIds: [],
       externalStatus: 'Open',
       externalOutcome: 'blocked',
       externalCollectedProducerCount: 0,
-      externalRequiredProducerCount: 1,
-      externalMissingProducerIds: ['external-security-assurance'],
+      externalRequiredProducerCount: 2,
+      externalMissingProducerIds: ['billing-product-live-closure', 'external-security-assurance'],
       producers: [],
     },
   });
@@ -279,6 +301,8 @@ test('writer grants internal Product Ready while strict assurance waits for the 
   assert.equal(result.decision, 'ENTERPRISE_PRODUCT_READY: PASS');
   assert.equal(result.enterpriseStrictDecision, 'ENTERPRISE_STRICT: WAITING_EXTERNAL');
   assert.equal(result.productionDecision, 'PRODUCTION_GO: PASS');
+  assert.equal(result.productionDecisionScope, 'TECHNICAL_RELEASE_ONLY');
+  assert.equal(result.realBillingLifecycle, 'WAITING_REAL_CUSTOMER');
   assert.deepEqual(result.blockers, []);
   assert.ok(result.strictBlockers.includes('strict_domain_sources_incomplete'));
   assert.ok(result.strictBlockers.includes('strict_enterprise_closure_not_go'));
@@ -304,6 +328,7 @@ test('Enterprise closure contract has 16 unique controls and requires every dire
   assert.equal(config.controls.length, 16);
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(byId.get('billing-product-live-closure')?.evidence, 'final-billing-product-live-closeout.json');
+  assert.equal(byId.get('billing-product-live-closure')?.scope, 'external');
   assert.equal(byId.get('supabase-production-acceptance')?.evidence, 'production-acceptance.json');
   assert.equal(byId.get('product-commercial-qa')?.evidence, 'fria-runtime-evidence.json');
   assert.equal(byId.get('production-provider-runtime')?.evidence, 'production-secrets-provider-stores.json');
@@ -312,7 +337,9 @@ test('Enterprise closure contract has 16 unique controls and requires every dire
   assert.equal(byId.get('legal-publication')?.scope, 'external');
   assert.equal(byId.get('final-go-no-go')?.scope, 'external');
   assert.equal(byId.get('enterprise-runtime-closeout')?.scope, 'internal');
-  assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 13);
-  assert.equal(config.controls.filter((control) => control.scope === 'external').length, 3);
+  assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 12);
+  assert.equal(config.controls.filter((control) => control.scope === 'external').length, 4);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'internal').length, 3);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 2);
   assert.equal(byId.get('enterprise-runtime-closeout')?.evidence, 'enterprise-runtime-closeout.json');
 });

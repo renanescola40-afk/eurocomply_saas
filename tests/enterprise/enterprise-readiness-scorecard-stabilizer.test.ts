@@ -95,9 +95,12 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain("GitHub's 1,000-result search cap within one second");
     expect(script).toContain('Exact-SHA run partition exceeds bounded pagination');
     expect(script).toContain('Exact-SHA run partition is incomplete');
-    expect(script).toContain('Material evidence producers did not reach a bounded quiet terminal state');
-    expect(script).toContain('A material evidence producer became active after the quiet-state check; refusing to dispatch');
-    expect(script).toContain('A material evidence producer became active while the production gate was settling; refusing to dispatch');
+    expect(script).toContain("writeOutput('reason', 'producers-unsettled')");
+    expect(script).toContain("writeOutput('reason', 'producer-reactivated')");
+    expect(script).toContain("writeOutput('reason', 'producer-reactivated-during-gate')");
+    expect(script).not.toContain('Material evidence producers did not reach a bounded quiet terminal state');
+    expect(script).not.toContain('A material evidence producer became active after the quiet-state check; refusing to dispatch');
+    expect(script).not.toContain('A material evidence producer became active while the production gate was settling; refusing to dispatch');
   });
 
   it('refreshes the production gate before the scorecard when retained evidence is newer', () => {
