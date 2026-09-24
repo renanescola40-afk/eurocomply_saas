@@ -194,8 +194,8 @@ const consistencyRules = [
   {
     label: 'current-release tenant isolation boundary',
     pass:
-      canonicalReadme.includes('Exact-current-release production isolation must be freshly revalidated')
-      && questionnaire.includes('production evidence must be collected'),
+      canonicalReadme.includes('Any statement that a specific production release is proven must be backed by exact-release runtime evidence')
+      && questionnaire.includes('Production-proof claims are release-bound'),
   },
   {
     label: 'certification non-claims',
