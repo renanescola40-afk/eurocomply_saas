@@ -9,6 +9,10 @@ import {
   getOrganizationBillingAuthority,
   type OrganizationBillingAuthority,
 } from '@/server/queries/subscription';
+import {
+  evaluateTenantMfaRequirement,
+  TenantMfaControlUnavailableError,
+} from '@/server/security/tenant-mfa';
 
 type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 type CurrentOrganization = NonNullable<Awaited<ReturnType<typeof getCurrentOrganizationForUser>>>;
@@ -77,7 +81,21 @@ export async function requireLicensedCommercialPageAccess(input: {
   pathname: string;
 }): Promise<LicensedCommercialAccess> {
   const access = await resolveCommercialProductAccess();
-  if (access.status === 'licensed') return access;
+  if (access.status === 'licensed') {
+    try {
+      const mfa = await evaluateTenantMfaRequirement(access.organization.id, access.user.id);
+      if (mfa.required && !mfa.satisfied) {
+        const safeNext = input.pathname || `/${input.locale}/dashboard/organizations`;
+        redirect(`/${input.locale}/security/mfa?next=${encodeURIComponent(safeNext)}`);
+      }
+      return access;
+    } catch (error) {
+      if (error instanceof TenantMfaControlUnavailableError) {
+        redirect(`/${input.locale}/pricing?billing=security_control_unavailable`);
+      }
+      throw error;
+    }
+  }
 
   const safeNext = input.pathname || `/${input.locale}/dashboard/organizations`;
 
