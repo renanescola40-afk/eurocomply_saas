@@ -98,6 +98,16 @@ export function exactShaProducerSnapshot(runs, targetSha, cutoffMs) {
   );
 }
 
+export function hasPostSnapshotUpstreamProducer(runs, targetSha, cutoffMs) {
+  const cutoff = Number(cutoffMs);
+  if (!Number.isFinite(cutoff) || cutoff <= 0) {
+    throw new Error('producer snapshot cutoff must be a positive epoch timestamp');
+  }
+  return exactShaUpstreamProducerRuns(runs, targetSha).some(
+    (run) => createdTimestampMs(run) > cutoff,
+  );
+}
+
 export function exactShaUpstreamProducerRuns(runs, targetSha, cutoffMs = Number.POSITIVE_INFINITY) {
   const sourceRuns = Number.isFinite(cutoffMs)
     ? exactShaProducerSnapshot(runs, targetSha, cutoffMs)
@@ -370,6 +380,12 @@ export async function stabilize({ now = () => Date.now() } = {}) {
 
   for (let attempt = 1; attempt <= MAX_SETTLE_ATTEMPTS; attempt += 1) {
     const runs = await listExactShaRuns(repository, targetSha);
+    if (hasPostSnapshotUpstreamProducer(runs, targetSha, producerSnapshotCutoffMs)) {
+      writeOutput('dispatched', false);
+      writeOutput('reason', 'superseded-by-new-producer');
+      writeOutput('target_sha', targetSha);
+      return { dispatched: false, reason: 'superseded-by-new-producer', targetSha };
+    }
     const upstreamProducers = exactShaUpstreamProducerRuns(runs, targetSha, producerSnapshotCutoffMs);
 
     if (upstreamProducers.length === 0 || hasActiveProducer(upstreamProducers)) {
@@ -403,6 +419,12 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   }
 
   let refreshedRuns = await listExactShaRuns(repository, targetSha);
+  if (hasPostSnapshotUpstreamProducer(refreshedRuns, targetSha, producerSnapshotCutoffMs)) {
+    writeOutput('dispatched', false);
+    writeOutput('reason', 'superseded-by-new-producer');
+    writeOutput('target_sha', targetSha);
+    return { dispatched: false, reason: 'superseded-by-new-producer', targetSha };
+  }
   let refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha, producerSnapshotCutoffMs);
   if (hasActiveProducer(refreshedUpstream)) {
     throw new Error('A material evidence producer became active after the quiet-state check; refusing to dispatch');
@@ -428,6 +450,12 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   });
 
   refreshedRuns = await listExactShaRuns(repository, targetSha);
+  if (hasPostSnapshotUpstreamProducer(refreshedRuns, targetSha, producerSnapshotCutoffMs)) {
+    writeOutput('dispatched', false);
+    writeOutput('reason', 'superseded-by-new-producer');
+    writeOutput('target_sha', targetSha);
+    return { dispatched: false, reason: 'superseded-by-new-producer', targetSha };
+  }
   refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha, producerSnapshotCutoffMs);
   if (hasActiveProducer(refreshedUpstream)) {
     throw new Error('A material evidence producer became active while the production gate was settling; refusing to dispatch');
