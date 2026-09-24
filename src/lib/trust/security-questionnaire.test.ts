@@ -12,6 +12,11 @@ describe('security questionnaire pack', () => {
     expect(pack.generatedAt).toBe('2026-07-30T00:00:00.000Z');
     expect(pack.answers.some((answer) => answer.answer.includes('No SOC 2 or ISO 27001 certification is claimed'))).toBe(true);
     expect(pack.answers.some((answer) => answer.answer.includes('does not replace legal counsel'))).toBe(true);
+    expect(pack.version).toBe('2026-09');
+    expect(pack.answers.some((answer) => answer.id === 'DATA-03' && answer.answer.includes('Article 28 DPA'))).toBe(true);
+    expect(pack.answers.some((answer) => answer.id === 'DATA-04' && answer.answer.includes('eu-west-1'))).toBe(true);
+    expect(pack.answers.some((answer) => answer.id === 'DATA-05' && answer.answer.includes('category-specific retention'))).toBe(true);
+    expect(pack.answers.some((answer) => answer.id === 'TEST-01' && answer.answer.includes('2026-09-12'))).toBe(true);
   });
 
   it('resolves evidence only against the supplied same origin', () => {
