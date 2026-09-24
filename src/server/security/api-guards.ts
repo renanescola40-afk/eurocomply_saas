@@ -31,7 +31,7 @@ import {
   type PermissionCheckResult,
 } from '@/server/security/rbac';
 import { ZodError } from 'zod';
-import { requireTenantMfaForOrganization, TenantMfaError } from '@/server/security/tenant-mfa';
+import { recordTenantMfaDenial, requireTenantMfaForOrganization, TenantMfaError } from '@/server/security/tenant-mfa';
 
 export type ApiUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
@@ -166,6 +166,9 @@ export async function requireOrganizationAccess(options: RequireOrganizationAcce
     await requireTenantMfaForOrganization(organizationId);
   } catch (error) {
     if (error instanceof TenantMfaError) {
+      if (error.code === 'tenant_mfa_required') {
+        await recordTenantMfaDenial(organizationId, options.userId, 'api_organization_access');
+      }
       throw new ApiSecurityError({
         code: error.code,
         message: error.code === 'tenant_mfa_required' ? 'Multi-factor authentication required.' : 'Could not verify multi-factor authentication policy.',
