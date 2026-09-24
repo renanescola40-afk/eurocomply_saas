@@ -1,40 +1,28 @@
-# SSO/SAML and mandatory MFA enterprise plan
+# SSO/SAML and enterprise MFA posture
 
-Status: planned. SSO/SAML and tenant-enforced mandatory MFA are not currently available as enterprise features.
+Status: `PARTIAL_IMPLEMENTED / TENANT_WIDE_POLICY_NOT_COMPLETE`.
 
-## Objective
+## Current implemented controls
 
-Define the enterprise identity controls required to answer customer security questionnaires positively.
+RISCK COMPLY already enforces AAL2 / step-up MFA for protected platform-administration and high-risk actions through the Supabase Auth MFA path and signed step-up controls. Evidence includes:
 
-## Target capabilities
+- `src/server/security/platform-admin.ts`;
+- `src/server/security/step-up-provider.ts`;
+- `docs/security/STEP_UP_ROLLOUT_MATRIX.md`;
+- protected runtime proof workflow/evidence under `docs/security/evidence/runtime/step-up-mfa-validation.json`.
 
-### SSO/SAML
+These controls may be described as implemented for the protected actions they actually guard. They must not be generalized into a claim that every workspace user is subject to a tenant-wide mandatory MFA policy.
 
-- Tenant-level SAML configuration.
-- Metadata URL or XML upload.
-- Entity ID and ACS URL documentation.
-- Just-in-time user provisioning policy.
-- Domain verification before SSO enforcement.
-- Break-glass admin account policy.
-- Audit events for SSO configuration changes.
+## Tenant-wide mandatory MFA
 
-### Mandatory MFA
+A tenant-level policy requiring MFA for all workspace users is not currently represented as complete. A future implementation must include organization-scoped policy authority, enrollment/grace handling, recovery/break-glass behavior, audit events and cross-tenant tests.
 
-- Tenant-level setting requiring MFA for all users.
-- Grace period for rollout.
-- Admin enforcement controls.
-- Recovery codes or support workflow.
-- Audit events for MFA enablement, disablement, and bypass.
-- Reporting of non-compliant users.
+## SSO/SAML
 
-## Security requirements
+Enterprise SSO capability is contract/entitlement-aware in the enterprise control plane, but RISCK COMPLY does not claim customer-ready SAML/SSO until the provider/runtime path and enterprise IdP validation are attributable for the relevant release.
 
-1. Only organization owners/admins may configure identity policies.
-2. SSO configuration changes must create audit events.
-3. MFA bypass must be auditable and time-bound.
-4. Enterprise identity settings must be organization-scoped.
-5. Users from one tenant must never influence another tenant's identity policy.
+If safe implementation requires a provider plan or licensed capability, classify the missing runtime capability as `WAITING_PROVIDER_FACT` or provider-plan dependency rather than fabricating support.
 
-## Customer-safe answer before implementation
+## Buyer-safe answer
 
-EuroComply does not currently provide SSO/SAML or tenant-enforced mandatory MFA. These controls are planned enterprise capabilities and should not be promised contractually until implemented and tested.
+RISCK COMPLY supports step-up MFA/AAL2 for protected administration and high-risk actions. Tenant-wide mandatory MFA and customer-ready SAML/SSO must be confirmed separately against the current enterprise identity runtime before being promised contractually.
