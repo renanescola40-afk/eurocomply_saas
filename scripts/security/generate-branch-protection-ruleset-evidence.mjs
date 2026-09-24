@@ -89,11 +89,14 @@ async function get(path, { requireBypassActors = false } = {}) {
 
     const body = await response.json();
     lastSuccessfulBody = body;
-    if (!requireBypassActors || Array.isArray(body?.bypass_actors)) return body;
+    if (!requireBypassActors || Array.isArray(body?.bypass_actors)) {
+      return body;
+    }
   }
 
-  // Preserve the last successful snapshot even when bypass actors are redacted.
-  // Downstream completeness logic records bypass visibility as Open/fail-closed.
+  // Never combine fields from separate API snapshots. If every successful
+  // response redacts bypass_actors, return one complete snapshot and let the
+  // downstream completeness boundary emit Open/fail-closed evidence.
   if (lastSuccessfulBody) return lastSuccessfulBody;
   throw lastError ?? new Error(`GitHub API unavailable: ${path}`);
 }

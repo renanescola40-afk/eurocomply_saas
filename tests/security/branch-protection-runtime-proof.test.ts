@@ -115,16 +115,14 @@ describe('exact-SHA branch protection runtime proof', () => {
 
     const generator = readFileSync('scripts/security/generate-branch-protection-ruleset-evidence.mjs', 'utf8');
     expect(generator).toContain("git', ['ls-remote', 'origin', 'refs/heads/main']");
-    expect(generator).toContain('requireBypassActors');
-    expect(generator).toContain("const dedicatedToken = String(process.env.BRANCH_PROTECTION_READ_TOKEN || '').trim()");
-    expect(generator).toContain("['public-read', '']");
-    expect(generator).toContain('lastSuccessfulBody');
-    expect(generator).toContain('bypass visibility as Open/fail-closed');
-    expect(generator).toContain('{ requireBypassActors: true }');
     expect(generator).toContain('/rulesets');
     expect(generator).toContain("const githubToken = String(process.env.GITHUB_TOKEN || '').trim()");
     expect(generator).toContain("Authorization: \`Bearer \${githubToken}\`");
     expect(generator).toContain("if (![401, 403, 404].includes(authenticated.status))");
+    expect(generator).toContain("const rulesetDetail = /^\\/repos\\/[^/]+\\/[^/]+\\/rulesets\\/\\d+$/");
+    expect(generator).toContain("Array.isArray(authenticatedPayload?.bypass_actors)");
+    expect(generator).toContain("A redacted detail response is not combined with another API snapshot.");
+    expect(generator).not.toContain("return { ...authenticatedPayload, bypass_actors: publicPayload.bypass_actors }");
     expect(generator).toContain("source: 'github-api-repository-rulesets-fallback'");
     expect(generator).toContain("classicProtectionApiFailure:");
     expect(generator).toContain("rawApiPayloadStored: false");
