@@ -1,6 +1,6 @@
 # SSO/SAML and enterprise MFA posture
 
-Status: `PARTIAL_IMPLEMENTED / TENANT_WIDE_POLICY_NOT_COMPLETE`.
+Status: `SSO_RUNTIME_IMPLEMENTED / BUYER_IDP_CONFIGURATION_PENDING / TENANT_WIDE_MFA_POLICY_NOT_COMPLETE`.
 
 ## Current implemented controls
 
@@ -19,10 +19,10 @@ A tenant-level policy requiring MFA for all workspace users is not currently rep
 
 ## SSO/SAML
 
-Enterprise SSO capability is contract/entitlement-aware in the enterprise control plane, but RISCK COMPLY does not claim customer-ready SAML/SSO until the provider/runtime path and enterprise IdP validation are attributable for the relevant release.
+Enterprise SAML SSO runtime is implemented in source and production schema: provider/domain binding, entitlement checks, configuration RPCs, callback provisioning and login auditing are present. Current production inspection confirms the required RPCs and binding columns exist. No enterprise identity connection is currently configured, so buyer-specific IdP metadata/domain configuration and an end-to-end IdP login remain counterparty/runtime events.
 
-If safe implementation requires a provider plan or licensed capability, classify the missing runtime capability as `WAITING_PROVIDER_FACT` or provider-plan dependency rather than fabricating support.
+Classify the remaining activation work as `WAITING_BUYER` when it requires buyer IdP metadata/domain configuration, and keep end-to-end IdP validation evidence explicit.
 
 ## Buyer-safe answer
 
-RISCK COMPLY supports step-up MFA/AAL2 for protected administration and high-risk actions. Tenant-wide mandatory MFA and customer-ready SAML/SSO must be confirmed separately against the current enterprise identity runtime before being promised contractually.
+RISCK COMPLY implements SAML SSO runtime controls and step-up MFA/AAL2 for protected administration/high-risk actions. SSO activation requires buyer-specific IdP/domain configuration and end-to-end validation; tenant-wide mandatory MFA for every workspace user is not currently claimed as complete.
