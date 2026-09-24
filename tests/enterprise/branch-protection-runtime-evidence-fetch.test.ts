@@ -217,7 +217,8 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(producer).toContain('name: Branch Protection Runtime Proof');
     expect(producer).not.toMatch(/^run-name:/m);
     expect(producer).toContain('push:\n    branches: [main]');
-    expect(producer).toContain('environment: Production');
+    expect(producer).not.toContain('environment: Production');
+    expect(producer).not.toContain('BRANCH_PROTECTION_READ_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}');
     expect(producer).toContain('contents: read');
     expect(producer).not.toContain('contents: write');
     expect(producer).not.toContain('pull_request_target');
