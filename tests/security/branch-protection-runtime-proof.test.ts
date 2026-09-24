@@ -113,6 +113,9 @@ describe('exact-SHA branch protection runtime proof', () => {
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs');
     expect(workflow).toContain("BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: 'true'");
+    expect(workflow).toContain('waiting for branch-proof producer');
+    expect(workflow).toContain('for attempt in $(seq 1 30)');
+    expect(workflow).toContain('No valid exact-SHA Branch Protection runtime artifact is available after bounded producer wait.');
     expect(workflow).toContain('branch-protection-required-checks.json');
     expect(workflow).toContain('validateBranchProtectionFreshness');
     expect(workflow).toContain('GITHUB_TOKEN: ${{ github.token }}');
