@@ -6,6 +6,7 @@ const targetSha = String(process.env.TARGET_SHA || '').toLowerCase();
 const supabasePromotionRunId = String(process.env.SUPABASE_PROMOTION_RUN_ID || '').trim();
 const supabaseReattestationRunId = String(process.env.SUPABASE_REATTESTATION_RUN_ID || '').trim();
 const supabaseCurrentStateRunId = String(process.env.SUPABASE_CURRENT_STATE_RUN_ID || '').trim();
+const campaignTriggerEvent = String(process.env.CAMPAIGN_TRIGGER_EVENT || 'workflow_dispatch').trim();
 
 if (!repository || !token) throw new Error('GITHUB_REPOSITORY and GITHUB_TOKEN are required');
 if (!/^[a-f0-9]{40}$/.test(targetSha)) throw new Error('TARGET_SHA must be a full 40-character Git SHA');
@@ -32,7 +33,7 @@ const supabaseRlsInputs = hasSupabaseAuthority ? {
       : 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF',
 } : null;
 
-const workflows = [
+let workflows = [
   { file: 'auth-rbac-runtime-proof.yml', controls: ['IAM-01','IAM-02','IAM-03','IAM-04','IAM-05','IAM-06','TEN-01'], inputs: { release_sha: targetSha } },
   { file: 'distributed-rate-limit-runtime-proof.yml', controls: ['PLT-09'], inputs: { release_sha: targetSha } },
   { file: 'production-runtime-proof.yml', controls: ['SEC-05','SEC-06','PLT-01','REL-02','REL-03','REL-04','REL-05','REL-06'], inputs: { release_sha: targetSha } },
@@ -41,6 +42,16 @@ const workflows = [
   { file: 'supabase-production-rls-reconciliation.yml', controls: ['TEN-RLS-RECONCILIATION'], inputs: { release_sha: targetSha, package: 'rls_catalog', mode: 'verify_only', confirmation: '' } },
   { file: 'p0-branch-protection-evidence.yml', controls: ['REL-08'], inputs: { release_sha: targetSha } },
 ];
+
+if (campaignTriggerEvent === 'push') {
+  const directPushProofs = new Set([
+    'auth-rbac-runtime-proof.yml',
+    'distributed-rate-limit-runtime-proof.yml',
+    'production-runtime-proof.yml',
+    'audit-chain-runtime-proof.yml',
+  ]);
+  workflows = workflows.filter((workflow) => !directPushProofs.has(workflow.file));
+}
 
 if (hasSupabaseAuthority) {
   workflows.splice(1, 0, {
@@ -90,12 +101,15 @@ const receipt = {
   supabaseAuthorityMode,
   supabaseAuthorityRunId,
   dispatchedAt: new Date().toISOString(),
+  triggerEvent: campaignTriggerEvent,
   status: hasSupabaseAuthority ? 'dispatched' : 'dispatched_non_supabase_only',
   workflows: [],
   controlCount: new Set(workflows.flatMap((item) => item.controls)).size,
   evidenceBoundary: hasSupabaseAuthority
     ? 'A dispatch receipt proves orchestration only. TEN-RLS is bound to exactly one successful canonical exact-SHA Supabase authority. Controls remain open until protected workflows emit passing exact-SHA evidence.'
-    : 'A dispatch receipt proves orchestration only. Non-Supabase proofs and read-only RLS reconciliation may run without a Supabase authority. TEN-RLS live proof remains intentionally undispatched and OPEN until a canonical exact-SHA promotion, reattestation, or current-state read-only authority exists.',
+    : campaignTriggerEvent === 'push'
+      ? 'A dispatch receipt proves orchestration only. Proof workflows with their own main push trigger are not redispatched. Only workflow_dispatch-only non-Supabase proofs and read-only RLS reconciliation are dispatched. TEN-RLS live proof remains intentionally undispatched and OPEN until a canonical exact-SHA promotion, reattestation, or current-state read-only authority exists.'
+      : 'A dispatch receipt proves orchestration only. Non-Supabase proofs and read-only RLS reconciliation may run without a Supabase authority. TEN-RLS live proof remains intentionally undispatched and OPEN until a canonical exact-SHA promotion, reattestation, or current-state read-only authority exists.',
 };
 
 for (const workflow of workflows) {
