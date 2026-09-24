@@ -208,16 +208,21 @@ test('writer emits Enterprise 100 and Production GO only when closure and source
   assert.equal(result.technicalReleaseClosure, 'TECHNICAL_RELEASE_CLOSURE: PASS');
 });
 
-test('writer fails closed when any direct domain authority is missing', () => {
+test('writer fails closed when an internal direct domain authority is missing', () => {
   const result = buildEnterpriseFinalAuthority({
     targetSha: SHA,
     closure: {
       decision: 'GO',
       passed: true,
+      internalDecision: 'GO',
+      internalPassed: true,
       expectedSha: SHA,
       blockers: [],
+      internalBlockers: [],
       acceptedControls: 16,
       totalControls: 16,
+      internalAcceptedControls: 12,
+      internalTotalControls: 12,
     },
     sourceManifest: {
       status: 'Open',
@@ -225,7 +230,17 @@ test('writer fails closed when any direct domain authority is missing', () => {
       targetSha: SHA,
       collectedProducerCount: 4,
       requiredProducerCount: 5,
-      missingProducerIds: ['billing-product-live-closure'],
+      missingProducerIds: ['production-provider-runtime'],
+      internalStatus: 'Open',
+      internalOutcome: 'blocked',
+      internalCollectedProducerCount: 2,
+      internalRequiredProducerCount: 3,
+      internalMissingProducerIds: ['production-provider-runtime'],
+      externalStatus: 'Complete',
+      externalOutcome: 'passed',
+      externalCollectedProducerCount: 2,
+      externalRequiredProducerCount: 2,
+      externalMissingProducerIds: [],
       producers: [],
     },
   });
@@ -315,5 +330,7 @@ test('Enterprise closure contract has 16 unique controls and requires every dire
   assert.equal(byId.get('enterprise-runtime-closeout')?.scope, 'internal');
   assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 12);
   assert.equal(config.controls.filter((control) => control.scope === 'external').length, 4);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'internal').length, 3);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 2);
   assert.equal(byId.get('enterprise-runtime-closeout')?.evidence, 'enterprise-runtime-closeout.json');
 });
