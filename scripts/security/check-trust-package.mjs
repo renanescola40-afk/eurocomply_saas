@@ -170,8 +170,10 @@ const consistencyRules = [
   {
     label: 'tenant-wide MFA boundary',
     pass:
-      canonicalReadme.includes('Tenant-wide mandatory MFA for every workspace user is not currently claimed as complete')
-      && questionnaire.includes('Tenant-wide mandatory MFA for every workspace user is not currently claimed as complete'),
+      canonicalReadme.includes('tenant-wide policy that requires an AAL2 session for all workspace access')
+      && canonicalReadme.includes('not claimed as enabled for every customer')
+      && questionnaire.includes('Yes, as a tenant-configurable policy')
+      && questionnaire.includes('not represented as enabled for every customer tenant by default'),
   },
   {
     label: 'SSO buyer activation boundary',
