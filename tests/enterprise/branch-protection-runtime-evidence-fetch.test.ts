@@ -11,6 +11,7 @@ import {
   isOptionalWorkflowUnavailable,
   selectBranchProtectionEvidenceEntry,
   selectExactShaRun,
+  selectLatestExactShaArtifact,
   validateDownloadedEvidence,
 } from '../../scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs';
 import { validateBranchProtectionFreshness } from '../../scripts/security/validate-branch-protection-freshness.mjs';
@@ -180,6 +181,32 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(isOptionalWorkflowUnavailable(missing, { required: true })).toBe(false);
     expect(isOptionalWorkflowUnavailable(missing, { sourceRunId: RUN_ID })).toBe(false);
     expect(isOptionalWorkflowUnavailable(unauthorized)).toBe(false);
+  });
+
+  it('selects the newest retained artifact from reruns of the same exact-SHA producer', () => {
+    const expectedName = `branch-protection-runtime-proof-${SHA}`;
+    const older = {
+      id: 11,
+      name: expectedName,
+      expired: false,
+      created_at: '2026-09-24T21:35:57Z',
+      updated_at: '2026-09-24T21:35:57Z',
+    };
+    const newest = {
+      id: 12,
+      name: expectedName,
+      expired: false,
+      created_at: '2026-09-24T22:23:52Z',
+      updated_at: '2026-09-24T22:23:52Z',
+    };
+
+    expect(selectLatestExactShaArtifact([older, newest], expectedName)).toEqual(newest);
+    expect(() => selectLatestExactShaArtifact([], expectedName))
+      .toThrow('exact_sha_branch_protection_artifact_missing');
+    expect(() => selectLatestExactShaArtifact([
+      { ...older, updated_at: newest.updated_at },
+      newest,
+    ], expectedName)).toThrow('exact_sha_branch_protection_artifact_recency_ambiguous');
   });
 
   it('rejects duplicate, traversal, unsafe directory, absolute and backslash ZIP entries', () => {
