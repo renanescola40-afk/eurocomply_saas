@@ -22,8 +22,13 @@ describe('public procurement pack', () => {
   it('keeps unsupported certifications explicitly unclaimed', () => {
     const certifications = procurementControls.find((control) => control.id === 'certifications');
     expect(certifications?.status).toBe('not-claimed');
-    expect(certifications?.summary).toContain('No SOC 2, ISO 27001 or completed independent penetration-test claim');
-    expect(certifications?.summary).toContain('without dated, attributable evidence');
+    expect(certifications?.summary).toContain('No SOC 2 or ISO 27001 certification is claimed');
+    expect(certifications?.summary).toContain('dated and attributable certification evidence');
+
+    const assessment = procurementControls.find((control) => control.id === 'security-assessment');
+    expect(assessment?.status).toBe('evidence-required');
+    expect(assessment?.summary).toContain('2026-09-12');
+    expect(assessment?.summary).toContain('clean independent retest/terminal assurance remains open');
   });
 
   it('has unique control and document identifiers', () => {
