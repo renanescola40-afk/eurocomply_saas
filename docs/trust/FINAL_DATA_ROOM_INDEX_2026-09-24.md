@@ -22,6 +22,8 @@ The public repository stores safe indices and non-confidential diligence materia
 | Procurement | `docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md` and `/{locale}/trust/procurement-pack` |
 | Legal/privacy posture | `docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md` |
 | Buyer-readiness matrix | `docs/sales/ENTERPRISE_BUYER_READINESS_2026-09-24.md` |
+| Canonical buyer Q&A | `docs/trust/ENTERPRISE_BUYER_DUE_DILIGENCE_QA.md` |
+| First 48 hours handoff | `docs/trust/BUYER_FIRST_48_HOURS_HANDOFF.md` |
 
 ## 1. Company and contracting facts
 
@@ -118,6 +120,8 @@ Current product-scope conclusions are change-trigger controlled. They are not a 
 - `docs/trust/SECURITY_QUESTIONNAIRE_OPERATING_GUIDE.md`
 - `src/lib/trust/security-questionnaire.ts`
 - `src/lib/trust/procurement-pack.ts`
+- `docs/trust/ENTERPRISE_BUYER_DUE_DILIGENCE_QA.md`
+- `docs/trust/BUYER_FIRST_48_HOURS_HANDOFF.md`
 - public Trust Center / procurement pack / questionnaire endpoints.
 
 These materials support diligence; they are not certifications or buyer acceptance.
