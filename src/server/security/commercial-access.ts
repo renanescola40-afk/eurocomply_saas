@@ -9,7 +9,7 @@ import {
   getOrganizationBillingAuthority,
   type OrganizationBillingAuthority,
 } from '@/server/queries/subscription';
-import { getTenantMfaSessionState, TenantMfaError } from '@/server/security/tenant-mfa';
+import { getTenantMfaSessionState, recordTenantMfaDenial, TenantMfaError } from '@/server/security/tenant-mfa';
 
 type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 type CurrentOrganization = NonNullable<Awaited<ReturnType<typeof getCurrentOrganizationForUser>>>;
@@ -82,6 +82,7 @@ export async function requireLicensedCommercialPageAccess(input: {
     try {
       const mfa = await getTenantMfaSessionState(access.organization.id);
       if (mfa.required && !mfa.satisfied) {
+        await recordTenantMfaDenial(access.organization.id, access.user.id, 'licensed_page');
         redirect(`/${input.locale}/mfa?next=${encodeURIComponent(input.pathname || `/${input.locale}/dashboard/organizations`)}`);
       }
       return access;
