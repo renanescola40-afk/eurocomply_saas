@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const required = new Map([
-  ['docs/sales/ENTERPRISE_BUYER_READINESS_2026-09-24.md', ['ENTERPRISE_BUYER_READINESS_INTERNAL=PASS', 'Essential €49', 'Enterprise from €990/month']],
+  ['docs/sales/ENTERPRISE_BUYER_READINESS_2026-09-24.md', ['ENTERPRISE_BUYER_READINESS_INTERNAL=PASS', 'Essential €49', '| Enterprise | from €990/month |']],
   ['docs/sales/enterprise-onboarding-plan.md', ['Phase 1 — Kickoff and success criteria', 'Security Questionnaire', 'fixed implementation timeline']],
   ['docs/sales/demo-script-10-min.md', ['synthetic demo', 'config/billing-commercial-catalog.json']],
   ['docs/sales/pitch-deck-short.md', ['Enterprise from €990/month', 'No free trial']],
