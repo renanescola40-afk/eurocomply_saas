@@ -116,7 +116,10 @@ describe('exact-SHA branch protection runtime proof', () => {
     const generator = readFileSync('scripts/security/generate-branch-protection-ruleset-evidence.mjs', 'utf8');
     expect(generator).toContain("git', ['ls-remote', 'origin', 'refs/heads/main']");
     expect(generator).toContain('requireBypassActors');
-    expect(generator).toContain('public GitHub API bypass visibility unavailable');
+    expect(generator).toContain("const dedicatedToken = String(process.env.BRANCH_PROTECTION_READ_TOKEN || '').trim()");
+    expect(generator).toContain("['public-read', '']");
+    expect(generator).toContain('lastSuccessfulBody');
+    expect(generator).toContain('bypass visibility as Open/fail-closed');
     expect(generator).toContain('{ requireBypassActors: true }');
     expect(generator).toContain('/rulesets');
     expect(generator).toContain("const githubToken = String(process.env.GITHUB_TOKEN || '').trim()");
