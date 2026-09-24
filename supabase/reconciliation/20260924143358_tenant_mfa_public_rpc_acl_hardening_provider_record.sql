@@ -1,0 +1,20 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260924143358
+--   provider name: tenant_mfa_public_rpc_acl_hardening
+--
+-- Canonical repository source representing the same forward hardening:
+--   canonical source version: 20260924144500
+--   local source: supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql
+--   local source SHA-256: 584c9047885d8d9edd39251e6791eb321693ea904cc57ce58e7eb16e28b61cf7
+--
+-- Owner-authorized read-only inspection of supabase_migrations.schema_migrations
+-- confirmed the provider ledger version/name and retained SQL statements. The
+-- provider statements contain the same revoke/grant, search_path hardening and
+-- fail-closed verification body as the canonical local source. The repository
+-- source additionally wraps that body in an explicit transaction and comments,
+-- so this record does not claim byte-for-byte wrapper identity.
+--
+-- This file binds only the observed remote identity to the reviewed local source.
+-- No DDL. No SQL execution. No migration-history repair. No database write.

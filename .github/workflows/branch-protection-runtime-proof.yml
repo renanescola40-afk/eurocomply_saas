@@ -77,7 +77,6 @@ jobs:
     needs: contract
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    environment: Production
     env:
       TARGET_SHA: ${{ inputs.release_sha || github.sha }}
       BRANCH_PROTECTION_READ_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}

@@ -44,34 +44,67 @@ if (!/^[0-9a-f]{40}$/.test(targetSha) || targetSha !== checkedOutSha || targetSh
 }
 if (!/^\d+$/.test(runId)) throw new Error('numeric GITHUB_RUN_ID required');
 
+const dedicatedToken = String(process.env.BRANCH_PROTECTION_READ_TOKEN || '').trim();
 const githubToken = String(process.env.GITHUB_TOKEN || '').trim();
 
-async function get(path) {
+function credentialCandidates() {
+  const seen = new Set();
+  const candidates = [];
+  for (const [label, token] of [
+    ['dedicated-read-token', dedicatedToken],
+    ['github-token', githubToken],
+    ['public-read', ''],
+  ]) {
+    if (seen.has(token)) continue;
+    if (!token && label !== 'public-read') continue;
+    seen.add(token);
+    candidates.push({ label, token });
+  }
+  return candidates;
+}
+
+async function get(path, { requireBypassActors = false } = {}) {
   const baseHeaders = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
     'User-Agent': 'risck-comply-ruleset-proof',
   };
 
-  if (githubToken) {
-    const authenticated = await fetch(`https://api.github.com${path}`, {
-      headers: { ...baseHeaders, Authorization: `Bearer ${githubToken}` },
-    });
-    if (authenticated.ok) return authenticated.json();
-    if (![401, 403, 404].includes(authenticated.status)) {
-      throw new Error(`authenticated GitHub API ${authenticated.status}: ${path}`);
+  let lastSuccessfulBody = null;
+  let lastError = null;
+
+  for (const candidate of credentialCandidates()) {
+    const headers = candidate.token
+      ? { ...baseHeaders, Authorization: `Bearer ${candidate.token}` }
+      : baseHeaders;
+    const response = await fetch(`https://api.github.com${path}`, { headers });
+
+    if (!response.ok) {
+      if (![401, 403, 404].includes(response.status)) {
+        throw new Error(`${candidate.label} GitHub API ${response.status}: ${path}`);
+      }
+      lastError = new Error(`${candidate.label} GitHub API ${response.status}: ${path}`);
+      continue;
+    }
+
+    const body = await response.json();
+    lastSuccessfulBody = body;
+    if (!requireBypassActors || Array.isArray(body?.bypass_actors)) {
+      return body;
     }
   }
 
-  const publicResponse = await fetch(`https://api.github.com${path}`, { headers: baseHeaders });
-  if (!publicResponse.ok) throw new Error(`public GitHub API ${publicResponse.status}: ${path}`);
-  return publicResponse.json();
+  // Never combine fields from separate API snapshots. If every successful
+  // response redacts bypass_actors, return one complete snapshot and let the
+  // downstream completeness boundary emit Open/fail-closed evidence.
+  if (lastSuccessfulBody) return lastSuccessfulBody;
+  throw lastError ?? new Error(`GitHub API unavailable: ${path}`);
 }
 
 const listed = await get(`/repos/${owner}/${repo}/rulesets`);
 const applicable = [];
 for (const item of listed) {
-  const rs = await get(`/repos/${owner}/${repo}/rulesets/${item.id}`);
+  const rs = await get(`/repos/${owner}/${repo}/rulesets/${item.id}`, { requireBypassActors: true });
   const inc = rs?.conditions?.ref_name?.include ?? [];
   const exc = rs?.conditions?.ref_name?.exclude ?? [];
   if (rs?.target === 'branch' && rs?.enforcement === 'active'

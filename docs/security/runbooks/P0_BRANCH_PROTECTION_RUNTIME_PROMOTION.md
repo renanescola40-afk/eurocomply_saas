@@ -13,8 +13,8 @@ This runbook validates existing GitHub configuration. It does not create, weaken
 
 - The assessed commit is the current 40-character `main` SHA.
 - `Branch Protection Runtime Proof` exists on `main` with its stable workflow name.
-- The `Production` GitHub environment permits the protected job to run.
-- `BRANCH_PROTECTION_READ_TOKEN` is configured when the default GitHub Actions token cannot read classic branch protection or repository rulesets.
+- The producer uses read-only GitHub repository metadata and does not require a protected environment approval.
+- Evidence collection tries a dedicated token when present, then the scoped GitHub Actions token, then the public read-only repository ruleset endpoint; bypass visibility must still be complete or the proof fails closed.
 - Required checks in `scripts/enterprise/build-branch-protection-runtime-evidence.mjs` match the repository policy.
 
 Never print or attach the read token. The evidence retains only the source mode, bounded control projection, numeric ruleset IDs when required and workflow run provenance.
