@@ -218,12 +218,13 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(producer).not.toMatch(/^run-name:/m);
     expect(producer).toContain('push:\n    branches: [main]');
     expect(producer).not.toContain('environment: Production');
-    expect(producer).not.toContain('BRANCH_PROTECTION_READ_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}');
+    expect(producer).toContain('BRANCH_PROTECTION_READ_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}');
     expect(producer).toContain('contents: read');
     expect(producer).not.toContain('contents: write');
     expect(producer).not.toContain('pull_request_target');
-    expect(producer).not.toContain('BRANCH_PROTECTION_READ_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}');
-    expect(builder).toContain("{ label: 'public-read', token: '' }");
+    expect(producer).toContain('BRANCH_PROTECTION_READ_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}');
+    const platformBuilder = readFileSync('scripts/enterprise/build-platform-controls-runtime-evidence.mjs', 'utf8');
+    expect(platformBuilder).toContain("{ label: 'public-read', token: '' }");
     expect(producer).toContain('check-generated-branch-protection-evidence.mjs');
 
     expect(p0).toContain('- RISCK COMPLY Upload Security CI');
