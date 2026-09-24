@@ -14,6 +14,7 @@ const SECURITY_SETTINGS_JSON_MAX_BYTES = 8 * 1024;
 const PROVIDER_MODES = new Set(['supabase_mfa', 'enterprise_idp', 'supabase_mfa_or_enterprise_idp']);
 
 type SecuritySettingsInput = {
+  requireMfaForAllUsers?: boolean;
   stepUpProviderMode: string;
   allowedIdpAcrValues: string[];
   allowedIdpAmrValues: string[];
@@ -22,6 +23,7 @@ type SecuritySettingsInput = {
 type StoredSecuritySettings = {
   organization_id: string;
   require_step_up_for_critical_actions: boolean;
+  require_mfa_for_all_users: boolean;
   step_up_provider_mode: string;
   allowed_idp_acr_values: string[] | null;
   allowed_idp_amr_values: string[] | null;
@@ -38,10 +40,12 @@ function parseSecuritySettingsInput(value: unknown): SecuritySettingsInput | nul
 
   const input = value as Record<string, unknown>;
   if (typeof input.stepUpProviderMode !== 'string' || !PROVIDER_MODES.has(input.stepUpProviderMode)) return null;
+  if (input.requireMfaForAllUsers !== undefined && typeof input.requireMfaForAllUsers !== 'boolean') return null;
   if (input.allowedIdpAcrValues !== undefined && !isBoundedStringList(input.allowedIdpAcrValues)) return null;
   if (input.allowedIdpAmrValues !== undefined && !isBoundedStringList(input.allowedIdpAmrValues)) return null;
 
   return {
+    requireMfaForAllUsers: input.requireMfaForAllUsers,
     stepUpProviderMode: input.stepUpProviderMode,
     allowedIdpAcrValues: input.allowedIdpAcrValues?.map((entry) => entry.trim()) ?? [],
     allowedIdpAmrValues: input.allowedIdpAmrValues?.map((entry) => entry.trim()) ?? [],
@@ -107,12 +111,19 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const { data: previousSettings, error: previousSettingsError } = await supabase
       .from('organization_security_settings')
-      .select('organization_id, require_step_up_for_critical_actions, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values')
+      .select('organization_id, require_step_up_for_critical_actions, require_mfa_for_all_users, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values')
       .eq('organization_id', organization.id)
       .maybeSingle<StoredSecuritySettings>();
 
     if (previousSettingsError) {
       return noStoreJson({ error: 'security_settings_read_failed' }, { status: 503 });
+    }
+
+    const requireMfaForAllUsers =
+      nextSettings.requireMfaForAllUsers ?? previousSettings?.require_mfa_for_all_users ?? false;
+
+    if (requireMfaForAllUsers !== (previousSettings?.require_mfa_for_all_users ?? false)) {
+      changes.push('require_mfa_for_all_users');
     }
 
     const { error } = await supabase
@@ -121,6 +132,7 @@ export async function POST(request: NextRequest) {
         {
           organization_id: organization.id,
           require_step_up_for_critical_actions: true,
+          require_mfa_for_all_users: requireMfaForAllUsers,
           step_up_provider_mode: nextSettings.stepUpProviderMode,
           allowed_idp_acr_values: nextSettings.allowedIdpAcrValues,
           allowed_idp_amr_values: nextSettings.allowedIdpAmrValues,
@@ -170,6 +182,7 @@ export async function POST(request: NextRequest) {
       auditPersisted: true,
       settings: {
         requireStepUpForCriticalActions: true,
+        requireMfaForAllUsers,
         stepUpProviderMode: nextSettings.stepUpProviderMode,
         allowedIdpAcrValueCount: nextSettings.allowedIdpAcrValues.length,
         allowedIdpAmrValueCount: nextSettings.allowedIdpAmrValues.length,
