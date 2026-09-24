@@ -44,16 +44,28 @@ if (!/^[0-9a-f]{40}$/.test(targetSha) || targetSha !== checkedOutSha || targetSh
 }
 if (!/^\d+$/.test(runId)) throw new Error('numeric GITHUB_RUN_ID required');
 
+const githubToken = String(process.env.GITHUB_TOKEN || '').trim();
+
 async function get(path) {
-  const r = await fetch(`https://api.github.com${path}`, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'risck-comply-ruleset-proof',
-    },
-  });
-  if (!r.ok) throw new Error(`public GitHub API ${r.status}: ${path}`);
-  return r.json();
+  const baseHeaders = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'risck-comply-ruleset-proof',
+  };
+
+  if (githubToken) {
+    const authenticated = await fetch(`https://api.github.com${path}`, {
+      headers: { ...baseHeaders, Authorization: `Bearer ${githubToken}` },
+    });
+    if (authenticated.ok) return authenticated.json();
+    if (![401, 403, 404].includes(authenticated.status)) {
+      throw new Error(`authenticated GitHub API ${authenticated.status}: ${path}`);
+    }
+  }
+
+  const publicResponse = await fetch(`https://api.github.com${path}`, { headers: baseHeaders });
+  if (!publicResponse.ok) throw new Error(`public GitHub API ${publicResponse.status}: ${path}`);
+  return publicResponse.json();
 }
 
 const listed = await get(`/repos/${owner}/${repo}/rulesets`);
@@ -157,7 +169,7 @@ const evidence = {
     bypassVisibilityMissingRulesetIds,
     bypassActorCount: bypassActors.length,
     bypassActors,
-    classicProtectionApiFailure: 'workflow token classic-protection read returned 401; public repository rulesets fallback used',
+    classicProtectionApiFailure: 'classic branch-protection API was unavailable; repository rulesets evidence used',
     missingRequiredChecks,
     missingProtectionFlags,
     configuredRequiredChecks: configuredChecks,
