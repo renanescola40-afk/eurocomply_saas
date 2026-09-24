@@ -119,9 +119,10 @@ describe('exact-SHA branch protection runtime proof', () => {
     expect(generator).toContain("const githubToken = String(process.env.GITHUB_TOKEN || '').trim()");
     expect(generator).toContain("Authorization: \`Bearer \${githubToken}\`");
     expect(generator).toContain("if (![401, 403, 404].includes(authenticated.status))");
+    expect(generator).toContain("const rulesetDetail = /^\\/repos\\/[^/]+\\/[^/]+\\/rulesets\\/\\d+$/");
     expect(generator).toContain("Array.isArray(authenticatedPayload?.bypass_actors)");
-    expect(generator).toContain("Array.isArray(publicPayload?.bypass_actors)");
-    expect(generator).toContain("bypass visibility is proven from GitHub rather than inferred");
+    expect(generator).toContain("A redacted detail response is not combined with another API snapshot.");
+    expect(generator).not.toContain("return { ...authenticatedPayload, bypass_actors: publicPayload.bypass_actors }");
     expect(generator).toContain("source: 'github-api-repository-rulesets-fallback'");
     expect(generator).toContain("classicProtectionApiFailure:");
     expect(generator).toContain("rawApiPayloadStored: false");
