@@ -33,8 +33,17 @@ describe('auth entry brand V2', () => {
     expect(source).toContain('signInWithGoogle');
     expect(source).toContain('signUpWithEmail');
     expect(source).toContain('requested_plan: selectedPlan.id');
+    expect(source).toContain('if (result.session)');
+    expect(source).not.toContain('if (user) {');
     expect(source).toContain('getSalesLedHref(activeLocale, selectedPlan.id)');
     expect(source).toContain('BILLING_PLANS.map');
     expect(source).toContain('bg-[#07101a]');
+  });
+
+  it('uses the signup result session as the immediate continuation authority', () => {
+    const auth = read('src/hooks/useAuth.tsx');
+
+    expect(auth).toContain('const { data, error } = await supabase.auth.signUp');
+    expect(auth).toContain('session: data?.session ?? null');
   });
 });

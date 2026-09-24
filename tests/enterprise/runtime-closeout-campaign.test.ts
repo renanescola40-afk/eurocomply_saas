@@ -8,11 +8,14 @@ describe('enterprise runtime closeout campaign', () => {
   it('keeps TEN-RLS authority optional for non-Supabase closure and exclusive when supplied', () => {
     expect(workflow).toContain('supabase_promotion_run_id:');
     expect(workflow).toContain('supabase_reattestation_run_id:');
+    expect(workflow).toContain('supabase_current_state_run_id:');
     expect(workflow).toContain("SUPABASE_PROMOTION_RUN_ID: ${{ inputs.supabase_promotion_run_id || '' }}");
     expect(workflow).toContain("SUPABASE_REATTESTATION_RUN_ID: ${{ inputs.supabase_reattestation_run_id || '' }}");
-    expect(workflow).toContain('test $((promotion_set + reattestation_set)) -le 1');
+    expect(workflow).toContain("SUPABASE_CURRENT_STATE_RUN_ID: ${{ inputs.supabase_current_state_run_id || '' }}");
+    expect(workflow).toContain('test $((promotion_set + reattestation_set + current_state_set)) -le 1');
     expect(dispatcher).toContain("'.github/workflows/supabase-forward-reconciliation-production-promotion.yml'");
     expect(dispatcher).toContain("'.github/workflows/supabase-forward-production-reattestation.yml'");
+    expect(dispatcher).toContain("'.github/workflows/supabase-current-production-state-read-only.yml'");
     expect(dispatcher).toContain('hasSupabaseAuthority');
     expect(dispatcher).toContain('dispatched_non_supabase_only');
     expect(dispatcher).toContain("file: 'audit-chain-runtime-proof.yml'");
@@ -21,8 +24,10 @@ describe('enterprise runtime closeout campaign', () => {
     expect(dispatcher).toContain("mode: 'verify_only'");
     expect(dispatcher).toContain("promotion_run_id: promotionSet ? supabasePromotionRunId : ''");
     expect(dispatcher).toContain("reattestation_run_id: reattestationSet ? supabaseReattestationRunId : ''");
+    expect(dispatcher).toContain("current_state_run_id: currentStateSet ? supabaseCurrentStateRunId : ''");
     expect(dispatcher).toContain("'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'");
     expect(dispatcher).toContain("'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF'");
+    expect(dispatcher).toContain("'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF'");
   });
 
   it('removes every live-RLS migration application switch', () => {

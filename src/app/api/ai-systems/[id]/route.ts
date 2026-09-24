@@ -178,9 +178,19 @@ export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
       return noStoreJson({ error: 'ai_system_reassessment_audit_unavailable' }, { status: 503 });
     }
 
-    const history = await listAiSystemHistory(system.id, organization.id);
+    const persistedSystem = await getAiSystem(system.id, organization.id);
+    if (
+      !persistedSystem
+      || persistedSystem.updated_at !== system.updated_at
+      || persistedSystem.name !== body.name
+      || persistedSystem.lifecycle_status !== result.lifecycleStatus
+    ) {
+      throw new Error('ai_system_reassessment_persistence_mismatch');
+    }
 
-    return noStoreJson({ system, history, roleAssessment: result.roleAssessment });
+    const history = await listAiSystemHistory(persistedSystem.id, organization.id);
+
+    return noStoreJson({ system: persistedSystem, history, roleAssessment: result.roleAssessment });
   } catch (error) {
     return secureApiError(error);
   }

@@ -5,26 +5,31 @@ const token = process.env.GITHUB_TOKEN;
 const targetSha = String(process.env.TARGET_SHA || '').toLowerCase();
 const supabasePromotionRunId = String(process.env.SUPABASE_PROMOTION_RUN_ID || '').trim();
 const supabaseReattestationRunId = String(process.env.SUPABASE_REATTESTATION_RUN_ID || '').trim();
+const supabaseCurrentStateRunId = String(process.env.SUPABASE_CURRENT_STATE_RUN_ID || '').trim();
 
 if (!repository || !token) throw new Error('GITHUB_REPOSITORY and GITHUB_TOKEN are required');
 if (!/^[a-f0-9]{40}$/.test(targetSha)) throw new Error('TARGET_SHA must be a full 40-character Git SHA');
 
 const promotionSet = /^\d+$/.test(supabasePromotionRunId);
 const reattestationSet = /^\d+$/.test(supabaseReattestationRunId);
-if (promotionSet && reattestationSet) {
+const currentStateSet = /^\d+$/.test(supabaseCurrentStateRunId);
+if ([promotionSet, reattestationSet, currentStateSet].filter(Boolean).length > 1) {
   throw new Error('At most one canonical Supabase authority run ID may be supplied');
 }
 
-const hasSupabaseAuthority = promotionSet || reattestationSet;
-const supabaseAuthorityMode = promotionSet ? 'promotion' : reattestationSet ? 'reattestation' : null;
-const supabaseAuthorityRunId = promotionSet ? supabasePromotionRunId : reattestationSet ? supabaseReattestationRunId : null;
+const hasSupabaseAuthority = promotionSet || reattestationSet || currentStateSet;
+const supabaseAuthorityMode = promotionSet ? 'promotion' : reattestationSet ? 'reattestation' : currentStateSet ? 'current_state' : null;
+const supabaseAuthorityRunId = promotionSet ? supabasePromotionRunId : reattestationSet ? supabaseReattestationRunId : currentStateSet ? supabaseCurrentStateRunId : null;
 const supabaseRlsInputs = hasSupabaseAuthority ? {
   release_sha: targetSha,
   promotion_run_id: promotionSet ? supabasePromotionRunId : '',
   reattestation_run_id: reattestationSet ? supabaseReattestationRunId : '',
+  current_state_run_id: currentStateSet ? supabaseCurrentStateRunId : '',
   confirmation: promotionSet
     ? 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
-    : 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF',
+    : reattestationSet
+      ? 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF'
+      : 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF',
 } : null;
 
 const workflows = [
@@ -67,7 +72,9 @@ if (hasSupabaseAuthority) {
   const authorityRun = await github(`/actions/runs/${supabaseAuthorityRunId}`);
   const expectedAuthorityPath = promotionSet
     ? '.github/workflows/supabase-forward-reconciliation-production-promotion.yml'
-    : '.github/workflows/supabase-forward-production-reattestation.yml';
+    : reattestationSet
+      ? '.github/workflows/supabase-forward-production-reattestation.yml'
+      : '.github/workflows/supabase-current-production-state-read-only.yml';
   if (authorityRun.head_sha !== targetSha) throw new Error('Supabase authority run is not bound to TARGET_SHA');
   if (authorityRun.path !== expectedAuthorityPath) throw new Error(`Supabase authority workflow path mismatch: ${authorityRun.path}`);
   if (authorityRun.event !== 'workflow_dispatch' || authorityRun.status !== 'completed' || authorityRun.conclusion !== 'success') {
@@ -88,7 +95,7 @@ const receipt = {
   controlCount: new Set(workflows.flatMap((item) => item.controls)).size,
   evidenceBoundary: hasSupabaseAuthority
     ? 'A dispatch receipt proves orchestration only. TEN-RLS is bound to exactly one successful canonical exact-SHA Supabase authority. Controls remain open until protected workflows emit passing exact-SHA evidence.'
-    : 'A dispatch receipt proves orchestration only. Non-Supabase proofs and read-only RLS reconciliation may run without a Supabase promotion authority. TEN-RLS live proof remains intentionally undispatched and OPEN until a canonical exact-SHA Supabase promotion or reattestation exists.',
+    : 'A dispatch receipt proves orchestration only. Non-Supabase proofs and read-only RLS reconciliation may run without a Supabase authority. TEN-RLS live proof remains intentionally undispatched and OPEN until a canonical exact-SHA promotion, reattestation, or current-state read-only authority exists.',
 };
 
 for (const workflow of workflows) {

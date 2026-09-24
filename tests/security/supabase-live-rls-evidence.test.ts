@@ -63,6 +63,38 @@ describe('Supabase live RLS forward-promotion evidence contract', () => {
     expect(evidence.productionGate.toLowerCase()).toContain('production');
   });
 
+
+  it('keeps current-state authority separate from historical promotion lineage', () => {
+    const previousMode = process.env.AUTHORITY_MODE;
+    const previousRunId = process.env.AUTHORITY_RUN_ID;
+    const previousPromotionRunId = process.env.PROMOTION_RUN_ID;
+    try {
+      process.env.AUTHORITY_MODE = 'current_state';
+      process.env.AUTHORITY_RUN_ID = '24680';
+      delete process.env.PROMOTION_RUN_ID;
+      const evidence = buildEvidencePayload({
+        status: 'Complete',
+        outcome: 'passed',
+        supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co',
+        commitSha: 'a'.repeat(40),
+        testCases: [],
+        serviceRolePaths: [{}, {}, {}, {}],
+      });
+      expect(evidence.authorityEvidence).toEqual({
+        mode: 'current_state',
+        runId: '24680',
+        currentProductionStateVerified: true,
+        historicalPromotionVerified: false,
+      });
+      expect(evidence).not.toHaveProperty('promotionLineage');
+      expect(evidence.summary).toContain('without claiming historical promotion lineage');
+    } finally {
+      if (previousMode === undefined) delete process.env.AUTHORITY_MODE; else process.env.AUTHORITY_MODE = previousMode;
+      if (previousRunId === undefined) delete process.env.AUTHORITY_RUN_ID; else process.env.AUTHORITY_RUN_ID = previousRunId;
+      if (previousPromotionRunId === undefined) delete process.env.PROMOTION_RUN_ID; else process.env.PROMOTION_RUN_ID = previousPromotionRunId;
+    }
+  });
+
   it('treats regulatory updates as backend-only product data', () => {
     expect(requiredGlobalReferenceOperations).toEqual([
       'rls_enabled',

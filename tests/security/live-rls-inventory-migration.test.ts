@@ -72,10 +72,11 @@ describe('live RLS inventory repair migration', () => {
   });
 
   it('requires exactly one exact-SHA governed Supabase authority before the tenant proof executes', () => {
-    expect(workflow).toContain('test $((promotion_set + reattestation_set)) -eq 1');
+    expect(workflow).toContain('test $((promotion_set + reattestation_set + current_state_set)) -eq 1');
     expect(workflow).toContain('download and validate exact governed supabase authority evidence');
     expect(workflow).toContain('validate-supabase-live-promotion-source.mjs');
     expect(workflow).toContain('validate-supabase-live-reattestation-source.mjs');
+    expect(workflow).toContain('validate-supabase-current-state-source.mjs');
     expect(workflow).toContain('execute canonical live tenant-isolation proof');
     expect(
       workflow.indexOf('download and validate exact governed supabase authority evidence'),
