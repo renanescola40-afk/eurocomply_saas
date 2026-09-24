@@ -15,11 +15,11 @@ This document is a buyer-safe factual answer set. It does not create certificati
 | RBAC | Organization-scoped RBAC/server guards are implemented. | PASS_INTERNAL |
 | Authentication | Supabase Auth with protected administration and step-up security controls. | PASS_INTERNAL |
 | MFA | Step-up MFA/AAL2 protects platform administration and high-risk actions. Tenant-wide mandatory MFA for every workspace user is not claimed as complete. | PASS_INTERNAL_WITH_BOUNDARY |
-| SSO/SAML | Do not promise customer-ready SAML/SSO until current provider/runtime and enterprise IdP validation are attributable. | WAITING_PROVIDER_FACT / implementation boundary |
+| SSO/SAML | SAML SSO runtime is implemented and present in production schema/RPCs. Activation requires buyer-specific IdP/domain configuration and end-to-end IdP validation. | PASS_INTERNAL / WAITING_BUYER |
 | Audit logs | Tenant-scoped audit events, hash-chain verification and signed evidence-pack export exist. | PASS_INTERNAL |
 | Audit immutability | Tamper-evident hash chain: yes. External WORM/immutable storage: not claimed. | PASS_INTERNAL_WITH_BOUNDARY |
-| Backups | Backup/recovery procedures exist. Completed isolated restore evidence must be attributable before claiming measured restore performance. | WAITING_PROVIDER_FACT / evidence event |
-| DR | DR plan/runbooks exist. Measured RTO/RPO are only stated when a real test provides them. | PASS_INTERNAL_PLAN / measured evidence pending |
+| Backups | An isolated recovery/schema rehearsal environment is evidenced; it is not proof of customer-data restore. A safe data-restore exercise is still required before measured restore claims. | PASS_INTERNAL_REHEARSAL / WAITING_PROVIDER_FACT |
+| DR | A non-destructive DR tabletop was completed on 2026-09-24. Live failover was not executed and measured RTO/RPO remain evidence-bound. | PASS_INTERNAL_TABLETOP / measured evidence pending |
 | Incident response | Intake, severity, containment, evidence preservation, communication, recovery and postmortem/CAPA workflow are documented. No 24/7 staffed-response claim is made. | PASS_INTERNAL |
 | Privacy/GDPR | ROPA, Art. 13/14 matrix, DSR controls, transfer register, provider register and technical/privacy controls exist. Final legal publication/contract facts remain separately governed. | PASS_INTERNAL |
 | DPA | Article 28 review structure, TOM references and annex framework exist. Signature/incorporation/counterparty facts remain external. | PASS_INTERNAL / WAITING_BUYER |
