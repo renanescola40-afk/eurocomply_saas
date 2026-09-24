@@ -83,7 +83,7 @@ const BLOCKED_METADATA_KEYS = [
 ];
 
 function isMissingAuditEventsTable(error: SupabaseError) {
-  return error.code === '42P01' || error.code === 'PGRST205' || /audit_events/i.test(error.message ?? '');
+  return error.code === '42P01' || error.code === 'PGRST205';
 }
 
 function isMissingAuditChainColumns(error: SupabaseError) {
@@ -444,6 +444,124 @@ export async function createAuditEvent(input: AuditEventInput) {
   }
 
   return { persisted: false, reason: 'transactional_append_unavailable' as const };
+}
+
+
+const AUDIT_EXPORT_PAGE_SIZE = 500;
+
+type AuditExportCursor = {
+  createdAt: string;
+  id: string;
+};
+
+function auditCursorFilter(cursor: AuditExportCursor) {
+  return `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`;
+}
+
+async function listAuditEventsPage(
+  supabase: SupabaseAdminClient,
+  organizationId: string,
+  cursor: AuditExportCursor | null,
+): Promise<{ rows: AuditEventRecord[]; legacy: boolean }> {
+  let query = supabase
+    .from('audit_events')
+    .select(AUDIT_EVENT_COLUMNS)
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(AUDIT_EXPORT_PAGE_SIZE);
+
+  if (cursor) query = query.or(auditCursorFilter(cursor));
+
+  const { data, error } = await query;
+
+  if (!error) {
+    return { rows: data ?? [], legacy: false };
+  }
+
+  if (isMissingAuditChainColumns(error)) {
+    let legacyQuery = supabase
+      .from('audit_events')
+      .select(LEGACY_AUDIT_EVENT_COLUMNS)
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(AUDIT_EXPORT_PAGE_SIZE);
+
+    if (cursor) legacyQuery = legacyQuery.or(auditCursorFilter(cursor));
+
+    const { data: legacyData, error: legacyError } = await legacyQuery;
+
+    if (!legacyError) {
+      return {
+        rows: (legacyData ?? []).map((event) => ({
+          id: event.id,
+          organization_id: event.organization_id,
+          actor_user_id: event.actor_user_id ?? null,
+          action: event.action,
+          entity_type: event.entity_type,
+          entity_id: event.entity_id,
+          metadata: event.metadata,
+          created_at: event.created_at,
+        })),
+        legacy: true,
+      };
+    }
+
+    if (isMissingAuditEventsTable(legacyError)) {
+      return { rows: [], legacy: true };
+    }
+
+    throw new Error(`audit_event_export_legacy_query_failed:${legacyError.code ?? 'unknown'}`);
+  }
+
+  if (isMissingAuditEventsTable(error)) {
+    return { rows: [], legacy: false };
+  }
+
+  throw new Error(`audit_event_export_query_failed:${error.code ?? 'unknown'}`);
+}
+
+export async function countAuditEvents(organizationId: string): Promise<number> {
+  const supabase = tryCreateAdminClient();
+  if (!supabase) {
+    throw new Error('audit_event_count_admin_client_unavailable');
+  }
+
+  const { count, error } = await supabase
+    .from('audit_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', organizationId);
+
+  if (!error) return count ?? 0;
+  if (isMissingAuditEventsTable(error)) return 0;
+  throw new Error(`audit_event_count_query_failed:${error.code ?? 'unknown'}`);
+}
+
+export async function listAllAuditEventsForExport(organizationId: string): Promise<AuditEventRecord[]> {
+  const supabase = tryCreateAdminClient();
+  if (!supabase) {
+    throw new Error('audit_event_export_admin_client_unavailable');
+  }
+
+  const events: AuditEventRecord[] = [];
+  let cursor: AuditExportCursor | null = null;
+
+  while (true) {
+    const page = await listAuditEventsPage(supabase, organizationId, cursor);
+    events.push(...page.rows);
+
+    if (page.rows.length < AUDIT_EXPORT_PAGE_SIZE) break;
+
+    const last = page.rows.at(-1);
+    if (!last?.created_at || !last?.id) {
+      throw new Error('audit_event_export_cursor_missing');
+    }
+
+    cursor = { createdAt: last.created_at, id: last.id };
+  }
+
+  return events;
 }
 
 export async function listAuditEvents(organizationId: string, limit = 100): Promise<AuditEventRecord[]> {
