@@ -1,7 +1,7 @@
 # RISCK COMPLY — M&A IP and Software Diligence Index
 
 Date: 2026-09-24  
-Release: `3599ad36e8549474021a669e0f1ad427421df4b7`  
+Release: `e170529f7bb537242b79461052cb32ecbb0f8ea0`  
 Status: `IP_SOFTWARE_DILIGENCE_INTERNAL=PASS_INDEX / OWNERSHIP_SIGNATURE_FACTS_EXTERNAL_OR_CONTROLLED`
 
 This is an evidence index, not a legal title opinion and not a representation that unsigned assignments exist.
@@ -10,7 +10,7 @@ This is an evidence index, not a legal title opinion and not a representation th
 
 - Primary repository: `renanescola40-afk/eurocomply_saas`.
 - Default branch: `main`.
-- Current release truth for this index: `3599ad36e8549474021a669e0f1ad427421df4b7`.
+- Current release truth for this index: `e170529f7bb537242b79461052cb32ecbb0f8ea0`.
 - Application source, database migrations, infrastructure/configuration, CI workflows, security runbooks, product documentation, AI Act/GDPR content and design/runtime assets are indexed in the repository or controlled asset stores.
 - Repository history/contributors are the authoritative source for contributor attribution; no unsupported statement is made that every contribution is employee-created or formally assigned.
 

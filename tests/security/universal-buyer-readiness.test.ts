@@ -63,7 +63,7 @@ describe('universal buyer readiness truth gate', () => {
   });
 
   it('keeps current release truth exact', () => {
-    const sha = '3599ad36e8549474021a669e0f1ad427421df4b7';
+    const sha = 'e170529f7bb537242b79461052cb32ecbb0f8ea0';
     expect(universal).toContain(sha);
     expect(ma).toContain(sha);
   });
