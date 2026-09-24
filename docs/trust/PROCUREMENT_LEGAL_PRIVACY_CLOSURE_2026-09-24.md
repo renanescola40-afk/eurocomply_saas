@@ -46,7 +46,7 @@ This is the canonical buyer-readiness reconciliation for this workstream. It doe
 
 - `docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md`
 - `docs/trust/PROCUREMENT_CHECKLIST.md`
-- `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-12.md`
+- `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-24.md`
 - `docs/trust/SECURITY_OVERVIEW.md`
 - `docs/trust/DATA_PROTECTION.md`
 - `docs/trust/INCIDENT_RESPONSE.md`
