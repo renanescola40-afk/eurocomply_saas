@@ -9,12 +9,12 @@ Status: draft operational trust package. This repository material documents curr
 | ISO 27001 | Not certified | RISCK COMPLY is not currently ISO 27001 certified. ISO 27001 readiness is tracked as a roadmap item. |
 | SOC 2 | Not audited | RISCK COMPLY does not currently have a SOC 2 Type I or Type II report. SOC 2 readiness is tracked as a roadmap item. |
 | Independent security assessment | Completed with retest boundary open | A third-party black-box web application assessment was completed on 2026-09-12. Original TLS Highs have technical remediation evidence; clean independent retest/terminal assurance remains open. |
-| SSO / SAML | Not available | Enterprise SSO/SAML is planned but not currently available. |
+| SSO / SAML | Implemented runtime / buyer activation pending | SAML SSO runtime, production schema/RPCs, provider/domain binding and callback provisioning are implemented. Activation requires buyer-specific IdP/domain configuration and end-to-end validation. |
 | Mandatory MFA | Not available as an enterprise policy | Mandatory MFA enforcement is planned but not currently available as a tenant policy. |
-| Exportable logs | Partial technical coverage | Audit events exist in the product, but enterprise-grade log export is not yet certified as complete. |
+| Exportable logs | Implemented | Tenant-scoped signed audit evidence-pack export is implemented with authorization, step-up protection, complete paginated audit history and fail-closed audit persistence. |
 | Tenant segregation | Partial / technical controls | Organization-scoped RBAC and RLS checks exist; production evidence must be collected before claiming verified tenant isolation. |
-| Disaster recovery | Not tested | A DR test plan is documented, but a formal DR exercise has not yet been executed. |
-| Backup restore | Not tested | A backup restore test plan is documented, but a formal restore exercise has not yet been executed. |
+| Disaster recovery | Tabletop tested | A non-destructive DR tabletop was completed on 2026-09-24. Live failover and measured RTO/RPO are not claimed. |
+| Backup restore | Schema recovery rehearsal evidenced | An isolated recovery environment proves schema/recovery rehearsal; customer-data restore and measured RTO/RPO remain unproven and provider/evidence-bound. |
 | DPA | Review structure complete / not effective | The canonical Article 28 review draft and control matrix exist; final effect depends on party, annex, provider and incorporation facts plus qualified review where required. |
 | Subprocessors | Active register / facts partial | The active provider/subprocessor register is maintained with purposes, known region/account facts, DPA framework and explicit open gaps. |
 | Contractual SLA | Draft | SLA terms are tracked in this trust package and require commercial/legal review before use. |
