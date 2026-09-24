@@ -46,7 +46,7 @@ if (!/^\d+$/.test(runId)) throw new Error('numeric GITHUB_RUN_ID required');
 
 const githubToken = String(process.env.GITHUB_TOKEN || '').trim();
 
-async function get(path) {
+async function get(path, { requireBypassActors = false } = {}) {
   const baseHeaders = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
@@ -57,21 +57,27 @@ async function get(path) {
     const authenticated = await fetch(`https://api.github.com${path}`, {
       headers: { ...baseHeaders, Authorization: `Bearer ${githubToken}` },
     });
-    if (authenticated.ok) return authenticated.json();
-    if (![401, 403, 404].includes(authenticated.status)) {
+    if (authenticated.ok) {
+      const body = await authenticated.json();
+      if (!requireBypassActors || Array.isArray(body?.bypass_actors)) return body;
+    } else if (![401, 403, 404].includes(authenticated.status)) {
       throw new Error(`authenticated GitHub API ${authenticated.status}: ${path}`);
     }
   }
 
   const publicResponse = await fetch(`https://api.github.com${path}`, { headers: baseHeaders });
   if (!publicResponse.ok) throw new Error(`public GitHub API ${publicResponse.status}: ${path}`);
-  return publicResponse.json();
+  const body = await publicResponse.json();
+  if (requireBypassActors && !Array.isArray(body?.bypass_actors)) {
+    throw new Error(`public GitHub API bypass visibility unavailable: ${path}`);
+  }
+  return body;
 }
 
 const listed = await get(`/repos/${owner}/${repo}/rulesets`);
 const applicable = [];
 for (const item of listed) {
-  const rs = await get(`/repos/${owner}/${repo}/rulesets/${item.id}`);
+  const rs = await get(`/repos/${owner}/${repo}/rulesets/${item.id}`, { requireBypassActors: true });
   const inc = rs?.conditions?.ref_name?.include ?? [];
   const exc = rs?.conditions?.ref_name?.exclude ?? [];
   if (rs?.target === 'branch' && rs?.enforcement === 'active'
