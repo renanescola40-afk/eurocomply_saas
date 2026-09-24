@@ -105,6 +105,8 @@ const STALE_TRUST_PHRASES = [
   'Define how long EuroComply retains',
   'Minimum 12 months draft target',
   '30-90 days draft target',
+  'it contains no restored customer/application rows',
+  'a real data-bearing restore and measured RTO/RPO remain unproven',
 ];
 
 const failures = [];
@@ -184,8 +186,10 @@ const consistencyRules = [
   {
     label: 'restore/RTO/RPO boundary',
     pass:
-      canonicalReadme.includes('a real data-bearing restore and measured RTO/RPO remain unproven')
-      && questionnaire.includes('measured RPO/RTO are not yet proven'),
+      canonicalReadme.includes('data-bearing snapshot whose representative tenant/application row counts and deterministic ID digests match the bounded production lineage')
+      && canonicalReadme.includes('measured RTO/RPO are not independently evidenced')
+      && questionnaire.includes('A data-bearing isolated recovery snapshot is evidenced')
+      && questionnaire.includes('measured RPO/RTO are not independently evidenced'),
   },
   {
     label: 'current-release tenant isolation boundary',
