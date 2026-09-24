@@ -108,7 +108,9 @@ describe('exact-SHA branch protection runtime proof', () => {
     expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('targetSha !== checkedOutSha || targetSha !== currentMainSha');
-    expect(workflow).toContain('github.rest.repos.getBranchProtection');
+    expect(workflow).toContain('const publicJson = async (url) =>');
+    expect(workflow).toContain('/rulesets');
+    expect(workflow).toContain('active_main_ruleset_not_found');
     expect(workflow).toContain('core.setFailed(evidence.summary)');
     expect(workflow).toContain('check-generated-branch-protection-evidence.mjs');
     expect(workflow).toContain('if: always()');
