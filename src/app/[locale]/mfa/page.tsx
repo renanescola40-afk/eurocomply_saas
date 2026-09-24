@@ -13,7 +13,9 @@ type Props = {
 
 function safeNextPath(value: string | undefined, locale: string) {
   const fallback = `/${locale}/dashboard/organizations`;
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return fallback;
+  if (!value) return fallback;
+  if (value.includes('\\') || value.startsWith('//')) return fallback;
+  if (!value.startsWith(`/${locale}/`)) return fallback;
   return value;
 }
 
