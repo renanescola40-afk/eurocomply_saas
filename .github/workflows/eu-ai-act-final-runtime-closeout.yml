@@ -116,20 +116,30 @@ jobs:
         run: |
           set -euo pipefail
           artifact_name="legal-rules-runtime-${TARGET_SHA}"
-          response="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${artifact_name}&per_page=100")"
-          selection="$(printf '%s' "$response" | jq -r --arg name "$artifact_name" --arg sha "$TARGET_SHA" '
-            [.artifacts[] | select(.name == $name and .expired == false and .workflow_run.head_sha == $sha)]
-            | sort_by(.created_at)
-            | last // empty
-            | if type == "object" then "\(.id)\t\(.workflow_run.id)" else "" end
-          ')"
+          selection=''
+          for attempt in $(seq 1 30); do
+            response="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${artifact_name}&per_page=100")"
+            selection="$(printf '%s' "$response" | jq -r --arg name "$artifact_name" --arg sha "$TARGET_SHA" '
+              [.artifacts[] | select(.name == $name and .expired == false and .workflow_run.head_sha == $sha)]
+              | sort_by(.created_at)
+              | last // empty
+              | if type == "object" then "\(.id)\t\(.workflow_run.id)" else "" end
+            ')"
+            if [ -n "$selection" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 30 ]; then
+              echo "Legal Rules exact-SHA artifact not ready yet (attempt ${attempt}/30); waiting for deployment producer."
+              sleep 10
+            fi
+          done
           if [ -z "$selection" ]; then
             echo 'found=false' >> "$GITHUB_OUTPUT"
-            echo "No immutable Legal Rules runtime artifact exists yet for exact SHA ${TARGET_SHA}."
+            echo "No immutable Legal Rules runtime artifact exists for exact SHA ${TARGET_SHA} after bounded producer wait."
             exit 0
           fi
           IFS=$'\t' read -r artifact_id source_run_id <<< "$selection"
@@ -201,7 +211,22 @@ jobs:
       - name: Inspect protected main branch controls
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/compliance/build-platform-controls-runtime-proof.mjs
+          RELEASE_SHA: ${{ env.TARGET_SHA }}
+          BRANCH_PROTECTION_EVIDENCE_PATH: p0-evidence/branch-protection-main.generated.json
+        run: |
+          set -euo pipefail
+          node scripts/security/generate-branch-protection-ruleset-evidence.mjs
+          node scripts/security/check-generated-branch-protection-evidence.mjs
+          mkdir -p artifacts/eu-ai-act-final-runtime
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const evidence = JSON.parse(readFileSync('p0-evidence/branch-protection-main.generated.json', 'utf8'));
+          writeFileSync('artifacts/eu-ai-act-final-runtime/platform-proof.json', JSON.stringify({
+            status: evidence.outcome === 'passed' ? 'VERIFIED' : 'BLOCKED',
+            targetSha: evidence.targetSha,
+            source: evidence.source,
+          }, null, 2));
+          NODE
 
       - name: Build final runtime evidence overlay
         run: node scripts/compliance/generate-eu-ai-act-final-runtime-bundle.mjs
@@ -219,11 +244,10 @@ jobs:
           const report = JSON.parse(readFileSync(process.env.EU_AI_ACT_COVERAGE_JSON, 'utf8'));
           if (report.targetSha !== process.env.TARGET_SHA) throw new Error('coverage SHA mismatch');
           if (report.scores.implementationCoverage !== 100 || report.scores.ciVerifiedCoverage !== 100) throw new Error('static coverage regressed');
-          // Pull-request closeout may promote readiness (8) and provider assurance (4)
-          // above the 80-point synthetic baseline. LEGAL-RULES (4) remains reserved
-          // for deployed exact-SHA proof, and PLATFORM-CONTROLS (4) remains blocked
-          // when approving-review policy cannot be verified. The report-mode floor is 92.
-          if (report.scores.runtimeEvidenceCoverage < 92) throw new Error('final overlay must promote readiness and provider evidence');
+          // Pull-request closeout may promote readiness (8), provider assurance (4), and
+          // PLATFORM-CONTROLS (4) above the 80-point synthetic baseline. LEGAL-RULES (4)
+          // remains reserved for deployed exact-SHA proof. The report-mode floor is 96.
+          if (report.scores.runtimeEvidenceCoverage < 96) throw new Error('final overlay must promote readiness, provider and platform evidence');
           if (process.env.STRICT_CLOSEOUT === '1' && report.scores.runtimeEvidenceCoverage !== 100) throw new Error('strict runtime closeout requires 100%');
           if (report.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') throw new Error('human review boundary must remain NO_GO');
           NODE
