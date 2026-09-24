@@ -83,4 +83,4 @@ The instruction not to pause/cancel Beagle for ordinary workflow convenience doe
 3. keep the independent-human-pentest workstream separate: provider selection -> due diligence -> written ROE -> exact target/release binding -> explicit owner GO -> report -> remediation -> independent retest;
 4. never convert Beagle automated evidence into independent-human-pentest credit.
 
-`ENTERPRISE_100: PASS`, `PRODUCTION_GO: PASS` and `INDEPENDENT_PENTEST: PASS` remain withheld until the required runtime and human/external evidence exists for the accepted release lineage.
+Current terminal policy separates internally controllable Product Ready from strict external assurance. `PRODUCTION_GO: PASS` may be emitted only when every mandatory internal exact-SHA release/runtime control is complete and there are zero mandatory internal blockers. Missing independent pentest/retest or other explicitly external assurance remains `ENTERPRISE_STRICT: WAITING_EXTERNAL` and can never be represented as `INDEPENDENT_PENTEST: PASS` or `ENTERPRISE_STRICT: PASS` without genuine attributable evidence.

@@ -1,6 +1,6 @@
 import { listAiIncidents, type AiIncidentRecord } from '@/server/queries/ai-incidents';
 import { listAiSystems, type AiSystemRecord } from '@/server/queries/ai-systems';
-import { listAuditEvents, type AuditEventRecord } from '@/server/queries/audit-events';
+import { countAuditEvents, listAllAuditEventsForExport, listAuditEvents, type AuditEventRecord } from '@/server/queries/audit-events';
 import { listDocuments } from '@/server/queries/documents';
 import { listRisks } from '@/server/queries/risks';
 import { listVendors } from '@/server/queries/vendors';
@@ -196,20 +196,30 @@ export async function buildAuditEvidencePack({
   userId,
   role,
   entitlements,
+  mode = 'full',
 }: {
   organization: OrganizationSnapshot;
   userId: string;
   role?: OrganizationRole;
   entitlements: PlanEntitlements;
+  mode?: 'full' | 'summary';
 }): Promise<AuditEvidencePack> {
+  const auditEventsPromise = mode === 'summary'
+    ? listAuditEvents(organization.id, 1)
+    : listAllAuditEventsForExport(organization.id);
+  const auditEventCountPromise = mode === 'summary'
+    ? countAuditEvents(organization.id)
+    : null;
+
   const [documentsRaw, vendorsRaw, risksRaw, aiSystems, aiIncidents, auditEvents] = await Promise.all([
     listDocuments(organization.id),
     listVendors(organization.id),
     listRisks(organization.id),
     listAiSystems(organization.id),
     listAiIncidents(organization.id),
-    listAuditEvents(organization.id, 100),
+    auditEventsPromise,
   ]);
+  const auditEventCount = auditEventCountPromise ? await auditEventCountPromise : auditEvents.length;
 
   const documents = normalizeRows<EvidenceDocument>(documentsRaw);
   const vendors = normalizeRows<EvidenceVendor>(vendorsRaw);
@@ -228,7 +238,7 @@ export async function buildAuditEvidencePack({
     risks: risks.length,
     aiSystems: aiSystems.length,
     aiIncidents: aiIncidents.length,
-    auditEvents: auditEvents.length,
+    auditEvents: auditEventCount,
     pendingDocumentReviews,
     highRiskVendors,
     highRiskAiSystems,

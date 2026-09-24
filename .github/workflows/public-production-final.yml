@@ -199,6 +199,8 @@ jobs:
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          VERCEL_TRUSTED_OIDC_TOKEN: ${{ secrets.VERCEL_TRUSTED_OIDC_TOKEN }}
         run: npm run release:production-final
 
       - name: Capture exact-SHA GitHub checks for final scorecard

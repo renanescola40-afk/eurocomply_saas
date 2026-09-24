@@ -22,6 +22,10 @@ const REQUIRED_FILES = [
   'docs/trust/SECURITY_FAQ.md',
   'docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md',
   'docs/trust/PROCUREMENT_CHECKLIST.md',
+  'docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md',
+  'docs/trust/README.md',
+  'docs/trust/PENTEST_READINESS.md',
+  'docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md',
   'src/app/[locale]/trust/page.tsx',
   'src/app/[locale]/security/page.tsx',
   'src/app/[locale]/status/page.tsx',
@@ -47,6 +51,10 @@ const REQUIRED_PHRASES = new Map([
   ['docs/trust/SECURITY_FAQ.md', ['SOC 2', 'ISO 27001', SECURITY_EMAIL, STATUS_URL]],
   ['docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md', ['Procurement checklist', 'designed to support', SECURITY_EMAIL, STATUS_URL]],
   ['docs/trust/PROCUREMENT_CHECKLIST.md', ['Enterprise procurement checklist', 'Authentication', 'RBAC', 'RLS', 'Audit logs', 'Data retention', 'Responsible disclosure', SECURITY_EMAIL, STATUS_URL]],
+  ['docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md', ['DPA / GDPR Article 28', 'SCC / international transfers', 'Retention / deletion', 'Data residency', 'AI Act documentation', 'GDPR documentation', 'PROCUREMENT_INTERNAL_READY=PASS']],
+  ['docs/trust/README.md', ['Independent security assessment', 'DPA', 'Subprocessors', 'Retention / deletion']],
+  ['docs/trust/PENTEST_READINESS.md', ['THIRD_PARTY_BLACK_BOX_ASSESSMENT_COMPLETE', 'CLEAN_RETEST_OPEN', '2026-09-12']],
+  ['docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md', ['third-party black-box web application assessment', 'Article 28 DPA', 'Category-specific retention']],
   ['src/app/[locale]/trust/page.tsx', ['TrustCenterPage', 'applyVerifiedTrustAuthority', "getLocalizedTrustCenterPage('trust'" ]],
   ['src/app/[locale]/security/page.tsx', ['TrustCenterPage', 'applyVerifiedTrustAuthority', "getLocalizedTrustCenterPage('security'" ]],
   ['src/app/[locale]/status/page.tsx', ['VerifiedStatusPage']],
@@ -85,6 +93,22 @@ const FALSE_CLAIM_PATTERNS = [
 
 const SAFE_NEGATION_CONTEXT = /(not currently|does not currently|must not|do not|unless|non-claim|non-claims|not claimed|não afirma|no afirma|ne revendique pas|non dichiara|beansprucht derzeit weder)/i;
 
+const STALE_TRUST_PHRASES = [
+  'RISCK COMPLY has not yet completed an independent penetration test',
+  'A third-party penetration test has not yet been completed',
+  'A third-party penetration test has not completed',
+  'tamper-evident/WORM audit storage is not yet implemented',
+  'SSO/SAML and tenant-enforced MFA implementation',
+  'Audit log export and tamper-evident retention',
+  'FINAL_DATA_ROOM_INDEX_2026-09-12.md',
+  '# Data retention policy draft',
+  'Define how long EuroComply retains',
+  'Minimum 12 months draft target',
+  '30-90 days draft target',
+  'it contains no restored customer/application rows',
+  'a real data-bearing restore and measured RTO/RPO remain unproven',
+];
+
 const failures = [];
 const contents = new Map();
 
@@ -109,6 +133,10 @@ for (const relativePath of REQUIRED_FILES) {
     if (!content.includes(phrase)) failures.push(`${relativePath}: missing required phrase "${phrase}"`);
   }
 
+  for (const stalePhrase of STALE_TRUST_PHRASES) {
+    if (content.includes(stalePhrase)) failures.push(`${relativePath}: stale trust statement "${stalePhrase}"`);
+  }
+
   content.split('\n').forEach((line, index) => {
     for (const { label, pattern } of FALSE_CLAIM_PATTERNS) {
       if (pattern.test(line) && !SAFE_NEGATION_CONTEXT.test(line)) {
@@ -127,6 +155,60 @@ for (const relativePath of CANONICAL_SECURITY_AUTHORITY_FILES) {
   if (PERSONAL_MAILBOX_PATTERN.test(content)) {
     failures.push(`${relativePath}: personal free-mail address must not be a current public security-reporting authority`);
   }
+}
+
+const canonicalReadme = contents.get('docs/trust/README.md') ?? '';
+const questionnaire = contents.get('docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md') ?? '';
+
+const consistencyRules = [
+  {
+    label: 'tamper-evident audit status',
+    pass:
+      canonicalReadme.includes('tamper-evident audit hash chain and signed audit evidence export are implemented')
+      && canonicalReadme.includes('External WORM/legally immutable storage is not currently claimed')
+      && questionnaire.includes('tamper-evident audit hash chain and signed evidence export')
+      && questionnaire.includes('External WORM/legally immutable storage is not currently claimed'),
+  },
+  {
+    label: 'tenant-wide MFA boundary',
+    pass:
+      canonicalReadme.includes('tenant-wide policy that requires an AAL2 session for all workspace access')
+      && canonicalReadme.includes('not claimed as enabled for every customer')
+      && questionnaire.includes('Yes, as a tenant-configurable policy')
+      && questionnaire.includes('not represented as enabled for every customer tenant by default'),
+  },
+  {
+    label: 'SSO buyer activation boundary',
+    pass:
+      canonicalReadme.includes('Activation requires buyer-specific IdP/domain configuration and end-to-end validation')
+      && questionnaire.includes('Activation requires buyer-specific IdP/domain configuration and end-to-end validation'),
+  },
+  {
+    label: 'restore/RTO/RPO boundary',
+    pass:
+      canonicalReadme.includes('data-bearing snapshot whose representative tenant/application row counts and deterministic ID digests match the bounded production lineage')
+      && canonicalReadme.includes('measured RTO/RPO are not independently evidenced')
+      && questionnaire.includes('A data-bearing isolated recovery snapshot is evidenced')
+      && questionnaire.includes('measured RPO/RTO are not independently evidenced'),
+  },
+  {
+    label: 'current-release tenant isolation boundary',
+    pass:
+      canonicalReadme.includes('Any statement that a specific production release is proven must be backed by exact-release runtime evidence')
+      && questionnaire.includes('Production-proof claims are release-bound'),
+  },
+  {
+    label: 'certification non-claims',
+    pass:
+      canonicalReadme.includes('not currently ISO 27001 certified')
+      && canonicalReadme.includes('does not currently have a SOC 2 Type I or Type II report')
+      && questionnaire.includes('not currently ISO 27001 certified')
+      && questionnaire.includes('does not currently have a SOC 2 Type I or Type II report'),
+  },
+];
+
+for (const rule of consistencyRules) {
+  if (!rule.pass) failures.push(`canonical trust consistency failure: ${rule.label}`);
 }
 
 console.log('RISCK COMPLY enterprise Trust Center package check');

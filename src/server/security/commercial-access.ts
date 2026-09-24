@@ -9,6 +9,7 @@ import {
   getOrganizationBillingAuthority,
   type OrganizationBillingAuthority,
 } from '@/server/queries/subscription';
+import { getTenantMfaSessionState, recordTenantMfaDenial, TenantMfaError } from '@/server/security/tenant-mfa';
 
 type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 type CurrentOrganization = NonNullable<Awaited<ReturnType<typeof getCurrentOrganizationForUser>>>;
@@ -72,12 +73,58 @@ export const resolveCommercialProductAccess = cache(async (): Promise<Commercial
   }
 });
 
+export async function requireAuthenticatedOrganizationMfaPageAccess(input: {
+  locale: string;
+  pathname: string;
+}) {
+  const user = await getCurrentUser();
+  const safeNext = input.pathname || `/${input.locale}/dashboard/organizations`;
+
+  if (!user) {
+    redirect(`/${input.locale}/login?next=${encodeURIComponent(safeNext)}`);
+  }
+
+  const organization = await getCurrentOrganizationForUser(user.id);
+  if (!organization?.id) {
+    redirect(`/${input.locale}/onboarding`);
+  }
+
+  try {
+    const mfa = await getTenantMfaSessionState(organization.id);
+    if (mfa.required && !mfa.satisfied) {
+      await recordTenantMfaDenial(organization.id, user.id, 'authenticated_organization_page');
+      redirect(`/${input.locale}/mfa?next=${encodeURIComponent(safeNext)}`);
+    }
+  } catch (error) {
+    if (error instanceof TenantMfaError) {
+      redirect(`/${input.locale}/mfa?error=security_control_unavailable`);
+    }
+    throw error;
+  }
+
+  return { user, organization };
+}
+
 export async function requireLicensedCommercialPageAccess(input: {
   locale: string;
   pathname: string;
 }): Promise<LicensedCommercialAccess> {
   const access = await resolveCommercialProductAccess();
-  if (access.status === 'licensed') return access;
+  if (access.status === 'licensed') {
+    try {
+      const mfa = await getTenantMfaSessionState(access.organization.id);
+      if (mfa.required && !mfa.satisfied) {
+        await recordTenantMfaDenial(access.organization.id, access.user.id, 'licensed_page');
+        redirect(`/${input.locale}/mfa?next=${encodeURIComponent(input.pathname || `/${input.locale}/dashboard/organizations`)}`);
+      }
+      return access;
+    } catch (error) {
+      if (error instanceof TenantMfaError) {
+        redirect(`/${input.locale}/mfa?error=security_control_unavailable`);
+      }
+      throw error;
+    }
+  }
 
   const safeNext = input.pathname || `/${input.locale}/dashboard/organizations`;
 

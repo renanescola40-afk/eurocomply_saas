@@ -1,4 +1,4 @@
-export const PROCUREMENT_PACK_VERSION = '2026-09-09';
+export const PROCUREMENT_PACK_VERSION = '2026-09-24';
 
 export type ProcurementControlStatus = 'implemented' | 'configured' | 'evidence-required' | 'not-claimed';
 
@@ -61,11 +61,53 @@ export const procurementControls: ProcurementControl[] = [
     evidence: ['Backup-provider posture', 'Restore validation', 'Release-specific recovery evidence'],
   },
   {
+    id: 'data-lifecycle',
+    title: 'Retention, export and deletion',
+    status: 'implemented',
+    summary: 'Category-specific retention criteria and controlled GDPR export/delete workflows exist; exact contractual periods and downstream provider lifecycle remain agreement- and evidence-bound.',
+    evidence: ['Privacy/data-protection documentation', 'DSR export/delete workflows', 'Provider lifecycle boundaries'],
+  },
+  {
+    id: 'dpa-subprocessors',
+    title: 'DPA and subprocessors',
+    status: 'configured',
+    summary: 'An Article 28 DPA review structure and active provider/subprocessor register exist. Final contractual effect depends on party, annex, provider and incorporation facts.',
+    evidence: ['DPA Article 28 control matrix', 'Subprocessor register', 'TOM references'],
+  },
+  {
+    id: 'international-transfers',
+    title: 'International transfers',
+    status: 'evidence-required',
+    summary: 'Provider transfer frameworks and known regions are tracked without making a blanket EU-only claim. Flow-level Chapter V conclusions remain fact-specific.',
+    evidence: ['International transfer register', 'Provider DPA/SCC framework evidence', 'Data residency disclosure'],
+  },
+  {
+    id: 'legal-publication',
+    title: 'Privacy and Terms publication',
+    status: 'evidence-required',
+    summary: 'Public Privacy and Terms review surfaces exist but are deliberately not represented as effective final contracts until the final factual/publication gates are satisfied.',
+    evidence: ['Versioned legal review surfaces', 'Public legal publication state', 'Current legal authority matrix'],
+  },
+  {
+    id: 'ai-gdpr-documentation',
+    title: 'AI Act and GDPR documentation',
+    status: 'implemented',
+    summary: 'Current-scope AI Act applicability, GDPR role/notice/DPA matrices, ROPA, DSR controls and provider/transfer registers are maintained with change-trigger boundaries.',
+    evidence: ['Current legal authority matrix', 'ROPA', 'Privacy Articles 13/14 matrix', 'DPA Article 28 matrix'],
+  },
+  {
     id: 'certifications',
     title: 'Independent certifications',
     status: 'not-claimed',
-    summary: 'No SOC 2, ISO 27001 or completed independent penetration-test claim is made without dated, attributable evidence.',
+    summary: 'No SOC 2 or ISO 27001 certification is claimed without current, dated and attributable certification evidence.',
     evidence: ['No unsupported certification badge', 'Evidence-bound public claims', 'Contract review before reliance'],
+  },
+  {
+    id: 'security-assessment',
+    title: 'Independent security assessment',
+    status: 'evidence-required',
+    summary: 'A third-party black-box assessment was completed on 2026-09-12; original TLS Highs have technical remediation evidence, while a clean independent retest/terminal assurance remains open.',
+    evidence: ['Confidential third-party assessment reference', 'TLS remediation evidence', 'Retest/terminal assurance boundary'],
   },
 ];
 
@@ -138,6 +180,11 @@ export const procurementDocuments = [
   { path: '/privacy', title: 'Privacy' },
   { path: '/dpa', title: 'Data Processing Addendum summary' },
   { path: '/subprocessors', title: 'Subprocessor list' },
+  { path: '/transfers', title: 'International transfers' },
+  { path: '/terms', title: 'Terms of Service review surface' },
+  { path: '/cookie-policy', title: 'Cookie and analytics policy review surface' },
+  { path: '/acceptable-use', title: 'Acceptable Use Policy review surface' },
+  { path: '/data-processing', title: 'Data processing overview' },
   { path: '/sla', title: 'Service commitments' },
   { path: '/status', title: 'Status surface' },
   { path: '/compliance', title: 'Compliance posture' },

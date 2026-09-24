@@ -78,8 +78,8 @@ describe('customer-facing claims guard', () => {
     const vendorAssurance = fs.readFileSync(path.join(rootDir, 'src/app/[locale]/vendor-assurance/page.tsx'), 'utf8');
     const enterpriseReadiness = fs.readFileSync(path.join(rootDir, 'src/app/[locale]/enterprise-readiness/page.tsx'), 'utf8');
     const passwordRecovery = fs.readFileSync(path.join(rootDir, 'src/app/[locale]/atualizar-senha/page.tsx'), 'utf8');
-    const dashboardNavigation = fs.readFileSync(
-      path.join(rootDir, 'src/components/dashboard/dashboard-command-navigation.tsx'),
+    const productShell = fs.readFileSync(
+      path.join(rootDir, 'src/components/dashboard/authenticated-product-shell.tsx'),
       'utf8',
     );
 
@@ -94,9 +94,10 @@ describe('customer-facing claims guard', () => {
       expect(source).toContain('RISCK COMPLY');
     }
 
-    expect(retentionCenter).toContain('DashboardCommandNavigation');
-    expect(dashboardNavigation).not.toContain('EuroComply');
-    expect(dashboardNavigation).toContain('RISCK COMPLY');
+    expect(retentionCenter).toContain('AuthenticatedProductShell');
+    expect(retentionCenter).not.toContain('DashboardCommandNavigation');
+    expect(productShell).not.toContain('EuroComply');
+    expect(productShell).toContain('RISCK COMPLY');
 
     expect(retentionCenter).not.toContain("enterpriseReady: 'Enterprise-ready'");
     expect(retentionCenter).not.toContain('signed retention-policy export');

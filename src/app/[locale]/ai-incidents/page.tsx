@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { listAiSystems } from '@/server/queries/ai-systems';
@@ -15,14 +15,20 @@ export default async function AiIncidentsPage({ params }: { params: Promise<{ lo
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const [incidents, systems] = organization
-    ? await Promise.all([listAiIncidents(organization.id), listAiSystems(organization.id)])
-    : [[], []];
+  if (!organization) {
+    redirect(`/${locale}/onboarding`);
+  }
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage="AI Governance" />
-      <AiIncidentsClient locale={locale} initialIncidents={incidents} systems={systems} organizationName={organization?.name} />
-    </main>
+  const [incidents, systems] = await Promise.all([
+    listAiIncidents(organization.id),
+    listAiSystems(organization.id),
+  ]);
+
+  const content = (
+    <div className="min-h-0 bg-transparent">
+      <AiIncidentsClient locale={locale} initialIncidents={incidents} systems={systems} organizationName={organization.name} />
+    </div>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }

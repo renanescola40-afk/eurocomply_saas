@@ -1,5 +1,7 @@
 name: Product FRIA Ephemeral Runtime QA
 
+# This producer is intentionally push-capable so an exact-main merge can refresh
+# product-commercial QA evidence for the new release SHA without synthetic reuse.
 on:
   workflow_dispatch:
   pull_request:
@@ -12,6 +14,8 @@ on:
       - 'scripts/product/sanitize-fria-playwright-report.mjs'
       - 'scripts/recovery/**'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
+      - 'tests/e2e/full-saas-functional-journey.spec.ts'
+      - 'tests/e2e/new-customer-commercial-activation.spec.ts'
       - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
@@ -24,6 +28,8 @@ on:
       - 'src/app/[locale]/status/**'
       - 'src/app/[locale]/risck-comply-home/**'
       - 'src/app/[locale]/ai-systems/**'
+      - 'src/app/[locale]/document-generator/**'
+      - 'src/components/documents/**'
       - 'src/app/[locale]/dashboard/layout.tsx'
       - 'src/app/[locale]/dashboard/organizations/**'
       - 'src/app/[locale]/dashboard/fria/**'
@@ -52,6 +58,8 @@ on:
       - 'scripts/product/sanitize-fria-playwright-report.mjs'
       - 'scripts/recovery/**'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
+      - 'tests/e2e/full-saas-functional-journey.spec.ts'
+      - 'tests/e2e/new-customer-commercial-activation.spec.ts'
       - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
       - 'src/hooks/useAuth.ts'
@@ -64,6 +72,8 @@ on:
       - 'src/app/[locale]/status/**'
       - 'src/app/[locale]/risck-comply-home/**'
       - 'src/app/[locale]/ai-systems/**'
+      - 'src/app/[locale]/document-generator/**'
+      - 'src/components/documents/**'
       - 'src/app/[locale]/dashboard/layout.tsx'
       - 'src/app/[locale]/dashboard/organizations/**'
       - 'src/app/[locale]/dashboard/fria/**'
@@ -175,7 +185,7 @@ jobs:
           # required for authenticated Product acceptance.
           supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" stop
           supabase --workdir "$RECOVERY_EPHEMERAL_WORKDIR" start \
-            -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+            -x realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
           post_restart_count="$(psql "$RECOVERY_ISOLATED_DATABASE_URL" --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1 --command 'select count(*) from supabase_migrations.schema_migrations;' | tr -d '[:space:]')"
           [[ "$post_restart_count" =~ ^[0-9]+$ ]]
@@ -279,7 +289,7 @@ jobs:
             exit 1
           fi
 
-      - name: Execute final customer journey and FRIA lifecycle acceptance
+      - name: Execute full SaaS journey and FRIA lifecycle acceptance
         shell: bash
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/fria-playwright-raw.json
@@ -292,12 +302,16 @@ jobs:
           test -n "${E2E_FRIA_APPROVER_PASSWORD:-}"
           test -n "${E2E_UNLICENSED_OWNER_EMAIL:-}"
           test -n "${E2E_UNLICENSED_OWNER_PASSWORD:-}"
+          test -n "${E2E_NEW_CUSTOMER_EMAIL:-}"
+          test -n "${E2E_NEW_CUSTOMER_PASSWORD:-}"
           test "${E2E_ALLOW_SYNTHETIC_APP_WRITES:-}" = 'true'
           test "${E2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED:-}" = 'true'
           test "${E2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED:-}" = 'true'
           test "${E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED:-}" = 'true'
           rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
-          if ! npx playwright test tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --reporter=line,github,json --retries=1; then
+          # These suites share disposable identities and exercise sign-out/session lifecycle.
+          # Serial execution prevents one journey from revoking or racing another journey's session.
+          if ! npx playwright test tests/e2e/new-customer-commercial-activation.spec.ts tests/e2e/full-saas-functional-journey.spec.ts tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --workers=1 --reporter=line,github,json --retries=1; then
             app_healthy=false
             auth_healthy=false
             if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then

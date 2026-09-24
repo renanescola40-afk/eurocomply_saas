@@ -142,7 +142,7 @@ describe('Public GA rollback resolver contract', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ value: jwt }), {
         status: 200,
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
       }),
     );
 
@@ -156,11 +156,11 @@ describe('Public GA rollback resolver contract', () => {
     });
   });
 
-  it('uses the trusted OIDC header for protected Vercel health checks', async () => {
+  it('uses the trusted OIDC header for protected Vercel health checks and requires no-store', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ status: 'ok' }), {
         status: 200,
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
       }),
     );
 
@@ -228,7 +228,7 @@ describe('Public GA rollback resolver contract', () => {
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ status: 'ok' }), {
           status: 200,
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
         }),
       );
 
@@ -251,3 +251,21 @@ describe('Public GA rollback resolver contract', () => {
     expect(normalizeDeploymentUrl('https://example.com')).toBeNull();
   });
 });
+
+
+  it('rejects a healthy-looking protected rollback response without no-store', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await expect(
+      protectedHealthProbe(
+        'https://previous.example.vercel.app',
+        'header.payload.signature',
+        5000,
+      ),
+    ).resolves.toEqual({ passed: false });
+  });

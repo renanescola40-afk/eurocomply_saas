@@ -6,21 +6,26 @@ on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Exact current main SHA authorized by a governed Production promotion or read-only reattestation
+        description: Exact current main SHA authorized by a governed Promotion, read-only reattestation, or current Production state authority
         required: true
         type: string
       promotion_run_id:
-        description: Successful exact-SHA Supabase Forward Reconciliation Production Promotion run ID (mutually exclusive with reattestation_run_id)
+        description: Successful exact-SHA Supabase Forward Reconciliation Production Promotion run ID (mutually exclusive with other authority inputs)
         required: false
         default: ''
         type: string
       reattestation_run_id:
-        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with promotion_run_id)
+        description: Successful exact-SHA Supabase Forward Production Reattestation run ID (mutually exclusive with other authority inputs)
+        required: false
+        default: ''
+        type: string
+      current_state_run_id:
+        description: Successful exact-SHA Supabase Current Production State Read-Only run ID (mutually exclusive with other authority inputs)
         required: false
         default: ''
         type: string
       confirmation:
-        description: Type EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF or EXECUTE_POST_REATTESTATION_RUNTIME_PROOF
+        description: Type EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF, EXECUTE_POST_REATTESTATION_RUNTIME_PROOF, or EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF
         required: true
         type: string
 
@@ -44,6 +49,7 @@ jobs:
       TARGET_SHA: ${{ inputs.release_sha }}
       PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
       REATTESTATION_RUN_ID: ${{ inputs.reattestation_run_id }}
+      CURRENT_STATE_RUN_ID: ${{ inputs.current_state_run_id }}
       INPUT_CONFIRMATION: ${{ inputs.confirmation }}
       GITHUB_ENVIRONMENT_NAME: supabase-live-rls-validation
       REQUIRE_PROTECTED_BRANCHES: 'true'
@@ -75,9 +81,11 @@ jobs:
 
           promotion_set=0
           reattestation_set=0
+          current_state_set=0
           if [[ -n "$PROMOTION_RUN_ID" ]]; then [[ "$PROMOTION_RUN_ID" =~ ^[0-9]+$ ]]; promotion_set=1; fi
           if [[ -n "$REATTESTATION_RUN_ID" ]]; then [[ "$REATTESTATION_RUN_ID" =~ ^[0-9]+$ ]]; reattestation_set=1; fi
-          test $((promotion_set + reattestation_set)) -eq 1
+          if [[ -n "$CURRENT_STATE_RUN_ID" ]]; then [[ "$CURRENT_STATE_RUN_ID" =~ ^[0-9]+$ ]]; current_state_set=1; fi
+          test $((promotion_set + reattestation_set + current_state_set)) -eq 1
 
           if [[ "$promotion_set" -eq 1 ]]; then
             test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF'
@@ -89,7 +97,7 @@ jobs:
             test "$(jq -r '.conclusion' <<<"$authority_json")" = 'success'
             echo 'authority_mode=promotion' >> "$GITHUB_OUTPUT"
             echo "authority_run_id=$PROMOTION_RUN_ID" >> "$GITHUB_OUTPUT"
-          else
+          elif [[ "$reattestation_set" -eq 1 ]]; then
             test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF'
             authority_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REATTESTATION_RUN_ID}")"
             test "$(jq -r '.head_sha' <<<"$authority_json")" = "$TARGET_SHA"
@@ -99,6 +107,16 @@ jobs:
             test "$(jq -r '.conclusion' <<<"$authority_json")" = 'success'
             echo 'authority_mode=reattestation' >> "$GITHUB_OUTPUT"
             echo "authority_run_id=$REATTESTATION_RUN_ID" >> "$GITHUB_OUTPUT"
+          else
+            test "$INPUT_CONFIRMATION" = 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF'
+            authority_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CURRENT_STATE_RUN_ID}")"
+            test "$(jq -r '.head_sha' <<<"$authority_json")" = "$TARGET_SHA"
+            test "$(jq -r '.path' <<<"$authority_json")" = '.github/workflows/supabase-current-production-state-read-only.yml'
+            test "$(jq -r '.event' <<<"$authority_json")" = 'workflow_dispatch'
+            test "$(jq -r '.status' <<<"$authority_json")" = 'completed'
+            test "$(jq -r '.conclusion' <<<"$authority_json")" = 'success'
+            echo 'authority_mode=current_state' >> "$GITHUB_OUTPUT"
+            echo "authority_run_id=$CURRENT_STATE_RUN_ID" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Verify protected environment governance before secrets
@@ -191,6 +209,9 @@ jobs:
           elif [[ "$AUTHORITY_MODE" = 'reattestation' ]]; then
             test "$INPUT_CONFIRMATION" = 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF'
             test "$(jq -r '.path' <<<"$authority_json")" = '.github/workflows/supabase-forward-production-reattestation.yml'
+          elif [[ "$AUTHORITY_MODE" = 'current_state' ]]; then
+            test "$INPUT_CONFIRMATION" = 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF'
+            test "$(jq -r '.path' <<<"$authority_json")" = '.github/workflows/supabase-current-production-state-read-only.yml'
           else
             echo "Unsupported authority mode: $AUTHORITY_MODE" >&2
             exit 1
@@ -216,6 +237,7 @@ jobs:
           node --check scripts/security/supabase-forward-manifest-contract.mjs
           node --check scripts/security/validate-supabase-live-promotion-source.mjs
           node --check scripts/security/validate-supabase-live-reattestation-source.mjs
+          node --check scripts/security/validate-supabase-current-state-source.mjs
           node --check scripts/security/supabase-project-binding.mjs
           node --check scripts/security/supabase-v20-live-fixtures.mjs
           node --check scripts/security/run-supabase-live-tenant-isolation-v4.mjs
@@ -223,7 +245,9 @@ jobs:
           node --check scripts/security/supabase-live-rls-evidence.mjs
           node --check scripts/release/validate-supabase-rls-runtime-evidence.mjs
           node --test tests/security/supabase-project-binding.test.mjs
+          node --test tests/security/supabase-live-rls-authority-binding.test.mjs
           node --test tests/security/supabase-live-rls-reattestation-authority.test.mjs
+          node --test tests/security/supabase-current-production-state-read-only.test.mjs
 
       - name: Verify live inventory helper privilege boundary contract
         shell: bash
@@ -243,7 +267,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf source-promotion source-reattestation
+          rm -rf source-promotion source-reattestation source-current-state
           if [[ "$AUTHORITY_MODE" = 'promotion' ]]; then
             mkdir -p source-promotion
             gh run download "$AUTHORITY_RUN_ID" \
@@ -269,6 +293,15 @@ jobs:
             acceptance="$(find source-reattestation -type f -name 'production-acceptance.json' -print -quit)"
             test -n "$acceptance"
             node scripts/security/validate-supabase-live-reattestation-source.mjs "$acceptance" "$TARGET_SHA" "$AUTHORITY_RUN_ID"
+          elif [[ "$AUTHORITY_MODE" = 'current_state' ]]; then
+            mkdir -p source-current-state
+            gh run download "$AUTHORITY_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "supabase-current-production-state-read-only-${TARGET_SHA}" \
+              --dir source-current-state
+            current_state="$(find source-current-state -type f -name 'current-production-state.json' -print -quit)"
+            test -n "$current_state"
+            node scripts/security/validate-supabase-current-state-source.mjs "$current_state" "$TARGET_SHA" "$AUTHORITY_RUN_ID" "$EXPECTED_SUPABASE_PROJECT_DIGEST"
           else
             exit 1
           fi

@@ -6,7 +6,7 @@ const runtime = readFileSync('scripts/identity/run-scim-runtime-proof.mjs', 'utf
 const validator = readFileSync('scripts/identity/check-scim-runtime-evidence.mjs', 'utf8');
 const lifecycleWorkflow = readFileSync('.github/workflows/identity-access-lifecycle-proof.yml', 'utf8');
 const laneContracts = readFileSync('scripts/enterprise/runtime-lane-contracts.mjs', 'utf8');
-const manifest = readFileSync('docs/security/evidence/enterprise-runtime-campaign-manifest.json', 'utf8');
+const manifest = JSON.parse(readFileSync('docs/security/evidence/enterprise-runtime-campaign-manifest.json', 'utf8')) as { workflows: Array<{ id: string; workflow: string; required: boolean; classification?: string }> };
 
 describe('SCIM runtime proof megapack', () => {
   it('uses protected manual exact-main execution without mutable workflow identity', () => {
@@ -83,12 +83,17 @@ describe('SCIM runtime proof megapack', () => {
     }
   });
 
-  it('adds SCIM as a mandatory exact-SHA runtime campaign lane', () => {
+  it('registers SCIM as a conditional exact-SHA runtime campaign lane', () => {
     expect(laneContracts).toContain("'IAM-SCIM'");
     expect(laneContracts).toContain("workflow: 'scim-runtime-proof.yml'");
     expect(laneContracts).toContain("artifactPrefix: 'scim-runtime-proof-'");
     expect(laneContracts).toContain("requiredEvidenceFiles: Object.freeze(['scim-runtime-validation.json'])");
-    expect(manifest).toContain('"id":"IAM-SCIM"');
-    expect(manifest).toContain('"workflow":"scim-runtime-proof.yml"');
+    const lane = manifest.workflows.find((item) => item.id === 'IAM-SCIM');
+    expect(lane).toMatchObject({
+      id: 'IAM-SCIM',
+      workflow: 'scim-runtime-proof.yml',
+      required: false,
+      classification: 'conditional_when_configured',
+    });
   });
 });

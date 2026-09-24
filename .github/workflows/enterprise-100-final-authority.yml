@@ -168,7 +168,9 @@ jobs:
             "$RETAINED_ARTIFACT_ROOT" \
             "$HYDRATED_CLOSURE_ROOT" \
             "$TARGET_SHA"
-      - name: Enforce all Enterprise controls
+      - name: Enforce all internal Enterprise controls and retain strict assurance state
+        env:
+          ENTERPRISE_CLOSURE_ENFORCEMENT: internal
         run: node scripts/release/check-enterprise-100-closure.mjs
       - name: Emit sole final Enterprise authority decision
         if: always()
@@ -181,14 +183,14 @@ jobs:
             echo '## RISCK COMPLY Enterprise 100 Final Authority'
             echo
             if [ -f release-validation/enterprise-final-authority.json ]; then
-              jq -r '"- Decision: \(.decision)\n- Production: \(.productionDecision)\n- Technical release: \(.technicalReleaseClosure)\n- Release SHA: `\(.releaseSha)`\n- Accepted controls: \(.acceptedControls)/\(.totalControls)"' \
+              jq -r '"- Decision: \(.decision)\n- Strict assurance: \(.enterpriseStrictDecision // "ENTERPRISE_STRICT: UNKNOWN")\n- Production: \(.productionDecision)\n- Technical release: \(.technicalReleaseClosure)\n- Release SHA: `\(.releaseSha)`\n- Accepted controls: \(.acceptedControls)/\(.totalControls)"' \
                 release-validation/enterprise-final-authority.json
             else
               echo '- Decision: NO_PASS_YET'
               echo "- Release SHA: \`$TARGET_SHA\`"
             fi
             if [ -f "$FINAL_AUTHORITY_SOURCE_ROOT/enterprise-final-authority-source.json" ]; then
-              jq -r '"- Direct domain sources: \(.collectedProducerCount)/\(.requiredProducerCount)\n- Missing direct sources: \(.missingProducerIds | join(\", \"))"' \
+              jq -r '"- Direct domain sources: \(.collectedProducerCount)/\(.requiredProducerCount)\n- Internal domain sources: \(.internalCollectedProducerCount // .collectedProducerCount)/\(.internalRequiredProducerCount // .requiredProducerCount)\n- Missing internal sources: \((.internalMissingProducerIds // .missingProducerIds) | join(\", \"))\n- Missing strict sources: \(.missingProducerIds | join(\", \"))"' \
                 "$FINAL_AUTHORITY_SOURCE_ROOT/enterprise-final-authority-source.json"
             fi
           } >> "$GITHUB_STEP_SUMMARY"

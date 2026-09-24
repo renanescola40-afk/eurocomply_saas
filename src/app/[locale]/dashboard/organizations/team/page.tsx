@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { Clock3, ShieldCheck, UserPlus, Users } from 'lucide-react';
 
 import { EnterpriseAccessConsole } from '@/components/team/enterprise-access-console';
+import { TenantMfaPolicyCard } from '@/components/security/tenant-mfa-policy-card';
 import { TeamSettingsSection } from '@/components/team/team-settings-section';
 import { isWithinPlanLimit } from '@/lib/billing/entitlements';
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
@@ -93,6 +94,7 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
         </section>
 
         <div className="space-y-6">
+          <TenantMfaPolicyCard locale={locale} />
           <TeamSettingsSection
             locale={locale}
             members={members}

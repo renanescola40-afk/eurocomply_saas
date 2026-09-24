@@ -134,6 +134,51 @@ function removeStaleEvidence(root) {
   rmSync(join(root, SCORECARD_EVIDENCE_PATH), { force: true });
 }
 
+function writeOpenAuthRbacPlaceholder(root, targetSha) {
+  const output = join(root, SOURCE_EVIDENCE_PATH);
+  const generatedAt = new Date().toISOString();
+  const evidence = {
+    schemaVersion: '1.0',
+    evidenceItem: 'enterprise-final-readiness-validation',
+    status: 'Open',
+    outcome: 'no_go',
+    reviewer: 'RISCK COMPLY release automation',
+    reviewedAt: generatedAt,
+    generatedAt,
+    primaryAuthStack: 'supabase-auth',
+    scope: 'final-auth-rbac-tenant-isolation-review',
+    summary: `No successful exact-SHA Auth/RBAC runtime proof exists for ${targetSha}; enterprise production remains blocked.`,
+    redactionConfirmation: 'Redaction confirmed for runtime evidence.',
+    releaseDecision: 'No-Go',
+    targetSha,
+    productionGate: 'blocked until exact-SHA Auth/RBAC runtime evidence is produced',
+    evidenceLocations: [
+      '.github/workflows/auth-rbac-runtime-proof.yml',
+    ],
+    completionRule: 'Complete only after a successful exact-SHA Auth/RBAC runtime proof is produced and validated.',
+    blockingEvidence: {
+      reason: 'exact_sha_runtime_run_missing',
+      requiredWorkflow: '.github/workflows/auth-rbac-runtime-proof.yml',
+      targetSha,
+    },
+    goNoGo: {
+      status: 'NO_GO',
+      reason: 'exact_sha_runtime_run_missing',
+    },
+    evidenceIntegrity: {
+      placeholderOnly: true,
+      realRuntimeEvidenceAttached: false,
+      customerFacingProof: false,
+      containsSensitiveValues: false,
+    },
+    validationCommands: [
+      { command: 'npm run security:step-up', status: 'required' },
+    ],
+  };
+  mkdirSync(dirname(output), { recursive: true });
+  writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+}
+
 export async function fetchAuthRbacEvidence({
   root,
   repository,
@@ -161,7 +206,8 @@ export async function fetchAuthRbacEvidence({
   const run = selectExactShaRun(runs, targetSha, sourceRunId);
   if (!run) {
     if (required) throw new Error('exact_sha_runtime_run_missing');
-    console.log(`Auth/RBAC evidence remains open: no successful exact-SHA runtime run for ${targetSha}.`);
+    writeOpenAuthRbacPlaceholder(root, targetSha);
+    console.log(`Auth/RBAC evidence remains open: no successful exact-SHA runtime run for ${targetSha}; fail-closed placeholder written.`);
     return { found: false, targetSha };
   }
   if (run.path !== WORKFLOW_PATH) throw new Error('runtime_workflow_path_invalid');

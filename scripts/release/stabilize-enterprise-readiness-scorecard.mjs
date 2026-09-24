@@ -374,7 +374,10 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   }
 
   if (!settledRuns) {
-    throw new Error('Material evidence producers did not reach a bounded quiet terminal state');
+    writeOutput('dispatched', false);
+    writeOutput('reason', 'producers-unsettled');
+    writeOutput('target_sha', targetSha);
+    return { dispatched: false, reason: 'producers-unsettled', targetSha };
   }
 
   let mainSha = await currentMainSha(repository);
@@ -388,7 +391,10 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   let refreshedRuns = await listExactShaRuns(repository, targetSha);
   let refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha);
   if (hasActiveProducer(refreshedUpstream)) {
-    throw new Error('A material evidence producer became active after the quiet-state check; refusing to dispatch');
+    writeOutput('dispatched', false);
+    writeOutput('reason', 'producer-reactivated');
+    writeOutput('target_sha', targetSha);
+    return { dispatched: false, reason: 'producer-reactivated', targetSha };
   }
 
   upstreamCutoffMs = latestProducerTimestamp(refreshedUpstream);
@@ -413,7 +419,10 @@ export async function stabilize({ now = () => Date.now() } = {}) {
   refreshedRuns = await listExactShaRuns(repository, targetSha);
   refreshedUpstream = exactShaUpstreamProducerRuns(refreshedRuns, targetSha);
   if (hasActiveProducer(refreshedUpstream)) {
-    throw new Error('A material evidence producer became active while the production gate was settling; refusing to dispatch');
+    writeOutput('dispatched', false);
+    writeOutput('reason', 'producer-reactivated-during-gate');
+    writeOutput('target_sha', targetSha);
+    return { dispatched: false, reason: 'producer-reactivated-during-gate', targetSha };
   }
 
   upstreamCutoffMs = latestProducerTimestamp(refreshedUpstream);

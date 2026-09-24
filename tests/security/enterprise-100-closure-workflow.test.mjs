@@ -35,8 +35,11 @@ test('closure generates exact-SHA Vercel Production deployment evidence directly
   assert.match(workflow, /Generate direct exact-SHA production deployment evidence/);
   assert.match(workflow, /write-github-vercel-production-deployment-evidence\.mjs/);
   assert.match(workflow, /direct-production-deployment\/release-validation\/production-deployment\.json/);
+  assert.match(workflow, /VERCEL_AUTOMATION_BYPASS_SECRET: \$\{\{ secrets\.VERCEL_AUTOMATION_BYPASS_SECRET \}\}/);
   assert.match(workflow, /PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS: '12'/);
   assert.match(workflow, /PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'/);
+  assert.match(workflow, /retained_proof=.*find "\$RETAINED_ARTIFACT_ROOT".*production-deployment\.json/);
+  assert.match(workflow, /Authorized retained production deployment proof already exists/);
   assert.match(workflow, /test -f "\$proof"/);
   assert.match(deploymentProof, /findExactShaVercelProductionDeployment/);
   assert.doesNotMatch(deploymentProof, /findExactShaVercelCommitStatus/);
@@ -153,7 +156,8 @@ test('closure execution requires the exact current main SHA rather than merely a
 
 test('closure summaries use valid jq string programs', () => {
   assert.match(workflow, /jq -r '"- Status:/);
-  assert.match(workflow, /jq -r '"- Decision:/);
+  assert.match(workflow, /jq -r '"- Internal decision:/);
+  assert.match(workflow, /Strict decision:/);
   assert.match(workflow, /jq -r '"- Hydrated retained evidence:/);
   assert.match(workflow, /errorCode \/\/ "none"/);
   assert.doesNotMatch(workflow, /\\"none\\"/);

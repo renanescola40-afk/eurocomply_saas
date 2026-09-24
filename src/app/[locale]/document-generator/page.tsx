@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Download, FileCheck2, FileText } from 'lucide-react';
+import { PrintableReportButton } from '@/components/documents/printable-report-button';
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { buildAiGovernanceReadiness } from '@/server/ai-governance/readiness';
@@ -36,9 +37,15 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const [systems, incidents, entitlements] = organization
-    ? await Promise.all([listAiSystems(organization.id), listAiIncidents(organization.id), getOrganizationEntitlements(organization.id)])
-    : [[], [], null];
+  if (!organization) {
+    redirect(`/${locale}/onboarding`);
+  }
+
+  const [systems, incidents, entitlements] = await Promise.all([
+    listAiSystems(organization.id),
+    listAiIncidents(organization.id),
+    getOrganizationEntitlements(organization.id),
+  ]);
   const canViewExecutiveReports = entitlements ? isPlanAtLeast(entitlements.plan, 'business') : false;
   const readiness = buildAiGovernanceReadiness({ locale, systems, incidents });
   const hasInventory = systems.length > 0;
@@ -51,12 +58,11 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
     { title: 'Vendor assessment memo', description: `${readiness.totals.vendorLinkedSystems} AI system${readiness.totals.vendorLinkedSystems === 1 ? '' : 's'} currently include vendor/model context.`, href: '/vendor-assurance', status: hasInventory ? 'ready' : 'needs inventory' },
   ];
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage="AI Governance" />
-      <section className="mx-auto max-w-7xl px-6 py-8">
+  const content = (
+    <div className="min-h-0 bg-transparent">
+      <section className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-6 print:hidden lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <Badge variant="outline" className="rounded-full"><FileText className="mr-1 h-3.5 w-3.5" />{t.badge}</Badge>
               <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">{t.title}</h1>
@@ -64,7 +70,7 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
             </div>
             <div className="flex flex-wrap gap-3">
               {canViewExecutiveReports ? (
-                <Button asChild className="rounded-full"><Link href="#generated-report">{t.print}<Download className="h-4 w-4" /></Link></Button>
+                <PrintableReportButton label={t.print} />
               ) : (
                 <Button asChild className="rounded-full"><Link href={`/${locale}/pricing`}>Upgrade to print report<Download className="h-4 w-4" /></Link></Button>
               )}
@@ -73,12 +79,12 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
           </div>
 
           {!hasInventory ? (
-            <div className="mt-6 rounded-3xl border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+            <div className="mt-6 rounded-3xl border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground print:hidden">
               <FileCheck2 className="mx-auto mb-3 h-8 w-8" />{t.empty}
             </div>
           ) : null}
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-6 grid gap-4 print:hidden md:grid-cols-2 xl:grid-cols-3">
             {documents.map((document) => (
               <Link key={document.title} href={`/${locale}${document.href}`} className="group rounded-3xl border bg-background p-5 shadow-sm transition hover:border-primary/40 hover:bg-muted/20">
                 <div className="flex items-start justify-between gap-3">
@@ -92,7 +98,7 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
           </div>
 
           {canViewExecutiveReports ? (
-            <section id="generated-report" className="mt-6 rounded-3xl border bg-background p-6 shadow-sm print:shadow-none">
+            <section id="generated-report" className="mt-6 rounded-3xl border bg-background p-6 shadow-sm print:mt-0 print:border-0 print:p-0 print:shadow-none">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold tracking-tight">{organization?.name ?? 'Organization'} · AI Governance Report</h2>
@@ -110,7 +116,7 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
               </div>
             </section>
           ) : (
-            <div id="generated-report" className="mt-6">
+            <div id="generated-report" className="mt-6 print:hidden">
               <UpgradeRequiredCard
                 locale={locale}
                 requiredPlan="Business"
@@ -121,6 +127,8 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
           )}
         </div>
       </section>
-    </main>
+    </div>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }

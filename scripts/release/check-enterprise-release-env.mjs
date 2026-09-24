@@ -10,6 +10,9 @@ const releaseTarget = process.env.RELEASE_TARGET || 'enterprise';
 const commitSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
 const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null;
 const allowedReleaseTargets = new Set(['enterprise', 'production', 'public-production']);
+const rollbackResolutionMode = String(process.env.RELEASE_ROLLBACK_RESOLUTION_MODE || 'manual').trim().toLowerCase();
+const automaticRollback = rollbackResolutionMode === 'automatic';
+const automaticRollbackValidated = automaticRollback && process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
 
 function hasAny(names) {
   return names.some((name) => Boolean(String(process.env[name] || '').trim()));
@@ -86,15 +89,27 @@ const checks = [
   group('sentrySourceMapUploadConfigured', sentrySourceMapUploadRequired, hasAll(['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN']), {
     requiredForEnterprise: sentrySourceMapUploadRequired,
   }, 'Set Sentry org, project and auth token for enterprise source-map release validation.'),
-  group('rollbackTargetConfigured', true, hasAny(['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL']), {
-    acceptedSources: ['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL'],
-  }, 'Set the last-known-good deployment URL or rollback target URL.'),
-  group('rollbackCommitConfigured', true, hasAny(['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA']), {
-    acceptedSources: ['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA'],
-  }, 'Set the last-known-good commit SHA associated with the rollback target.'),
-  group('rollbackFunctionalValidationFlagConfigured', true, process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true', {
+  group('rollbackTargetConfigured', true, automaticRollbackValidated || hasAny(['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL']), {
+    resolutionMode: rollbackResolutionMode,
+    deferredToRuntimeResolver: automaticRollback,
+    acceptedSources: automaticRollback ? [] : ['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL'],
+  }, automaticRollback
+    ? 'Automatic rollback must be successfully resolved and health-validated before enterprise preflight.'
+    : 'Set the last-known-good deployment URL or rollback target URL.'),
+  group('rollbackCommitConfigured', true, automaticRollbackValidated || hasAny(['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA']), {
+    resolutionMode: rollbackResolutionMode,
+    deferredToRuntimeResolver: automaticRollback,
+    acceptedSources: automaticRollback ? [] : ['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA'],
+  }, automaticRollback
+    ? 'Automatic rollback resolver must bind a distinct previous deployment before enterprise preflight.'
+    : 'Set the last-known-good commit SHA associated with the rollback target.'),
+  group('rollbackFunctionalValidationFlagConfigured', true, automaticRollbackValidated || (!automaticRollback && process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true'), {
+    resolutionMode: rollbackResolutionMode,
+    deferredToRuntimeResolver: automaticRollback,
     requiredValue: 'RELEASE_ROLLBACK_TARGET_VALIDATED=true',
-  }, 'Set RELEASE_ROLLBACK_TARGET_VALIDATED=true only after the rollback target has been smoke-tested.'),
+  }, automaticRollback
+    ? 'Automatic rollback resolver must validate provider identity and health before enterprise preflight.'
+    : 'Set RELEASE_ROLLBACK_TARGET_VALIDATED=true only after the rollback target has been smoke-tested.'),
   group('enterpriseUploadScannerConfigured', enterpriseScannerRequired, !enterpriseScannerRequired || (scannerProvider && !['none', 'disabled', 'not_configured'].includes(scannerProvider) && scannerTransportReady), {
     requiredForEnterprise: enterpriseScannerRequired,
     transport: scannerProvider ? (['clamav', 'clamd'].includes(scannerProvider) ? 'clamav' : 'http') : 'missing',

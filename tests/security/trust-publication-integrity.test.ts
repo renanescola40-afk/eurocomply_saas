@@ -31,10 +31,17 @@ describe('canonical Trust Center publication integrity', () => {
     const publicPack = read('src/lib/trust/procurement-pack.ts');
     const providerRegister = read('docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md');
 
-    expect(publicPack).toContain("PROCUREMENT_PACK_VERSION = '2026-09-09'");
+    expect(publicPack).toContain("PROCUREMENT_PACK_VERSION = '2026-09-24'");
     expect(publicPack).toContain('Current V41 selected migrations are present live 13/13');
     expect(publicPack).toContain('Exact-current-main Production binding and protected runtime acceptance remain evidence-required');
     expect(publicPack).toContain('no legitimate LIVE subscription authority is currently credited');
+    expect(publicPack).toContain("id: 'data-lifecycle'");
+    expect(publicPack).toContain("id: 'dpa-subprocessors'");
+    expect(publicPack).toContain("id: 'international-transfers'");
+    expect(publicPack).toContain("id: 'legal-publication'");
+    expect(publicPack).toContain("id: 'ai-gdpr-documentation'");
+    expect(publicPack).toContain("id: 'security-assessment'");
+    expect(publicPack).toContain("{ path: '/transfers', title: 'International transfers' }");
     expect(publicPack).not.toContain('governed V21 Production promotion remains separate and currently unapplied');
     expect(publicPack).not.toContain('Current direct Production deployment binding is proven on the current release');
 

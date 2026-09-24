@@ -24,6 +24,21 @@ const PRODUCERS = Object.freeze({
       artifactPatterns: Object.freeze(['production-runtime-proof-*']),
     }),
     Object.freeze({
+      workflow: 'eu-ai-act-final-runtime-closeout.yml',
+      workflowPath: '.github/workflows/eu-ai-act-final-runtime-closeout.yml',
+      artifactPatterns: Object.freeze(['eu-ai-act-final-runtime-closeout-*']),
+    }),
+    Object.freeze({
+      workflow: 'branch-protection-runtime-proof.yml',
+      workflowPath: '.github/workflows/branch-protection-runtime-proof.yml',
+      artifactPatterns: Object.freeze(['branch-protection-runtime-proof-*']),
+    }),
+    Object.freeze({
+      workflow: 'production-provider-runtime-proof.yml',
+      workflowPath: '.github/workflows/production-provider-runtime-proof.yml',
+      artifactPatterns: Object.freeze(['production-provider-runtime-proof-*']),
+    }),
+    Object.freeze({
       workflow: 'enterprise-recovery-drill.yml',
       workflowPath: '.github/workflows/enterprise-recovery-drill.yml',
       artifactPatterns: Object.freeze(['enterprise-recovery-*']),

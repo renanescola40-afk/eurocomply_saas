@@ -17,6 +17,7 @@ describe('TEN-RLS Supabase authority resolution', () => {
       release_sha: SHA,
       promotion_run_id: '12345',
       reattestation_run_id: '',
+      current_state_run_id: '',
       confirmation: 'EXECUTE_POST_FORWARD_PROMOTION_RUNTIME_PROOF',
     });
   });
@@ -32,7 +33,26 @@ describe('TEN-RLS Supabase authority resolution', () => {
       release_sha: SHA,
       promotion_run_id: '',
       reattestation_run_id: '67890',
+      current_state_run_id: '',
       confirmation: 'EXECUTE_POST_REATTESTATION_RUNTIME_PROOF',
+    });
+  });
+
+
+  it('resolves a canonical current Production state read-only authority', () => {
+    const inputs = resolveLaneInputs(lane.inputs, {
+      releaseSha: SHA,
+      recoveryRollbackConfirmation: '',
+      supabasePromotionRunId: '',
+      supabaseReattestationRunId: '',
+      supabaseCurrentStateRunId: '24680',
+    });
+    expect(inputs).toEqual({
+      release_sha: SHA,
+      promotion_run_id: '',
+      reattestation_run_id: '',
+      current_state_run_id: '24680',
+      confirmation: 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF',
     });
   });
 
@@ -42,6 +62,7 @@ describe('TEN-RLS Supabase authority resolution', () => {
       recoveryRollbackConfirmation: '',
       supabasePromotionRunId: '',
       supabaseReattestationRunId: '',
+      supabaseCurrentStateRunId: '',
     })).toThrow(/Exactly one/);
   });
 
@@ -51,6 +72,7 @@ describe('TEN-RLS Supabase authority resolution', () => {
       recoveryRollbackConfirmation: '',
       supabasePromotionRunId: '12345',
       supabaseReattestationRunId: '67890',
+      supabaseCurrentStateRunId: '',
     })).toThrow(/Exactly one/);
   });
 });

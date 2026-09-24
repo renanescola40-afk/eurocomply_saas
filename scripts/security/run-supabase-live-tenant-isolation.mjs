@@ -74,6 +74,27 @@ export function resolveAuthorityBinding(env = process.env) {
     };
   }
 
+  if (mode === 'current_state') {
+    if (!/^\d+$/.test(authorityRunId)) {
+      return { valid: false, reason: 'AUTHORITY_RUN_ID is not bound to the current-state authority' };
+    }
+    if (confirmation !== 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF') {
+      return { valid: false, reason: 'current-state authority confirmation is invalid' };
+    }
+    if (promotionRunId) {
+      return { valid: false, reason: 'legacy promotion binding must remain empty for current-state authority' };
+    }
+    return {
+      valid: true,
+      mode,
+      runId: authorityRunId,
+      // The v4 runner requires a numeric compatibility guard. In current-state
+      // mode this value identifies the current-state authority run only and MUST
+      // NOT be interpreted as historical promotion lineage.
+      compatibilityPromotionRunId: authorityRunId,
+    };
+  }
+
   return { valid: false, reason: `unsupported authority mode: ${mode}` };
 }
 

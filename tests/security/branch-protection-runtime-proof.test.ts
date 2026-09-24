@@ -107,9 +107,20 @@ describe('exact-SHA branch protection runtime proof', () => {
     expect(workflow).toContain('release_sha:');
     expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
     expect(workflow).toContain('persist-credentials: false');
-    expect(workflow).toContain('targetSha !== checkedOutSha || targetSha !== currentMainSha');
-    expect(workflow).toContain('github.rest.repos.getBranchProtection');
-    expect(workflow).toContain('core.setFailed(evidence.summary)');
+    expect(workflow).toContain('generate-branch-protection-ruleset-evidence.mjs');
+    expect(workflow).toContain('GITHUB_TOKEN: ${{ github.token }}');
+
+    const generator = readFileSync('scripts/security/generate-branch-protection-ruleset-evidence.mjs', 'utf8');
+    expect(generator).toContain("git', ['ls-remote', 'origin', 'refs/heads/main']");
+    expect(generator).toContain('/rulesets');
+    expect(generator).toContain("const githubToken = String(process.env.GITHUB_TOKEN || '').trim()");
+    expect(generator).toContain("Authorization: \`Bearer \${githubToken}\`");
+    expect(generator).toContain("if (![401, 403, 404].includes(authenticated.status))");
+    expect(generator).toContain("source: 'github-api-repository-rulesets-fallback'");
+    expect(generator).toContain("classicProtectionApiFailure:");
+    expect(generator).toContain("rawApiPayloadStored: false");
+    expect(generator).toContain("accessTokensStored: false");
+    expect(generator).toContain("if (!complete) process.exitCode = 1");
     expect(workflow).toContain('check-generated-branch-protection-evidence.mjs');
     expect(workflow).toContain('if: always()');
     expect(workflow).not.toContain('pull_request_target');

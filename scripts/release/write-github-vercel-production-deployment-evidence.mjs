@@ -16,6 +16,7 @@ const EXPECTED_REF = 'main';
 const EXPECTED_ENVIRONMENT = 'production';
 const EXPECTED_VERCEL_ACTOR = 'vercel[bot]';
 const EXPECTED_VERCEL_HOST_PREFIX = 'eurocomply-saas-';
+const EXPECTED_CANONICAL_PRODUCTION_URL = 'https://www.risckcomply.com';
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
@@ -188,6 +189,7 @@ export async function findExactShaVercelProductionDeployment({
 export async function probeExactDeploymentHealth({
   publicUrl,
   protectionBypassSecret = '',
+  healthcheckToken = '',
   fetchImpl = globalThis.fetch,
 }) {
   let healthUrl;
@@ -235,6 +237,9 @@ export async function probeExactDeploymentHealth({
   const noStore = /\bno-store\b/i.test(String(response.headers.get('cache-control') ?? ''));
   const bodyStatus = String(body?.status ?? '');
   const location = String(response.headers.get('location') ?? '');
+  const serverHeader = String(response.headers.get('server') ?? '').trim().toLowerCase();
+  const vercelRequestId = String(response.headers.get('x-vercel-id') ?? '').trim();
+  const vercelProviderMarked = serverHeader === 'vercel' && vercelRequestId.length > 0;
   let blockedByVercelProtection = false;
   if (response.status === 302 && location) {
     try {
@@ -253,18 +258,98 @@ export async function probeExactDeploymentHealth({
     noStore,
     protectionBypassUsed: Boolean(bypassSecret),
     blockedByVercelProtection,
+    vercelProviderMarked,
+  };
+}
+
+export async function probeCanonicalReleaseHealth({
+  publicUrl,
+  targetSha,
+  healthcheckToken,
+  fetchImpl = globalThis.fetch,
+}) {
+  const token = String(healthcheckToken ?? '').trim();
+  if (!token || !FULL_SHA.test(String(targetSha ?? '').toLowerCase())) {
+    return {
+      passed: false,
+      path: '/api/ready/release',
+      status: 0,
+      bodyStatus: null,
+      noStore: false,
+      releaseShaMatched: false,
+      canonicalFallbackUsed: true,
+    };
+  }
+
+  let releaseUrl;
+  try {
+    releaseUrl = new URL('/api/ready/release', publicUrl);
+  } catch {
+    return {
+      passed: false,
+      path: '/api/ready/release',
+      status: 0,
+      bodyStatus: null,
+      noStore: false,
+      releaseShaMatched: false,
+      canonicalFallbackUsed: true,
+    };
+  }
+
+  let response;
+  try {
+    response = await fetchImpl(releaseUrl, {
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'risck-comply-production-release-proof/1.0',
+      },
+    });
+  } catch {
+    return {
+      passed: false,
+      path: '/api/ready/release',
+      status: 0,
+      bodyStatus: null,
+      noStore: false,
+      releaseShaMatched: false,
+      canonicalFallbackUsed: true,
+    };
+  }
+
+  const body = response.ok ? await readBoundedJson(response, 64 * 1024) : null;
+  if (!response.ok) await response.body?.cancel().catch(() => undefined);
+  const noStore = /\bno-store\b/i.test(String(response.headers.get('cache-control') ?? ''));
+  const bodyStatus = String(body?.status ?? '');
+  const runtimeSha = String(body?.release?.commitSha ?? '').trim().toLowerCase();
+  const releaseShaMatched = runtimeSha === String(targetSha).toLowerCase();
+
+  return {
+    passed: response.status === 200 && bodyStatus === 'ok' && noStore && releaseShaMatched,
+    path: '/api/ready/release',
+    status: response.status,
+    bodyStatus: bodyStatus || null,
+    noStore,
+    releaseShaMatched,
+    canonicalFallbackUsed: true,
   };
 }
 
 function safeHealthEvidence(health) {
   if (!health) return null;
   return {
-    path: '/api/health',
+    path: health.path || '/api/health',
     status: Number(health.status) || 0,
     bodyStatus: health.bodyStatus || null,
     noStore: health.noStore === true,
     protectionBypassUsed: health.protectionBypassUsed === true,
     blockedByVercelProtection: health.blockedByVercelProtection === true,
+    vercelProviderMarked: health.vercelProviderMarked === true,
+    releaseShaMatched: health.releaseShaMatched === true,
+    canonicalFallbackUsed: health.canonicalFallbackUsed === true,
   };
 }
 
@@ -281,6 +366,9 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
       vercelSuccessStatusFound: Boolean(deployment),
       productionHealthOk: health?.passed === true,
       productionHealthNoStore: health?.noStore === true,
+      immutableDeploymentProtectionObserved: health?.blockedByVercelProtection === true,
+      immutableDeploymentAuthBoundaryObserved:
+        [401, 403].includes(Number(health?.status ?? 0)) && health?.vercelProviderMarked === true,
     },
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -288,6 +376,9 @@ function failureEvidence(baseEvidence, blocker, deployment = null, health = null
       githubDeploymentBound: deployment?.source === 'github_deployment_status',
       githubCommitStatusBound: false,
       liveHealthVerified: health?.passed === true,
+      immutableProtectionObserved: health?.blockedByVercelProtection === true,
+      immutableAuthBoundaryObserved:
+        [401, 403].includes(Number(health?.status ?? 0)) && health?.vercelProviderMarked === true,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
@@ -311,6 +402,7 @@ export async function buildProductionDeploymentEvidence({
   targetSha,
   token,
   protectionBypassSecret = '',
+  healthcheckToken = '',
   fetchImpl = globalThis.fetch,
   sleepImpl = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms)),
   apiUrl = DEFAULT_API_URL,
@@ -338,6 +430,7 @@ export async function buildProductionDeploymentEvidence({
   let deployment = null;
   let health = null;
   let immutableProtectionObserved = false;
+  let immutableAuthBoundaryObserved = false;
   const attempts = boundedInteger(maxAttempts, DEFAULT_ATTEMPTS, 1, 60);
   const waitMs = boundedInteger(pollMs, DEFAULT_POLL_MS, 0, 30_000);
 
@@ -364,6 +457,22 @@ export async function buildProductionDeploymentEvidence({
     deployment = immutableAttempt?.deployment ?? null;
     health = immutableAttempt?.health ?? null;
     immutableProtectionObserved = immutableAttempt?.health?.blockedByVercelProtection === true;
+    immutableAuthBoundaryObserved = [401, 403].includes(Number(immutableAttempt?.health?.status ?? 0))
+      && immutableAttempt?.health?.vercelProviderMarked === true;
+    const canonicalFallbackEligible = immutableProtectionObserved || immutableAuthBoundaryObserved;
+
+    if (deployment && canonicalFallbackEligible && !String(protectionBypassSecret ?? '').trim()) {
+      const canonicalHealth = await probeCanonicalReleaseHealth({
+        publicUrl: EXPECTED_CANONICAL_PRODUCTION_URL,
+        targetSha,
+        healthcheckToken,
+        fetchImpl,
+      });
+      if (canonicalHealth.passed) {
+        health = canonicalHealth;
+        break;
+      }
+    }
 
     if (attempt < attempts && waitMs > 0) await sleepImpl(waitMs);
   }
@@ -383,7 +492,9 @@ export async function buildProductionDeploymentEvidence({
     ...baseEvidence,
     status: 'PASS',
     outcome: 'passed',
-    summary: 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.',
+    summary: health?.canonicalFallbackUsed === true
+      ? 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the authenticated canonical release endpoint confirms the same exact SHA with no-store.'
+      : 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.',
     deployment: {
       proofSource: deployment.source,
       id: deployment.deploymentId,
@@ -403,16 +514,19 @@ export async function buildProductionDeploymentEvidence({
       vercelSuccessStatusFound: true,
       productionHealthOk: true,
       productionHealthNoStore: true,
-      immutableDeploymentHealthOk: true,
+      immutableDeploymentHealthOk: health?.canonicalFallbackUsed !== true,
       immutableDeploymentProtectionObserved: immutableProtectionObserved,
-      canonicalProductionHealthFallbackUsed: false,
+      immutableDeploymentAuthBoundaryObserved: immutableAuthBoundaryObserved,
+      canonicalProductionHealthFallbackUsed: health?.canonicalFallbackUsed === true,
     },
     health: {
-      path: '/api/health',
+      path: health.path || '/api/health',
       status: health.status,
       bodyStatus: health.bodyStatus,
       noStore: health.noStore,
-      targetClass: 'immutable_vercel_deployment',
+      targetClass: health?.canonicalFallbackUsed === true
+        ? 'canonical_public_production'
+        : 'immutable_vercel_deployment',
     },
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -423,12 +537,13 @@ export async function buildProductionDeploymentEvidence({
       vercelStatusActorBound: true,
       liveHealthVerified: true,
       immutableProtectionObserved,
+      immutableAuthBoundaryObserved,
       tokenPersisted: false,
       authorizationHeaderStored: false,
       protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
-    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that the immutable deployment /api/health endpoint passed with no-store. Preview deployments are never accepted as Production authority. Generic commit statuses, canonical-domain substitution, arbitrary redirects, protected immutable deployments without an authorized bypass, and unhealthy immutable deployments are never accepted as exact-SHA Production health proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
+    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. Canonical fallback is accepted only through the authenticated /api/ready/release endpoint when it reports the same exact target SHA and only after the immutable Vercel URL is blocked by Vercel protection or a Vercel authentication boundary (401/403); generic public /api/health is never sufficient for exact-SHA substitution. Preview deployments are never accepted as Production authority. Generic commit statuses, arbitrary redirects, SHA-mismatched canonical responses, and unhealthy immutable deployments are never accepted as exact-SHA Production proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
   };
 }
 
@@ -437,6 +552,7 @@ async function main() {
   const targetSha = (env('TARGET_SHA') || env('RELEASE_COMMIT_SHA') || env('GITHUB_SHA')).toLowerCase();
   const token = env('GITHUB_TOKEN');
   const protectionBypassSecret = env('VERCEL_AUTOMATION_BYPASS_SECRET');
+  const healthcheckToken = env('HEALTHCHECK_TOKEN');
   const outputPath = resolve(env('PRODUCTION_DEPLOYMENT_EVIDENCE_PATH') || DEFAULT_OUTPUT);
   const maxAttempts = boundedInteger(env('PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS'), DEFAULT_ATTEMPTS, 1, 60);
   const pollMs = boundedInteger(env('PRODUCTION_DEPLOYMENT_PROOF_POLL_MS'), DEFAULT_POLL_MS, 0, 30_000);
@@ -446,6 +562,7 @@ async function main() {
     targetSha,
     token,
     protectionBypassSecret,
+    healthcheckToken,
     maxAttempts,
     pollMs,
   });

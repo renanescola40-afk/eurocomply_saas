@@ -119,3 +119,27 @@ describe('enterprise production provider environment wiring', () => {
     }
   });
 });
+
+
+describe('enterprise automatic rollback wiring', () => {
+  it('keeps Vercel provider credentials step-local', () => {
+    const jobStart = workflow.indexOf('  production-release-validation:');
+    const stepsStart = workflow.indexOf('\n    steps:', jobStart);
+    const jobEnv = workflow.slice(jobStart, stepsStart);
+
+    for (const key of ['VERCEL_TOKEN', 'VERCEL_ORG_ID', 'VERCEL_PROJECT_ID']) {
+      expect(jobEnv).not.toMatch(new RegExp(`^\\s+${key}:`, 'm'));
+      expect(workflow).toContain(`${key}: \${{ secrets.${key} }}`);
+    }
+  });
+
+  it('passes resolver-validated automatic rollback through enterprise preflight and final validation', () => {
+    expect(workflow).toContain('Validate enterprise release environment with resolved rollback');
+    expect(workflow).toContain('RELEASE_ROLLBACK_RESOLUTION_MODE: automatic');
+    expect(workflow).toContain('RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ steps.rollback_resolver.outputs.validated }}');
+    expect(workflow).toContain('RELEASE_ROLLBACK_EXPECTED_PROJECT_DIGEST: ${{ steps.rollback_resolver.outputs.project_digest }}');
+    expect(workflow).toContain('RELEASE_ROLLBACK_EXPECTED_CURRENT_DEPLOYMENT_DIGEST: ${{ steps.rollback_resolver.outputs.current_deployment_digest }}');
+    expect(preflight).toContain('automaticRollbackValidated');
+    expect(preflight).toContain('deferredToRuntimeResolver: automaticRollback');
+  });
+});

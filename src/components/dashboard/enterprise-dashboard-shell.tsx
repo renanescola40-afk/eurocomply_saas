@@ -293,7 +293,7 @@ export function EnterpriseDashboardShell({ children, locale, organizationName, u
           </div>
         </div> : null}
 
-        <main className="min-h-[calc(100vh-72px)] bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.055),transparent_30rem)]">{children}</main>
+        <main className="min-h-[calc(100vh-72px)] bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.055),transparent_30rem)]"><div className="px-4 py-5 md:px-6 md:py-6 xl:px-8 xl:py-8 2xl:px-10 print:p-0">{children}</div></main>
       </div>
     </div>
   );

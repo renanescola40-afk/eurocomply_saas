@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentOrganizationForUser: vi.fn(),
   getOrganizationEntitlements: vi.fn(),
   requireEnterpriseRateLimit: vi.fn(),
+  requireOrganizationAccess: vi.fn(),
 }));
 
 vi.mock('@/server/queries/auth', () => ({
@@ -24,6 +25,7 @@ vi.mock('@/server/security/api-guards', async (importOriginal) => {
   return {
     ...original,
     requireEnterpriseRateLimit: mocks.requireEnterpriseRateLimit,
+    requireOrganizationAccess: mocks.requireOrganizationAccess,
   };
 });
 
@@ -47,6 +49,12 @@ describe('billing entitlements response hardening', () => {
       maxFiscalCountries: Number.NaN,
     });
     mocks.requireEnterpriseRateLimit.mockResolvedValue(null);
+    mocks.requireOrganizationAccess.mockResolvedValue({
+      userId: 'user_123',
+      organizationId: 'org_123',
+      role: 'owner',
+      membership: { role: 'owner' },
+    });
   });
 
   it('returns no-store unauthorized responses', async () => {

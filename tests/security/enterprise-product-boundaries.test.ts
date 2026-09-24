@@ -54,7 +54,8 @@ describe('enterprise product information architecture', () => {
     const shell = read('src/components/dashboard/enterprise-dashboard-shell.tsx');
 
     expect(dashboardLayout).toContain("import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell'");
-    expect(dashboardLayout).toContain("import { requireLicensedCommercialPageAccess } from '@/server/security/commercial-access'");
+    expect(dashboardLayout).toContain("from '@/server/security/commercial-access'");
+    expect(dashboardLayout).toContain('requireLicensedCommercialPageAccess');
     expect(dashboardLayout).not.toContain('getUserOrganizationMemberships');
     expect(dashboardLayout).not.toContain("@/server/queries/organizations");
     expect(dashboardLayout).not.toContain("@/server/queries/current-organization");

@@ -23,6 +23,7 @@ function alternativeSource(spec) {
 export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
   Object.freeze({
     id: 'product-commercial-qa',
+    scope: 'internal',
     workflow: 'product-fria-ephemeral-qa.yml',
     workflowPath: '.github/workflows/product-fria-ephemeral-qa.yml',
     artifact: (sha) => `product-fria-runtime-${sha}`,
@@ -35,6 +36,7 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
   }),
   Object.freeze({
     id: 'billing-product-live-closure',
+    scope: 'external',
     workflow: 'final-billing-product-live-closeout.yml',
     workflowPath: '.github/workflows/final-billing-product-live-closeout.yml',
     artifact: (sha) => `final-billing-product-live-closeout-${sha}`,
@@ -51,6 +53,7 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
   }),
   Object.freeze({
     id: 'supabase-production-acceptance',
+    scope: 'internal',
     workflow: 'supabase-forward-production-acceptance.yml',
     workflowPath: '.github/workflows/supabase-forward-production-acceptance.yml',
     alternativeSources: Object.freeze([
@@ -72,6 +75,7 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
   }),
   Object.freeze({
     id: 'production-provider-runtime',
+    scope: 'internal',
     workflow: 'production-provider-runtime-proof.yml',
     workflowPath: '.github/workflows/production-provider-runtime-proof.yml',
     artifact: (sha) => `production-provider-runtime-proof-${sha}`,
@@ -86,6 +90,7 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
   }),
   Object.freeze({
     id: 'external-security-assurance',
+    scope: 'external',
     workflow: 'external-security-assurance.yml',
     workflowPath: '.github/workflows/external-security-assurance.yml',
     artifact: (sha) => `external-security-assurance-accepted-${sha}`,
@@ -235,6 +240,7 @@ async function collectProducer({ spec, repository, targetSha, token, root }) {
 
       return {
         id: spec.id,
+        scope: spec.scope === 'external' ? 'external' : 'internal',
         status: 'COLLECTED',
         workflow: source.workflowPath,
         runId: run.id,
@@ -250,6 +256,7 @@ async function collectProducer({ spec, repository, targetSha, token, root }) {
 
   return {
     id: spec.id,
+    scope: spec.scope === 'external' ? 'external' : 'internal',
     status: 'MISSING',
     workflow: spec.workflowPath,
     alternativeWorkflows: (spec.alternativeSources || []).map((source) => source.workflowPath),
@@ -259,15 +266,36 @@ async function collectProducer({ spec, repository, targetSha, token, root }) {
   };
 }
 
-export async function collectFinalAuthorityEvidence({ repository, targetSha, token, root } = {}) {
+export async function collectFinalAuthorityEvidence({ repository, targetSha, token, root, collectProducerImpl = collectProducer } = {}) {
   if (!/^[^/]+\/[^/]+$/.test(repository || '')) throw new Error('repository must use owner/name');
   if (!FULL_SHA.test(targetSha || '')) throw new Error('TARGET_SHA must be a lowercase full commit SHA');
   if (!token) throw new Error('GITHUB_TOKEN is required');
 
   await mkdir(root, { recursive: true });
   const producers = [];
-  for (const spec of FINAL_AUTHORITY_PRODUCERS) producers.push(await collectProducer({ spec, repository, targetSha, token, root }));
+  for (const spec of FINAL_AUTHORITY_PRODUCERS) {
+    try {
+      producers.push(await collectProducerImpl({ spec, repository, targetSha, token, root }));
+    } catch (error) {
+      if (spec.scope !== 'external') throw error;
+      producers.push({
+        id: spec.id,
+        scope: 'external',
+        status: 'ERROR',
+        workflow: spec.workflowPath,
+        alternativeWorkflows: (spec.alternativeSources || []).map((source) => source.workflowPath),
+        artifactName: spec.artifact(targetSha),
+        evidenceFile: null,
+        errorCode: 'external_producer_collection_error',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
   const missing = producers.filter((producer) => producer.status !== 'COLLECTED');
+  const internalProducers = producers.filter((producer) => producer.scope !== 'external');
+  const externalProducers = producers.filter((producer) => producer.scope === 'external');
+  const internalMissing = internalProducers.filter((producer) => producer.status !== 'COLLECTED');
+  const externalMissing = externalProducers.filter((producer) => producer.status !== 'COLLECTED');
   const manifest = {
     schema: 'risck-comply.enterprise-final-authority-source.v1',
     generatedAt: new Date().toISOString(),
@@ -278,6 +306,16 @@ export async function collectFinalAuthorityEvidence({ repository, targetSha, tok
     requiredProducerCount: FINAL_AUTHORITY_PRODUCERS.length,
     collectedProducerCount: producers.length - missing.length,
     missingProducerIds: missing.map((producer) => producer.id),
+    internalStatus: internalMissing.length === 0 ? 'Complete' : 'Open',
+    internalOutcome: internalMissing.length === 0 ? 'passed' : 'blocked',
+    internalRequiredProducerCount: internalProducers.length,
+    internalCollectedProducerCount: internalProducers.length - internalMissing.length,
+    internalMissingProducerIds: internalMissing.map((producer) => producer.id),
+    externalStatus: externalMissing.length === 0 ? 'Complete' : 'Open',
+    externalOutcome: externalMissing.length === 0 ? 'passed' : 'blocked',
+    externalRequiredProducerCount: externalProducers.length,
+    externalCollectedProducerCount: externalProducers.length - externalMissing.length,
+    externalMissingProducerIds: externalMissing.map((producer) => producer.id),
     producers,
     evidenceIntegrity: {
       exactShaRequired: true,
@@ -288,6 +326,8 @@ export async function collectFinalAuthorityEvidence({ repository, targetSha, tok
       firstJsonWinsAccepted: false,
       blockedEvidenceAcceptedFromSuccessfulRun: false,
       sensitiveValuesAccepted: false,
+      externalProducerErrorsCanGrantStrictPass: false,
+      externalProducerErrorsAbortInternalEvaluation: false,
     },
   };
   await writeFile(path.join(root, 'enterprise-final-authority-source.json'), `${JSON.stringify(manifest, null, 2)}\n`);

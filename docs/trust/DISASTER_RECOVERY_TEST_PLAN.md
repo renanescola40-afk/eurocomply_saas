@@ -1,6 +1,6 @@
 # Disaster recovery test plan
 
-Status: draft. Must be executed and approved before claiming disaster recovery is tested.
+Status: tabletop executed 2026-09-24; live technical failover/restore remains unexecuted. See `DR_TABLETOP_2026-09-24.md`.
 
 ## Objective
 
@@ -59,4 +59,4 @@ Validate EuroComply's ability to respond to a major service disruption affecting
 
 ## Customer-safe answer while untested
 
-EuroComply has a documented disaster recovery test plan, but a formal DR test has not yet been executed.
+RISCK COMPLY has completed a non-destructive DR tabletop covering outage, rollback, credential compromise and provider degradation. No live failover or measured RTO/RPO is claimed.

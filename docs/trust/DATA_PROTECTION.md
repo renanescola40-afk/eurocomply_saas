@@ -22,9 +22,9 @@ Customer data is intended to be accessed only by authenticated users who are mem
 
 ## Retention
 
-A formal retention policy remains draft and must be reviewed before it is represented contractually. Until a customer-specific retention schedule is approved, customer-safe language should state that Risck comply is designed to support controlled retention workflows, but final periods depend on the signed agreement, operational configuration, and legal review.
+RISCK COMPLY uses a category-specific retention model rather than one universal period. The repository includes retention-policy schema/workflows and GDPR export/delete operations, but final contractual durations remain dependent on the data category, signed agreement, legal/accounting/security requirements and verified provider backup/log lifecycle.
 
-Retention review should cover:
+Retention review covers:
 
 | Data category | Default posture to confirm | Buyer-safe boundary |
 | --- | --- | --- |
@@ -35,11 +35,13 @@ Retention review should cover:
 | Billing metadata | Managed through Stripe and application subscription records | Payment-card details are handled by Stripe, not stored directly by Risck comply |
 | Operational logs | Provider-managed and environment-dependent | Retention and access vary by provider configuration |
 
-Related draft: `docs/trust/RETENTION_POLICY_DRAFT.md`.
+Related controls: `docs/trust/RETENTION_POLICY_DRAFT.md`, `docs/compliance/GDPR_OPERATIONAL_CONTROLS.md` and `docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md`.
 
 ## Export and deletion workflows
 
-The repository includes GDPR export request routes and audit actions for `gdpr.export` and `gdpr.delete_requested`. These support privacy operations, but do not by themselves prove legal compliance, SLA timing, or complete subprocessor handling.
+The repository includes GDPR export/delete request workflows, durable request-state handling and audit actions for privacy operations. These controls support customer/controller assistance and internal accountability, but a product delete event does not prove instantaneous erasure from every provider backup/log copy. Legal holds, accounting records, security evidence and downstream provider lifecycle constraints remain separate.
+
+Buyer-safe language is: RISCK COMPLY supports controlled export/deletion workflows and category-specific retention criteria; exact contractual deletion windows and provider backup effects are stated only where verified and agreed.
 
 ## Subprocessors
 
@@ -48,3 +50,10 @@ Subprocessors are documented in `docs/trust/SUBPROCESSORS.md`. The list must be 
 ## Customer-safe answer
 
 Use bounded language: Risck comply is designed around organization-scoped access, RBAC, RLS migrations, private document handling, audit logging, sensitive configuration management, provider-managed infrastructure, and agreement-dependent retention. Retention and subprocessor commitments must be finalized in the applicable customer agreement.
+
+
+## Data residency and international transfers
+
+The primary Production Supabase project is currently evidenced in `eu-west-1` (Ireland). Other active providers may process or access data from additional locations or global infrastructure. RISCK COMPLY therefore does not make a blanket “EU-only processing” claim.
+
+Use `docs/trust/SUBPROCESSORS.md` and `docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md` for the current provider-by-provider evidence boundary. A provider DPA/SCC framework is not automatically a final flow-level Chapter V conclusion.

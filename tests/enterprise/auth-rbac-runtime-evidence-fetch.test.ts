@@ -162,7 +162,8 @@ describe('Auth RBAC exact-SHA evidence retrieval', () => {
 
     expect(runtimeWorkflow).toContain('push:\n    branches: [main]');
     expect(runtimeWorkflow).toContain('Verify exact current main checkout');
-    expect(runtimeWorkflow).toContain('/commits/main');
+    expect(runtimeWorkflow).toContain('git ls-remote');
+    expect(runtimeWorkflow).toContain('refs/heads/main');
     expect(runtimeWorkflow).toContain('environment: production');
     expect(runtimeWorkflow).toContain('persist-credentials: false');
     expect(runtimeWorkflow).not.toContain('pull_request_target');

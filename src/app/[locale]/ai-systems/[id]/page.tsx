@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
+import { EnterpriseDashboardShell } from '@/components/dashboard/enterprise-dashboard-shell';
 import { Badge } from '@/components/ui/badge';
 import { roleHasPermission } from '@/lib/security/permissions';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
@@ -58,6 +59,9 @@ function getEnterpriseReadinessCopy(locale: string) {
   return locale === 'pt' ? copy.pt : copy.en;
 }
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 export default async function AiSystemDetailPage({ params }: AiSystemDetailPageProps) {
   const { locale, id } = await params;
   const user = await getCurrentUser();
@@ -86,19 +90,21 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
     const membershipOrganization = Array.isArray(membership.organizations) ? membership.organizations[0] : membership.organizations;
     return membershipOrganization?.id === organization.id;
   });
+  const shellRole = currentMembership?.role ?? 'member';
   const canManageAiGovernance = roleHasPermission(currentMembership?.role, 'manage_ai_governance');
+  const userDisplayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
   const businessWorkflowsEnabled = entitlements.licensed && isPlanAtLeast(entitlements.plan, 'business');
   const enterpriseEvidenceEnabled = entitlements.licensed && isPlanAtLeast(entitlements.plan, 'enterprise');
   const t = getEnterpriseReadinessCopy(locale);
   const hasVendor = Boolean(system.vendor_name);
   const requiresRiskWorkflow = system.risk_level === 'high_risk_review' || system.risk_level === 'prohibited_review';
 
-  return (
-    <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
+  const content = (
+    <div className="min-h-0 bg-transparent text-white">
+      <div className="mx-auto max-w-6xl space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <Link href={`/${locale}/ai-systems`} className="text-sm text-white/55 hover:text-white">← AI inventory</Link>
+            <nav aria-label="Breadcrumb" className="text-sm text-slate-500"><Link href={`/${locale}/dashboard/organizations`} className="hover:text-slate-200">Dashboard</Link><span className="px-2">/</span><Link href={`/${locale}/ai-systems`} className="hover:text-slate-200">AI systems</Link><span className="px-2">/</span><span className="text-slate-300">{system.name}</span></nav>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">{system.name}</h1>
             <p className="mt-2 max-w-3xl text-white/55">{system.classification_summary}</p>
           </div>
@@ -224,6 +230,18 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
           </aside>
         </section>
       </div>
-    </main>
+    </div>
+  );
+
+  return (
+    <EnterpriseDashboardShell
+      locale={locale}
+      organizationName={organization.name}
+      userDisplayName={userDisplayName}
+      role={shellRole}
+      selectedPlan={entitlements.plan}
+    >
+      {content}
+    </EnterpriseDashboardShell>
   );
 }
