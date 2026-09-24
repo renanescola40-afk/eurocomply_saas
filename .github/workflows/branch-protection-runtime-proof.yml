@@ -79,6 +79,7 @@ jobs:
     timeout-minutes: 15
     env:
       TARGET_SHA: ${{ inputs.release_sha || github.sha }}
+      BRANCH_PROTECTION_READ_TOKEN: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN }}
       GITHUB_TOKEN: ${{ github.token }}
       BRANCH_PROTECTION_EVIDENCE_PATH: p0-evidence/branch-protection-main.generated.json
 
