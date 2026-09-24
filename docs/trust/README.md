@@ -10,7 +10,7 @@ Status: draft operational trust package. This repository material documents curr
 | SOC 2 | Not audited | RISCK COMPLY does not currently have a SOC 2 Type I or Type II report. SOC 2 readiness is tracked as a roadmap item. |
 | Independent security assessment | Completed with retest boundary open | A third-party black-box web application assessment was completed on 2026-09-12. Original TLS Highs have technical remediation evidence; clean independent retest/terminal assurance remains open. |
 | SSO / SAML | Implemented runtime / buyer activation pending | SAML SSO runtime, production schema/RPCs, provider/domain binding and callback provisioning are implemented. Activation requires buyer-specific IdP/domain configuration and end-to-end validation. |
-| Mandatory MFA | Step-up implemented / tenant-wide policy not complete | Step-up MFA/AAL2 protects platform administration and high-risk actions. Tenant-wide mandatory MFA for every workspace user is not currently claimed as complete. |
+| Mandatory MFA | Implemented / tenant-configurable | Step-up MFA/AAL2 protects platform administration and high-risk actions. Workspace owners/admins can enable a tenant-wide policy that requires an AAL2 session for all workspace access; tenant activation is configurable and is not claimed as enabled for every customer. |
 | Exportable logs | Implemented | Tenant-scoped signed audit evidence-pack export is implemented with authorization, step-up protection, complete paginated audit history and fail-closed audit persistence. |
 | Tenant segregation | Historical live proof / current-release revalidation pending | Organization-scoped RBAC, RLS and historical negative cross-tenant runtime evidence exist. Exact-current-release production isolation must be freshly revalidated before it is represented as current production proof. |
 | Disaster recovery | Tabletop tested | A non-destructive DR tabletop was completed on 2026-09-24. Live failover and measured RTO/RPO are not claimed. |
@@ -31,9 +31,9 @@ Status: draft operational trust package. This repository material documents curr
 4. Live failover evidence before claiming technical failover testing beyond the completed DR tabletop.
 5. Clean independent retest/terminal assurance if required by the buyer or selected assurance target.
 6. Final effective DPA/Privacy/Terms publication and provider/retention facts required by the applicable agreement.
-7. Tenant-wide mandatory MFA implementation and production proof before claiming all workspace users are forced to AAL2.
+7. Tenant-specific activation evidence before claiming a particular customer workspace has the tenant-wide MFA requirement enabled.
 8. External WORM/legally immutable audit retention only if such a control is actually implemented and evidenced.
 
 ## Rule for customer communication
 
-Do not claim ISO 27001, SOC 2, a clean pentest pass, external WORM immutability, 24/7 monitoring, contractual SLA, live failover, tested data restore, measured RTO/RPO, current-release tenant-isolation proof, or tenant-wide mandatory MFA until the corresponding evidence is complete. Tamper-evident hash-chain protection and signed audit export may be described only within their implemented evidence boundary.
+Do not claim ISO 27001, SOC 2, a clean pentest pass, external WORM immutability, 24/7 monitoring, contractual SLA, live failover, tested data restore, measured RTO/RPO, current-release tenant-isolation proof, or tenant-wide MFA as universally enabled across all customer tenants. Tenant-wide MFA capability may be described as implemented and tenant-configurable. Tamper-evident hash-chain protection and signed audit export may be described only within their implemented evidence boundary.
