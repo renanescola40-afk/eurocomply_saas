@@ -77,22 +77,29 @@
     {
       "id": "mandatory-mfa",
       "question": "Do you support mandatory MFA?",
-      "status": "partial_strong",
-      "customerAnswer": "Step-up MFA/AAL2 is implemented for protected platform-administration and high-risk actions. Tenant-wide mandatory MFA policy enforcement for every workspace user is not currently represented as complete.",
+      "status": "implemented_evidence_bound",
+      "customerAnswer": "RISCK COMPLY implements step-up MFA/AAL2 for protected platform-administration and high-risk actions plus a tenant-configurable mandatory MFA policy that can require AAL2 for all workspace access. The capability is implemented; activation for a specific customer tenant is configuration-specific.",
       "evidence": [
         "src/server/security/platform-admin.ts",
-        "src/server/security/step-up-provider.ts",
-        "docs/security/STEP_UP_ROLLOUT_MATRIX.md",
-        "docs/security/evidence/runtime/step-up-mfa-validation.json",
+        "src/server/security/tenant-mfa.ts",
+        "src/server/security/commercial-access.ts",
+        "src/server/security/api-guards.ts",
+        "src/server/security/rbac.ts",
+        "src/app/[locale]/mfa/page.tsx",
+        "src/components/security/tenant-mfa-enrollment.tsx",
+        "src/components/security/tenant-mfa-policy-card.tsx",
+        "supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+        "supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+        "tests/security/tenant-wide-mfa-contract.test.ts",
         "docs/trust/SSO_MFA_ENTERPRISE_PLAN.md"
       ],
       "blockers": [
-        "Tenant-wide organization policy enforcement is not evidenced as complete.",
-        "Exact-release protected runtime MFA proof remains evidence-bound."
+        "Exact-release application deployment must remain current before describing a specific release as production-proven.",
+        "Whether a particular customer tenant has mandatory MFA enabled is a tenant-specific configuration fact."
       ],
       "nextActions": [
-        "Retain step-up/AAL2 claims for protected actions only.",
-        "Treat tenant-wide mandatory MFA as a separate enterprise identity capability until implemented and runtime-proven."
+        "Keep exact-release runtime evidence current.",
+        "State customer-specific activation only from the actual tenant configuration; do not generalize capability into universal adoption."
       ]
     },
     {
