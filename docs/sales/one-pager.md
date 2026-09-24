@@ -1,6 +1,6 @@
-# Risck Comply — One-Pager
+# RISCK COMPLY — Enterprise Product One-Pager
 
-## The European AI compliance control room
+## AI governance and EU AI Act readiness in one operating workspace
 
 Risck Comply helps companies manage AI system inventory, EU AI Act readiness, risk evidence, governance documents and compliance ownership in one place.
 
@@ -52,6 +52,25 @@ European buyers increasingly expect structured answers around AI usage, governan
 4. Prepare an audit/customer evidence pack.
 5. Give leadership a single AI risk and compliance dashboard.
 
+## Enterprise buyer package
+
+For enterprise review, RISCK COMPLY can provide evidence-bound public/controlled materials including:
+
+- Security Questionnaire;
+- Architecture Overview and buyer architecture diagram;
+- Procurement Pack;
+- DPA/subprocessor/transfer review posture;
+- onboarding implementation plan;
+- controlled data-room index.
+
+## Commercial reference
+
+- Essential — €49/month
+- Professional — €149/month
+- Business — €399/month
+- Enterprise — from €990/month, final price by contract
+- No free trial is currently offered.
+
 ## Call to action
 
 Book a 30-minute demo and workflow mapping session.
@@ -60,4 +79,4 @@ Suggested next step: bring your current AI inventory, risk spreadsheet and top 5
 
 ## Important note
 
-Risck Comply supports operational AI compliance management. Enterprise commitments are confirmed through signed commercial and trust documentation.
+RISCK COMPLY supports operational AI governance readiness and evidence management. It is not legal advice and does not guarantee regulatory compliance. Enterprise commitments are confirmed through the applicable signed commercial and trust documentation.
