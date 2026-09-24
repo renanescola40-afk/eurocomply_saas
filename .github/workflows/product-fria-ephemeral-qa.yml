@@ -1,6 +1,8 @@
 name: Product FRIA Ephemeral Runtime QA
 # Evidence-trigger note: touching this workflow on main intentionally produces exact-SHA Product/FRIA acceptance evidence.
 
+# This producer is intentionally push-capable so an exact-main merge can refresh
+# product-commercial QA evidence for the new release SHA without synthetic reuse.
 on:
   workflow_dispatch:
   pull_request:
