@@ -11,6 +11,11 @@ const ALLOWED_STATUSES = new Set([
   'draft',
   'partial',
   'partial_strong',
+  'partial_external',
+  'implemented_evidence_bound',
+  'active_register_partial_facts',
+  'implemented_policy_partial_periods',
+  'tamper_evident_not_worm',
   'available',
   'externally_validated',
 ]);
@@ -37,7 +42,7 @@ try {
   fail(`manifest is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
 }
 
-if (manifest.schemaVersion !== '2026-06-13.enterprise-trust-evidence.v1') {
+if (manifest.schemaVersion !== '2026-09-24.enterprise-trust-evidence.v2') {
   fail('unexpected schemaVersion. Update this check when intentionally changing the trust evidence schema.');
 }
 
@@ -101,7 +106,7 @@ for (const [index, claim] of manifest.claims.entries()) {
   }
 
   const unsafeAnswerPattern = /\b(we have|certified|audited|completed|guaranteed|immutable)\b/i;
-  const draftLikeStatus = new Set(['not_available', 'planned', 'draft', 'partial', 'partial_strong']);
+  const draftLikeStatus = new Set(['not_available', 'planned', 'draft', 'partial', 'partial_strong', 'partial_external']);
   if (draftLikeStatus.has(claim.status) && unsafeAnswerPattern.test(claim.customerAnswer)) {
     fail(`claim ${claim.id} has potentially over-claiming customerAnswer for status ${claim.status}.`);
   }
