@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   exactShaProducerSnapshot,
+  hasPostSnapshotUpstreamProducer,
   productionGateAlreadyCoversEvidence,
   relevantProductionGateRuns,
 } from '../../scripts/release/stabilize-enterprise-readiness-scorecard.mjs';
@@ -53,6 +54,18 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     ];
 
     expect(exactShaProducerSnapshot(runs, targetSha, cutoff).map((run: { id?: number }) => run.id)).toEqual([1]);
+    expect(hasPostSnapshotUpstreamProducer(runs, targetSha, cutoff)).toBe(true);
+    expect(hasPostSnapshotUpstreamProducer([
+      {
+        id: 4,
+        name: 'Enterprise Production Gate',
+        head_sha: targetSha,
+        status: 'queued',
+        conclusion: null,
+        created_at: '2026-09-24T08:00:30Z',
+        updated_at: '2026-09-24T08:00:30Z',
+      },
+    ], targetSha, cutoff)).toBe(false);
   });
 
   it('is syntactically valid JavaScript', () => {
@@ -135,6 +148,7 @@ describe('enterprise readiness scorecard terminal stabilizer', () => {
     expect(script).toContain('Material evidence producers did not reach a bounded quiet terminal state');
     expect(script).toContain('A material evidence producer became active after the quiet-state check; refusing to dispatch');
     expect(script).toContain('A material evidence producer became active while the production gate was settling; refusing to dispatch');
+    expect(script).toContain("writeOutput('reason', 'superseded-by-new-producer')");
   });
 
   it('refreshes the production gate before the scorecard when retained evidence is newer', () => {
