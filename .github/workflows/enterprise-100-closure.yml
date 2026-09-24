@@ -70,6 +70,7 @@ jobs:
     name: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha != github.sha && 'Stale Enterprise closure trigger (ignored)' || 'Enterprise closure contract' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    environment: Production
     env:
       ENTERPRISE_CLOSURE_EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
       RETAINED_ARTIFACT_ROOT: artifacts/enterprise-100-retained-artifacts
