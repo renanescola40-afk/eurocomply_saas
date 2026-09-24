@@ -206,3 +206,21 @@ jobs:
             artifacts/enterprise-final-authority-evidence-root/enterprise-100-evidence-hydration.json
           if-no-files-found: error
           retention-days: 365
+
+  authority-status:
+    name: Final authority terminal status
+    if: ${{ always() && github.event_name != 'pull_request' }}
+    needs: [contract, production-governance, final-authority]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject skipped or failed authority execution
+        env:
+          CONTRACT_RESULT: ${{ needs.contract.result }}
+          GOVERNANCE_RESULT: ${{ needs.production-governance.result }}
+          FINAL_AUTHORITY_RESULT: ${{ needs.final-authority.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$CONTRACT_RESULT" = "success"
+          test "$GOVERNANCE_RESULT" = "success"
+          test "$FINAL_AUTHORITY_RESULT" = "success"

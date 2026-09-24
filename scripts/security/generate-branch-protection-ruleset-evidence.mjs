@@ -53,18 +53,28 @@ async function get(path) {
     'User-Agent': 'risck-comply-ruleset-proof',
   };
 
+  const rulesetDetail = /^\/repos\/[^/]+\/[^/]+\/rulesets\/\d+$/.test(path);
+
   if (githubToken) {
     const authenticated = await fetch(`https://api.github.com${path}`, {
       headers: { ...baseHeaders, Authorization: `Bearer ${githubToken}` },
     });
-    if (authenticated.ok) return authenticated.json();
-    if (![401, 403, 404].includes(authenticated.status)) {
+    if (authenticated.ok) {
+      const authenticatedPayload = await authenticated.json();
+      if (!rulesetDetail || Array.isArray(authenticatedPayload?.bypass_actors)) {
+        return authenticatedPayload;
+      }
+      // A redacted detail response is not combined with another API snapshot.
+      // Fall through and use the anonymous response as one complete observation.
+    } else if (![401, 403, 404].includes(authenticated.status)) {
       throw new Error(`authenticated GitHub API ${authenticated.status}: ${path}`);
     }
   }
 
   const publicResponse = await fetch(`https://api.github.com${path}`, { headers: baseHeaders });
-  if (!publicResponse.ok) throw new Error(`public GitHub API ${publicResponse.status}: ${path}`);
+  if (!publicResponse.ok) {
+    throw new Error(`public GitHub API ${publicResponse.status}: ${path}`);
+  }
   return publicResponse.json();
 }
 

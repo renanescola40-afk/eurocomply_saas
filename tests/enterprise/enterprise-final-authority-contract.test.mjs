@@ -343,3 +343,13 @@ test('Enterprise closure contract has 16 unique controls and requires every dire
   assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 2);
   assert.equal(byId.get('enterprise-runtime-closeout')?.evidence, 'enterprise-runtime-closeout.json');
 });
+
+
+test('final authority workflow cannot report success when authoritative jobs are skipped', () => {
+  const workflow = readFileSync('.github/workflows/enterprise-100-final-authority.yml', 'utf8');
+  assert.match(workflow, /authority-status:/);
+  assert.match(workflow, /Final authority terminal status/);
+  assert.match(workflow, /needs: \[contract, production-governance, final-authority\]/);
+  assert.match(workflow, /test "\$GOVERNANCE_RESULT" = "success"/);
+  assert.match(workflow, /test "\$FINAL_AUTHORITY_RESULT" = "success"/);
+});
