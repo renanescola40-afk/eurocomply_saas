@@ -170,7 +170,16 @@ test.describe('full SaaS functional E2E closure', () => {
       const persistedRow = page.locator('tbody tr').filter({ hasText: uniqueName }).first();
       await expect(persistedRow).toBeVisible({ timeout: 20_000 });
 
-      await persistedRow.getByRole('link', { name: /open detail/i }).click();
+      const detailLink = persistedRow.getByRole('link', { name: /open detail/i });
+      const detailHref = await detailLink.getAttribute('href');
+      expect(detailHref, 'persisted inventory row should expose a concrete detail route').toMatch(/\/ai-systems\/[0-9a-f-]+$/i);
+      await Promise.all([
+        page.waitForURL((url) => /\/ai-systems\/[0-9a-f-]+$/i.test(url.pathname), {
+          timeout: 30_000,
+          waitUntil: 'domcontentloaded',
+        }),
+        detailLink.click(),
+      ]);
       await waitForInteractivePage(page);
       await expectHealthyPage(page, 'AI assessment detail');
       const systemNameInput = page.getByLabel(/system name/i);
