@@ -9,7 +9,10 @@ import {
   classifyLocalizedCommercialRoute,
   INTERNAL_PATHNAME_HEADER,
 } from '@/lib/security/commercial-route-policy';
-import { requireLicensedCommercialPageAccess } from '@/server/security/commercial-access';
+import {
+  requireAuthenticatedOrganizationMfaPageAccess,
+  requireLicensedCommercialPageAccess,
+} from '@/server/security/commercial-access';
 
 export const metadata: Metadata = {
   robots: {
@@ -44,6 +47,7 @@ export default async function DashboardLayout({
   // that are not licensed yet. It owns its purchase/retry state and must never
   // be trapped behind the very subscription it is intended to recover.
   if (commercialRouteClass === 'billing_recovery') {
+    await requireAuthenticatedOrganizationMfaPageAccess({ locale, pathname });
     return runtimeChildren;
   }
 
