@@ -22,7 +22,7 @@ export function TenantMfaEnrollment({ locale, nextPath }: Props) {
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
 
-  const copy = locale === 'pt'
+  const copy = useMemo(() => locale === 'pt'
     ? {
         title: 'Autenticação multifator obrigatória',
         body: 'Este workspace exige MFA. Use uma aplicação autenticadora para continuar.',
@@ -42,7 +42,7 @@ export function TenantMfaEnrollment({ locale, nextPath }: Props) {
         working: 'Verifying…',
         backup: 'After signing in, add a second TOTP factor as a recovery factor.',
         error: 'MFA could not be completed. Try again or contact your administrator.',
-      };
+      }, [locale]);
 
   useEffect(() => {
     let cancelled = false;
