@@ -1,0 +1,19 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20260924141739
+--   provider name: tenant_wide_mfa_terminal
+--
+-- Canonical repository source representing the same migration body:
+--   canonical source version: 20260924142500
+--   local source: supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql
+--   local source SHA-256: 80efaf49c7501ba6966b2b880f77d4f8fa676657bcc8d9f08ddb857d5c17ea4c
+--
+-- Owner-authorized read-only inspection of supabase_migrations.schema_migrations
+-- confirmed the provider ledger version/name and retained SQL statements. Those
+-- statements correspond to the canonical tenant-wide MFA migration above; the
+-- provider recorded a generated ledger timestamp earlier than the reviewed
+-- repository filename timestamp.
+--
+-- This file binds only the observed remote identity to the reviewed local source.
+-- No DDL. No SQL execution. No migration-history repair. No database write.
