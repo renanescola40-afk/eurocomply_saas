@@ -116,7 +116,7 @@
       "acceptedStatuses": [
         "BILLING_PRODUCT_EU_AI_ACT:_PASS"
       ],
-      "scope": "internal"
+      "scope": "external"
     },
     {
       "id": "product-commercial-qa",
