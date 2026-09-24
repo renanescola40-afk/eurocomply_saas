@@ -4,7 +4,7 @@ Status: architecture documentation for enterprise procurement. This document des
 
 ## System shape
 
-EuroComply is a localized Next.js application with a public marketing/trust surface and authenticated organization workspaces. The root route redirects to a locale-specific page. Public routes include pricing, resources, FAQ, about, contact, trust, security, compliance, data processing, SLA, privacy, terms, DPA, subprocessors, and status. Private routes require a Supabase-authenticated session.
+RISCK COMPLY is a localized Next.js application with a public marketing/trust surface and authenticated organization workspaces. The root route redirects to a locale-specific page. Public routes include pricing, resources, FAQ, about, contact, trust, security, compliance, data processing, SLA, privacy, terms, DPA, subprocessors, and status. Private routes require a Supabase-authenticated session.
 
 ```text
 Browser
@@ -52,4 +52,7 @@ Browser
 
 ## Architecture gaps and non-claims
 
-The architecture is designed to support enterprise review, but some evidence remains pending. Live RLS validation must pass against the target Supabase project before claiming verified tenant isolation in production. Formal disaster recovery, backup restore, and third-party penetration test evidence are not complete. ISO 27001 and SOC 2 are not current certifications.
+The architecture is designed to support enterprise review while keeping runtime and third-party assurance evidence-bound. Current release/security gates and tenant-isolation evidence must be evaluated against the applicable accepted release rather than inferred from source presence alone. A third-party black-box web application assessment completed on 2026-09-12; original TLS High findings have technical remediation evidence, while a clean independent retest/terminal assurance remains open. Formal recovery commitments remain limited to current evidence and signed terms. ISO 27001 and SOC 2 are not current certifications.
+
+Buyer diagram: `docs/trust/ENTERPRISE_ARCHITECTURE_DIAGRAM.md`.
+Canonical buyer-readiness matrix: `docs/sales/ENTERPRISE_BUYER_READINESS_2026-09-24.md`.
