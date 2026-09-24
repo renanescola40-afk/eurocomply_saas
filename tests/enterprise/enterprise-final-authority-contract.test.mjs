@@ -113,7 +113,7 @@ test('internal producer collection errors remain fail-closed and abort authority
       token: 'test-token',
       root,
       collectProducerImpl: async ({ spec }) => {
-        if (spec.id === 'billing-product-live-closure') throw new Error('simulated_internal_error');
+        if (spec.id === 'product-commercial-qa') throw new Error('simulated_internal_error');
         return {
           id: spec.id,
           scope: spec.scope === 'external' ? 'external' : 'internal',
@@ -309,10 +309,11 @@ test('Enterprise closure contract has 16 unique controls and requires every dire
   assert.equal(byId.get('production-provider-runtime')?.evidence, 'production-secrets-provider-stores.json');
   assert.equal(byId.get('external-security-assurance')?.evidence, 'external-security-assurance-decision.json');
   assert.equal(byId.get('external-security-assurance')?.scope, 'external');
+  assert.equal(byId.get('billing-product-live-closure')?.scope, 'external');
   assert.equal(byId.get('legal-publication')?.scope, 'external');
   assert.equal(byId.get('final-go-no-go')?.scope, 'external');
   assert.equal(byId.get('enterprise-runtime-closeout')?.scope, 'internal');
-  assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 13);
-  assert.equal(config.controls.filter((control) => control.scope === 'external').length, 3);
+  assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 12);
+  assert.equal(config.controls.filter((control) => control.scope === 'external').length, 4);
   assert.equal(byId.get('enterprise-runtime-closeout')?.evidence, 'enterprise-runtime-closeout.json');
 });
