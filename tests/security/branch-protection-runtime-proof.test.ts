@@ -100,6 +100,48 @@ describe('exact-SHA branch protection runtime proof', () => {
     expect(failures).toContain('access tokens must not be stored');
   });
 
+  it('accepts the public repository-ruleset source only with complete bounded bypass provenance', () => {
+    const evidence = passingEvidence({
+      source: 'github-public-branch-ruleset-workflow',
+      sourceDetails: {
+        sourceMode: 'repository-rulesets',
+        applicableRulesetCount: 2,
+        rulesetIds: [101, 202],
+        rulesetSources: ['Repository', 'Repository'],
+        bypassVisibilityComplete: true,
+        bypassVisibilityMissingRulesetIds: [],
+        bypassActorCount: 0,
+        bypassActors: [],
+        missingRequiredChecks: [],
+        missingProtectionFlags: 0,
+      },
+    });
+
+    expect(validateGeneratedBranchProtectionEvidence(evidence, { expectedSha: SHA })).toEqual([]);
+  });
+
+  it('fails closed when public ruleset bypass visibility is incomplete', () => {
+    const evidence = passingEvidence({
+      source: 'github-public-branch-ruleset-workflow',
+      sourceDetails: {
+        sourceMode: 'repository-rulesets',
+        applicableRulesetCount: 2,
+        rulesetIds: [101, 202],
+        rulesetSources: ['Repository', 'Repository'],
+        bypassVisibilityComplete: false,
+        bypassVisibilityMissingRulesetIds: [202],
+        bypassActorCount: 0,
+        bypassActors: [],
+        missingRequiredChecks: [],
+        missingProtectionFlags: 0,
+      },
+    });
+
+    const failures = validateGeneratedBranchProtectionEvidence(evidence, { expectedSha: SHA });
+    expect(failures).toContain('ruleset bypass-actor visibility must be proven');
+    expect(failures).toContain('ruleset bypass-actor visibility gaps are not allowed');
+  });
+
   it('keeps the protected workflow manual, exact-SHA-bound, and fail closed', () => {
     const workflow = readFileSync('.github/workflows/p0-branch-protection-evidence.yml', 'utf8');
 
@@ -111,6 +153,10 @@ describe('exact-SHA branch protection runtime proof', () => {
     expect(workflow).toContain('const publicJson = async (url) =>');
     expect(workflow).toContain('/rulesets');
     expect(workflow).toContain('active_main_ruleset_not_found');
+    expect(workflow).toContain('const applicableRulesets = []');
+    expect(workflow).toContain('applicableRulesets.push(detail)');
+    expect(workflow).toContain('bypassVisibilityMissingRulesetIds');
+    expect(workflow).toContain('ruleset_bypass_visibility_unproven');
     expect(workflow).toContain('core.setFailed(evidence.summary)');
     expect(workflow).toContain('check-generated-branch-protection-evidence.mjs');
     expect(workflow).toContain('if: always()');
