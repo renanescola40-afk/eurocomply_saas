@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isExpectedMissingSupabaseRelation } from '@/server/supabase/schema-compatibility';
 import {
   buildRegulatoryControlTower,
   type RegulatoryControlTowerInput,
@@ -22,6 +23,13 @@ type StageRow = {
   stage: string;
   updated_at: string | null;
 };
+
+const PRE_PROMOTION_CONTROL_TOWER_RELATIONS = new Set([
+  'ai_provider_data_programs',
+  'ai_annex_iv_packages',
+  'ai_article50_assessments',
+  'ai_conformity_assessments',
+]);
 
 function throwQueryError(area: string, error: { code?: string } | null) {
   console.warn('[regulatory-control-tower] query_failed', {
@@ -133,7 +141,14 @@ export async function getRegulatoryControlTowerSnapshot(organizationId: string) 
   ] as const;
 
   for (const [area, result] of results) {
-    if (result.error) throwQueryError(area, result.error);
+    if (!result.error) continue;
+
+    if (PRE_PROMOTION_CONTROL_TOWER_RELATIONS.has(area) && isExpectedMissingSupabaseRelation(result.error)) {
+      console.info('[regulatory-control-tower] module_not_promoted', { area, code: result.error.code ?? 'unknown' });
+      continue;
+    }
+
+    throwQueryError(area, result.error);
   }
 
   const input: RegulatoryControlTowerInput = {

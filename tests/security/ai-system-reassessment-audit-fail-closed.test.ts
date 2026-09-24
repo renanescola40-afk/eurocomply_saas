@@ -14,12 +14,28 @@ describe('AI-system reassessment audit persistence', () => {
     expect(source).toContain("return noStoreJson({ error: 'ai_system_reassessment_audit_unavailable' }, { status: 503 });");
 
     const auditGuardIndex = source.indexOf('if (!audit.persisted)');
-    const historyReadIndex = source.indexOf('const history = await listAiSystemHistory', auditGuardIndex);
-    const successIndex = source.indexOf('return noStoreJson({ system, history, roleAssessment', auditGuardIndex);
+    const persistedReadIndex = source.indexOf(
+      'const persistedSystem = await getAiSystem(system.id, organization.id)',
+      auditGuardIndex,
+    );
+    const persistenceMismatchIndex = source.indexOf(
+      "throw new Error('ai_system_reassessment_persistence_mismatch')",
+      persistedReadIndex,
+    );
+    const historyReadIndex = source.indexOf(
+      'const history = await listAiSystemHistory(persistedSystem.id, organization.id)',
+      persistedReadIndex,
+    );
+    const successIndex = source.indexOf(
+      'return noStoreJson({ system: persistedSystem, history, roleAssessment: result.roleAssessment })',
+      historyReadIndex,
+    );
 
     expect(auditGuardIndex).toBeGreaterThan(-1);
-    expect(historyReadIndex).toBeGreaterThan(auditGuardIndex);
-    expect(successIndex).toBeGreaterThan(auditGuardIndex);
+    expect(persistedReadIndex).toBeGreaterThan(auditGuardIndex);
+    expect(persistenceMismatchIndex).toBeGreaterThan(persistedReadIndex);
+    expect(historyReadIndex).toBeGreaterThan(persistenceMismatchIndex);
+    expect(successIndex).toBeGreaterThan(historyReadIndex);
   });
 
   it('keeps compensation tenant-scoped and concurrency-safe', () => {

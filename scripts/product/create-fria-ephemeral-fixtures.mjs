@@ -78,6 +78,7 @@ async function main() {
   const reviewer = await createUser(admin, 'reviewer', suffix);
   const approver = await createUser(admin, 'approver', suffix);
   const unlicensedOwner = await createUser(admin, 'unlicensed-owner', suffix);
+  const newCustomer = await createUser(admin, 'new-customer', suffix);
 
   // Prove that the exact disposable browser credentials are accepted by the same
   // loopback GoTrue instance before Product UI acceptance starts. This intentionally
@@ -85,6 +86,7 @@ async function main() {
   await verifyPasswordGrant(url, anonKey, owner, 'owner');
   await verifyPasswordGrant(url, anonKey, approver, 'approver');
   await verifyPasswordGrant(url, anonKey, unlicensedOwner, 'unlicensed_owner');
+  await verifyPasswordGrant(url, anonKey, newCustomer, 'new_customer');
 
   const onboardingCompletedAt = new Date(Date.now() - 60_000).toISOString();
   const organization = await insertOne(admin, 'organizations', {
@@ -140,6 +142,22 @@ async function main() {
     role: 'owner',
   }, 'unlicensed_owner_membership');
 
+  const newCustomerOrganization = await insertOne(admin, 'organizations', {
+    name: `New Customer Disposable QA ${suffix}`,
+    slug: `new-customer-qa-${suffix}`,
+    created_by: newCustomer.id,
+    onboarding_status: 'in_progress',
+    onboarding_step: 'create-organization',
+    onboarding_completed_at: null,
+    selected_plan: 'professional',
+  }, 'new_customer_organization');
+
+  await insertOne(admin, 'organization_members', {
+    organization_id: newCustomerOrganization.id,
+    user_id: newCustomer.id,
+    role: 'owner',
+  }, 'new_customer_owner_membership');
+
   // Commercial Product acceptance must exercise the same durable authority used
   // by the runtime. This is deliberately NOT a seeded subscriptions row or fake
   // Stripe event: the disposable tenant receives a current signed-contract source
@@ -185,6 +203,43 @@ async function main() {
     applied_policy_version: 1,
   }, 'fria_commercial_entitlement_snapshot');
 
+  const newCustomerAuthority = await insertOne(admin, 'enterprise_entitlement_sources', {
+    organization_id: newCustomerOrganization.id,
+    source_kind: 'signed_contract',
+    external_reference: `new-customer-qa-professional-${suffix}`,
+    priority: 900,
+    active: true,
+    version: 1,
+    effective_from: effectiveFrom,
+    effective_until: null,
+  }, 'new_customer_commercial_authority');
+
+  await insertOne(admin, 'enterprise_entitlement_snapshots', {
+    organization_id: newCustomerOrganization.id,
+    source_id: newCustomerAuthority.id,
+    idempotency_key: `new-customer-qa-professional-${suffix}`,
+    source_version: 1,
+    plan_code: 'professional',
+    full_seat_limit: 10,
+    participant_seat_limit: 10,
+    viewer_seat_limit: 10,
+    entitlements: {
+      purpose: 'full-saas-onboarding-acceptance',
+      commercialAuthority: 'signed_contract',
+    },
+    source_payload_sha256: createHash('sha256').update(JSON.stringify({
+      purpose: 'full-saas-onboarding-acceptance',
+      organizationId: newCustomerOrganization.id,
+      planCode: 'professional',
+      sourceVersion: 1,
+    })).digest('hex'),
+    observed_at: effectiveFrom,
+    valid_from: effectiveFrom,
+    valid_until: null,
+    status: 'applied',
+    applied_policy_version: 1,
+  }, 'new_customer_commercial_entitlement_snapshot');
+
   const { data: authorityProof, error: authorityProofError } = await admin
     .from('enterprise_entitlement_snapshots')
     .select('plan_code,status,source_id')
@@ -198,6 +253,21 @@ async function main() {
     || authorityProof?.source_id !== commercialAuthority.id
   ) {
     throw new Error('fria_commercial_authority_verification_failed');
+  }
+
+  const { data: newCustomerAuthorityProof, error: newCustomerAuthorityProofError } = await admin
+    .from('enterprise_entitlement_snapshots')
+    .select('plan_code,status,source_id')
+    .eq('organization_id', newCustomerOrganization.id)
+    .eq('source_id', newCustomerAuthority.id)
+    .eq('status', 'applied')
+    .single();
+  if (
+    newCustomerAuthorityProofError
+    || newCustomerAuthorityProof?.plan_code !== 'professional'
+    || newCustomerAuthorityProof?.source_id !== newCustomerAuthority.id
+  ) {
+    throw new Error('new_customer_commercial_authority_verification_failed');
   }
 
   const { count: unlicensedSourceCount, error: unlicensedSourceError } = await admin
@@ -239,13 +309,15 @@ async function main() {
   exportEnv('E2E_FRIA_APPROVER_PASSWORD', approver.password);
   exportEnv('E2E_UNLICENSED_OWNER_EMAIL', unlicensedOwner.email);
   exportEnv('E2E_UNLICENSED_OWNER_PASSWORD', unlicensedOwner.password);
+  exportEnv('E2E_NEW_CUSTOMER_EMAIL', newCustomer.email);
+  exportEnv('E2E_NEW_CUSTOMER_PASSWORD', newCustomer.password);
   appendFileSync(
     process.env.GITHUB_ENV,
     'E2E_ALLOW_SYNTHETIC_APP_WRITES=true\nE2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED=true\nE2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED=true\nE2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED=true\n',
     'utf8',
   );
 
-  process.stdout.write('Disposable licensed and unlicensed Product identities, password grants, tenant authority boundaries and Evidence Vault schema verified on loopback Supabase.\n');
+  process.stdout.write('Disposable licensed, unlicensed and pre-onboarding Product identities, password grants, tenant authority boundaries and Evidence Vault schema verified on loopback Supabase.\n');
 }
 
 main().catch((error) => {

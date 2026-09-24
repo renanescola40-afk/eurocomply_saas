@@ -47,7 +47,7 @@ const PUBLIC_ROUTES = new Set([
 
 const PUBLIC_PREFIXES = ['/features/', '/auth/', '/api/auth/'] as const;
 
-const AUTH_ONLY_ROUTES = ['/onboarding', '/profile'] as const;
+const AUTH_ONLY_ROUTES = ['/onboarding', '/profile', '/mfa'] as const;
 const AUTH_ONLY_PREFIXES = ['/invite/'] as const;
 
 // These routes have their own elevated staff/platform authorization. Customer

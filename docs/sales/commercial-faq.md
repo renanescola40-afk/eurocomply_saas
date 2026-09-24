@@ -56,7 +56,7 @@ Customers should avoid uploading unnecessary sensitive data unless the agreed pl
 
 ## 9. Where is data stored?
 
-RISCK COMPLY is designed around managed cloud infrastructure. The exact production region, subprocessors and contractual commitments should be confirmed in the Trust Center, DPA and signed agreement.
+The primary Production Supabase project is currently evidenced in eu-west-1 (Ireland). Other active providers may process or access data from additional locations, so RISCK COMPLY does not make a blanket EU-only processing claim. Current provider and transfer information is maintained in the Trust Center, subprocessor/transfer registers and applicable agreement.
 
 ## 10. Is data encrypted?
 
@@ -76,7 +76,7 @@ Do not claim completed certifications unless they are present in the live Trust 
 
 Suggested answer:
 
-“RISCK COMPLY keeps security claims tied to documented evidence. We can share the current Trust Center materials during enterprise review.”
+“RISCK COMPLY is not currently SOC 2 or ISO 27001 certified. Security claims remain tied to documented evidence. A third-party black-box web application assessment completed on 12 September 2026; original TLS High findings have technical remediation evidence, while a clean independent retest/terminal assurance remains open. Current Trust Center materials are available for enterprise review.”
 
 ## 14. Do you sign a DPA?
 
@@ -110,9 +110,9 @@ Public packaging:
 - Essential — €49/month
 - Professional — €149/month
 - Business — €399/month
-- Enterprise — custom
+- Enterprise — from €990/month, final price by contract
 
-Pricing can also depend on company size, number of users, number of countries/entities, document volume, vendor volume, onboarding level and support requirements.
+Enterprise pricing can depend on company size, users, entities/countries, scope, onboarding and support requirements. Essential, Professional and Business public references remain the canonical catalog amounts; negotiated Enterprise terms belong in the signed order/contract.
 
 ## 19. What support is included?
 

@@ -1,9 +1,17 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 function readRepoFile(path: string) {
   return readFileSync(join(process.cwd(), path), 'utf8');
+}
+
+function readTrackedRepoFile(path: string) {
+  return execFileSync('git', ['show', `HEAD:${path}`], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
 }
 
 describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
@@ -114,7 +122,10 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     expect(existsSync(join(process.cwd(), evidencePath))).toBe(true);
 
     const review = readRepoFile(reviewPath);
-    const evidence = JSON.parse(readRepoFile(evidencePath));
+    // Runtime proof tests may intentionally rewrite the working-tree evidence
+    // path in parallel. This review validates the immutable file committed at
+    // HEAD, avoiding cross-test races without weakening the runtime contract.
+    const evidence = JSON.parse(readTrackedRepoFile(evidencePath));
 
     expect(review).toContain('Supabase Auth');
     expect(review).toContain('Go/No-Go');

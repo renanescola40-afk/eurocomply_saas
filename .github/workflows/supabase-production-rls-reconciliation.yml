@@ -1,6 +1,6 @@
 name: Supabase Production RLS Reconciliation
 
-run-name: Supabase RLS ${{ inputs.mode }} for ${{ inputs.release_sha }}
+run-name: Supabase ${{ inputs.package }} ${{ inputs.mode }} for ${{ inputs.release_sha }}
 
 on:
   workflow_dispatch:
@@ -9,6 +9,14 @@ on:
         description: Exact 40-character SHA currently at the tip of main
         required: true
         type: string
+      package:
+        description: Explicitly allowlisted reconciliation package
+        required: true
+        default: rls_catalog
+        type: choice
+        options:
+          - rls_catalog
+          - team_membership_rpcs
       mode:
         description: Verify current production state without writes, or explicitly apply the idempotent hotfix first
         required: true
@@ -18,7 +26,7 @@ on:
           - verify_only
           - apply
       confirmation:
-        description: Required only for apply mode; type APPLY_RLS_RECONCILIATION
+        description: Required only for apply mode; use the package-specific confirmation from the runbook
         required: false
         default: ''
         type: string
@@ -85,6 +93,7 @@ jobs:
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          PACKAGE: ${{ inputs.package }}
           MODE: ${{ inputs.mode }}
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
@@ -94,16 +103,20 @@ jobs:
           [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
           test "${RELEASE_SHA,,}" = "$main_sha"
           test "$(git rev-parse HEAD)" = "$main_sha"
+          case "$PACKAGE" in
+            rls_catalog|team_membership_rpcs) ;;
+            *) echo 'Unsupported reconciliation package' >&2; exit 1 ;;
+          esac
+
           case "$MODE" in
-            verify_only)
-              ;;
+            verify_only) ;;
             apply)
-              test "$CONFIRMATION" = "APPLY_RLS_RECONCILIATION"
+              case "$PACKAGE" in
+                rls_catalog) test "$CONFIRMATION" = "APPLY_RLS_RECONCILIATION" ;;
+                team_membership_rpcs) test "$CONFIRMATION" = "APPLY_TEAM_MEMBERSHIP_RPC_RECONCILIATION" ;;
+              esac
               ;;
-            *)
-              echo 'Unsupported RLS reconciliation mode' >&2
-              exit 1
-              ;;
+            *) echo 'Unsupported reconciliation mode' >&2; exit 1 ;;
           esac
 
       - name: Validate production configuration
@@ -136,16 +149,22 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client
 
-      - name: Apply idempotent RLS reconciliation only when explicitly authorized
+      - name: Apply selected idempotent reconciliation only when explicitly authorized
         if: ${{ inputs.mode == 'apply' }}
         shell: bash
+        env:
+          PACKAGE: ${{ inputs.package }}
         run: |
           set -euo pipefail
-          psql "$SUPABASE_DB_POOLER_URL" \
-            --set ON_ERROR_STOP=1 \
-            --file supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql
+          case "$PACKAGE" in
+            rls_catalog) sql_file='supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql' ;;
+            team_membership_rpcs) sql_file='supabase/reconciliation/20260922203500_team_membership_runtime_rpcs_hotfix.sql' ;;
+            *) echo 'Unsupported reconciliation package' >&2; exit 1 ;;
+          esac
+          psql "$SUPABASE_DB_POOLER_URL" --set ON_ERROR_STOP=1 --file "$sql_file"
 
       - name: Collect RLS, grants, policies and migration evidence read-only
+        if: ${{ inputs.package == 'rls_catalog' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -178,6 +197,7 @@ jobs:
           SQL
 
       - name: Verify reconciliation proof deterministically
+        if: ${{ inputs.package == 'rls_catalog' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -188,6 +208,7 @@ jobs:
             > artifacts/supabase-rls-reconciliation/SHA256SUMS
 
       - name: Emit canonical exact-SHA Enterprise 100 evidence
+        if: ${{ inputs.package == 'rls_catalog' }}
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -201,17 +222,54 @@ jobs:
             "$GITHUB_RUN_ID" \
             "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
+      - name: Collect and verify team membership RPC reconciliation
+        if: ${{ inputs.package == 'team_membership_rpcs' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/supabase-team-membership-rpc-reconciliation
+          psql "$SUPABASE_DB_POOLER_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align <<'SQL' | sed '/^[[:space:]]*$/d' | tee artifacts/supabase-team-membership-rpc-reconciliation/reconciliation-proof.txt
+          select 'function|' || p.proname || '|security_definer=' || p.prosecdef || '|config=' || coalesce(array_to_string(p.proconfig, ','), '')
+          from pg_proc p
+          join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and p.proname in ('change_organization_member_role_atomic','remove_organization_member_atomic')
+          order by p.proname;
+
+          select 'execute|' || p.proname
+                 || '|public=' || has_function_privilege('public', p.oid, 'execute')
+                 || '|anon=' || has_function_privilege('anon', p.oid, 'execute')
+                 || '|authenticated=' || has_function_privilege('authenticated', p.oid, 'execute')
+                 || '|service_role=' || has_function_privilege('service_role', p.oid, 'execute')
+          from pg_proc p
+          join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and p.proname in ('change_organization_member_role_atomic','remove_organization_member_atomic')
+          order by p.proname;
+
+          select 'history|' || version || '|' || coalesce(name, '')
+          from supabase_migrations.schema_migrations
+          where version = '20260922203500';
+          SQL
+
+          node scripts/supabase/verify-team-membership-rpc-reconciliation.mjs \
+            artifacts/supabase-team-membership-rpc-reconciliation/reconciliation-proof.txt \
+            artifacts/supabase-team-membership-rpc-reconciliation/verification.json
+          sha256sum artifacts/supabase-team-membership-rpc-reconciliation/* > artifacts/supabase-team-membership-rpc-reconciliation/SHA256SUMS
+
       - name: Publish verification summary
         if: always()
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          PACKAGE: ${{ inputs.package }}
           MODE: ${{ inputs.mode }}
         run: |
           {
             echo '## Supabase production RLS reconciliation'
             echo
             echo "- Release SHA: \`$RELEASE_SHA\`"
+            echo "- Package: \`$PACKAGE\`"
             echo "- Mode: \`$MODE\`"
             echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
             echo '- Connection path: Supabase Session Pooler (secret-backed)'
@@ -246,6 +304,7 @@ jobs:
           name: supabase-rls-reconciliation-${{ inputs.release_sha }}
           path: |
             artifacts/supabase-rls-reconciliation
+            artifacts/supabase-team-membership-rpc-reconciliation
             release-validation/supabase-rls-reconciliation.json
           if-no-files-found: error
           retention-days: 90

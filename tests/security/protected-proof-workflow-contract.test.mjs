@@ -9,6 +9,7 @@ const rehearsal = readFileSync('.github/workflows/supabase-forward-reconciliatio
 const preflight = readFileSync('scripts/security/preflight-protected-proof.mjs', 'utf8');
 const observability = readFileSync('scripts/release/run-observability-smoke-validation.mjs', 'utf8');
 const observabilityValidator = readFileSync('scripts/release/validate-observability-runtime-evidence.mjs', 'utf8');
+const productionProviderProof = readFileSync('scripts/security/run-production-provider-runtime-proof.mjs', 'utf8');
 
 function before(source, first, second) {
   const firstIndex = source.indexOf(first);
@@ -84,4 +85,12 @@ test('observability runtime evidence binds every probed hostname to the deployed
   assert.match(observabilityValidator, /every observability target must prove deployed runtime SHA binding/);
   assert.match(observabilityValidator, /observedRuntimeCommitMatchesExpected must pass/);
   assert.match(observabilityValidator, /evidenceIntegrity\.exactShaBound must be true/);
+  assert.match(observability, /methodProbe\.status === 405/);
+  assert.match(observability, /methodProbe\.status === 401/);
+  assert.match(observability, /methodProbe\.body\?\.status === 'unauthorized'/);
+});
+
+test('production provider runtime proof declares explicit production scope for downstream readiness checks', () => {
+  assert.match(productionProviderProof, /environmentsChecked: \['production'\]/);
+  assert.match(productionProviderProof, /environment: 'production'/);
 });

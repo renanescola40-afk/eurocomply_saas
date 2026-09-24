@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -25,12 +25,13 @@ export default async function ComplianceCalendarPage({ params, searchParams }: P
   const entitlements = organization ? await getOrganizationEntitlements(organization.id) : null;
   const canUseAiSearch = entitlements?.aiCalendar === 'advanced';
 
-  return (
-    <main className="min-h-screen bg-slate-950 px-6 py-6 text-white">
+  const content = (
+    <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-8">
-        <DashboardCommandNavigation locale={locale} />
         <ComplianceCalendarClient locale={locale} canUseAiSearch={canUseAiSearch} plan={entitlements?.plan ?? 'essential'} suggestion={suggestion} />
       </div>
-    </main>
+    </div>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }

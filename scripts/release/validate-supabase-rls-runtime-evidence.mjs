@@ -43,15 +43,28 @@ export function validateSupabaseRlsRuntimeEvidence(
   if (evidence?.status !== 'Complete') return failures;
   if (evidence?.outcome !== 'passed') failures.push('Complete evidence outcome must be passed');
 
-  const lineage = evidence?.promotionLineage ?? {};
-  if (!/^\d+$/.test(String(lineage.promotionRunId ?? ''))) failures.push('promotionLineage.promotionRunId must be numeric');
-  if (lineage.changeSet !== contract.changeSet) failures.push('promotionLineage.changeSet must match current governed manifest');
-  if (Number(lineage.selectedMigrationCount) !== contract.count) failures.push('promotionLineage.selectedMigrationCount must match current governed manifest');
-  if (!/^sha256:[a-f0-9]{64}$/.test(String(lineage.selectionDigest ?? ''))) failures.push('promotionLineage.selectionDigest must be a SHA-256 digest');
-  if (lineage.manifestMatchVerified !== true) failures.push('promotionLineage.manifestMatchVerified must be true');
-  if (lineage.remoteAfterEqualsBeforePlusSelected !== true) failures.push('promotionLineage exact remote ledger transition must be true');
-  if (lineage.unauthorizedMigrationApplied !== false) failures.push('promotionLineage unauthorizedMigrationApplied must be false');
-  if (lineage.productionPromotionVerified !== true) failures.push('promotionLineage.productionPromotionVerified must be true');
+  const authority = evidence?.authorityEvidence ?? {};
+  if (!['promotion', 'reattestation', 'current_state'].includes(String(authority.mode ?? ''))) {
+    failures.push('authorityEvidence.mode must identify promotion, reattestation, or current_state');
+  }
+  if (!/^\d+$/.test(String(authority.runId ?? ''))) failures.push('authorityEvidence.runId must be numeric');
+
+  if (authority.mode === 'current_state') {
+    if (authority.currentProductionStateVerified !== true) failures.push('authorityEvidence.currentProductionStateVerified must be true');
+    if (authority.historicalPromotionVerified !== false) failures.push('authorityEvidence.historicalPromotionVerified must be false');
+    if (evidence?.promotionLineage != null) failures.push('promotionLineage must be absent for current_state authority');
+  } else {
+    if (authority.historicalPromotionVerified !== true) failures.push('authorityEvidence.historicalPromotionVerified must be true');
+    const lineage = evidence?.promotionLineage ?? {};
+    if (!/^\d+$/.test(String(lineage.promotionRunId ?? ''))) failures.push('promotionLineage.promotionRunId must be numeric');
+    if (lineage.changeSet !== contract.changeSet) failures.push('promotionLineage.changeSet must match current governed manifest');
+    if (Number(lineage.selectedMigrationCount) !== contract.count) failures.push('promotionLineage.selectedMigrationCount must match current governed manifest');
+    if (!/^sha256:[a-f0-9]{64}$/.test(String(lineage.selectionDigest ?? ''))) failures.push('promotionLineage.selectionDigest must be a SHA-256 digest');
+    if (lineage.manifestMatchVerified !== true) failures.push('promotionLineage.manifestMatchVerified must be true');
+    if (lineage.remoteAfterEqualsBeforePlusSelected !== true) failures.push('promotionLineage exact remote ledger transition must be true');
+    if (lineage.unauthorizedMigrationApplied !== false) failures.push('promotionLineage unauthorizedMigrationApplied must be false');
+    if (lineage.productionPromotionVerified !== true) failures.push('promotionLineage.productionPromotionVerified must be true');
+  }
 
   const runtime = evidence?.runtimeContext ?? {};
   if (runtime.generatedByGithubActions !== true) failures.push('runtimeContext.generatedByGithubActions must be true');

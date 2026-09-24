@@ -56,6 +56,34 @@ test('rejects reattestation authority without the exact confirmation', () => {
   assert.match(result.reason, /reattestation authority confirmation is invalid/);
 });
 
+
+test('accepts governed current-state read-only authority without promotion lineage', () => {
+  const result = resolveAuthorityBinding({
+    AUTHORITY_MODE: 'current_state',
+    AUTHORITY_RUN_ID: '35999999999',
+    INPUT_CONFIRMATION: 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF',
+  });
+
+  assert.equal(result.valid, true);
+  assert.equal(result.mode, 'current_state');
+  assert.equal(result.runId, '35999999999');
+  const compatibility = resolveCompatibilityPromotionRunId(result, {});
+  assert.equal(compatibility.valid, true);
+  assert.equal(compatibility.runId, '35999999999');
+});
+
+test('rejects current-state authority when legacy promotion binding is present', () => {
+  const result = resolveAuthorityBinding({
+    AUTHORITY_MODE: 'current_state',
+    AUTHORITY_RUN_ID: '35999999999',
+    PROMOTION_RUN_ID: '12345',
+    INPUT_CONFIRMATION: 'EXECUTE_CURRENT_PRODUCTION_STATE_RUNTIME_PROOF',
+  });
+
+  assert.equal(result.valid, false);
+  assert.match(result.reason, /must remain empty/);
+});
+
 test('accepts governed promotion authority when run ids and confirmation agree', () => {
   const result = resolveAuthorityBinding({
     AUTHORITY_MODE: 'promotion',

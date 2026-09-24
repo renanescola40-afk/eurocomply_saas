@@ -1,0 +1,208 @@
+name: Supabase Current Production State Read-Only
+
+run-name: Attest current Supabase Production state for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA to bind to the current Production Supabase state
+        required: true
+        type: string
+      confirmation:
+        description: Type ATTEST_CURRENT_PRODUCTION_STATE_READ_ONLY
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: supabase-current-production-state-read-only-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  governance:
+    name: Verify exact current main and Production governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      GITHUB_ENVIRONMENT_NAME: Production
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact current main without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+      - name: Validate exact current main and explicit read-only confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$INPUT_CONFIRMATION" = 'ATTEST_CURRENT_PRODUCTION_STATE_READ_ONLY'
+          test "$GITHUB_REF_NAME" = 'main'
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+      - name: Verify Production environment governance before database secret
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  observe:
+    name: Prove current live schema and tenant isolation read-only
+    needs: governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: Production
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      EVIDENCE_DIR: artifacts/supabase-current-production-state-read-only
+      GITHUB_ENVIRONMENT_NAME: Production
+      REQUIRE_PROTECTED_BRANCHES: 'true'
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      PGSSLMODE: require
+    steps:
+      - name: Check out exact current main without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify hosted PostgreSQL client without network installation
+        run: node scripts/recovery/verify-postgresql-client.mjs
+      - name: Revalidate exact current main and Production governance after approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+          node scripts/security/check-github-environment-governance.mjs
+      - name: Bind observation to Production Supabase project
+        id: binding
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+        run: node scripts/security/supabase-project-binding.mjs emit-pooler-digest
+      - name: Validate read-only database connection shape
+        shell: bash
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_POOLER_URL:-}"
+          case "$SUPABASE_DB_POOLER_URL" in
+            postgresql://*|postgres://*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must be a PostgreSQL connection string' >&2; exit 1 ;;
+          esac
+          case "$SUPABASE_DB_POOLER_URL" in
+            *pooler.supabase.com*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must use the Supabase pooler endpoint' >&2; exit 1 ;;
+          esac
+      - name: Capture current migration ledger read-only
+        shell: bash
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          psql "$SUPABASE_DB_POOLER_URL"             --no-psqlrc --tuples-only --no-align --set ON_ERROR_STOP=1             --command 'begin transaction read only; select version from supabase_migrations.schema_migrations order by version; rollback;'             | sed '/^[[:space:]]*$/d'             | jq -R -s 'split("\n") | map(select(test("^[0-9]{14}$")))' > "$EVIDENCE_DIR/live-migration-ledger.json"
+          test "$(jq 'length' "$EVIDENCE_DIR/live-migration-ledger.json")" -gt 0
+      - name: Execute canonical schema security postconditions read-only
+        shell: bash
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_POOLER_URL"             --no-psqlrc --set ON_ERROR_STOP=1             --command 'begin transaction read only;'             --file scripts/supabase/verify-forward-reconciliation-postconditions.sql             --file scripts/supabase/verify-cross-tenant-reference-integrity-postconditions.sql             --command 'rollback;' >/dev/null
+      - name: Prove existing-actor tenant isolation read-only
+        shell: bash
+        env:
+          SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_POOLER_URL"             --no-psqlrc --set ON_ERROR_STOP=1             --file scripts/supabase/assert-live-tenant-isolation-read-only.sql >/dev/null
+      - name: Build redacted current-state authority evidence
+        shell: bash
+        env:
+          PRODUCTION_PROJECT_DIGEST: ${{ steps.binding.outputs.project_digest }}
+        run: |
+          set -euo pipefail
+          ledger="$EVIDENCE_DIR/live-migration-ledger.json"
+          count="$(jq 'length' "$ledger")"
+          head="$(jq -r '.[-1]' "$ledger")"
+          digest="sha256:$(sha256sum "$ledger" | awk '{print $1}')"
+          jq -n             --arg sha "$TARGET_SHA"             --arg run "${GITHUB_RUN_ID}"             --arg repo "${GITHUB_REPOSITORY}"             --arg projectDigest "$PRODUCTION_PROJECT_DIGEST"             --arg ledgerHead "$head"             --arg ledgerDigest "$digest"             --argjson ledgerCount "$count"             '{
+              schema:"risck-comply.supabase-current-production-state.v1",
+              evidenceItem:"supabase-current-production-state-read-only",
+              status:"Complete",
+              outcome:"passed",
+              authorityMode:"current_production_state_read_only",
+              targetSha:$sha,
+              productionProjectDigest:$projectDigest,
+              migrationLedger:{count:$ledgerCount,head:$ledgerHead,sha256:$ledgerDigest},
+              githubActions:{repository:$repo,branch:"main",runId:$run,commitSha:$sha},
+              checks:{
+                exactShaBound:true,
+                productionEnvironmentGoverned:true,
+                productionProjectBound:true,
+                migrationLedgerCapturedReadOnly:true,
+                liveSchemaSecurityPostconditionsPassed:true,
+                livePostconditionsReadOnly:true,
+                liveTenantIsolationPassed:true,
+                liveTenantProofReadOnly:true,
+                forceRlsVerified:true,
+                crossTenantIsolationVerified:true,
+                noProductionMutation:true,
+                dbPushPerformed:false,
+                migrationRepairPerformed:false,
+                manualLedgerInsertionPerformed:false,
+                historicalPromotionVerified:false,
+                humanReviewedMigrationBytesPromoted:false,
+                remoteAfterEqualsBeforePlusSelected:false,
+                backupRestoreProven:false
+              },
+              evidenceIntegrity:{
+                containsSensitiveValues:false,
+                credentialsStored:false,
+                databaseUrlsStored:false,
+                rowDataStored:false,
+                userIdsStored:false,
+                organizationIdsStored:false
+              },
+              truthBoundary:"Complete proves the current exact-SHA Production Supabase project was observed read-only, the live migration ledger was captured read-only, canonical schema/security postconditions passed and existing-actor tenant isolation passed without a Production mutation. It does not prove historical migration promotion lineage, human-reviewed migration bytes, remote-before/after transition or backup/restore."
+            }' > "$EVIDENCE_DIR/current-production-state.json"
+          node scripts/security/validate-supabase-current-state-source.mjs             "$EVIDENCE_DIR/current-production-state.json" "$TARGET_SHA" "${GITHUB_RUN_ID}" "$PRODUCTION_PROJECT_DIGEST"
+      - name: Reject retained sensitive evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f "$EVIDENCE_DIR/live-migration-ledger.json"
+          ! grep -RIE 'postgres(ql)?://|pooler\.supabase\.com|service[_-]?role|eyJ[A-Za-z0-9_-]{20,}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}' "$EVIDENCE_DIR"
+      - name: Generate immutable evidence checksum
+        run: sha256sum "$EVIDENCE_DIR/current-production-state.json" > "$EVIDENCE_DIR/SHA256SUMS"
+      - name: Revalidate exact current main before publication
+        run: test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')" = "$TARGET_SHA"
+      - name: Upload exact-SHA read-only Production authority
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: supabase-current-production-state-read-only-${{ env.TARGET_SHA }}
+          path: artifacts/supabase-current-production-state-read-only
+          if-no-files-found: error
+          retention-days: 90

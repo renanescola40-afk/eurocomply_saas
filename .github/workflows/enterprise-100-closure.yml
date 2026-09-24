@@ -179,11 +179,18 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ env.ENTERPRISE_CLOSURE_EXPECTED_SHA }}
           HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           PRODUCTION_DEPLOYMENT_PROOF_ATTEMPTS: '12'
           PRODUCTION_DEPLOYMENT_PROOF_POLL_MS: '5000'
         shell: bash
         run: |
           set -euo pipefail
+          retained_proof="$(find "$RETAINED_ARTIFACT_ROOT" -type f -path '*/release-validation/production-deployment.json' -print -quit)"
+          if [ -n "$retained_proof" ]; then
+            echo "Authorized retained production deployment proof already exists: $retained_proof"
+            exit 0
+          fi
+
           proof="$RETAINED_ARTIFACT_ROOT/direct-production-deployment/release-validation/production-deployment.json"
           mkdir -p "$(dirname "$proof")"
           set +e

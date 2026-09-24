@@ -11,7 +11,8 @@ describe('automatic ephemeral audit-chain runtime proof', () => {
     expect(workflow).toContain('push:\n    branches: [main]');
     expect(workflow).toContain('environment: Production');
     expect(workflow).toContain('needs: production-environment-governance');
-    expect(workflow).toContain('/commits/main');
+    expect(workflow).toContain('git ls-remote');
+    expect(workflow).toContain('refs/heads/main');
     expect(workflow).toContain('test "$main_sha" = "$TARGET_SHA"');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).not.toContain('pull_request_target');

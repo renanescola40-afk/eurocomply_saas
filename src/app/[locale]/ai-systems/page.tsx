@@ -12,6 +12,9 @@ import { AiSystemsClient } from './ai-systems-client';
 import { AiSystemsReadonlyView } from './ai-systems-readonly-view';
 import { AiSystemsRegistryV2 } from './ai-systems-registry-v2';
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 export default async function AiSystemsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const user = await getCurrentUser();

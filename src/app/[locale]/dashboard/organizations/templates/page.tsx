@@ -101,7 +101,7 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
   const totalSections = COMPLIANCE_TEMPLATES.reduce((sum, template) => sum + template.sections.length, 0);
 
   return (
-    <main className="space-y-6 text-white">
+    <div className="space-y-6 text-white">
       <header className="border-b border-white/[0.07] pb-6">
         <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-emerald-300/75">Template library</p>
         <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -221,6 +221,6 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
           </article>
         ))}
       </section>
-    </main>
+    </div>
   );
 }

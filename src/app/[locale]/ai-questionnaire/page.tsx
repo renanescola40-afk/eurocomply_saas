@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, ClipboardList, Globe2, ShieldCheck } from 'lucide-react';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { buildAiGovernanceReadiness } from '@/server/ai-governance/readiness';
@@ -49,10 +49,9 @@ export default async function AiQuestionnairePage({ params }: { params: Promise<
     : [[], []];
   const readiness = buildAiGovernanceReadiness({ locale, systems, incidents });
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage="AI Governance" />
-      <section className="mx-auto max-w-7xl px-6 py-8">
+  const content = (
+    <div className="min-h-0 bg-transparent">
+      <section className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
@@ -97,6 +96,8 @@ export default async function AiQuestionnairePage({ params }: { params: Promise<
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }

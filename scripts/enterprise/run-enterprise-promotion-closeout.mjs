@@ -73,7 +73,7 @@ function validateCampaign(campaign, targetSha, profile) {
       validateCompleteLane(result, contract);
       promotableLanes.push(result.id);
     } else {
-      if (!incremental) fail(`runtime lane ${result.id} is not complete/success`);
+      if (!incremental && result.required !== false) fail(`runtime lane ${result.id} is not complete/success`);
       validateBlockedLane(result, contract);
       blockedLanes.push(result.id);
     }

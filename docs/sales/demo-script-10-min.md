@@ -10,13 +10,17 @@ Goal: show that RISCK COMPLY replaces scattered spreadsheets, folders and manual
 
 ## Demo setup
 
-Prepare a demo workspace with:
+Prepare a dedicated synthetic demo workspace. Label it clearly as demo data and never imply that the company, activity, revenue, incidents or evidence are real customers or Production events.
 
-- Company: Acme Europe Ltd.
-- Risks: missing DPA, overdue policy review, vendor evidence gap, audit action overdue, critical provider review.
-- Documents: Security Policy, Data Processing Addendum, Vendor Register, Internal Compliance Checklist.
-- Vendors: payroll provider, analytics tool, cloud hosting provider.
-- Dashboard: open actions, high-priority risks and upcoming reviews.
+Recommended scenario:
+
+- Company: Acme Europe Ltd. — **synthetic demo organization**.
+- AI systems: customer-support assistant, internal document summarizer and recruiting-screening example.
+- Assessment: show risk/classification, owner and lifecycle context.
+- Risks/actions: missing governance evidence, overdue review and vendor evidence gap.
+- Documents: AI Governance Policy, Data Processing Addendum example, AI Inventory and Internal Review Checklist.
+- Dashboard: open actions, priority risks and upcoming reviews.
+- Trust surfaces: Security Questionnaire, Procurement Pack and Architecture Overview.
 
 ## Flow
 
@@ -47,15 +51,15 @@ Talk track:
 
 “Every risk becomes an accountable work item with owner, status and evidence.”
 
-### 3:20–4:40 — Document control
+### 3:20–4:40 — Assessment and document control
 
-Show controlled documents, current version, owner, status and review date.
+Show the selected AI system assessment/classification, then controlled documents/evidence, owner, status and review context.
 
 Talk track:
 
 “The enterprise question is not only ‘do you have a policy?’ It is ‘which version is current, who owns it and when was it reviewed?’”
 
-### 4:40–6:00 — Vendor control
+### 4:40–6:00 — Provider/vendor and governance context
 
 Show vendors, criticality, DPA status, review status and missing evidence.
 
@@ -71,11 +75,11 @@ Talk track:
 
 “The goal is to answer enterprise questions with evidence, not memory.”
 
-### 7:20–8:30 — Enterprise FAQ moment
+### 7:20–8:30 — Enterprise trust and FAQ moment
 
 Say:
 
-“RISCK COMPLY supports GDPR-oriented workflows, vendor evidence, audit trails, role-based access and managed cloud deployment. Contract terms such as DPA, subprocessors, support and security evidence are handled during enterprise review.”
+“RISCK COMPLY supports AI governance readiness workflows, evidence, auditability, role-based access and managed cloud deployment. Enterprise review materials include the Security Questionnaire, Architecture Overview, Procurement Pack, DPA/subprocessor/transfer posture and current assurance boundaries.”
 
 Do not present RISCK COMPLY as legal advice or claim certifications that are not listed in the Trust Center.
 
@@ -99,3 +103,13 @@ Ask:
 Close:
 
 “The next step is to map your current workflow, choose the first 3 use cases and decide whether to start with risks, documents, vendors or audit readiness.”
+
+
+## Demo proof rules
+
+- Show only implemented routes/features.
+- Use synthetic or dedicated demo data; identify it as synthetic.
+- Do not claim a customer, revenue figure, certification, signed contract, regulator approval or Production incident unless attributable evidence exists.
+- Do not describe the third-party assessment as a clean pentest pass.
+- If a live provider-dependent action is not enabled for the demo environment, explain the boundary rather than simulating a successful external event.
+- Pricing shown during the demo must match `config/billing-commercial-catalog.json`.

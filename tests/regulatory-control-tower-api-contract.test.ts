@@ -37,6 +37,15 @@ describe('regulatory control tower API contract', () => {
     for (const table of tables) expect(query).toContain(`.from('${table}')`);
     expect(query.match(/\.eq\('organization_id', organizationId\)/g)).toHaveLength(tables.length);
     expect(query).toContain("throw new Error('regulatory_control_tower_storage_unavailable')");
+    expect(query).toContain('isExpectedMissingSupabaseRelation');
+    expect(query).toContain('PRE_PROMOTION_CONTROL_TOWER_RELATIONS');
+    for (const relation of [
+      'ai_provider_data_programs',
+      'ai_annex_iv_packages',
+      'ai_article50_assessments',
+      'ai_conformity_assessments',
+    ]) expect(query).toContain(`'${relation}'`);
+    expect(query).toContain("'[regulatory-control-tower] module_not_promoted'");
   });
 
   it('exposes a customer-facing no-store dashboard and navigation entry', () => {

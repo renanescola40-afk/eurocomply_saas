@@ -1,44 +1,40 @@
-# Audit log export and immutability plan
+# Audit log export and tamper-evidence posture
 
-Status: planned. Internal audit events exist, but enterprise-grade export and tamper-evident/immutable audit retention are not yet complete.
+Status: `EXPORT_IMPLEMENTED / HASH_CHAIN_IMPLEMENTED / WORM_NOT_CLAIMED`.
 
-## Objective
+## Implemented controls
 
-Define the controls required before claiming exportable logs or immutable audit trails.
+RISCK COMPLY has:
 
-## Target audit event categories
+- tenant-scoped audit events;
+- transactional chained audit persistence;
+- previous-hash / event-hash integrity;
+- chain verification;
+- RBAC and step-up protected audit evidence-pack export;
+- signed export integrity;
+- fail-closed export audit persistence;
+- offline verification tooling and release checks.
 
-- Authentication and session events.
-- Organization membership changes.
-- Role and permission changes.
-- Billing/subscription changes.
-- Document upload/download/delete events.
-- SSO/MFA configuration changes, when implemented.
-- Admin/security setting changes.
-- Data export and deletion requests.
-- Internal cron/admin job outcomes.
+Canonical implementation/evidence includes:
 
-## Export requirements
+- `src/server/security/audit-chain.ts`;
+- `src/server/queries/audit-events.ts`;
+- `src/app/api/audit/chain/verify/route.ts`;
+- `src/app/api/audit/evidence-pack/route.ts`;
+- `src/app/api/audit/evidence-pack/route.test.ts`;
+- `docs/security/AUDIT_CHAIN.md`;
+- `docs/security/EXPORTS_AND_INTEGRITY.md`.
 
-- Organization-scoped export endpoint.
-- RBAC: only authorized roles can export logs.
-- Date-range filter.
-- Actor, action, target, IP/user agent where available.
-- CSV and JSON formats.
-- Export audit event emitted after export.
-- Large export pagination or async job handling.
+## Boundary: tamper-evident is not WORM
 
-## Immutability requirements
+RISCK COMPLY may describe the current design as a **tamper-evident hash chain with signed evidence export** when the relevant runtime/release evidence is current.
 
-Before claiming immutable audit trails, EuroComply must implement or procure:
+RISCK COMPLY must not claim external WORM storage, legally immutable retention, or independent append-only storage unless such a provider-backed control is actually implemented and evidenced.
 
-1. Append-only write path for audit events.
-2. Separation between application writers and audit retention administrators.
-3. Tamper-evident hash chain, signed log batches, WORM storage, or equivalent provider control.
-4. Retention policy with deletion restrictions.
-5. Integrity verification procedure.
-6. Evidence that normal application administrators cannot silently alter or delete audit history.
+## Runtime evidence rule
 
-## Customer-safe answer while partial
+Repository implementation alone does not prove every production release. Exact-release runtime evidence remains authoritative for production claims. If runtime proof is stale or blocked, classify the claim as implementation-complete but runtime-evidence-pending rather than downgrading the source implementation to “planned”.
 
-EuroComply records internal audit events for sensitive actions, but enterprise-grade log export and immutable/tamper-evident retention are not yet complete. Do not claim immutable audit trails until the controls above are implemented and tested.
+## Buyer-safe answer
+
+Enterprise audit evidence export is implemented with tenant scoping, authorization, step-up protection and signed integrity. Audit history is tamper-evident through a hash-chain design. External WORM/immutable storage is not currently claimed.

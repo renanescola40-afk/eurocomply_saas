@@ -17,6 +17,7 @@ function completeEvidence() {
     schema: LIVE_RLS_EVIDENCE_SCHEMA,
     evidenceItem: 'supabase-live-rls-validation',
     status: 'Complete', outcome: 'passed', generatedAt: '2026-08-24T18:30:00Z', commitSha: SHA,
+    authorityEvidence: { mode: 'promotion', runId: '12345', currentProductionStateVerified: false, historicalPromotionVerified: true },
     promotionLineage: {
       promotionRunId: '12345', changeSet: contract.changeSet,
       selectedMigrationCount: contract.count, selectionDigest: `sha256:${'b'.repeat(64)}`,
@@ -43,6 +44,28 @@ function completeEvidence() {
 describe('release Supabase RLS validator', () => {
   it('accepts a fresh exact-SHA proof bound to the current manifest', () => {
     expect(validateSupabaseRlsRuntimeEvidence(completeEvidence(), { now })).toEqual([]);
+  });
+
+  it('accepts a fresh current-state authority proof without promotion lineage', () => {
+    const evidence = completeEvidence();
+    evidence.authorityEvidence = {
+      mode: 'current_state',
+      runId: '24680',
+      currentProductionStateVerified: true,
+      historicalPromotionVerified: false,
+    };
+    delete evidence.promotionLineage;
+    expect(validateSupabaseRlsRuntimeEvidence(evidence, { now })).toEqual([]);
+  });
+  it('rejects current-state authority that also claims promotion lineage', () => {
+    const evidence = completeEvidence();
+    evidence.authorityEvidence = {
+      mode: 'current_state',
+      runId: '24680',
+      currentProductionStateVerified: true,
+      historicalPromotionVerified: false,
+    };
+    expect(validateSupabaseRlsRuntimeEvidence(evidence, { now })).toContain('promotionLineage must be absent for current_state authority');
   });
   it('rejects stale package counts without hard-coding a version count', () => {
     const evidence = completeEvidence();

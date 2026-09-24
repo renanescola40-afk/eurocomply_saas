@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, FileText, ShieldCheck, UsersRound } from 'lucide-react';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { buildAiGovernanceReadiness } from '@/server/ai-governance/readiness';
@@ -39,10 +39,9 @@ export default async function PolicyPackPage({ params }: { params: Promise<{ loc
   const readiness = buildAiGovernanceReadiness({ locale, systems, incidents });
   const highRiskSystems = systems.filter((system) => system.risk_level === 'high_risk_review' || system.risk_level === 'prohibited_review');
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
-      <DashboardCommandNavigation locale={locale} activePage="AI Governance" />
-      <section className="mx-auto max-w-7xl px-6 py-8">
+  const content = (
+    <div className="min-h-0 bg-transparent">
+      <section className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
@@ -100,6 +99,8 @@ export default async function PolicyPackPage({ params }: { params: Promise<{ loc
           </section>
         </div>
       </section>
-    </main>
+    </div>
   );
+
+  return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }

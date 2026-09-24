@@ -70,6 +70,10 @@ export function buildEnterpriseFinalAuthority({ targetSha, closure, sourceManife
         ? 'ENTERPRISE_STRICT: WAITING_EXTERNAL'
         : 'ENTERPRISE_STRICT: NO_PASS_YET',
     productionDecision: internalPassed ? 'PRODUCTION_GO: PASS' : 'PRODUCTION_GO: NO_GO',
+    productionDecisionScope: 'TECHNICAL_RELEASE_ONLY',
+    realBillingLifecycle: sourceManifest?.externalMissingProducerIds?.includes('billing-product-live-closure')
+      ? 'WAITING_REAL_CUSTOMER'
+      : 'EVIDENCED',
     technicalReleaseClosure: internalPassed ? 'TECHNICAL_RELEASE_CLOSURE: PASS' : 'TECHNICAL_RELEASE_CLOSURE: NO_PASS_YET',
     internalPassed,
     strictPassed,
@@ -93,7 +97,7 @@ export function buildEnterpriseFinalAuthority({ targetSha, closure, sourceManife
     truthBoundary: strictPassed
       ? 'Internal Product Ready, Production GO and strict Enterprise assurance are granted because all exact-SHA internal controls and selected external assurance controls are genuinely complete.'
       : internalPassed
-        ? 'Internal Product Ready and Production GO are granted from complete exact-SHA internal evidence. Strict Enterprise assurance remains WAITING_EXTERNAL and no missing independent external evidence is fabricated or converted into engineering work.'
+        ? 'Internal Product Ready and technical Production GO are granted from complete exact-SHA internal release evidence. Real-customer billing lifecycle proof may remain WAITING_REAL_CUSTOMER and is not represented as completed billing evidence. Strict Enterprise assurance remains WAITING_EXTERNAL and no missing independent external evidence is fabricated or converted into engineering work.'
         : 'Internal Product Ready and Production GO remain withheld until every internally controllable exact-SHA control and internal authoritative producer is genuinely complete.',
   };
 }
