@@ -165,7 +165,7 @@ jobs:
             };
 
             let currentMainSha;
-            let ruleset;
+            const applicableRulesets = [];
             try {
               const mainBranch = await publicJson(`${context.apiUrl}/repos/${owner}/${repo}/branches/${branch}`);
               currentMainSha = String(mainBranch.commit?.sha || '').toLowerCase();
@@ -177,11 +177,12 @@ jobs:
 
               for (const candidate of candidates) {
                 const detail = await publicJson(`${context.apiUrl}/repos/${owner}/${repo}/rulesets/${candidate.id}`);
-                const includesMain = detail.conditions?.ref_name?.include?.includes('refs/heads/main');
-                const excludesMain = detail.conditions?.ref_name?.exclude?.includes('refs/heads/main');
+                const includes = detail.conditions?.ref_name?.include ?? [];
+                const excludes = detail.conditions?.ref_name?.exclude ?? [];
+                const includesMain = includes.includes('refs/heads/main') || includes.includes('~DEFAULT_BRANCH');
+                const excludesMain = excludes.includes('refs/heads/main') || excludes.includes('~DEFAULT_BRANCH');
                 if (includesMain && !excludesMain) {
-                  ruleset = detail;
-                  break;
+                  applicableRulesets.push(detail);
                 }
               }
             } catch (error) {
@@ -210,7 +211,7 @@ jobs:
               return;
             }
 
-            if (!ruleset) {
+            if (applicableRulesets.length === 0) {
               const evidence = baseEvidence({
                 status: 'Open',
                 outcome: 'blocked',
@@ -223,13 +224,30 @@ jobs:
               return;
             }
 
-            const pullRequestRule = ruleset.rules?.find((rule) => rule.type === 'pull_request');
-            const statusRule = ruleset.rules?.find((rule) => rule.type === 'required_status_checks');
+            const bypassVisibilityMissingRulesetIds = applicableRulesets
+              .filter((ruleset) => !Array.isArray(ruleset.bypass_actors))
+              .map((ruleset) => ruleset.id);
+            const bypassVisibilityComplete = bypassVisibilityMissingRulesetIds.length === 0;
+            const bypassActors = applicableRulesets.flatMap((ruleset) =>
+              Array.isArray(ruleset.bypass_actors)
+                ? ruleset.bypass_actors.map((actor) => ({
+                    rulesetId: Number.isSafeInteger(ruleset.id) ? ruleset.id : null,
+                    actorType: actor?.actor_type ?? actor?.actorType ?? 'unknown',
+                    bypassMode: actor?.bypass_mode ?? actor?.bypassMode ?? 'unknown',
+                  }))
+                : []
+            );
+
+            const allRules = applicableRulesets.flatMap((ruleset) => ruleset.rules ?? []);
+            const pullRequestRules = allRules.filter((rule) => rule.type === 'pull_request');
+            const statusRules = allRules.filter((rule) => rule.type === 'required_status_checks');
             const configuredChecks = [
               ...new Set(
-                statusRule?.parameters?.required_status_checks
-                  ?.map((check) => check.context)
-                  .filter(Boolean) ?? []
+                statusRules.flatMap((rule) =>
+                  rule?.parameters?.required_status_checks
+                    ?.map((check) => check.context)
+                    .filter(Boolean) ?? []
+                )
               ),
             ];
             const configured = new Set(configuredChecks);
@@ -238,19 +256,25 @@ jobs:
               return [check, accepted.filter((name) => configured.has(name))];
             }));
             const missingChecks = requiredChecks.filter((check) => matchedRequiredChecks[check].length === 0);
-            const pullRequest = pullRequestRule?.parameters ?? {};
+
+            const approvalCounts = pullRequestRules.map((rule) =>
+              Number(rule?.parameters?.required_approving_review_count ?? 0)
+            );
             const branchProtection = {
-              protect_branch: ruleset.enforcement === 'active',
-              require_pull_request: Boolean(pullRequestRule),
-              required_approving_reviews: pullRequest.required_approving_review_count ?? 0,
-              require_code_owner_review: Boolean(pullRequest.require_code_owner_review),
-              dismiss_stale_reviews: Boolean(pullRequest.dismiss_stale_reviews_on_push),
-              require_conversation_resolution: Boolean(pullRequest.required_review_thread_resolution),
-              require_status_checks: Boolean(statusRule),
-              require_up_to_date_branch: Boolean(statusRule?.parameters?.strict_required_status_checks_policy),
-              block_force_pushes: Boolean(ruleset.rules?.some((rule) => rule.type === 'non_fast_forward')),
-              block_deletions: Boolean(ruleset.rules?.some((rule) => rule.type === 'deletion')),
-              restrict_direct_pushes: Boolean(pullRequestRule) && (ruleset.bypass_actors?.length ?? 0) === 0,
+              protect_branch: applicableRulesets.every((ruleset) => ruleset.enforcement === 'active'),
+              require_pull_request: pullRequestRules.length > 0,
+              required_approving_reviews: approvalCounts.length > 0 ? Math.max(...approvalCounts) : 0,
+              require_code_owner_review: pullRequestRules.some((rule) => Boolean(rule?.parameters?.require_code_owner_review)),
+              dismiss_stale_reviews: pullRequestRules.some((rule) => Boolean(rule?.parameters?.dismiss_stale_reviews_on_push)),
+              require_conversation_resolution: pullRequestRules.some((rule) => Boolean(rule?.parameters?.required_review_thread_resolution)),
+              require_status_checks: statusRules.length > 0,
+              require_up_to_date_branch: statusRules.some((rule) => Boolean(rule?.parameters?.strict_required_status_checks_policy)),
+              block_force_pushes: allRules.some((rule) => rule.type === 'non_fast_forward'),
+              block_deletions: allRules.some((rule) => rule.type === 'deletion'),
+              restrict_direct_pushes:
+                pullRequestRules.length > 0
+                && bypassVisibilityComplete
+                && bypassActors.length === 0,
             };
             const requiredFlags = [
               'protect_branch',
@@ -279,7 +303,11 @@ jobs:
               branchProtection.restrict_direct_pushes ? 'Direct pushes are restricted' : null,
               missingChecks.length === 0 ? 'All documented required checks are configured' : null,
             ].filter(Boolean);
-            const complete = missingChecks.length === 0 && missingProtectionFlags === 0;
+            const complete =
+              missingChecks.length === 0
+              && missingProtectionFlags === 0
+              && bypassVisibilityComplete
+              && bypassActors.length === 0;
             const evidence = baseEvidence({
               status: complete ? 'Complete' : 'Open',
               outcome: complete ? 'passed' : 'failed',
@@ -287,7 +315,13 @@ jobs:
                 ? 'GitHub branch protection for the exact current main SHA matches the enterprise requirements.'
                 : `GitHub branch protection is incomplete: ${missingChecks.length} required check(s) and ${missingProtectionFlags} protection requirement(s) are missing.`,
               currentMainSha,
-              failures: complete ? [] : ['branch_protection_incomplete'],
+              failures: complete
+                ? []
+                : [
+                    'branch_protection_incomplete',
+                    ...(!bypassVisibilityComplete ? ['ruleset_bypass_visibility_unproven'] : []),
+                    ...(bypassActors.length > 0 ? ['ruleset_bypass_actors_present'] : []),
+                  ],
             });
             evidence.controlsVerified = controlsVerified;
             evidence.branch_protection = branchProtection;
@@ -295,6 +329,14 @@ jobs:
               repository,
               branch,
               runId: String(context.runId),
+              sourceMode: 'repository-rulesets',
+              applicableRulesetCount: applicableRulesets.length,
+              rulesetIds: applicableRulesets.map((ruleset) => ruleset.id),
+              rulesetSources: applicableRulesets.map((ruleset) => ruleset.source_type ?? 'unknown'),
+              bypassVisibilityComplete,
+              bypassVisibilityMissingRulesetIds,
+              bypassActorCount: bypassActors.length,
+              bypassActors,
               missingRequiredChecks: missingChecks,
               missingProtectionFlags,
               configuredRequiredChecks: configuredChecks,
