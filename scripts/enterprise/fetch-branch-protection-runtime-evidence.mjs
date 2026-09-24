@@ -128,6 +128,30 @@ export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
       - Date.parse(left?.updated_at || left?.created_at || 0))[0] ?? null;
 }
 
+export function selectLatestExactShaArtifact(artifacts, expectedName) {
+  const matches = (Array.isArray(artifacts) ? artifacts : [])
+    .filter((item) => item?.name === expectedName && item?.expired !== true);
+
+  if (matches.length === 0) throw new Error('exact_sha_branch_protection_artifact_missing');
+  if (matches.length === 1) return matches[0];
+
+  const ranked = matches
+    .map((item) => ({
+      item,
+      timestamp: Date.parse(item?.updated_at || item?.created_at || ''),
+    }))
+    .filter(({ timestamp }) => Number.isFinite(timestamp))
+    .sort((left, right) => right.timestamp - left.timestamp);
+
+  if (ranked.length !== matches.length) {
+    throw new Error('exact_sha_branch_protection_artifact_recency_unproven');
+  }
+  if (ranked[0].timestamp === ranked[1].timestamp) {
+    throw new Error('exact_sha_branch_protection_artifact_recency_ambiguous');
+  }
+  return ranked[0].item;
+}
+
 export function validateDownloadedEvidence(evidence, { targetSha, runId }) {
   const failures = validateGeneratedBranchProtectionEvidence(evidence, {
     expectedSha: targetSha,
@@ -431,12 +455,10 @@ export async function fetchBranchProtectionRuntimeEvidence({
     token,
   );
   const expectedName = `branch-protection-runtime-proof-${targetSha}`;
-  const matches = (artifactListing.artifacts || []).filter(
-    (item) => item?.name === expectedName && item?.expired !== true,
+  const artifact = selectLatestExactShaArtifact(
+    artifactListing.artifacts || [],
+    expectedName,
   );
-  if (matches.length !== 1) throw new Error('exact_sha_branch_protection_artifact_not_unique');
-
-  const artifact = matches[0];
   const artifactSize = Number(artifact?.size_in_bytes || 0);
   if (!Number.isFinite(artifactSize) || artifactSize <= 0 || artifactSize > MAX_ARTIFACT_BYTES) {
     throw new Error('artifact_size_invalid');
