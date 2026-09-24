@@ -2,7 +2,7 @@
 
 Status: `INTERNAL_PACKET_READY / EXTERNAL_ACCEPTANCE_OPEN`. Buyer-facing checklist and answer bank for enterprise review. This packet is not a certification report, legal opinion, DPA, tax opinion, or clean third-party security attestation.
 
-Last factual reconciliation: `2026-09-14`.
+Last factual reconciliation: `2026-09-24`.
 
 ## Procurement checklist
 
@@ -16,7 +16,7 @@ The owner has selected **SAMUEL CERQUEIRA, UNIPESSOAL LDA** as the RISCK COMPLY 
 
 ## Current release boundary
 
-Fresh controller evidence shows that protected source and canonical Production are not yet one accepted release lineage. The exact source SHA, Production SHA, deployment identifier and measured drift remain controlled release evidence in `docs/enterprise/ENTERPRISE_CLOSURE_CONTROLLER_V2_2026-09-14.md` and the canonical provider/evidence register; they are intentionally not hard-coded into this buyer-facing packet.
+Fresh controller evidence shows that protected source and canonical Production are not yet one accepted release lineage. The exact source SHA, Production SHA, deployment identifier and measured drift remain controlled release evidence in `docs/enterprise/ENTERPRISE_CLOSURE_CONTROLLER_V2_2026-09-14.md`, `docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md` and the canonical provider/evidence register; they are intentionally not hard-coded into this buyer-facing packet.
 
 V43 is now observed as `4/4 APPLIED` in the Production migration ledger, with the reviewed Article 5 / FRIA / atomic DSR runtime objects present and sampled relevant tables showing RLS + FORCE RLS. This materially supersedes the pre-V43 state recorded in the V1 controller. Exact-current-main application acceptance remains separate and open.
 
@@ -95,9 +95,28 @@ No owner decision, AI analysis or internal review may be described as qualified 
 - `docs/trust/PROCUREMENT_CHECKLIST.md`
 - `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-12.md`
 - `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md`
+- `docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md`
+- `docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md`
+- `docs/legal-assurance/ROPA.md`
+- `docs/legal-assurance/PRIVACY_ART13_14_MATRIX.md`
+- `docs/legal-assurance/DPA_ARTICLE_28_CONTROL_MATRIX.md`
+- `docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md`
 - `docs/enterprise/ENTERPRISE_CLOSURE_CONTROLLER_V2_2026-09-14.md`
 
 The V1 Enterprise Closure Controller remains historical provenance only and must not be used as the current operational source of truth.
+
+## Legal/privacy buyer-answer boundary
+
+The canonical workstream reconciliation is `docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md`.
+
+Buyer answers must distinguish:
+
+- DPA Article 28 structure from a final effective signed DPA;
+- provider SCC/DPF/adequacy framework evidence from a flow-level Chapter V conclusion;
+- category-specific retention/deletion workflows from a universal immediate-erasure promise;
+- Supabase Production residency in Ireland from a blanket EU-only processing claim;
+- AI Act current-scope applicability documentation from a guarantee of customer compliance; and
+- internal procurement readiness from actual buyer/counterparty acceptance.
 
 ## Current terminal blockers to disclose when material
 

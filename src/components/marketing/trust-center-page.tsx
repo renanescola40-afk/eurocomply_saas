@@ -176,7 +176,7 @@ const PAGE_CONTENT: Record<TrustPageKind, TrustPageContent> = {
     badge: 'Security overview',
     summaryTitle: 'What enterprise buyers should know',
     summary: ['The platform is built on managed cloud services and avoids unsupported certification claims.', 'Tenant isolation is designed around organization membership, server-side checks and Supabase RLS policies.', 'Security evidence should be refreshed for the active production environment before enterprise contracting.'],
-    sections: [...sharedSecuritySections, { title: 'Current non-claims', description: 'These statements prevent procurement risk from accidental overpromising.', items: ['No SOC 2 certification is claimed.', 'No ISO 27001 certification is claimed.', 'No completed independent penetration test is claimed unless a dated report is added.'], icon: AlertTriangle }],
+    sections: [...sharedSecuritySections, { title: 'Current non-claims', description: 'These statements prevent procurement risk from accidental overpromising.', items: ['No SOC 2 certification is claimed.', 'No ISO 27001 certification is claimed.', 'A third-party black-box assessment completed on 2026-09-12; a clean independent retest/terminal assurance remains open.'], icon: AlertTriangle }],
     disclosure: `Security contact: ${SECURITY_EMAIL}. Security commitments are limited to the implementation and evidence available for the deployed environment.`,
   },
   privacy: {
