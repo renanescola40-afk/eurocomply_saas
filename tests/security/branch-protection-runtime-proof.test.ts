@@ -105,7 +105,10 @@ describe('exact-SHA branch protection runtime proof', () => {
 
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('release_sha:');
-    expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
+    expect(workflow).toContain('push:');
+    expect(workflow).toContain('branches: [main]');
+    expect(workflow).toContain('RELEASE_SHA: ${{ inputs.release_sha || github.sha }}');
+    expect(workflow).toContain('ref: ${{ env.RELEASE_SHA }}');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('generate-branch-protection-ruleset-evidence.mjs');
     expect(workflow).toContain('GITHUB_TOKEN: ${{ github.token }}');
