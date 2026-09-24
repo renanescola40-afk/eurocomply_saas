@@ -40,6 +40,7 @@ describe('canonical Trust Center publication integrity', () => {
     expect(publicPack).toContain("id: 'international-transfers'");
     expect(publicPack).toContain("id: 'legal-publication'");
     expect(publicPack).toContain("id: 'ai-gdpr-documentation'");
+    expect(publicPack).toContain("id: 'security-assessment'");
     expect(publicPack).toContain("{ path: '/transfers', title: 'International transfers' }");
     expect(publicPack).not.toContain('governed V21 Production promotion remains separate and currently unapplied');
     expect(publicPack).not.toContain('Current direct Production deployment binding is proven on the current release');
