@@ -32,6 +32,7 @@ export const SECURITY_CI_CHECKS = Object.freeze([
   'security:api-guards',
   'security:enterprise-api',
   'security:public-claims',
+  'procurement:buyer-readiness',
 ]);
 
 export function hasSecurityCiCheck(check) {

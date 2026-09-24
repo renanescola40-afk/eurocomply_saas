@@ -4,7 +4,7 @@ This folder is the source of truth for GTM positioning, sales demos, discovery c
 
 ## Commercial truth boundary
 
-As of **2026-09-09**, the canonical commercial motion is:
+As of **2026-09-24**, the canonical commercial motion is:
 
 - Essential: €49/month, self-serve monthly checkout;
 - Professional: €149/month, self-serve monthly checkout;
@@ -27,6 +27,10 @@ As of **2026-09-09**, the canonical commercial motion is:
 7. [`roi-calculator.md`](./roi-calculator.md) — simple ROI calculator with formulas and example.
 8. [`discovery-call-checklist.md`](./discovery-call-checklist.md) — qualification checklist for demo/discovery.
 9. [`outbound-email-sequences.md`](./outbound-email-sequences.md) — outbound emails for CFO, Compliance Manager and DPO.
+10. [`enterprise-onboarding-plan.md`](./enterprise-onboarding-plan.md) — assisted enterprise rollout and implementation handoff.
+11. [`ENTERPRISE_BUYER_READINESS_2026-09-24.md`](./ENTERPRISE_BUYER_READINESS_2026-09-24.md) — canonical buyer-readiness terminal matrix.
+12. [`../trust/ENTERPRISE_ARCHITECTURE_DIAGRAM.md`](../trust/ENTERPRISE_ARCHITECTURE_DIAGRAM.md) — buyer-review logical architecture diagram.
+13. [`../trust/FINAL_DATA_ROOM_INDEX_2026-09-24.md`](../trust/FINAL_DATA_ROOM_INDEX_2026-09-24.md) — controlled enterprise diligence data-room index.
 
 ## Public GTM surfaces
 
@@ -54,6 +58,6 @@ As of **2026-09-09**, the canonical commercial motion is:
 
 - Do not claim guaranteed EU AI Act compliance, legal approval or regulator endorsement.
 - Do not present RISCK COMPLY as legal advice or a replacement for lawyers, DPOs, security teams or auditors.
-- Do not claim SOC 2, ISO 27001 certification, third-party pentest completion or guaranteed legal compliance unless the signed contract and Trust Center evidence explicitly support it.
+- Do not claim SOC 2, ISO 27001 certification, a clean independent pentest pass or guaranteed legal compliance unless current Trust Center evidence and the applicable signed contract support it. A third-party black-box assessment completed on 2026-09-12; its clean independent retest/terminal assurance remains open.
 - Position RISCK COMPLY as an operational AI governance readiness system for inventory, risk, policy, evidence, workflow, visibility and review preparation.
 - Enterprise commitments must be tied to contract, DPA, subprocessor list, support terms and security evidence.
