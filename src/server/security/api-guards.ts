@@ -21,6 +21,10 @@ import {
   providerFailureContext,
 } from '@/server/providers/failure';
 import { resolveApiCommercialMinimumPlan } from '@/server/security/api-commercial-policy';
+import {
+  evaluateTenantMfaRequirement,
+  TenantMfaControlUnavailableError,
+} from '@/server/security/tenant-mfa';
 import { noStoreJson, noStoreDownload, applyNoStoreHeaders } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import {
@@ -74,6 +78,7 @@ export class ApiSecurityError extends Error {
     | 'unauthorized'
     | 'organization_membership_required'
     | 'permission_denied'
+    | 'mfa_required'
     | 'rate_limited'
     | 'security_control_unavailable';
 
@@ -139,6 +144,29 @@ export async function requireApiUser() {
   return user;
 }
 
+async function requireTenantMfaForApi(userId: string, organizationId: string) {
+  try {
+    const mfa = await evaluateTenantMfaRequirement(organizationId, userId);
+    if (mfa.required && !mfa.satisfied) {
+      throw new ApiSecurityError({
+        code: 'mfa_required',
+        message: 'Multi-factor authentication is required for this organization.',
+        status: 403,
+      });
+    }
+  } catch (error) {
+    if (error instanceof ApiSecurityError) throw error;
+    if (error instanceof TenantMfaControlUnavailableError) {
+      throw new ApiSecurityError({
+        code: 'security_control_unavailable',
+        message: 'Could not verify organization MFA policy.',
+        status: 503,
+      });
+    }
+    throw error;
+  }
+}
+
 export async function requireOrganizationAccess(options: RequireOrganizationAccessOptions): Promise<ApiOrganizationAccess> {
   const organizationId = sanitizeOrganizationId(options.organizationId);
   const { membership, error } = await getOrganizationMembership(options.userId, organizationId);
@@ -158,6 +186,8 @@ export async function requireOrganizationAccess(options: RequireOrganizationAcce
       status: 403,
     });
   }
+
+  await requireTenantMfaForApi(options.userId, organizationId);
 
   return {
     userId: options.userId,
@@ -192,6 +222,8 @@ export async function requirePermission(options: RequirePermissionOptions): Prom
       status: result.status === 503 ? 503 : 403,
     });
   }
+
+  await requireTenantMfaForApi(options.userId, organizationId);
 
   return result;
 }
