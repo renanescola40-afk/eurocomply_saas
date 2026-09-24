@@ -59,19 +59,19 @@
     {
       "id": "sso-saml",
       "question": "Do you support SSO/SAML?",
-      "status": "planned",
-      "customerAnswer": "SAML/SSO is on the enterprise roadmap but is not currently available as a production feature.",
+      "status": "implemented_evidence_bound",
+      "customerAnswer": "RISCK COMPLY implements a SAML SSO runtime with provider/domain binding, entitlement checks, callback provisioning and login audit controls. Activation requires buyer-specific IdP/domain configuration and end-to-end validation.",
       "evidence": [
-        "docs/trust/SSO_MFA_ENTERPRISE_PLAN.md"
+        "docs/trust/SSO_MFA_ENTERPRISE_PLAN.md",
+        "supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+        "tests/enterprise/enterprise-sso-contract.test.ts",
+        "src/app/auth/callback/route.ts"
       ],
       "blockers": [
-        "SAML provider integration is not implemented.",
-        "Enterprise IdP test matrix is not completed."
+        "No enterprise identity connection is currently configured in production; buyer-specific IdP/domain configuration and E2E login validation remain."
       ],
       "nextActions": [
-        "Choose SAML/OIDC implementation path.",
-        "Add organization-level SSO configuration.",
-        "Test with at least one enterprise IdP."
+        "Configure the buyer IdP/domain after a real enterprise SSO requirement exists and retain end-to-end validation evidence."
       ]
     },
     {
@@ -137,37 +137,35 @@
     {
       "id": "disaster-recovery-tested",
       "question": "Is disaster recovery tested?",
-      "status": "planned",
-      "customerAnswer": "A DR test plan exists, but a completed DR exercise has not yet been evidenced.",
+      "status": "implemented_evidence_bound",
+      "customerAnswer": "A non-destructive disaster recovery tabletop was completed on 2026-09-24. Live failover and measured RTO/RPO are not claimed.",
       "evidence": [
-        "docs/trust/DISASTER_RECOVERY_TEST_PLAN.md"
+        "docs/trust/DR_TABLETOP_2026-09-24.md",
+        "docs/trust/DISASTER_RECOVERY_TEST_PLAN.md",
+        "docs/trust/INCIDENT_RESPONSE.md"
       ],
       "blockers": [
-        "DR exercise has not been executed and signed off.",
-        "RTO/RPO measurements are not recorded."
+        "Live technical failover/restore evidence and measured RTO/RPO are not available."
       ],
       "nextActions": [
-        "Run a tabletop DR test.",
-        "Run a technical failover/restore drill where applicable.",
-        "Record RTO/RPO and remediation items."
+        "Run a safe technical recovery exercise when provider-backed recovery evidence is required and record measured RTO/RPO."
       ]
     },
     {
       "id": "backup-restore-tested",
       "question": "Is backup restore tested?",
-      "status": "planned",
-      "customerAnswer": "A backup restore test plan exists, but a completed restore test has not yet been evidenced.",
+      "status": "partial_strong",
+      "customerAnswer": "An isolated recovery/schema rehearsal environment is evidenced. It does not contain restored customer/application rows, so a customer-data backup restore and measured recovery objectives are not yet proven.",
       "evidence": [
+        "docs/trust/BACKUP_RESTORE_EVIDENCE_2026-09-24.md",
         "docs/trust/BACKUP_RESTORE_TEST_PLAN.md"
       ],
       "blockers": [
-        "Restore drill has not been completed and signed off.",
-        "Restore artifact and integrity checks are not stored."
+        "Customer/application data restore has not been proven in the isolated recovery project.",
+        "Measured restore duration and RPO are not available."
       ],
       "nextActions": [
-        "Run restore drill in a non-production environment.",
-        "Record timestamp, dataset scope, operator, duration, and validation checks.",
-        "Store evidence and remediation items."
+        "Use a provider-supported isolated data-restore exercise when safe and retain timestamps plus integrity checks."
       ]
     },
     {
