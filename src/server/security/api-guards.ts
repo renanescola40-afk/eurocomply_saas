@@ -31,6 +31,7 @@ import {
   type PermissionCheckResult,
 } from '@/server/security/rbac';
 import { ZodError } from 'zod';
+import { requireTenantMfaForOrganization, TenantMfaError } from '@/server/security/tenant-mfa';
 
 export type ApiUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
@@ -74,6 +75,8 @@ export class ApiSecurityError extends Error {
     | 'unauthorized'
     | 'organization_membership_required'
     | 'permission_denied'
+    | 'tenant_mfa_required'
+    | 'tenant_mfa_check_failed'
     | 'rate_limited'
     | 'security_control_unavailable';
 
@@ -157,6 +160,19 @@ export async function requireOrganizationAccess(options: RequireOrganizationAcce
       message: 'Organization membership required.',
       status: 403,
     });
+  }
+
+  try {
+    await requireTenantMfaForOrganization(organizationId);
+  } catch (error) {
+    if (error instanceof TenantMfaError) {
+      throw new ApiSecurityError({
+        code: error.code,
+        message: error.code === 'tenant_mfa_required' ? 'Multi-factor authentication required.' : 'Could not verify multi-factor authentication policy.',
+        status: error.status,
+      });
+    }
+    throw error;
   }
 
   return {
