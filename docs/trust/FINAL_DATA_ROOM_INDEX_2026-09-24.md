@@ -24,6 +24,9 @@ The public repository stores safe indices and non-confidential diligence materia
 | Buyer-readiness matrix | `docs/sales/ENTERPRISE_BUYER_READINESS_2026-09-24.md` |
 | Canonical buyer Q&A | `docs/trust/ENTERPRISE_BUYER_DUE_DILIGENCE_QA.md` |
 | First 48 hours handoff | `docs/trust/BUYER_FIRST_48_HOURS_HANDOFF.md` |
+| Universal SMB→M&A sharing policy | `docs/trust/UNIVERSAL_BUYER_READINESS_2026-09-24.md` |
+| M&A IP/software diligence | `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md` |
+| OSS license diligence | `docs/trust/OPEN_SOURCE_LICENSE_DILIGENCE_2026-09-24.md` |
 
 ## 1. Company and contracting facts
 
@@ -153,7 +156,17 @@ Controlled/provider evidence when required:
 
 Synthetic fixtures must never be represented as real customers or revenue.
 
-## 10. Evidence-sharing rules
+## 10. Strategic acquirer / M&A diligence
+
+- `docs/trust/UNIVERSAL_BUYER_READINESS_2026-09-24.md`
+- `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md`
+- `docs/trust/OPEN_SOURCE_LICENSE_DILIGENCE_2026-09-24.md`
+- current SBOM/supply-chain evidence
+- exact-SHA CI/release evidence
+
+The M&A initial pack remains high-level. Source code and raw security evidence are not automatically shared and require late-stage controlled diligence, an identified buyer, NDA and need-to-know.
+
+## 11. Evidence-sharing rules
 
 Before sending a controlled data room to a buyer:
 
@@ -165,7 +178,7 @@ Before sending a controlled data room to a buyer:
 6. distinguish current evidence from historical evidence;
 7. do not upgrade open external items to PASS because a document exists.
 
-## 11. Terminal buyer-readiness state
+## 12. Terminal buyer-readiness state
 
 ```text
 PRODUCT_ONE_PAGER=PASS
@@ -178,6 +191,10 @@ ARCHITECTURE_PACKAGE=PASS
 PROCUREMENT_PACK=PASS_INTERNAL
 LEGAL_PRIVACY_PROCUREMENT_PACKAGE=PASS_INTERNAL
 CONTROLLED_DATA_ROOM_INDEX=PASS_INTERNAL
+UNIVERSAL_BUYER_SHARE_POLICY=PASS_INTERNAL
+BIG_TECH_MA_DATA_ROOM_INDEX=PASS_INTERNAL
+IP_SOFTWARE_DILIGENCE_INDEX=PASS_INTERNAL
+OPEN_SOURCE_LICENSE_INVENTORY=PASS_INTERNAL
 BUYER_ACCEPTANCE=EXTERNAL
 SIGNED_CUSTOMER_CONTRACT=EXTERNAL
 CUSTOMER_LOGOS_OR_TESTIMONIALS=NOT_CLAIMED
