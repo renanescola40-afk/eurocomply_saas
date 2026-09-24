@@ -124,21 +124,19 @@
     {
       "id": "tenant-segregation",
       "question": "Is tenant segregation proven?",
-      "status": "partial_strong",
-      "customerAnswer": "RISCK COMPLY has organization-scoped authorization controls and RLS/security checks. Production evidence and live RLS validation should be provided before claiming proven tenant isolation.",
+      "status": "implemented_evidence_bound",
+      "customerAnswer": "Organization-scoped authorization and RLS tenant-isolation controls are implemented. A specific production release should be described as production-proven only when exact-release negative cross-tenant runtime evidence is current for that release.",
       "evidence": [
-        "src/server/authz.ts",
-        "scripts/security/check-rls.mjs",
-        "scripts/security/check-api-guards.mjs"
+        "scripts/security/run-supabase-live-tenant-isolation.mjs",
+        "scripts/security/run-supabase-live-tenant-isolation-v4.mjs",
+        "docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md",
+        "docs/security/evidence/runtime/supabase-live-rls-validation.json"
       ],
       "blockers": [
-        "Live RLS evidence must be generated against the production Supabase project.",
-        "Cross-tenant negative tests need to be stored as evidence."
+        "Production-proof disclosure is release-bound; the exact-release runtime artifact must be current for the release being disclosed."
       ],
       "nextActions": [
-        "Run RLS live check with SUPABASE_ACCESS_TOKEN.",
-        "Store tenant isolation test evidence.",
-        "Add cross-tenant regression tests to CI where safe."
+        "Generate or revalidate exact-release negative cross-tenant runtime evidence whenever the production release changes before making a production-proven claim."
       ]
     },
     {
