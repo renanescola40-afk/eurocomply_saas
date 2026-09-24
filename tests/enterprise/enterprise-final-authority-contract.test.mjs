@@ -67,7 +67,8 @@ test('final authority producers require the five direct domain proofs and no raw
   const external = FINAL_AUTHORITY_PRODUCERS.find((producer) => producer.id === 'external-security-assurance');
   assert.equal(external?.artifact(SHA), `external-security-assurance-accepted-${SHA}`);
   assert.equal(external?.scope, 'external');
-  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope !== 'external').length, 4);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope !== 'external').length, 3);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 2);
 });
 
 
@@ -96,7 +97,7 @@ test('external producer collection errors remain strict WAITING_EXTERNAL without
   assert.deepEqual(manifest.internalMissingProducerIds, []);
   assert.equal(manifest.externalStatus, 'Open');
   assert.equal(manifest.externalOutcome, 'blocked');
-  assert.deepEqual(manifest.externalMissingProducerIds, ['external-security-assurance']);
+  assert.deepEqual(manifest.externalMissingProducerIds.sort(), ['billing-product-live-closure', 'external-security-assurance']);
   assert.equal(manifest.status, 'Open');
   assert.equal(manifest.outcome, 'blocked');
   const external = manifest.producers.find((producer) => producer.id === 'external-security-assurance');
@@ -113,7 +114,7 @@ test('internal producer collection errors remain fail-closed and abort authority
       token: 'test-token',
       root,
       collectProducerImpl: async ({ spec }) => {
-        if (spec.id === 'billing-product-live-closure') throw new Error('simulated_internal_error');
+        if (spec.id === 'production-provider-runtime') throw new Error('simulated_internal_error');
         return {
           id: spec.id,
           scope: spec.scope === 'external' ? 'external' : 'internal',
