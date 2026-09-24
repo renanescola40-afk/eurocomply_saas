@@ -52,6 +52,48 @@ function parseSecuritySettingsInput(value: unknown): SecuritySettingsInput | nul
   };
 }
 
+
+export async function GET() {
+  try {
+    const user = await requireApiUser();
+    const organization = await getCurrentOrganizationForUser(user.id);
+
+    if (!organization) {
+      return noStoreJson({ error: 'organization_required' }, { status: 403 });
+    }
+
+    await requirePermission({
+      userId: user.id,
+      organizationId: organization.id,
+      permission: 'manage_settings',
+      minimumPlan: 'starter',
+    });
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('organization_security_settings')
+      .select('require_step_up_for_critical_actions, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values, require_mfa_for_all_users')
+      .eq('organization_id', organization.id)
+      .maybeSingle<StoredSecuritySettings>();
+
+    if (error) {
+      return noStoreJson({ error: 'security_settings_read_failed' }, { status: 503 });
+    }
+
+    return noStoreJson({
+      settings: {
+        requireStepUpForCriticalActions: data?.require_step_up_for_critical_actions ?? true,
+        stepUpProviderMode: data?.step_up_provider_mode ?? 'supabase_mfa_or_enterprise_idp',
+        allowedIdpAcrValues: data?.allowed_idp_acr_values ?? [],
+        allowedIdpAmrValues: data?.allowed_idp_amr_values ?? [],
+        requireMfaForAllUsers: data?.require_mfa_for_all_users ?? false,
+      },
+    });
+  } catch (error) {
+    return secureApiError(error);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await requireApiUser();
