@@ -58,6 +58,10 @@ const COMMERCIAL_PRODUCT_PERMISSIONS = new Set<OrganizationPermission>([
   'export_data',
 ]);
 
+const TENANT_MFA_EXEMPT_PERMISSIONS = new Set<OrganizationPermission>([
+  'manage_billing',
+]);
+
 const MINIMUM_PLAN_BY_PERMISSION: Partial<Record<OrganizationPermission, SubscriptionPlan>> = {
   manage_vendors: 'professional',
   read_vendors: 'professional',
@@ -101,6 +105,52 @@ async function recordRbacDeniedAuditEvent({
     });
   } catch {
     // Keep the original authorization result even if best-effort audit logging fails.
+  }
+}
+
+async function assertTenantMfaAuthority({
+  userId,
+  organizationId,
+  permission,
+  role,
+  rawRole,
+}: {
+  userId: string;
+  organizationId: string;
+  permission: OrganizationPermission;
+  role: OrganizationRole;
+  rawRole: string | null;
+}): Promise<PermissionCheckDenied | null> {
+  if (TENANT_MFA_EXEMPT_PERMISSIONS.has(permission)) return null;
+
+  try {
+    const { evaluateTenantMfaRequirement } = await import('@/server/security/tenant-mfa');
+    const assessment = await evaluateTenantMfaRequirement(organizationId, userId);
+    if (!assessment.required || assessment.satisfied) return null;
+
+    const result: PermissionCheckDenied = {
+      ok: false,
+      status: 403,
+      error: 'mfa_required',
+      message: 'Multi-factor authentication is required for this organization.',
+      role,
+      rawRole,
+      permission,
+    };
+    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+    return result;
+  } catch {
+    const result: PermissionCheckDenied = {
+      ok: false,
+      status: 503,
+      error: 'mfa_control_unavailable',
+      message: 'Could not verify organization MFA policy.',
+      role,
+      rawRole,
+      permission,
+    };
+    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+    return result;
   }
 }
 
@@ -268,6 +318,15 @@ export async function assertOrganizationPermission({
     await recordRbacDeniedAuditEvent({ userId, organizationId, result });
     return result;
   }
+
+  const tenantMfaDenied = await assertTenantMfaAuthority({
+    userId,
+    organizationId,
+    permission,
+    role,
+    rawRole: membership.role,
+  });
+  if (tenantMfaDenied) return tenantMfaDenied;
 
   const commercialAuthorityDenied = await assertCommercialProductAuthority({
     userId,
