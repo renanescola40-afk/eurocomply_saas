@@ -227,7 +227,21 @@ jobs:
           BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: 'true'
         run: |
           set -euo pipefail
-          node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
+          branch_proof_ready=false
+          for attempt in $(seq 1 30); do
+            if node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs; then
+              branch_proof_ready=true
+              break
+            fi
+            if [ "$attempt" -lt 30 ]; then
+              echo "Branch Protection exact-SHA artifact not ready yet (attempt ${attempt}/30); waiting for branch-proof producer."
+              sleep 10
+            fi
+          done
+          if [ "$branch_proof_ready" != "true" ]; then
+            echo "No valid exact-SHA Branch Protection runtime artifact is available after bounded producer wait." >&2
+            exit 1
+          fi
           mkdir -p artifacts/eu-ai-act-final-runtime
           node --input-type=module <<'NODE'
           import { readFileSync, writeFileSync } from 'node:fs';
