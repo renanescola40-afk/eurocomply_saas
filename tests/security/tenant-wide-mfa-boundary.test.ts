@@ -6,6 +6,7 @@ describe('tenant-wide mandatory MFA boundary', () => {
     const migration = readFileSync('supabase/migrations/20260924142243_tenant_wide_mfa.sql', 'utf8');
     const helper = readFileSync('src/server/security/tenant-mfa.ts', 'utf8');
     const apiGuards = readFileSync('src/server/security/api-guards.ts', 'utf8');
+    const rbac = readFileSync('src/server/security/rbac.ts', 'utf8');
     const commercialAccess = readFileSync('src/server/security/commercial-access.ts', 'utf8');
     const settingsRoute = readFileSync('src/app/api/security/settings/route.ts', 'utf8');
     const enrollment = readFileSync('src/components/security/tenant-mfa-enrollment.tsx', 'utf8');
@@ -22,6 +23,9 @@ describe('tenant-wide mandatory MFA boundary', () => {
 
     expect(apiGuards).toContain("code: 'mfa_required'");
     expect(apiGuards).toContain('requireTenantMfaForApi(options.userId, organizationId)');
+    expect(rbac).toContain('assertTenantMfaAuthority');
+    expect(rbac).toContain("error: 'mfa_required'");
+    expect(rbac).toContain("'manage_billing'");
     expect(commercialAccess).toContain('/security/mfa?next=');
 
     expect(settingsRoute).toContain('requireMfaForAllUsers');
