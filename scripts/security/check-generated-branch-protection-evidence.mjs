@@ -21,11 +21,13 @@ export const ALLOWED_EVIDENCE_SOURCES = Object.freeze([
   'github-api-classic-branch-protection',
   'github-api-repository-rulesets-fallback',
   'github-api-classic-plus-repository-rulesets',
+  'github-public-branch-ruleset-workflow',
 ]);
 
 const RULESET_EVIDENCE_SOURCES = new Set([
   'github-api-repository-rulesets-fallback',
   'github-api-classic-plus-repository-rulesets',
+  'github-public-branch-ruleset-workflow',
 ]);
 
 const REQUIRED_PROTECTION_FLAGS = [
@@ -247,12 +249,14 @@ export function validateGeneratedBranchProtectionEvidence(
       boundedRulesetProvenanceIsValid(evidence?.sourceDetails),
       'bounded ruleset provenance is invalid',
     );
-    requireCondition(
-      failures,
-      typeof evidence?.sourceDetails?.classicProtectionApiFailure === 'string'
-        && evidence.sourceDetails.classicProtectionApiFailure.length >= 3,
-      'classic protection boundary is missing',
-    );
+    if (evidence.source !== 'github-public-branch-ruleset-workflow') {
+      requireCondition(
+        failures,
+        typeof evidence?.sourceDetails?.classicProtectionApiFailure === 'string'
+          && evidence.sourceDetails.classicProtectionApiFailure.length >= 3,
+        'classic protection boundary is missing',
+      );
+    }
     requireCondition(
       failures,
       !Object.hasOwn(evidence?.sourceDetails ?? {}, 'rulesetNames'),
