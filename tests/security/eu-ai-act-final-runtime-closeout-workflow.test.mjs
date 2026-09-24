@@ -41,6 +41,9 @@ describe('EU AI Act final runtime closeout workflow', () => {
     expect(platformProof).toContain('validateDownloadedEvidence');
     expect(workflow).not.toContain('administration: read');
     expect(workflow).toContain('waiting for deployment producer');
+    expect(workflow).toContain('waiting for branch-proof producer');
+    expect(workflow).toContain('for attempt in $(seq 1 30)');
+    expect(workflow).toContain('No valid exact-SHA Branch Protection runtime artifact is available after bounded producer wait.');
   });
 
   it('keeps qualified human review outside automated promotion', () => {
