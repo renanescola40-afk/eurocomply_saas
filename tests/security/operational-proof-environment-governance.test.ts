@@ -71,12 +71,12 @@ describe('operational production proof environment governance', () => {
     expect(incidentContinuity).toContain('INCIDENT_NOTIFICATION_MATRIX_REVIEWED: ${{ vars.INCIDENT_NOTIFICATION_MATRIX_REVIEWED }}');
   });
 
-  it('keeps the procurement trust secret behind exact-main and environment governance', () => {
+  it('binds procurement trust proof to the canonical public Trust Center URL after exact-main governance', () => {
     expectOperationalProofBoundary(procurementTrust, 'procurement-trust-environment-governance', 'production-procurement-trust-proof', 'trust-proof', 'Execute procurement trust proof');
     const proofStep = procurementTrust.indexOf('- name: Execute procurement trust proof');
-    const secretReference = procurementTrust.indexOf('secrets.TRUST_CENTER_PUBLIC_URL');
-    expect(secretReference).toBeGreaterThan(proofStep);
-    expect(procurementTrust.slice(0, proofStep)).not.toContain('secrets.TRUST_CENTER_PUBLIC_URL');
+    const publicUrlReference = procurementTrust.indexOf('TRUST_CENTER_PUBLIC_URL: https://www.risckcomply.com/en/trust');
+    expect(publicUrlReference).toBeGreaterThan(proofStep);
+    expect(procurementTrust).not.toContain('secrets.TRUST_CENTER_PUBLIC_URL');
   });
 
   it('fails closed before safe runtime evidence can be dispatched or promoted', () => {
