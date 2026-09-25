@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: ephemeral-supabase-restore-smoke-pr-${{ github.event.pull_request.number }}
@@ -52,6 +53,15 @@ jobs:
 
       - name: Verify runner PostgreSQL client without network installation
         run: node scripts/recovery/verify-postgresql-client.mjs
+
+      - name: Authenticate GHCR pulls for disposable recovery database
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -n "$GHCR_TOKEN"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 
       - name: Start clean disposable synthetic source
         run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start
