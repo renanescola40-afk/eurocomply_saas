@@ -153,7 +153,7 @@ jobs:
 
       - name: Execute procurement trust proof
         env:
-          TRUST_CENTER_PUBLIC_URL: ${{ secrets.TRUST_CENTER_PUBLIC_URL }}
+          TRUST_CENTER_PUBLIC_URL: https://www.risckcomply.com/en/trust
           TRUST_PACKAGE_ENCRYPTION_REQUIRED: ${{ vars.TRUST_PACKAGE_ENCRYPTION_REQUIRED }}
           PROCUREMENT_SLA_DAYS: ${{ vars.PROCUREMENT_SLA_DAYS }}
           SUBPROCESSOR_REGISTER_REVIEWED: ${{ vars.SUBPROCESSOR_REGISTER_REVIEWED }}
