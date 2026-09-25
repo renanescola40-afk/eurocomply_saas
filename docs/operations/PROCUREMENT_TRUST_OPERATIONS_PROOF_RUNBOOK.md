@@ -8,7 +8,9 @@ Environment: `production-procurement-trust-proof`
 
 Secret:
 - `RECOVERY_ISOLATED_DATABASE_URL`
-- `TRUST_CENTER_PUBLIC_URL`
+
+Public binding:
+- `TRUST_CENTER_PUBLIC_URL=https://www.risckcomply.com/en/trust` is repository-bound in the workflow because it is an approved public URL, not a secret.
 
 Variables:
 - `TRUST_PACKAGE_ENCRYPTION_REQUIRED=true`
@@ -19,7 +21,7 @@ Variables:
 1. The migration is applied to the isolated recovery database.
 2. The branch is merged to `main`.
 3. An independent reviewer has approved the configuration values.
-4. The public Trust Center URL uses HTTPS and exposes only approved public material.
+4. The canonical public Trust Center URL is `https://www.risckcomply.com/en/trust`, uses HTTPS and exposes only approved public material.
 
 ## Execution
 Run `Procurement Trust Operations Proof` manually and type:
