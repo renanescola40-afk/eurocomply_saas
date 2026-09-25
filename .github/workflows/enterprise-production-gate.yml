@@ -27,7 +27,6 @@ permissions:
   actions: read
   deployments: read
   security-events: read
-  packages: read
   id-token: write
 
 env:
@@ -173,8 +172,6 @@ jobs:
           grep -Fq "RELEASE_ROLLBACK_EXPECTED_CURRENT_DEPLOYMENT_DIGEST" .github/workflows/enterprise-production-gate.yml
           grep -Fq "cancel-in-progress: true" .github/workflows/enterprise-production-gate.yml
           grep -Fq "deployments: read" .github/workflows/enterprise-production-gate.yml
-          grep -Fq "packages: read" .github/workflows/enterprise-production-gate.yml
-          grep -Fq "docker login ghcr.io" .github/workflows/enterprise-production-gate.yml
           grep -Fq "check-github-environment-governance.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "needs: [quality-security-build, e2e-production-like, production-environment-governance]" .github/workflows/enterprise-production-gate.yml
           grep -Fq "node scripts/release/validate-release-go-no-go-evidence.mjs" scripts/release/run-public-production-release-v2.mjs
@@ -307,15 +304,6 @@ jobs:
           RELEASE_ROLLBACK_RESOLUTION_MODE: automatic
           RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ steps.rollback_resolver.outputs.validated }}
         run: node scripts/release/check-enterprise-release-env.mjs
-      - name: Authenticate GHCR pulls for disposable recovery infrastructure
-        shell: bash
-        env:
-          GHCR_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          test -n "$GHCR_TOKEN"
-          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
-
       - name: Run protected production final validation
         env:
           RELEASE_ROLLBACK_RESOLUTION_MODE: automatic
