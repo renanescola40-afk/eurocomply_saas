@@ -125,12 +125,22 @@ try {
   );
 
   const sentryRelease = sentryEventRelease(providerEvent);
-  const releaseFilesUrl = `https://sentry.io/api/0/projects/${encodeURIComponent(sentryOrg)}/${encodeURIComponent(sentryProject)}/releases/${encodeURIComponent(sha)}/files/`;
-  const releaseFilesResponse = await request(releaseFilesUrl, {
+  const sourceMapDebugUrl = `https://sentry.io/api/0/projects/${encodeURIComponent(sentryOrg)}/${encodeURIComponent(sentryProject)}/events/${encodeURIComponent(sentryEventId)}/source-map-debug/`;
+  const sourceMapDebugResponse = await request(sourceMapDebugUrl, {
     headers: { authorization: `Bearer ${sentryAuthToken}`, accept: 'application/json' },
   });
-  const releaseFiles = releaseFilesResponse.status === 200 ? await readJson(releaseFilesResponse) : null;
-  checks.sentryReleaseAndSourceMaps = sentryRelease === sha && Array.isArray(releaseFiles) && releaseFiles.length > 0;
+  const sourceMapDebug = sourceMapDebugResponse.status === 200 ? await readJson(sourceMapDebugResponse) : null;
+  const sentryArtifactBundleVisible = Boolean(
+    sourceMapDebug
+    && (
+      sourceMapDebug.project_has_some_artifact_bundle === true
+      || sourceMapDebug.release_has_some_artifact === true
+      || sourceMapDebug.has_uploaded_some_artifact_with_a_debug_id === true
+    ),
+  );
+  checks.sentryReleaseAndSourceMaps = sentryRelease === sha
+    && String(sourceMapDebug?.release ?? '') === sha
+    && sentryArtifactBundleVisible;
 
   const rateLimitRequests = await Promise.all(Array.from({ length: 12 }, () => request(`${baseUrl}/api/internal/platform-proof/rate-limit`, { headers: proofHeaders })));
   checks.distributedRateLimit = rateLimitRequests.some((response) => response.status === 429);
