@@ -80,7 +80,10 @@ describe('platform providers revenue megapack', () => {
       expect(runner).toContain(`required('${secret}')`);
     }
     expect(runner).toContain('/events/${encodeURIComponent(eventId)}/');
-    expect(runner).toContain('/releases/${encodeURIComponent(sha)}/files/');
+    expect(runner).toContain('/source-map-debug/');
+    expect(runner).toContain('project_has_some_artifact_bundle');
+    expect(runner).toContain('release_has_some_artifact');
+    expect(runner).toContain('has_uploaded_some_artifact_with_a_debug_id');
 
     expect(rateLimitRoute).toContain('checkDistributedRateLimit');
     expect(rateLimitRoute).toContain('limit: 5');
