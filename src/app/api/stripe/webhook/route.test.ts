@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   syncEnterpriseContractBillingEvent: vi.fn(),
   getStripeEventAuditContext: vi.fn(() => ({ organizationId: 'org_a', actorUserId: 'user_admin', objectId: 'sub_123' })),
   reportError: vi.fn(),
+  loggerWarn: vi.fn(),
   writeAuditLog: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
   getClientIpFromRequest: vi.fn(() => '203.0.113.10'),
@@ -40,6 +41,12 @@ vi.mock('@/server/billing/stripe-webhooks', () => ({
 
 vi.mock('@/lib/observability/report-error', () => ({
   reportError: mocks.reportError,
+}));
+
+vi.mock('@/server/observability/logger', () => ({
+  logger: {
+    warn: mocks.loggerWarn,
+  },
 }));
 
 vi.mock('@/lib/security/audit-log', () => ({
@@ -158,11 +165,15 @@ describe('Stripe webhook route signature validation and dispatch', () => {
       TEST_STRIPE_WEBHOOK_SECRET,
       STRIPE_WEBHOOK_TOLERANCE_SECONDS,
     );
-    expect(mocks.reportError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'Invalid Stripe webhook signature' }),
-      expect.objectContaining({ area: 'stripe_webhook_signature' }),
+    expect(mocks.reportError).not.toHaveBeenCalled();
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(
+      'stripe_webhook_signature_rejected',
+      expect.objectContaining({
+        area: 'stripe_webhook_signature',
+        expectedSecurityRejection: true,
+        route: '/api/stripe/webhook',
+      }),
     );
-    expect(mocks.reportError).not.toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('No signatures found') }), expect.anything());
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'webhook_rejected',

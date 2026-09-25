@@ -81,7 +81,12 @@ try {
     headers: headers(env('SUPABASE_ANON_KEY')),
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
-  requireNetwork(refresh.response.ok && Boolean(refresh.body?.access_token), 'session_refresh_validation_failed');
+  requireNetwork(
+    refresh.response.ok && Boolean(refresh.body?.access_token && refresh.body?.refresh_token),
+    'session_refresh_validation_failed',
+  );
+  accessToken = refresh.body.access_token;
+  refreshToken = refresh.body.refresh_token;
   checks.sessionRefreshValidated = true;
 
   const recovery = await fetchJson(`${base}/auth/v1/recover`, {
@@ -96,9 +101,17 @@ try {
   requireNetwork(logout.response.ok, 'logout_validation_failed');
   checks.logoutValidated = true;
 
-  const staleSession = await fetchJson(`${base}/auth/v1/user`, { headers: headers(accessToken) });
-  requireNetwork(staleSession.response.status === 401 || staleSession.response.status === 403, 'session_revocation_validation_failed');
+  const revokedRefresh = await fetchJson(`${base}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: headers(env('SUPABASE_ANON_KEY')),
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  requireNetwork(
+    [400, 401, 403].includes(revokedRefresh.response.status),
+    'session_refresh_revocation_validation_failed',
+  );
   checks.sessionRevocationValidated = true;
+  checks.accessTokenImmediateRevocationProviderLimitationDocumented = true;
 
   await validateOAuthCallback(env('PRODUCTION_URL').replace(/\/$/, ''));
   checks.oauthCallbackFailsClosed = true;
@@ -144,6 +157,7 @@ const canonicalChecks = {
   accountRecoveryAccepted: checks.accountRecoveryAccepted === true,
   logoutValidated: checks.logoutValidated === true,
   sessionRevocationValidated: checks.sessionRevocationValidated === true,
+  accessTokenImmediateRevocationProviderLimitationDocumented: checks.accessTokenImmediateRevocationProviderLimitationDocumented === true,
   oauthCallbackFailsClosed: checks.oauthCallbackFailsClosed === true,
   oidcDiscoveryValidated: checks.oidcDiscoveryValidated === true,
   adminMfaPolicyPresent: checks.adminMfaPolicyPresent === true,
@@ -170,7 +184,7 @@ const evidence = {
     networkHeadersStored: false,
     disposableAccountRemoved: canonicalChecks.disposableUserCleanup,
   },
-  boundary: 'Synthetic disposable identity lifecycle validation. Network responses are validated and discarded before canonical evidence is assembled; no credentials, email address, tokens, callback parameters, status objects, headers, bodies or provider responses are stored.',
+  boundary: 'Synthetic disposable identity lifecycle validation. Logout proof validates that the refreshed session can no longer mint tokens. Supabase access-token JWTs may remain valid until their encoded expiry after logout, so immediate access-token invalidation is treated as a documented provider limitation rather than fabricated revocation. Network responses are validated and discarded before canonical evidence is assembled; no credentials, email address, tokens, callback parameters, status objects, headers, bodies or provider responses are stored.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });

@@ -18,7 +18,7 @@ describe('identity access lifecycle megapack', () => {
   it('validates the full disposable identity lifecycle', () => {
     for (const token of [
       '/auth/v1/signup','grant_type=password','grant_type=refresh_token','/auth/v1/recover','/auth/v1/logout',
-      'sessionRevocationValidated','oauthCallbackFailsClosed','oidcDiscoveryValidated','adminMfaPolicyPresent',
+      'sessionRevocationValidated','accessTokenImmediateRevocationProviderLimitationDocumented','oauthCallbackFailsClosed','oidcDiscoveryValidated','adminMfaPolicyPresent',
       'sensitiveStepUpPolicyPresent','organizationOnboardingProofPresent','disposableUserCleanup',
     ]) expect(runtime).toContain(token);
   });
@@ -44,7 +44,7 @@ describe('identity access lifecycle megapack', () => {
 
   it('fails closed unless every identity control is proven', () => {
     for (const token of [
-      'signupValidated','accountRecoveryAccepted','sessionRevocationValidated','adminMfaPolicyPresent',
+      'signupValidated','accountRecoveryAccepted','sessionRevocationValidated','accessTokenImmediateRevocationProviderLimitationDocumented','adminMfaPolicyPresent',
       'disposableAccountRemoved','networkStatusStored','networkHeadersStored',
     ]) expect(validator).toContain(token);
   });

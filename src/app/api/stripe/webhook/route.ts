@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 
 import { getStripeClient } from '@/lib/billing/stripe';
 import { reportError } from '@/lib/observability/report-error';
+import { logger } from '@/server/observability/logger';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit, getClientIpFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
@@ -112,7 +113,11 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret, STRIPE_WEBHOOK_TOLERANCE_SECONDS);
   } catch {
     await recordWebhookRouteAudit({ action: 'webhook_rejected', reason: 'invalid_signature' });
-    reportError(new Error('Invalid Stripe webhook signature'), { area: 'stripe_webhook_signature' });
+    logger.warn('stripe_webhook_signature_rejected', {
+      area: 'stripe_webhook_signature',
+      expectedSecurityRejection: true,
+      route: '/api/stripe/webhook',
+    });
     return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
   }
 

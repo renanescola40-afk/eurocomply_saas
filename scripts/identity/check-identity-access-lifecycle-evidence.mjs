@@ -11,7 +11,7 @@ catch { failures.push('identity evidence is invalid JSON'); }
 const requiredChecks = [
   'protectedMainExecution','exactShaBound','explicitConfirmation','signupValidated','loginValidated',
   'sessionRefreshValidated','accountRecoveryAccepted','logoutValidated','sessionRevocationValidated',
-  'oauthCallbackFailsClosed','oidcDiscoveryValidated','adminMfaPolicyPresent','sensitiveStepUpPolicyPresent',
+  'accessTokenImmediateRevocationProviderLimitationDocumented','oauthCallbackFailsClosed','oidcDiscoveryValidated','adminMfaPolicyPresent','sensitiveStepUpPolicyPresent',
   'organizationOnboardingProofPresent','disposableUserCleanup',
 ];
 
