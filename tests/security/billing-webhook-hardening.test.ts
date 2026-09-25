@@ -47,7 +47,9 @@ describe('billing webhook hardening invariants', () => {
   });
 
   it('does not log raw signature validation errors', () => {
-    expect(stripeWebhookRoute).toContain('Invalid Stripe webhook signature');
+    expect(stripeWebhookRoute).toContain('stripe_webhook_signature_rejected');
+    expect(stripeWebhookRoute).toContain('expectedSecurityRejection: true');
+    expect(stripeWebhookRoute).not.toContain('Invalid Stripe webhook signature');
     expect(billingWebhookRoute).toContain('Invalid provider webhook signature');
 
     for (const route of webhookRoutes) {
