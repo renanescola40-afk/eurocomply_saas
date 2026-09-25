@@ -11,6 +11,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -48,26 +49,56 @@ jobs:
       - name: Validate committed branch protection evidence policy
         run: node scripts/security/check-branch-protection-evidence.mjs
 
-      - name: Generate exact-SHA branch protection evidence JSON
+      - name: Retrieve validated exact-SHA branch protection runtime evidence
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_TOKEN: ${{ github.token }}
-          RELEASE_SHA: ${{ env.RELEASE_SHA }}
-        run: node scripts/security/generate-branch-protection-ruleset-evidence.mjs
+          TARGET_SHA: ${{ env.RELEASE_SHA }}
+          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: 'true'
+        run: |
+          set -euo pipefail
+          branch_proof_ready=false
+          for attempt in $(seq 1 30); do
+            if node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs; then
+              branch_proof_ready=true
+              break
+            fi
+            if [ "$attempt" -lt 30 ]; then
+              echo "Branch Protection exact-SHA artifact not ready yet (attempt ${attempt}/30); waiting for branch-proof producer."
+              sleep 10
+            fi
+          done
+          if [ "$branch_proof_ready" != "true" ]; then
+            echo "No valid exact-SHA Branch Protection runtime artifact is available after bounded producer wait." >&2
+            exit 1
+          fi
 
       - name: Validate exact-SHA branch protection evidence contract
-        if: always()
         env:
-          ENTERPRISE_EXPECTED_SHA: ${{ env.RELEASE_SHA }}
-          BRANCH_PROTECTION_EVIDENCE_PATH: p0-evidence/branch-protection-main.generated.json
-        run: node scripts/security/check-generated-branch-protection-evidence.mjs
+          RELEASE_SHA: ${{ env.RELEASE_SHA }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { validateBranchProtectionFreshness } from './scripts/security/validate-branch-protection-freshness.mjs';
+
+          const evidence = JSON.parse(
+            readFileSync('docs/security/evidence/runtime/branch-protection-required-checks.json', 'utf8'),
+          );
+          const failures = validateBranchProtectionFreshness(evidence, {
+            expectedCommitSha: process.env.RELEASE_SHA.toLowerCase(),
+          });
+          if (evidence.outcome !== 'passed' || evidence.targetSha !== process.env.RELEASE_SHA.toLowerCase()) {
+            failures.push('exact-SHA branch protection runtime evidence is not verified');
+          }
+          if (failures.length > 0) {
+            throw new Error(`branch protection evidence validation failed: ${[...new Set(failures)].join(', ')}`);
+          }
+          NODE
 
       - name: Upload exact-SHA branch protection evidence
-        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: p0-branch-protection-evidence-${{ env.RELEASE_SHA }}
-          path: p0-evidence/branch-protection-main.generated.json
+          path: docs/security/evidence/runtime/branch-protection-required-checks.json
           retention-days: 90
           if-no-files-found: error

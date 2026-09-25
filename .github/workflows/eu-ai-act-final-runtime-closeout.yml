@@ -222,20 +222,38 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          RELEASE_SHA: ${{ env.TARGET_SHA }}
-          BRANCH_PROTECTION_EVIDENCE_PATH: p0-evidence/branch-protection-main.generated.json
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ env.TARGET_SHA }}
+          BRANCH_PROTECTION_RUNTIME_EVIDENCE_REQUIRED: 'true'
         run: |
           set -euo pipefail
-          node scripts/security/generate-branch-protection-ruleset-evidence.mjs
-          node scripts/security/check-generated-branch-protection-evidence.mjs
+          branch_proof_ready=false
+          for attempt in $(seq 1 30); do
+            if node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs; then
+              branch_proof_ready=true
+              break
+            fi
+            if [ "$attempt" -lt 30 ]; then
+              echo "Branch Protection exact-SHA artifact not ready yet (attempt ${attempt}/30); waiting for branch-proof producer."
+              sleep 10
+            fi
+          done
+          if [ "$branch_proof_ready" != "true" ]; then
+            echo "No valid exact-SHA Branch Protection runtime artifact is available after bounded producer wait." >&2
+            exit 1
+          fi
           mkdir -p artifacts/eu-ai-act-final-runtime
           node --input-type=module <<'NODE'
           import { readFileSync, writeFileSync } from 'node:fs';
-          const evidence = JSON.parse(readFileSync('p0-evidence/branch-protection-main.generated.json', 'utf8'));
+          const evidence = JSON.parse(readFileSync('docs/security/evidence/runtime/branch-protection-required-checks.json', 'utf8'));
+          if (evidence.outcome !== 'passed' || evidence.targetSha !== process.env.TARGET_SHA) {
+            throw new Error('exact-SHA branch protection runtime evidence is not verified');
+          }
           writeFileSync('artifacts/eu-ai-act-final-runtime/platform-proof.json', JSON.stringify({
-            status: evidence.outcome === 'passed' ? 'VERIFIED' : 'BLOCKED',
+            status: 'VERIFIED',
             targetSha: evidence.targetSha,
             source: evidence.source,
+            sourceRunId: evidence.sourceWorkflow?.runId || null,
           }, null, 2));
           NODE
 
