@@ -38,8 +38,15 @@ function hasSensitiveShape(value) {
     // object or non-string-array value falls back to the fail-closed sensitive scan.
     if (SAFE_LABEL_MAP_KEYS.has(key) && isStringArrayMap(item)) return false;
 
-    return (SENSITIVE_KEY.test(key) && item !== null && item !== '' && item !== false)
-      || hasSensitiveShape(item);
+    // Boolean values on sensitive-shaped keys are evidence assertions (for example,
+    // dedicatedSigningSecretConfigured=true or readyEndpointOkWithToken=true), not
+    // credential material. Preserve fail-closed behavior for every non-boolean value.
+    const sensitiveValuePresent = SENSITIVE_KEY.test(key)
+      && typeof item !== 'boolean'
+      && item !== null
+      && item !== '';
+
+    return sensitiveValuePresent || hasSensitiveShape(item);
   });
 }
 
