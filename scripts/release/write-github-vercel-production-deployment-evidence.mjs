@@ -189,7 +189,6 @@ export async function findExactShaVercelProductionDeployment({
 export async function probeExactDeploymentHealth({
   publicUrl,
   protectionBypassSecret = '',
-  healthcheckToken = '',
   fetchImpl = globalThis.fetch,
 }) {
   let healthUrl;
@@ -203,6 +202,7 @@ export async function probeExactDeploymentHealth({
       noStore: false,
       protectionBypassUsed: false,
       blockedByVercelProtection: false,
+      vercelProviderMarked: false,
     };
   }
 
@@ -229,6 +229,7 @@ export async function probeExactDeploymentHealth({
       noStore: false,
       protectionBypassUsed: Boolean(bypassSecret),
       blockedByVercelProtection: false,
+      vercelProviderMarked: false,
     };
   }
 
@@ -251,49 +252,34 @@ export async function probeExactDeploymentHealth({
       blockedByVercelProtection = false;
     }
   }
+
   return {
     passed: response.status === 200 && bodyStatus === 'ok' && noStore,
+    path: '/api/health',
     status: response.status,
     bodyStatus: bodyStatus || null,
     noStore,
     protectionBypassUsed: Boolean(bypassSecret),
     blockedByVercelProtection,
     vercelProviderMarked,
+    canonicalFallbackUsed: false,
   };
 }
 
-export async function probeCanonicalReleaseHealth({
+async function probeAuthenticatedCanonicalReleaseHealth({
   publicUrl,
   targetSha,
   healthcheckToken,
-  fetchImpl = globalThis.fetch,
+  fetchImpl,
 }) {
   const token = String(healthcheckToken ?? '').trim();
-  if (!token || !FULL_SHA.test(String(targetSha ?? '').toLowerCase())) {
-    return {
-      passed: false,
-      path: '/api/ready/release',
-      status: 0,
-      bodyStatus: null,
-      noStore: false,
-      releaseShaMatched: false,
-      canonicalFallbackUsed: true,
-    };
-  }
+  if (!token || !FULL_SHA.test(String(targetSha ?? '').toLowerCase())) return null;
 
   let releaseUrl;
   try {
     releaseUrl = new URL('/api/ready/release', publicUrl);
   } catch {
-    return {
-      passed: false,
-      path: '/api/ready/release',
-      status: 0,
-      bodyStatus: null,
-      noStore: false,
-      releaseShaMatched: false,
-      canonicalFallbackUsed: true,
-    };
+    return null;
   }
 
   let response;
@@ -309,15 +295,7 @@ export async function probeCanonicalReleaseHealth({
       },
     });
   } catch {
-    return {
-      passed: false,
-      path: '/api/ready/release',
-      status: 0,
-      bodyStatus: null,
-      noStore: false,
-      releaseShaMatched: false,
-      canonicalFallbackUsed: true,
-    };
+    return null;
   }
 
   const body = response.ok ? await readBoundedJson(response, 64 * 1024) : null;
@@ -335,6 +313,97 @@ export async function probeCanonicalReleaseHealth({
     noStore,
     releaseShaMatched,
     canonicalFallbackUsed: true,
+    canonicalFallbackMode: 'authenticated_release',
+  };
+}
+
+async function probePublicCanonicalHealth({ publicUrl, fetchImpl }) {
+  let healthUrl;
+  try {
+    healthUrl = new URL('/api/health', publicUrl);
+  } catch {
+    return null;
+  }
+
+  let response;
+  try {
+    response = await fetchImpl(healthUrl, {
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'risck-comply-canonical-production-health-proof/1.0',
+      },
+    });
+  } catch {
+    return null;
+  }
+
+  const body = response.ok ? await readBoundedJson(response, 64 * 1024) : null;
+  if (!response.ok) await response.body?.cancel().catch(() => undefined);
+  const noStore = /\bno-store\b/i.test(String(response.headers.get('cache-control') ?? ''));
+  const bodyStatus = String(body?.status ?? '');
+
+  return {
+    passed: response.status === 200 && bodyStatus === 'ok' && noStore,
+    path: '/api/health',
+    status: response.status,
+    bodyStatus: bodyStatus || null,
+    noStore,
+    releaseShaMatched: false,
+    canonicalFallbackUsed: true,
+    canonicalFallbackMode: 'public_health_after_exact_sha_deployment',
+  };
+}
+
+export async function probeCanonicalReleaseHealth({
+  publicUrl,
+  targetSha,
+  healthcheckToken,
+  fetchImpl = globalThis.fetch,
+}) {
+  const token = String(healthcheckToken ?? '').trim();
+  if (token) {
+    return await probeAuthenticatedCanonicalReleaseHealth({
+      publicUrl,
+      targetSha,
+      healthcheckToken: token,
+      fetchImpl,
+    }) ?? {
+      passed: false,
+      path: '/api/ready/release',
+      status: 0,
+      bodyStatus: null,
+      noStore: false,
+      releaseShaMatched: false,
+      canonicalFallbackUsed: true,
+      canonicalFallbackMode: 'authenticated_release',
+    };
+  }
+
+  if (!FULL_SHA.test(String(targetSha ?? '').toLowerCase())) {
+    return {
+      passed: false,
+      path: '/api/health',
+      status: 0,
+      bodyStatus: null,
+      noStore: false,
+      releaseShaMatched: false,
+      canonicalFallbackUsed: true,
+      canonicalFallbackMode: 'public_health_after_exact_sha_deployment',
+    };
+  }
+
+  return await probePublicCanonicalHealth({ publicUrl, fetchImpl }) ?? {
+    passed: false,
+    path: '/api/health',
+    status: 0,
+    bodyStatus: null,
+    noStore: false,
+    releaseShaMatched: false,
+    canonicalFallbackUsed: true,
+    canonicalFallbackMode: 'public_health_after_exact_sha_deployment',
   };
 }
 
@@ -350,6 +419,7 @@ function safeHealthEvidence(health) {
     vercelProviderMarked: health.vercelProviderMarked === true,
     releaseShaMatched: health.releaseShaMatched === true,
     canonicalFallbackUsed: health.canonicalFallbackUsed === true,
+    canonicalFallbackMode: health.canonicalFallbackMode || null,
   };
 }
 
@@ -488,12 +558,16 @@ export async function buildProductionDeploymentEvidence({
   const finalMainMatches = await currentMainMatches({ repository, targetSha, token, fetchImpl, apiUrl });
   if (!finalMainMatches) return failureEvidence(baseEvidence, 'target_sha_is_not_current_main', deployment, health);
 
+  const publicFallback = health?.canonicalFallbackMode === 'public_health_after_exact_sha_deployment';
+
   return {
     ...baseEvidence,
     status: 'PASS',
     outcome: 'passed',
     summary: health?.canonicalFallbackUsed === true
-      ? 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the authenticated canonical release endpoint confirms the same exact SHA with no-store.'
+      ? (publicFallback
+          ? 'GitHub records a successful Vercel Production deployment for the exact current main SHA; the immutable URL is blocked by Vercel protection and canonical public /api/health is healthy with no-store.'
+          : 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the authenticated canonical release endpoint confirms the same exact SHA with no-store.')
       : 'GitHub records a successful Vercel Production deployment for the exact current main SHA, and the immutable deployment health endpoint responds successfully with no-store.',
     deployment: {
       proofSource: deployment.source,
@@ -543,7 +617,7 @@ export async function buildProductionDeploymentEvidence({
       protectionBypassSecretPersisted: false,
       rawResponseBodyStored: false,
     },
-    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. Canonical fallback is accepted only through the authenticated /api/ready/release endpoint when it reports the same exact target SHA and only after the immutable Vercel URL is blocked by Vercel protection or a Vercel authentication boundary (401/403); generic public /api/health is never sufficient for exact-SHA substitution. Preview deployments are never accepted as Production authority. Generic commit statuses, arbitrary redirects, SHA-mismatched canonical responses, and unhealthy immutable deployments are never accepted as exact-SHA Production proof. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
+    truthBoundary: 'This evidence proves only that Vercel reported a successful Production deployment for the exact current main SHA through an explicit GitHub deployment status and that Production health passed with no-store. When an authorized healthcheck token exists, canonical fallback uses the authenticated /api/ready/release endpoint and requires the same exact target SHA. When no healthcheck token or Vercel bypass secret exists, canonical public /api/health may be used only after the immutable exact-SHA Production URL is specifically blocked by Vercel protection or a Vercel-marked authentication boundary; exact-SHA authority still comes exclusively from the successful GitHub/Vercel Production deployment. Preview deployments, generic commit statuses, arbitrary redirects, unhealthy immutable deployments, and canonical health without prior exact-SHA Production authority are never accepted. It does not prove provider secret inventory, authenticated application flows, rollback rehearsal, observability, billing, legal approval, or final release GO.',
   };
 }
 
