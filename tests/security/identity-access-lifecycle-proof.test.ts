@@ -17,7 +17,7 @@ describe('identity access lifecycle megapack', () => {
 
   it('validates the full disposable identity lifecycle', () => {
     for (const token of [
-      '/auth/v1/signup','grant_type=password','grant_type=refresh_token','/auth/v1/recover','/auth/v1/logout',
+      '/auth/v1/signup','/auth/v1/admin/users?page=1&per_page=1000','email_confirm: true','grant_type=password','grant_type=refresh_token','/auth/v1/recover','/auth/v1/logout',
       'sessionRevocationValidated','accessTokenImmediateRevocationProviderLimitationDocumented','oauthCallbackFailsClosed','oidcDiscoveryValidated','adminMfaPolicyPresent',
       'sensitiveStepUpPolicyPresent','organizationOnboardingProofPresent','disposableUserCleanup',
     ]) expect(runtime).toContain(token);
@@ -30,6 +30,9 @@ describe('identity access lifecycle megapack', () => {
     expect(runtime).toContain('checks.oauthCallbackFailsClosed = true');
     expect(runtime).toContain('networkStatusStored: false');
     expect(runtime).toContain('networkHeadersStored: false');
+    expect(runtime).toContain("'signup_user_resolution_failed'");
+    expect(runtime).toContain("'synthetic_email_confirmation_failed'");
+    expect(runtime).toContain('email_confirm: true');
     expect(runtime).not.toContain('checks.signupValidated = signup.response.ok');
     expect(runtime).not.toContain('postRollback');
   });
