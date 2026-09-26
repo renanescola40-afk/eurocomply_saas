@@ -61,10 +61,31 @@ try {
     headers: headers(env('SUPABASE_ANON_KEY')),
     body: JSON.stringify({ email, password }),
   });
-  userId = signup.body?.user?.id ?? null;
-  accessToken = signup.body?.access_token ?? null;
-  requireNetwork(signup.response.ok && Boolean(userId), 'signup_validation_failed');
+  requireNetwork(signup.response.ok, 'signup_validation_failed');
+
+  userId = signup.body?.user?.id ?? signup.body?.id ?? null;
+  accessToken = signup.body?.access_token ?? signup.body?.session?.access_token ?? null;
+
+  if (!userId) {
+    const adminUsers = await fetchJson(`${base}/auth/v1/admin/users?page=1&per_page=1000`, {
+      headers: adminHeaders,
+    });
+    const users = Array.isArray(adminUsers.body?.users) ? adminUsers.body.users : [];
+    userId = users.find((user) => String(user?.email ?? '').toLowerCase() === email.toLowerCase())?.id ?? null;
+  }
+
+  requireNetwork(Boolean(userId), 'signup_user_resolution_failed');
   checks.signupValidated = true;
+
+  const confirmSyntheticUser = await fetchJson(
+    `${base}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
+    {
+      method: 'PUT',
+      headers: adminHeaders,
+      body: JSON.stringify({ email_confirm: true }),
+    },
+  );
+  requireNetwork(confirmSyntheticUser.response.ok, 'synthetic_email_confirmation_failed');
 
   const login = await fetchJson(`${base}/auth/v1/token?grant_type=password`, {
     method: 'POST',
@@ -184,7 +205,7 @@ const evidence = {
     networkHeadersStored: false,
     disposableAccountRemoved: canonicalChecks.disposableUserCleanup,
   },
-  boundary: 'Synthetic disposable identity lifecycle validation. Logout proof validates that the refreshed session can no longer mint tokens. Supabase access-token JWTs may remain valid until their encoded expiry after logout, so immediate access-token invalidation is treated as a documented provider limitation rather than fabricated revocation. Network responses are validated and discarded before canonical evidence is assembled; no credentials, email address, tokens, callback parameters, status objects, headers, bodies or provider responses are stored.',
+  boundary: 'Synthetic disposable identity lifecycle validation. Public signup is validated with email confirmation policy enabled; only the disposable proof account is then admin-confirmed in-memory so password-login, refresh, recovery, logout and revocation can be tested without weakening production confirmation policy. Logout proof validates that the refreshed session can no longer mint tokens. Supabase access-token JWTs may remain valid until their encoded expiry after logout, so immediate access-token invalidation is treated as a documented provider limitation rather than fabricated revocation. Network responses are validated and discarded before canonical evidence is assembled; no credentials, email address, tokens, callback parameters, status objects, headers, bodies or provider responses are stored.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
