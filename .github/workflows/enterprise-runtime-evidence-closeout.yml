@@ -12,6 +12,7 @@ on:
       - 'scripts/release/run-rollback-dry-run.mjs'
       - 'tests/release/rollback-protection-bypass.test.mjs'
       - 'tests/release/enterprise-runtime-closeout-wiring.test.mjs'
+      - 'tests/release/enterprise-runtime-closeout-retained-evidence-hydration.test.mjs'
       - '.github/workflows/enterprise-runtime-evidence-closeout.yml'
       - 'docs/security/runbooks/ENTERPRISE_RUNTIME_EVIDENCE_CLOSEOUT.md'
   workflow_dispatch:
@@ -43,6 +44,7 @@ jobs:
       - run: node --check scripts/release/run-rollback-dry-run.mjs
       - run: node --test scripts/release/validate-enterprise-runtime-closeout.test.mjs
       - run: node --test tests/release/enterprise-runtime-closeout-wiring.test.mjs
+      - run: node --test tests/release/enterprise-runtime-closeout-retained-evidence-hydration.test.mjs
       - run: node --test tests/release/rollback-protection-bypass.test.mjs
 
   environment-governance:
@@ -138,6 +140,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+
+      - name: Hydrate retained exact-SHA runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.release_sha }}
+          RETAINED_PROOF_OPTIONAL_ERRORS_AS_MISSING: 'false'
+        run: node scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs
 
       - name: Run public production final validation
         env:
