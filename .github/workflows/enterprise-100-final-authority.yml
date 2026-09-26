@@ -10,8 +10,10 @@ on:
       - '.github/workflows/enterprise-conversation-runtime-closeout.yml'
       - 'config/enterprise-100-closure.json'
       - 'scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs'
+      - 'scripts/enterprise/prune-superseded-artifact-attempts.mjs'
       - 'scripts/release/write-enterprise-final-authority.mjs'
       - 'tests/enterprise/enterprise-final-authority-contract.test.mjs'
+      - 'tests/enterprise/prune-superseded-artifact-attempts.test.mjs'
   push:
     branches: [main]
   workflow_run:
@@ -66,8 +68,10 @@ jobs:
       - name: Validate final authority contracts
         run: |
           node --check scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs
+          node --check scripts/enterprise/prune-superseded-artifact-attempts.mjs
           node --check scripts/release/write-enterprise-final-authority.mjs
           node --test tests/enterprise/enterprise-final-authority-contract.test.mjs
+          node --test tests/enterprise/prune-superseded-artifact-attempts.test.mjs
 
   production-governance:
     name: Verify Production governance before final authority
@@ -154,6 +158,8 @@ jobs:
             enterprise-100 \
             "$TARGET_SHA" \
             "$RETAINED_ARTIFACT_ROOT"
+      - name: Prune superseded attempts before evidence path selection
+        run: node scripts/enterprise/prune-superseded-artifact-attempts.mjs "$RETAINED_ARTIFACT_ROOT"
       - name: Collect direct domain authority artifacts
         run: node scripts/enterprise/fetch-enterprise-final-authority-evidence.mjs
       - name: Merge direct authority sources into retained evidence root
@@ -190,7 +196,7 @@ jobs:
               echo "- Release SHA: \`$TARGET_SHA\`"
             fi
             if [ -f "$FINAL_AUTHORITY_SOURCE_ROOT/enterprise-final-authority-source.json" ]; then
-              jq -r '"- Direct domain sources: \(.collectedProducerCount)/\(.requiredProducerCount)\n- Internal domain sources: \(.internalCollectedProducerCount // .collectedProducerCount)/\(.internalRequiredProducerCount // .requiredProducerCount)\n- Missing internal sources: \((.internalMissingProducerIds // .missingProducerIds) | join(\", \"))\n- Missing strict sources: \(.missingProducerIds | join(\", \"))"' \
+              jq -r '"- Direct domain sources: \(.collectedProducerCount)/\(.requiredProducerCount)\n- Internal domain sources: \(.internalCollectedProducerCount // .collectedProducerCount)/\(.internalRequiredProducerCount // .requiredProducerCount)\n- Missing internal sources: \((.internalMissingProducerIds // .missingProducerIds) | join(", "))\n- Missing strict sources: \(.missingProducerIds | join(", "))"' \
                 "$FINAL_AUTHORITY_SOURCE_ROOT/enterprise-final-authority-source.json"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
