@@ -176,7 +176,7 @@ describe('exact-SHA Vercel production deployment proof', () => {
       githubCommitStatusBound: false,
       liveHealthVerified: true,
     });
-    expect(evidence.truthBoundary).toContain('Preview deployments are never accepted');
+    expect(evidence.truthBoundary).toContain('Preview deployments, generic commit statuses, arbitrary redirects, unhealthy immutable deployments, and canonical health without prior exact-SHA Production authority are never accepted');
     expect(JSON.stringify(evidence)).not.toContain('test-token');
     expect(JSON.stringify(evidence)).not.toContain('https://');
   });
