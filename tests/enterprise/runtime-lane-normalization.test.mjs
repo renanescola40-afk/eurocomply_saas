@@ -112,6 +112,32 @@ test('repository status-check label maps do not look like credentials', async ()
   }
 });
 
+test('boolean secret-shaped evidence assertions are accepted without weakening value scanning', async () => {
+  const root = await setup('PRODUCTION', (document) => ({
+    ...document,
+    checks: {
+      readyEndpointOkWithToken: true,
+      readyEndpointDoesNotExposeSecrets: true,
+      sourceMapsUploadRequiresAuthToken: true,
+      dedicatedSigningSecretConfigured: true,
+    },
+  }));
+
+  try {
+    const evidence = await normalizeLaneEvidence({
+      runtimeRoot: root,
+      lane: 'PRODUCTION',
+      campaignResult: { run_id: 4242 },
+      targetSha: SHA,
+      repository: REPOSITORY,
+    });
+    assert.equal(evidence.status, 'Complete');
+    assert.equal(evidence.outcome, 'passed');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('actual sensitive metadata still fails closed', async () => {
   const root = await setup('REPOSITORY', (document) => ({
     ...document,
