@@ -35,7 +35,7 @@ const commands = [
   ['05-playwright-install', 'npx playwright install --with-deps chromium', 'npx', ['playwright', 'install', '--with-deps', 'chromium']],
   ['06-test-e2e-production-like', 'npm run test:e2e', 'npm', ['run', 'test:e2e']],
   ['07-security-ci', 'npm run security:ci', 'npm', ['run', 'security:ci']],
-  ['08-security-rls-live', 'validate retained exact-SHA Supabase live RLS evidence', 'node', ['scripts/security/check-p0-supabase-rls-evidence.mjs']],
+  ['08-security-rls-live', 'node scripts/release/validate-retained-supabase-rls-release-proof.mjs', 'node', ['scripts/release/validate-retained-supabase-rls-release-proof.mjs']],
   ['09-release-deployment-smoke', 'npm run release:deployment-smoke', 'npm', ['run', 'release:deployment-smoke']],
   ['10-release-observability-smoke', 'npm run release:observability-smoke', 'npm', ['run', 'release:observability-smoke']],
   ['11-release-rollback-dry-run', 'npm run release:rollback:dry-run', 'npm', ['run', 'release:rollback:dry-run']],
