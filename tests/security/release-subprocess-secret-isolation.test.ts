@@ -32,7 +32,8 @@ describe('release subprocess secret isolation', () => {
   it('does not expose provider secrets to public install or static validation children', () => {
     expect(publicRunner).toContain("['00-npm-ci', 'npm ci --ignore-scripts', 'npm', ['ci', '--ignore-scripts']]");
     expect(publicRunner).toContain('buildReleaseSubprocessEnv(process.env, protectedKeysByStep.get(step.slug) || [])');
-    expect(publicRunner).toContain("['08-security-rls-live', ['SUPABASE_SERVICE_ROLE_KEY']]");
+    expect(publicRunner).toContain("['08-security-rls-live', 'node scripts/release/validate-retained-supabase-rls-release-proof.mjs'");
+    expect(publicRunner).not.toContain("['08-security-rls-live', ['SUPABASE_SERVICE_ROLE_KEY']]");
     expect(publicRunner).toContain("['09-release-deployment-smoke', ['HEALTHCHECK_TOKEN']]");
     expect(publicRunner).toContain("['10-release-observability-smoke', ['HEALTHCHECK_TOKEN']]");
     expect(publicRunner).toContain("['11-release-rollback-dry-run', ['HEALTHCHECK_TOKEN']]");
