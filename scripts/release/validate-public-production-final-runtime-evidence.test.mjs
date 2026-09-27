@@ -13,7 +13,8 @@ const runtimePaths = [
 const commands = [
   'npm ci', 'npm run lint', 'npm run typecheck', 'npm run test', 'npm run build',
   'npx playwright install --with-deps chromium', 'npm run test:e2e', 'npm run security:ci',
-  'npm run security:rls:live', 'npm run release:deployment-smoke', 'npm run release:observability-smoke',
+  'node scripts/release/validate-retained-supabase-rls-release-proof.mjs',
+  'npm run release:deployment-smoke', 'npm run release:observability-smoke',
   'npm run release:rollback:dry-run', 'npm run security:branch-protection-evidence',
   'npm run security:release-candidate', 'npm run security:release-evidence', 'npm run security:release-approval',
   'npm run security:release-go-no-go', 'npm run security:release-rollback',
@@ -98,6 +99,13 @@ describe('validatePublicProductionFinalRuntimeEvidence', () => {
     evidence.commands.pop();
     expect(validatePublicProductionFinalRuntimeEvidence(evidence, { now, expectedCommitSha: sha }))
       .toContain(`commands must contain exactly ${commands.length} public release commands`);
+  });
+
+  it('rejects legacy live-RLS reexecution in the retained-proof profile', () => {
+    const evidence = completeEvidence();
+    evidence.commands[8] = { command: 'npm run security:rls:live', result: 'passed', passed: true };
+    expect(validatePublicProductionFinalRuntimeEvidence(evidence, { now, expectedCommitSha: sha }))
+      .toContain('commands must contain exactly one passing node scripts/release/validate-retained-supabase-rls-release-proof.mjs');
   });
 
   it('rejects stored authorization headers', () => {

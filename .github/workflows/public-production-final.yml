@@ -150,6 +150,7 @@ jobs:
           node --check scripts/release/run-public-production-release.mjs
           node --check scripts/release/check-public-production-release-env.mjs
           node --check scripts/release/run-public-production-release-final.mjs
+          node --check scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs
           node --check scripts/release/write-public-production-go-no-go-evidence.mjs
           node --check scripts/release/validate-public-production-go-no-go-evidence.mjs
           node --check scripts/release/validate-public-production-final-runtime-evidence.mjs
@@ -183,6 +184,13 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$main_sha" = "$TARGET_SHA"
           node scripts/security/check-github-environment-governance.mjs
+
+      - name: Hydrate retained exact-SHA runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.sha }}
+          RETAINED_PROOF_OPTIONAL_ERRORS_AS_MISSING: 'false'
+        run: node scripts/release/hydrate-enterprise-retained-runtime-evidence.mjs
 
       - name: Run public production final gate
         env:
@@ -226,6 +234,7 @@ jobs:
           name: public-production-final-validation-${{ github.sha }}
           path: |
             release-validation/public-production/**
+            release-validation/retained-runtime-evidence-hydration.json
             artifacts/enterprise-readiness/**
             docs/security/evidence/runtime/public-production-release-env-readiness.json
             docs/security/evidence/runtime/deployment-smoke-validation.json
