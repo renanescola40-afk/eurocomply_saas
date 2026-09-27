@@ -15,7 +15,7 @@ const REQUIRED_COMMANDS = [
   'npx playwright install --with-deps chromium',
   'npm run test:e2e',
   'npm run security:ci',
-  'npm run security:rls:live',
+  'node scripts/release/validate-retained-supabase-rls-release-proof.mjs',
   'npm run release:deployment-smoke',
   'npm run release:observability-smoke',
   'npm run release:rollback:dry-run',
