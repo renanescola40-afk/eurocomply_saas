@@ -26,7 +26,7 @@ test('collector modes use explicit producer workflow bindings', () => {
   const closure = producerSpecsForMode('enterprise-100');
   const dashboard = producerSpecsForMode('dashboard');
 
-  assert.equal(closure.length, 15);
+  assert.equal(closure.length, 16);
   assert.equal(dashboard.length, 5);
   assert.ok(closure.some((producer) => producer.workflowPath === '.github/workflows/enterprise-production-gate.yml'));
   assert.ok(closure.some((producer) => producer.workflowPath === '.github/workflows/production-runtime-proof.yml'));
@@ -35,6 +35,7 @@ test('collector modes use explicit producer workflow bindings', () => {
   assert.ok(closure.some((producer) => producer.workflowPath === '.github/workflows/production-provider-runtime-proof.yml'));
   assert.ok(closure.some((producer) => producer.workflowPath === '.github/workflows/recovery-resilience-proof.yml'));
   assert.ok(closure.some((producer) => producer.workflowPath === '.github/workflows/supabase-production-rls-reconciliation.yml'));
+  assert.ok(closure.some((producer) => producer.workflowPath === '.github/workflows/supabase-live-rls-validation.yml'));
   assert.ok(closure.some((producer) => producer.workflowPath === '.github/workflows/external-security-assurance.yml'));
   assert.ok(closure.some((producer) => producer.workflowPath === '.github/workflows/final-legal-publication-gate.yml'));
   assert.ok(dashboard.some((producer) => producer.workflowPath === '.github/workflows/eu-ai-act-final-runtime-closeout.yml'));
@@ -58,6 +59,7 @@ test('artifact patterns remain exact or prefix-bound', () => {
   assert.equal(artifactNameMatches(`production-runtime-proof-${SHA}`, ['production-runtime-proof-*']), true);
   assert.equal(artifactNameMatches(`recovery-resilience-proof-${SHA}`, ['recovery-resilience-proof-*']), true);
   assert.equal(artifactNameMatches(`supabase-rls-reconciliation-${SHA}`, ['supabase-rls-reconciliation-*']), true);
+  assert.equal(artifactNameMatches(`supabase-live-rls-runtime-proof-${SHA}`, ['supabase-live-rls-runtime-proof-*']), true);
   assert.equal(artifactNameMatches(`external-security-assurance-accepted-${SHA}`, ['external-security-assurance-accepted-*']), true);
   assert.equal(artifactNameMatches(`external-security-assurance-rejected-${SHA}`, ['external-security-assurance-accepted-*']), false);
   assert.equal(artifactNameMatches('unrelated-artifact', ['enterprise-runtime-closeout-*']), false);
@@ -92,8 +94,8 @@ test('zero artifacts is valid only after all workflow-scoped inventories succeed
 
     assert.equal(manifest.status, 'Complete');
     assert.equal(manifest.collectedArtifactCount, 0);
-    assert.equal(manifest.producers.length, 15);
-    assert.equal(urls.length, 15);
+    assert.equal(manifest.producers.length, 16);
+    assert.equal(urls.length, 16);
     for (const url of urls) {
       assert.match(url, /\/actions\/workflows\//);
       assert.match(url, /status=completed/);

@@ -74,6 +74,11 @@ const PRODUCERS = Object.freeze({
       artifactPatterns: Object.freeze(['supabase-rls-reconciliation-*']),
     }),
     Object.freeze({
+      workflow: 'supabase-live-rls-validation.yml',
+      workflowPath: '.github/workflows/supabase-live-rls-validation.yml',
+      artifactPatterns: Object.freeze(['supabase-live-rls-runtime-proof-*']),
+    }),
+    Object.freeze({
       workflow: 'external-security-assurance.yml',
       workflowPath: '.github/workflows/external-security-assurance.yml',
       artifactPatterns: Object.freeze(['external-security-assurance-accepted-*']),
