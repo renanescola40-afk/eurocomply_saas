@@ -32,8 +32,10 @@ describe('production release profiles', () => {
 
   it('keeps P0 runtime evidence in the public profile without enterprise-only gates', () => {
     const publicRunner = read('scripts/release/run-public-production-release-final.mjs');
+    const retainedRlsValidator = read('scripts/release/validate-retained-supabase-rls-release-proof.mjs');
 
-    expect(publicRunner).toContain('npm run security:rls:live');
+    expect(publicRunner).toContain('node scripts/release/validate-retained-supabase-rls-release-proof.mjs');
+    expect(publicRunner).not.toContain("['08-security-rls-live', 'npm run security:rls:live'");
     expect(publicRunner).toContain('npm run release:deployment-smoke');
     expect(publicRunner).toContain('npm run release:observability-smoke');
     expect(publicRunner).toContain('npm run release:rollback:dry-run');
@@ -43,6 +45,10 @@ describe('production release profiles', () => {
     expect(publicRunner).not.toContain("'docs/security/evidence/runtime/release-go-no-go.json',");
     expect(publicRunner).toContain('requiresEnterpriseRuntimeEvidence: false');
     expect(publicRunner).toContain('requiresExternalReviewEvidence: false');
+    expect(retainedRlsValidator).toContain("workflow: 'Supabase Live RLS Validation'");
+    expect(retainedRlsValidator).toContain('validateProducerEvidence');
+    expect(retainedRlsValidator).toContain('validateReleaseEvidence');
+    expect(retainedRlsValidator).toContain('sourceRunBound');
   });
 
   it('requires the canonical four self-serve Stripe price bindings in the public preflight', () => {
@@ -87,6 +93,8 @@ describe('production release profiles', () => {
     expect(workflow).toContain('observability-smoke-validation.json');
     expect(workflow).toContain('write-public-production-go-no-go-evidence.mjs');
     expect(workflow).toContain('validate-public-production-go-no-go-evidence.mjs');
+    expect(workflow).toContain('hydrate-enterprise-retained-runtime-evidence.mjs');
+    expect(workflow).toContain("RETAINED_PROOF_OPTIONAL_ERRORS_AS_MISSING: 'false'");
     expect(workflow).not.toContain('enterprise-runtime-evidence.json');
     expect(workflow).not.toContain('SENTRY_AUTH_TOKEN:');
     expect(workflow).not.toContain('RISCK_COMPLY_ENTERPRISE_RELEASE:');
