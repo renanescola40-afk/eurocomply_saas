@@ -86,7 +86,7 @@ jobs:
           esac
 
       - name: Install Supabase CLI
-        uses: supabase/setup-cli@v3
+        uses: supabase/setup-cli@v3.0.1
         with:
           version: latest
 
