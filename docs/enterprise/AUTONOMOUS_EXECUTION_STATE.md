@@ -1,86 +1,50 @@
 # Autonomous execution state
 
-- Updated: 2026-09-12
-- Observed protected `main`: `e755c1858ba4e46621905ebd6cfa01371a1d180c`
-- Latest observed Vercel Production: `dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9` — `READY / production`
-- Observed Production Git SHA: `13b19410caa20045b19d98d58df406c43433af5a`
-- Exact-current-main Production: **NO** — Production is behind protected `main`
-- Fresh canonical `/api/health`: last connected validation remains HTTP 200
-- Open pull requests observed during this refresh: #2055 and #2056
-- Current-main official Enterprise score: **unknown**
-- Last accepted historical score remains historical/stale and is not promoted by this documentation refresh
-- Active external assurance authority: #1692 remains authoritative for the independent terminal pentest
-- Beagle Security current classification: external automated unauthenticated VAPT in progress; not an independent human pentest
-- Current owner Beagle baseline: `ZERO_COST_PENTEST_CLOSURE_PERCENT=89`, `ZERO_COST_PENTEST_REMAINING_PERCENT=11`
+- Updated: 2026-09-28
+- Observed protected `main`: `0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`
+- Latest observed canonical Vercel Production: `dpl_E8ph3QNWoqv3MYw71JnUQoHAncuC` — `READY / production`
+- Observed Production Git SHA: `0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`
+- Exact-current-main Production: **YES**
+- Canonical Production aliases include `www.risckcomply.com` and `risckcomply.com`
+- Current-main official Enterprise Internal 100 score: **pending exact-current mandatory gate fan-in; not fabricated here**
+- Active closure PR during this refresh: #2234
 - Merge authority remains governed by exact-head required checks, eligible review, resolved conversations and clean merge state
 
 ## Current transition
 
-Protected `main` is now `e755c1858ba4e46621905ebd6cfa01371a1d180c`, while the latest observed canonical Vercel Production deployment remains `dpl_BznNuFKG8UEh4yW8y9HQyzLXDiJ9` on `13b19410caa20045b19d98d58df406c43433af5a`. Production is therefore not exact-current-main.
+Protected `main` and canonical Vercel Production are now directly observed on the same release SHA. The former persistent statement that Production was behind `main` is retired.
 
-Repository and assurance work may continue while the current Beagle scan remains unfinished. Merge/deploy is not globally frozen solely because Beagle is running, but any later release is a post-pentest version and must not inherit earlier Beagle coverage by implication.
+This parity observation is necessary but not sufficient for `ENTERPRISE_INTERNAL_100=PASS`. Exact-current mandatory runtime/security/billing/recovery/observability evidence must remain satisfied by the canonical final authority.
 
-## External pentest authority
+## External assurance boundary
 
-Canonical #1692 remains the source of truth for the **independent terminal external-security assurance**.
+Independent manual penetration testing and qualified counsel approval remain separately governed external/human assurance. They must not be represented as complete without genuine attributable evidence and do not automatically invalidate internally controllable Product Ready when the internal closure contract explicitly classifies them as external.
 
-Independent terminal pentest state remains:
+Automated or black-box external assessment evidence must not be relabeled as an independent human/manual pentest.
 
-- `PROVIDER_SELECTED=false`;
-- `TARGET_FROZEN=false` for the terminal independent engagement;
-- `TEST_AUTHORIZED=false` for the terminal independent human engagement;
-- `REPORT_RECEIVED=false` for the terminal independent human engagement;
-- `RETEST_COMPLETE=false` for the terminal independent human engagement;
-- 7ASecurity remains on owner hold unless a later owner instruction changes that direction;
-- Beagle automated VAPT remains supplemental and cannot substitute for the independent terminal human pentest.
-
-The current Beagle automated scan has a separate, narrower owner instruction dated 2026-09-12:
-
-```text
-BEAGLE_AUTOMATED_SCAN_OWNER_CONTINUATION_AUTHORIZED=true
-BEAGLE_TARGET=https://www.risckcomply.com
-BEAGLE_AUTHENTICATED_TESTING_AUTHORIZED=false
-BEAGLE_DESTRUCTIVE_TESTING_AUTHORIZED=false
-GENERAL_PRODUCTION_PENTEST_AUTHORIZED=false
-EXTERNAL_AUTOMATED_UNAUTHENTICATED_VAPT=IN_PROGRESS
-INDEPENDENT_HUMAN_PENTEST=NOT_PASS
-```
-
-This scoped continuation authorization permits only the already-running automated unauthenticated Beagle assessment to continue on the existing target. It does not satisfy the independent pentest ROE, does not authorize a human/manual Production pentest, and does not authorize a target change, authenticated testing, destructive activity, brute force, credential stuffing, stress, DoS or load testing.
-
-The canonical default target for the **independent terminal pentest** remains a dedicated non-production test environment with synthetic data and Stripe test mode unless a separately reviewed Production-testing amendment and explicit owner authorization govern that later engagement.
-
-## Beagle emergency-stop boundary
-
-The instruction not to pause/cancel Beagle for ordinary workflow convenience does not override canonical emergency stop conditions. Stop active testing immediately and preserve evidence if real customer data or secrets become accessible, a verified Critical tenant/auth/authorization bypass is found after minimum proof, destructive behavior occurs outside approved fixtures, or Production/provider stability is materially degraded. Escalate to the owner/security contact as soon as practicable after the safety stop.
-
-## Evidence boundary
+## Current internal evidence boundary
 
 - repository/source remediation is not Production runtime acceptance;
-- HTTP 200 health is not exact-SHA release acceptance;
-- CI/SAST/DAST is not an independent pentest;
-- candidate-provider correspondence is not provider selection;
-- no NDA/ROE is represented as finally executed for the terminal independent assessor;
-- no test credentials have been released by this state refresh;
-- the current Beagle automated unauthenticated scan is owner-authorized to continue only under the scoped 2026-09-12 notice;
-- no independent human pentest is authorized by the Beagle continuation notice;
-- no Production database write or Production deploy is authorized merely by this state file;
-- no repository-only change raises the official Enterprise score or closes the independent external-review evidence record.
+- HTTP health alone is not Enterprise Internal 100;
+- CI/SAST/DAST is not an independent manual pentest;
+- exact-current cookie/consent behavior remains an open runtime proof until recorded for the final release;
+- no Production database write is authorized merely by this state file;
+- no stale percentage is promoted to current authority;
+- final authority must use exact-current release evidence and keep external dependencies separate from internal blockers.
 
 ## Next priorities
 
 ### Technical authority
 
-1. continue repository/CI closure without disturbing the current Beagle evidence;
-2. keep later merge/deploy evidence explicitly separated from the Production version observed by Beagle;
-3. retain exact-SHA post-deploy runtime evidence for any post-pentest release;
-4. keep Supabase Production decisions/writes under their separate approval/owner authority.
+1. close PR #2234 only after its review findings are resolved and required checks pass;
+2. after merge, re-establish `MAIN_SHA == PRODUCTION_SHA` on the resulting release;
+3. record the exact-current consent runtime proof required by the legal evidence package;
+4. reconcile remaining mandatory internal gate evidence without reopening already proven controls;
+5. stop once the canonical final authority records zero mandatory internal blockers and current Production parity.
 
 ### External assurance
 
-1. allow the current Beagle automated unauthenticated scan to finish unless an emergency stop condition occurs;
-2. when the Beagle report becomes available, preserve it, triage findings and require Critical=0 / High=0 before recording `AUTOMATED_EXTERNAL_VAPT=PASS`;
-3. keep the independent-human-pentest workstream separate: provider selection -> due diligence -> written ROE -> exact target/release binding -> explicit owner GO -> report -> remediation -> independent retest;
-4. never convert Beagle automated evidence into independent-human-pentest credit.
-
-Current terminal policy separates internally controllable Product Ready from strict external assurance. `PRODUCTION_GO: PASS` may be emitted only when every mandatory internal exact-SHA release/runtime control is complete and there are zero mandatory internal blockers. Missing independent pentest/retest or other explicitly external assurance remains `ENTERPRISE_STRICT: WAITING_EXTERNAL` and can never be represented as `INDEPENDENT_PENTEST: PASS` or `ENTERPRISE_STRICT: PASS` without genuine attributable evidence.
+1. preserve attributable external-assessment evidence and remediation/retest truth;
+2. keep independent-human-pentest status separate unless a genuine independent engagement produces evidence;
+3. keep qualified counsel approval separate unless attributable counsel acceptance exists;
+4. do not convert optional or buyer-specific assurance into an invented internal technical blocker.
