@@ -6,6 +6,16 @@ import { buildReleaseSubprocessEnv, stripProtectedReleaseEnv } from './release-s
 const releaseTarget = String(process.env.RELEASE_TARGET || 'public-production').trim().toLowerCase();
 const enterpriseRequested = releaseTarget === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
+function canonicalizeBooleanEnv(name) {
+  if (process.env[name] === undefined) return;
+  process.env[name] = String(process.env[name]).trim().toLowerCase() === 'true' ? 'true' : 'false';
+}
+
+// GitHub workflow boolean inputs can arrive as `True`/`False`. Canonicalize once
+// before any preflight or nested runner so every downstream strict comparison
+// observes the same fail-closed lowercase value.
+canonicalizeBooleanEnv('RELEASE_ROLLBACK_TARGET_VALIDATED');
+
 function runNodeScript(path, envOverrides = {}, allowProtectedKeys = []) {
   const result = spawnSync(process.execPath, [path], {
     env: buildReleaseSubprocessEnv({ ...process.env, ...envOverrides }, allowProtectedKeys),
