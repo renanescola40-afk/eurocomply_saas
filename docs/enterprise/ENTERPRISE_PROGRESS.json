@@ -1,33 +1,55 @@
 {
   "timestamp": "2026-09-28",
-  "observed_main_sha": "0fdec34b19b200aaab44e8f5495aebe8a6b77d6c",
+  "observed_main_sha": "0f82941526d906b305512ccb2e4bf133edc01b2c",
   "observed_production_deployment": "dpl_E8ph3QNWoqv3MYw71JnUQoHAncuC",
   "observed_production_state": "READY",
   "observed_production_sha": "0fdec34b19b200aaab44e8f5495aebe8a6b77d6c",
-  "exact_current_main_production": true,
-  "official_completion_percent": null,
-  "official_remaining_percent": null,
+  "exact_current_main_production": false,
+  "last_verified_score_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
+  "official_completion_percent": 45,
+  "official_remaining_percent": 55,
   "technical_repository_percent": null,
   "runtime_evidence_percent": null,
   "owner_action_percent": null,
-  "current_decision": "CURRENT_RELEASE_PARITY_PASS_INTERNAL_GATE_FAN_IN_PENDING",
-  "classification": "CURRENT_RELEASE_VERIFIED_FINAL_INTERNAL_AUTHORITY_PENDING",
-  "publish_recommendation": "PUBLIC_PRODUCTION_READY_ENTERPRISE_INTERNAL_FINAL_AUTHORITY_PENDING",
-  "active_authority_pr": 2234,
-  "active_authority_branch": "fix/external-assurance-legal-terminal-closure",
+  "controls_pass": 45,
+  "controls_partial": 0,
+  "controls_fail": 0,
+  "controls_total": 100,
+  "controls_blocked": 1,
+  "controls_not_verified": 54,
+  "controls_not_applicable": 0,
+  "critical_controls_open": 49,
+  "current_decision": "NO_GO",
+  "classification": "UNVERIFIED_CURRENT_MAIN",
+  "publish_recommendation": "DO_NOT_PUBLISH_AS_ENTERPRISE",
+  "active_authority_pr": null,
+  "active_authority_branch": "fix/enterprise-progress-schema-repair-20260928",
   "canonical_authority": "Enterprise 100 Final Authority",
+  "closure_contract_control_count": 16,
+  "required_direct_authorities": [
+    "Product FRIA Ephemeral Runtime QA",
+    "Final Billing + Product Live Closeout",
+    "Supabase Forward Production Acceptance",
+    "Production Provider Runtime Proof",
+    "External Security Assurance Acceptance"
+  ],
   "external_assurance": {
     "independent_manual_pentest": "EXTERNAL_OR_BUYER_REQUIRED_NOT_PROVEN_COMPLETE",
     "qualified_counsel_review": "EXTERNAL_OR_BUYER_REQUIRED_NOT_PROVEN_COMPLETE"
   },
   "open_internal_runtime_evidence": [
+    "deploy current main SHA to canonical production and re-establish exact SHA parity",
     "exact-current cookie/consent production runtime recheck after final release merge"
   ],
   "evidence_freshness": {
-    "status": "CURRENT_FOR_SHA_PARITY",
-    "verified_sha": "0fdec34b19b200aaab44e8f5495aebe8a6b77d6c",
-    "production_deployment": "dpl_E8ph3QNWoqv3MYw71JnUQoHAncuC",
-    "reason": "Protected main and canonical Production are directly observed at the same SHA. Final Enterprise Internal 100 remains subject to exact-current mandatory gate fan-in and must not be inferred from this parity observation alone."
+    "status": "STALE",
+    "last_verified_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
+    "scorecard_run_id": 29703295579,
+    "scorecard_artifact_id": 8447248813,
+    "scorecard_artifact_digest": "sha256:d7ae394485b7760d53788743b072bb60bd784edc6febf36d5d7d421d53a98572",
+    "source_scorecard_schema": "risck-comply.enterprise-readiness-scorecard.v1",
+    "source_scorecard_sha256": "e2f50fcea5cfbb398b781d4a8948a1a9e898fe18eb1a441cb603d7a7e5d15d9a",
+    "reason": "The last accepted 45% score remains historical and stale. Current release parity and final Enterprise Internal 100 must be established by exact-current canonical evidence; this persistent file preserves the validated scorecard schema rather than inventing a new score."
   },
-  "calculation_method": "No current percentage is asserted by this persistent state file. Final completion must come from the exact-current canonical Enterprise authority after mandatory internal evidence fan-in."
+  "calculation_method": "Historical result from the canonical 100-control exact-SHA scorecard. Current completion is not promoted until a successful exact-current-main authority accepts all required mandatory internal evidence."
 }
