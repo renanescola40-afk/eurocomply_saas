@@ -415,7 +415,7 @@ const evidence = {
   summary: outcome === 'passed'
     ? 'Rollback dry-run verified previous known-good metadata, public health, no-store controls, and functional validation proof without mutating production.'
     : 'Rollback dry-run evidence is incomplete or the rollback target failed runtime validation; release remains blocked.',
-  redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, protection bypass secret, secret value, or raw rollback URL is written to this evidence file.',
+  redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, or raw rollback URL is written to this evidence file.',
   noSecretsStored: true,
   commandsExecuted: ['npm run release:rollback:dry-run'],
   evidenceLocations: [
