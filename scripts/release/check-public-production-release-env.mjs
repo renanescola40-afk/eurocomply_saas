@@ -11,6 +11,7 @@ const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_
 const allowedReleaseTargets = new Set(['production', 'public-production']);
 const rollbackResolutionMode = String(process.env.RELEASE_ROLLBACK_RESOLUTION_MODE || 'manual').trim().toLowerCase();
 const automaticRollback = rollbackResolutionMode === 'automatic';
+const rollbackTargetValidated = String(process.env.RELEASE_ROLLBACK_TARGET_VALIDATED || '').trim().toLowerCase() === 'true';
 
 function hasAny(names) {
   return names.some((name) => Boolean(String(process.env[name] || '').trim()));
@@ -71,7 +72,7 @@ const checks = [
     : 'Set the commit SHA associated with the rollback target.'),
   group('rollbackFunctionalValidationConfigured', automaticRollback
     ? true
-    : process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true', {
+    : rollbackTargetValidated, {
     resolutionMode: rollbackResolutionMode,
     deferredToRuntimeResolver: automaticRollback,
     requiredManualValue: automaticRollback ? null : 'RELEASE_ROLLBACK_TARGET_VALIDATED=true',
