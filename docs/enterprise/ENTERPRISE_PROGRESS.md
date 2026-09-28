@@ -1,48 +1,54 @@
 # Enterprise progress
 
-Observed protected main baseline on 2026-08-24:
-`41cc6656de9a9d9df06b549dc1309d481498758b`
+Observed protected `main` on 2026-09-28:
+`0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`
 
-Decision: **NO_GO / CURRENT-MAIN SCORE UNKNOWN**
+Observed canonical Vercel Production:
+`dpl_E8ph3QNWoqv3MYw71JnUQoHAncuC` — `READY / production`
 
-## Evidence status
+Observed Production Git SHA:
+`0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`
 
-The last accepted score remains historical evidence only:
+Exact-current-main Production: **YES**
 
-- historical completion: **45%** (**45 PASS**, **1 BLOCKED**, **54 NOT_VERIFIED**);
-- assessed SHA: `c413288eb8453b55c4d049c758dc0cd063aa70b9`;
-- scorecard run: `29703295579`;
-- freshness: **STALE**;
-- current Enterprise publication recommendation: **DO_NOT_PUBLISH_AS_ENTERPRISE**.
+## Current decision
 
-No PR, repository-only test, disposable database replay, green CI result or pentest scoping meeting raises that score. A new percentage or `ENTERPRISE_100: PASS` is valid only after the canonical exact-current-main authority accepts all required protected runtime and human evidence.
+`CURRENT_RELEASE_PARITY=PASS`
+
+`PUBLIC_PRODUCTION_STATE=READY`
+
+`ENTERPRISE_INTERNAL_FINAL_AUTHORITY=PENDING_CURRENT_GATE_FAN_IN`
+
+The historical August score is stale evidence only and is not used as current authority. This file does not manufacture a replacement percentage. Current Enterprise Internal 100 may be declared only by exact-current release evidence satisfying the active closure contract.
 
 ## Current authority state
 
-Protected main now includes #1819, which binds live RLS validation to the current governed Supabase forward-promotion artifact and removes stale fixed migration-count authority from that proof path. #1819 does **not** execute or authorize a Production database write.
+The current protected `main` is deployed to canonical Production with exact SHA parity. That closes the prior persistent-state contradiction that said Production was behind `main`.
 
-Connected Vercel Production for the observed main is `dpl_FEUDn9oPpzetNwZcu3N5qJWmeAtZ`, `READY / production`, with canonical origin `https://www.risckcomply.com`.
+Repository and runtime evidence must still remain truth-bound. External assurance items such as an independent manual pentest or qualified counsel review are tracked separately and must not be represented as complete without attributable evidence.
 
-External Security Assurance has advanced from generic vendor outreach to a real Layer8 scoping session confirmed for 2026-08-25 10:00–11:00 Europe/Lisbon. Canonical #1692 is synchronized to that state. PR #1822 refreshes the pentest handoff and dedicated meeting pack; it is preparation only and does not claim engagement or pentest completion.
+The current release still requires any explicitly open exact-current runtime proofs to remain open until recorded, including the cookie/consent runtime recheck identified by the legal evidence package.
 
-## Mandatory direct authorities
+## Mandatory internal fan-in
 
-The final authority must remain `NO_GO` until the same accepted release lineage has sufficient evidence from:
+Final internal authority must verify the same accepted release lineage for, where applicable:
 
-1. Product FRIA Ephemeral Runtime QA;
-2. Final Billing + Product Live Closeout;
-3. Supabase Forward Production Acceptance;
-4. Production Provider Runtime Proof;
-5. External Security Assurance Acceptance.
+1. product/core workflow runtime evidence;
+2. billing and Stripe fail-closed evidence;
+3. Supabase/RLS/tenant-isolation evidence;
+4. provider/production runtime proof;
+5. CI/CD and repository security gates;
+6. observability and release binding;
+7. backup/recovery/rollback evidence;
+8. exact-current legal/runtime controls that are explicitly internal, including consent behavior.
 
-Legal publication/acceptance, recovery, deployment/smoke, runtime closeout and final Go/No-Go controls remain independently required by the shared closure contract.
+## Evidence boundary
 
-## Immediate priorities
+- repository/source remediation is not Production runtime acceptance;
+- HTTP 200 alone is not Enterprise 100;
+- CI/SAST/DAST is not an independent manual pentest;
+- external assurance remains external unless attributable evidence proves otherwise;
+- no Production database write is authorized merely by this state file;
+- no stale score is promoted to current authority.
 
-### External assurance — owner/human
-Use the confirmed Layer8 meeting to close contracting entity, applicable CREST accreditation, tester/independence handling, NDA, ROE, exact release binding, synthetic-account and secret-sharing approach, methodology/severity, evidence retention, report/retest deliverables, price/duration and next execution window. Do not authorize active testing until these items and explicit owner authorization are in place.
-
-### Technical authority
-Continue the current governed Supabase Production decision/promotion/recovery path only under exact-current-main evidence and its independent approval plus explicit owner Production-write authorization. Do not treat pre-promotion live-RLS proof as Production acceptance.
-
-This versioned file is a synchronized handoff, not an exact-current-main runtime authority. Generated protected workflow artifacts remain the canonical exact-SHA evidence source.
+Generated protected workflow artifacts and exact-current provider/runtime observations remain the canonical proof sources for final gate decisions.
