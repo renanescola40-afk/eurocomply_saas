@@ -17,7 +17,7 @@ Current production SHA verified: `0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`
 
 `SHA_PARITY=PASS_CURRENT_PRODUCTION`
 
-This replaces the previous branch-start-only parity statement. The merged assurance/legal closure release is now directly observed as the current Vercel production deployment for the same `main` SHA.
+This replaces the previous branch-start-only parity statement. The merged assurance/legal closure release is directly observed as the current Vercel production deployment for the same `main` SHA.
 
 ## Assurance scorecard
 
@@ -40,7 +40,7 @@ This replaces the previous branch-start-only parity statement. The merged assura
 | Retention / deletion | PREPARED / FACT_GAPS | 85 | policies/process documentation exists | provider-specific retention windows must not be guessed | mark unknowns FACT_REQUIRED and close proven fields |
 | Privacy | PREPARED | 90 | public/document review material exists | final authoritative company/provider facts | exact factual reconciliation |
 | Terms | PREPARED | 90 | public/document review material exists | governing law/forum/commercial facts where not yet authoritative | finalize factual decisions |
-| Cookie / consent | IMPLEMENTED / RUNTIME_RECHECK | 90 | consent controls and cookie-policy work exist | exact current production behavior should remain periodically revalidated | production smoke test |
+| Cookie / consent | IMPLEMENTED / RUNTIME_RECHECK_REQUIRED | 90 | consent controls and cookie-policy work exist; exact-current production consent behavior is not yet recorded for this release | exact-current production runtime proof remains required | run and record production consent smoke test after final release merge |
 | Acceptable Use | PREPARED | 90 | public route/review material exists | final version/effective-state reconciliation | finalize with canonical Terms relationship |
 | Incident response | IMPLEMENTED / DOCUMENTED | 95 | incident-response documentation exists | keep processor/controller notification distinctions truthful | periodic operational validation |
 | EU AI Act mapping | IMPLEMENTED / LEGAL_AMBIGUITIES_SEPARATED | 95 | extensive AI Act mapping exists | genuinely ambiguous interpretations require legal review, not guessing | maintain official-source reconciliation |
@@ -84,6 +84,7 @@ These gates do not mean every enterprise buyer will waive a manual pentest, coun
 4. Reconcile provider-by-provider transfer/subprocessor/retention facts against active production configuration without inventing unknowns.
 5. Finalize exact factual legal fields that are already known/authoritative; keep unproven fields explicitly gated.
 6. Reconcile the 2026-09-12 external black-box findings against the current release and record remediation/retest evidence where attributable.
+7. Record exact-current production cookie/consent runtime behavior after the final release merge.
 
 ## Remaining human/external blockers
 
@@ -99,4 +100,4 @@ Do not lower internal readiness merely because optional paid certifications are 
 
 `INTERNALLY_CONTROLLABLE_ASSURANCE_AND_LEGAL_CLOSURE=NOT_YET_COMPLETE`
 
-Reason: standard CSA STAR Level 1 preparation, fresh free public assurance checks, provider/legal truth reconciliation, and external-assessment remediation/retest reconciliation remain internally actionable or evidence-collection workstreams.
+Reason: standard CSA STAR Level 1 preparation, fresh free public assurance checks, provider/legal truth reconciliation, external-assessment remediation/retest reconciliation, and exact-current consent runtime proof remain internally actionable or evidence-collection workstreams.
