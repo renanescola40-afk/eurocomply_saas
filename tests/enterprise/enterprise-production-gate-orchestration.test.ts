@@ -63,14 +63,15 @@ describe('enterprise production gate retained-proof orchestration', () => {
     }
   });
 
-  it('keeps the fan-in read-only, fail-closed, and collapses redundant successful same-SHA runners', () => {
+  it('keeps the fan-in read-only, fail-closed, and isolates failed producer completions from valid gates', () => {
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('actions: write');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('continue-on-error: true');
     expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
-    expect(workflow).toContain("github.event.workflow_run.conclusion != 'success' && github.run_id || 'active'");
+    expect(workflow).toContain("github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.name || github.run_id");
+    expect(workflow).toContain("github.event_name == 'workflow_run'");
     expect(workflow).toContain('cancel-in-progress: true');
     expect(workflow).not.toContain('cancel-in-progress: false');
   });
