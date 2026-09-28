@@ -63,6 +63,13 @@ describe('production release profiles', () => {
     expect(publicPreflight).toContain('legacyAliasesAcceptedForReadiness: false');
   });
 
+  it('normalizes the manual rollback validation flag without weakening the true-only gate', () => {
+    const publicPreflight = read('scripts/release/check-public-production-release-env.mjs');
+
+    expect(publicPreflight).toContain("String(process.env.RELEASE_ROLLBACK_TARGET_VALIDATED || '').trim().toLowerCase() === 'true'");
+    expect(publicPreflight).toContain('rollbackTargetValidated');
+  });
+
   it('supports automatic rollback resolution without trusting stale manual rollback pointers', () => {
     const publicPreflight = read('scripts/release/check-public-production-release-env.mjs');
 
