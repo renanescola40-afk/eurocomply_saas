@@ -91,19 +91,22 @@ describe('post-billing commercial customer journey closure', () => {
     const source = await readFile(BILLING_VIEW, 'utf8');
 
     expect(source).toContain("const hasActivePlan = billing.status === 'active' || billing.status === 'trialing';");
-    expect(source).toContain('const hasSubscriptionRecord = billing.status !== null;');
+    expect(source).toContain("const stripeManaged = billing.authority === 'stripe_live';");
+    expect(source).toContain("const contractManaged = billing.authority === 'signed_contract';");
     expect(source).toContain('{hasActivePlan ? currentPlan.name : copy.noActiveSubscription}');
     expect(source).toContain('const isCurrent = hasActivePlan && plan.id === currentPlan.id;');
     expect(source).not.toContain('const isCurrent = plan.id === currentPlan.id;');
   });
 
-  it('keeps payment recovery available without opening a portal for a brand-new organization', async () => {
+  it('keeps payment recovery available without opening self-service billing for contract-managed organizations', async () => {
     const source = await readFile(BILLING_VIEW, 'utf8');
 
-    expect(source).toContain('canManageBilling && hasSubscriptionRecord');
+    expect(source).toContain('canManageBilling && stripeManaged');
+    expect(source).toContain('canManageBilling && contractManaged');
     expect(source).toContain('action="portal"');
     expect(source).toContain('action="checkout"');
-    expect(source).toContain('disabled={isCurrent}');
+    expect(source).toContain('const requiresSales = isSalesLed || contractManaged;');
+    expect(source).toContain("billing.authority === 'none'");
     expect(source).toContain("past_due: 'Past due'");
     expect(source).toContain("unpaid: 'Unpaid'");
     expect(source).toContain("canceled: 'Canceled'");
@@ -146,7 +149,6 @@ describe('post-billing commercial customer journey closure', () => {
     expect(view).not.toContain('owner do workspace');
     expect(view).not.toContain('owner del workspace');
     expect(view).not.toContain('owner du workspace');
-    expect(view).not.toContain('owner del workspace');
     expect(view).not.toContain('Workspace-Owner');
     expect(view).not.toContain("checkoutCompleted: 'Checkout concluído'");
     expect(view).not.toContain("checkoutCompleted: 'Checkout completado'");
