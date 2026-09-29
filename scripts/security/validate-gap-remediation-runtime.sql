@@ -159,6 +159,11 @@ begin
     raise exception 'personal compliance_tasks create RLS policy is incomplete';
   end if;
 
+  -- Compare the entire normalized predicate, not independent fragments. This
+  -- prevents weakened variants such as the canonical expression followed by
+  -- `OR true` from satisfying the promotion/restore proof. pg_get_expr may
+  -- render a scalar subquery with an `AS uid` alias and/or outer parentheses,
+  -- so only those equivalent canonical renderings are accepted.
   if not exists (
     select 1
     from pg_policies
@@ -168,22 +173,12 @@ begin
       and permissive = 'PERMISSIVE'
       and cmd = 'SELECT'
       and roles = array['authenticated']::name[]
-      and position(
-        'app_private.is_org_member(organization_id)'
-        in lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g'))
-      ) > 0
-      and position(
-        'organization_idisnull'
-        in lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g'))
-      ) > 0
-      and position(
-        'user_id='
-        in lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g'))
-      ) > 0
-      and position(
-        'auth.uid()'
-        in lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g'))
-      ) > 0
+      and lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g')) in (
+        'app_private.is_org_member(organization_id)or((organization_idisnull)and(user_id=(selectauth.uid())))',
+        '(app_private.is_org_member(organization_id)or((organization_idisnull)and(user_id=(selectauth.uid()))))',
+        'app_private.is_org_member(organization_id)or((organization_idisnull)and(user_id=(selectauth.uid()asuid)))',
+        '(app_private.is_org_member(organization_id)or((organization_idisnull)and(user_id=(selectauth.uid()asuid))))'
+      )
   ) then
     raise exception 'canonical consolidated compliance_tasks read policy is incomplete';
   end if;
