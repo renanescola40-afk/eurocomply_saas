@@ -53,10 +53,11 @@ describe('post-billing commercial customer journey closure', () => {
     expect(page).toContain('const selectedPlan = getBillingPlan(resolvedSearchParams.plan);');
     expect(page).toContain('<BillingPlanIntentBanner');
     expect(page).toContain('selectedPlan={selectedPlan}');
+    expect(page).toContain('billingAuthority={billing.authority}');
 
     expect(banner).toContain('action="checkout"');
     expect(banner).toContain('planId={selectedPlan.id}');
-    expect(banner).toContain('selectedPlan.salesLed ?');
+    expect(banner).toContain("const requiresSales = selectedPlan.salesLed || billingAuthority === 'signed_contract';");
     expect(banner).toContain("href={`/${locale}/contact?intent=sales&plan=${selectedPlan.id}&source=onboarding`}");
     expect(banner).toContain('!canManageBilling ?');
     expect(banner).toContain('aria-disabled="true"');
