@@ -36,10 +36,15 @@ describe('gap/remediation reconciliation runtime postconditions', () => {
     expect(gapRuntime).toContain('compliance_tasks_requires_tenant_scope');
     expect(gapRuntime).toContain('legacy workspace_id foreign key is present');
     expect(gapRuntime).toContain('authenticated compliance_tasks organization mutation boundary is not backend-only');
+    expect(gapRuntime).toContain('personal compliance_tasks create RLS policy is incomplete');
+    expect(gapRuntime).toContain('canonical consolidated compliance_tasks read policy is incomplete');
+    expect(gapRuntime).toContain('legacy split compliance_tasks SELECT policies remain active after terminal consolidation');
+    expect(gapRuntime).toContain("lower(regexp_replace(coalesce(qual, ''), '\\s+', '', 'g')) in (");
+    expect(gapRuntime).toContain('app_private.is_org_member(organization_id)or((organization_idisnull)and(user_id=(selectauth.uid())))');
+    expect(gapRuntime).not.toContain("position(\n        'app_private.is_org_member(organization_id)'");
     expect(gapRuntime).toContain('restrictive personal compliance_tasks insert guard is missing');
     expect(gapRuntime).toContain('transitional compliance_tasks insert guard was not retired');
     expect(gapRuntime).toContain('authenticated compliance_tasks permanent update/delete guard is incomplete');
-    expect(gapRuntime).toContain('canonical organization compliance_tasks read policy was not preserved');
     expect(gapRuntime).toContain('direct compliance_tasks mutation policy unexpectedly remains active');
   });
 
