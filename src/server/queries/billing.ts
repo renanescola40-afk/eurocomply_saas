@@ -17,6 +17,7 @@ export type BillingUsage = {
 export type OrganizationBillingContext = {
   plan: string;
   status: string | null;
+  authority: 'signed_contract' | 'stripe_live' | 'none';
   usage: BillingUsage;
 };
 
@@ -102,10 +103,16 @@ export async function getOrganizationBillingContext(
     : liveStripeAuthority
       ? subscription?.status ?? null
       : null;
+  const authority: OrganizationBillingContext['authority'] = signedContractPlan
+    ? 'signed_contract'
+    : liveStripeAuthority
+      ? 'stripe_live'
+      : 'none';
 
   return {
     plan,
     status,
+    authority,
     usage: {
       users,
       documents,
