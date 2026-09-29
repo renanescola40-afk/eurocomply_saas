@@ -12,7 +12,7 @@ describe('procurement trust operations megapack', () => {
     expect(workflow).toContain('environment: production-procurement-trust-proof');
     expect(workflow).toContain('EXECUTE_PROCUREMENT_TRUST_PROOF');
     expect(workflow).toContain('persist-credentials: false');
-    expect(workflow).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
+    expect(workflow).toContain('supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359');
     expect(workflow).toContain('version: 2.101.0');
     expect(workflow).toContain('run-reviewed-ephemeral-schema-boundary-v4.mjs');
     expect(workflow).not.toContain('run-ephemeral-project-schema-replay.mjs');
