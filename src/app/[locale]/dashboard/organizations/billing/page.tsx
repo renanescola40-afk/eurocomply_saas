@@ -65,6 +65,7 @@ export default async function BillingPage({ params, searchParams }: BillingPageP
           locale={locale}
           selectedPlan={selectedPlan}
           canManageBilling={canManageBilling}
+          billingAuthority={billing.authority}
         />
       ) : null}
       <BillingPageView
