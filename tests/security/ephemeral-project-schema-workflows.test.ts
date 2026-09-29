@@ -177,7 +177,7 @@ describe('exact-SHA disposable project schema workflows', () => {
 
   it('uses the reviewed disposable schema-effect replay and cleanup in every schema-only proof', () => {
     for (const { path, source } of schemaWorkflows) {
-      expect(source, path).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
+      expect(source, path).toContain('supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359');
       expect(source, path).toContain('run-reviewed-ephemeral-schema-boundary-v4.mjs');
       expect(source, path).not.toContain('run-ephemeral-project-schema-replay.mjs');
       expect(source, path).toContain('manage-ephemeral-recovery-database.mjs stop');
