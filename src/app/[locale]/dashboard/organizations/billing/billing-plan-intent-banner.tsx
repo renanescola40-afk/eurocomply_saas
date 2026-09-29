@@ -3,12 +3,14 @@ import { ArrowRight, CheckCircle2, LockKeyhole } from 'lucide-react';
 
 import type { BillingPlan } from '@/lib/billing/plans';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import type { OrganizationBillingContext } from '@/server/queries/billing';
 import { BillingActionButton } from './billing-action-button';
 
 type Props = {
   locale: string;
   selectedPlan: BillingPlan;
   canManageBilling: boolean;
+  billingAuthority: OrganizationBillingContext['authority'];
 };
 
 type Copy = {
@@ -75,8 +77,9 @@ function safeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
 }
 
-export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling }: Props) {
+export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling, billingAuthority }: Props) {
   const copy = copyByLocale[safeLocale(locale)];
+  const requiresSales = selectedPlan.salesLed || billingAuthority === 'signed_contract';
 
   return (
     <aside aria-labelledby="selected-plan-title" className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-4 text-white">
@@ -103,7 +106,7 @@ export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling
               <LockKeyhole className="h-4 w-4 shrink-0" aria-hidden="true" />
               {copy.ownerRequired}
             </button>
-          ) : selectedPlan.salesLed ? (
+          ) : requiresSales ? (
             <Link
               href={`/${locale}/contact?intent=sales&plan=${selectedPlan.id}&source=onboarding`}
               className="inline-flex h-10 max-w-full items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
