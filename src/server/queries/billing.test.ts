@@ -97,6 +97,7 @@ describe('organization billing context', () => {
     expect(context).toEqual({
       plan: 'business',
       status: 'active',
+      authority: 'stripe_live',
       usage: {
         users: 2,
         documents: 5,
@@ -118,6 +119,7 @@ describe('organization billing context', () => {
 
     expect(context.plan).toBe('starter');
     expect(context.status).toBeNull();
+    expect(context.authority).toBe('none');
   });
 
   it('preserves delinquent live status without granting paid entitlements', async () => {
@@ -133,6 +135,7 @@ describe('organization billing context', () => {
 
     expect(context.plan).toBe('starter');
     expect(context.status).toBe('past_due');
+    expect(context.authority).toBe('stripe_live');
   });
 
   it('treats an applied signed contract as independent paid authority', async () => {
@@ -142,6 +145,7 @@ describe('organization billing context', () => {
 
     expect(context.plan).toBe('enterprise');
     expect(context.status).toBe('active');
+    expect(context.authority).toBe('signed_contract');
     expect(mocks.hasProcessedLiveStripeSubscriptionAuthority).not.toHaveBeenCalled();
   });
 
@@ -150,5 +154,6 @@ describe('organization billing context', () => {
 
     expect(context.plan).toBe('starter');
     expect(context.status).toBeNull();
+    expect(context.authority).toBe('none');
   });
 });
