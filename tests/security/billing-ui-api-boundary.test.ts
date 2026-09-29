@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const billingPageRoute = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/page.tsx'), 'utf8');
 const billingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'), 'utf8');
+const billingPlanIntentBanner = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx'), 'utf8');
 const publicCheckoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const enterpriseHome = readFileSync(join(process.cwd(), 'src/components/marketing/enterprise-home.tsx'), 'utf8');
 const billingActionButton = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx'), 'utf8');
@@ -52,6 +53,14 @@ describe('billing UI API boundary', () => {
     expect(publicCheckoutPage).toContain('next=${encodeURIComponent(checkoutContinuationPath)}');
     expect(publicCheckoutPage).toContain('const onboardingPath = `/${locale}/onboarding?plan=${encodeURIComponent(selectedPlan.id)}`');
     expect(publicCheckoutPage).not.toContain('/onboarding?next=');
+  });
+
+  it('routes contract-managed plan intent to sales before checkout', () => {
+    expect(billingPageRoute).toContain('billingAuthority={billing.authority}');
+    expect(billingPlanIntentBanner).toContain("billingAuthority: OrganizationBillingContext['authority']");
+    expect(billingPlanIntentBanner).toContain("selectedPlan.salesLed || billingAuthority === 'signed_contract'");
+    expect(billingPlanIntentBanner).toContain(') : requiresSales ? (');
+    expect(billingPlanIntentBanner).toContain('intent=sales&plan=${selectedPlan.id}&source=onboarding');
   });
 
   it('keeps checkout session creation ready for European B2B billing', () => {
