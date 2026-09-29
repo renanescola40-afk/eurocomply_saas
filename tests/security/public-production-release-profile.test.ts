@@ -30,6 +30,19 @@ describe('production release profiles', () => {
     expect(dispatcher).toContain("runNodeScript('scripts/release/validate-public-production-go-no-go-evidence.mjs')");
   });
 
+  it('canonicalizes workflow boolean serialization before every release consumer', () => {
+    const dispatcher = read('scripts/release/run-public-production-release.mjs');
+    const publicPreflight = read('scripts/release/check-public-production-release-env.mjs');
+    const deploymentSmoke = read('scripts/release/run-deployment-smoke-v2.mjs');
+    const rollbackDryRun = read('scripts/release/run-rollback-dry-run.mjs');
+
+    expect(dispatcher).toContain("canonicalizeBooleanEnv('RELEASE_ROLLBACK_TARGET_VALIDATED')");
+    expect(dispatcher).toContain("String(process.env[name]).trim().toLowerCase() === 'true' ? 'true' : 'false'");
+    expect(publicPreflight).toContain("String(process.env.RELEASE_ROLLBACK_TARGET_VALIDATED || '').trim().toLowerCase() === 'true'");
+    expect(deploymentSmoke).toContain("process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true'");
+    expect(rollbackDryRun).toContain("process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true'");
+  });
+
   it('keeps P0 runtime evidence in the public profile without enterprise-only gates', () => {
     const publicRunner = read('scripts/release/run-public-production-release-final.mjs');
     const retainedRlsValidator = read('scripts/release/validate-retained-supabase-rls-release-proof.mjs');
@@ -61,6 +74,13 @@ describe('production release profiles', () => {
       expect(publicPreflight).not.toContain(name);
     }
     expect(publicPreflight).toContain('legacyAliasesAcceptedForReadiness: false');
+  });
+
+  it('normalizes the manual rollback validation flag without weakening the true-only gate', () => {
+    const publicPreflight = read('scripts/release/check-public-production-release-env.mjs');
+
+    expect(publicPreflight).toContain("String(process.env.RELEASE_ROLLBACK_TARGET_VALIDATED || '').trim().toLowerCase() === 'true'");
+    expect(publicPreflight).toContain('rollbackTargetValidated');
   });
 
   it('supports automatic rollback resolution without trusting stale manual rollback pointers', () => {

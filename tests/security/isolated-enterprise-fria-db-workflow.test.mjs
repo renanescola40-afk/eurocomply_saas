@@ -17,7 +17,7 @@ test('workflow executes only for successful main or explicit manual confirmation
 test('workflow is read-only and uses the reviewed disposable schema boundary', () => {
   assert.match(workflow, /permissions:\n  contents: read/);
   assert.doesNotMatch(workflow, /contents: write|actions: write|pull_request_target/);
-  assert.match(workflow, /supabase\/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520/);
+  assert.match(workflow, /supabase\/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359/);
   assert.match(workflow, /version: 2\.101\.0/);
   assert.match(workflow, /run-reviewed-ephemeral-schema-boundary-v4\.mjs/);
   assert.match(workflow, /normalize-disposable-fria-acl\.mjs/);

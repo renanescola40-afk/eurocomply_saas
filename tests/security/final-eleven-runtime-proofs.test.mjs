@@ -67,7 +67,7 @@ test('final technical proof exercises disposable auth, payment-authorized storag
   assert.match(technicalWorkflow, /persist-credentials: false/);
   assert.match(technicalWorkflow, /Start exact-SHA disposable Supabase project database/);
   assert.match(technicalWorkflow, /Remove disposable recovery database/);
-  assert.match(technicalWorkflow, /supabase\/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520/);
+  assert.match(technicalWorkflow, /supabase\/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359/);
   assert.doesNotMatch(technicalWorkflow, /secrets\.RECOVERY_ISOLATED_DATABASE_URL/);
   assert.match(ephemeralRecovery, /RECOVERY_ISOLATED_DATABASE_URL/);
   assert.match(ephemeralRecovery, /supabase.*db.*start/s);

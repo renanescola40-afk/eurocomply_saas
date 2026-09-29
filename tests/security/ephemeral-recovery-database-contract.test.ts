@@ -195,7 +195,7 @@ describe('ephemeral Supabase recovery database contract', () => {
       expect(workflow).not.toContain('secrets.RECOVERY_ISOLATED_DATABASE_URL');
     }
 
-    expect(finalTechnical).toContain('supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520');
+    expect(finalTechnical).toContain('supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359');
     expect(finalTechnical).toContain('version: 2.101.0');
     expect(finalTechnical).toContain('Start exact-SHA disposable Supabase project database');
 
