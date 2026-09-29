@@ -191,7 +191,8 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
           <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-4">
             {BILLING_PLANS.map((plan) => {
               const isCurrent = hasActivePlan && plan.id === currentPlan.id;
-              const requiresSales = plan.salesLed || contractManaged;
+              const isSalesLed = plan.salesLed;
+              const requiresSales = isSalesLed || contractManaged;
               const description = `${pricingCopy.plan[plan.id].description} ${formatLimitValue(plan.limits.users, copy)} ${copy.users}, ${formatLimitValue(plan.limits.documents, copy)} ${copy.documents}, ${formatLimitValue(plan.limits.vendors, copy)} ${copy.vendors} ${copy.included}.`;
               const limitRows = [
                 `${formatLimitValue(plan.limits.users, copy)} ${copy.users}`,
@@ -208,7 +209,7 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
                       <p className="mt-1.5 text-sm leading-6 text-slate-500">{description}</p>
                     </div>
                     {isCurrent ? <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-blue-300">{copy.current}</span> : null}
-                    {plan.salesLed && !isCurrent ? <span className="rounded-md border border-slate-700 bg-slate-900/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">{copy.salesLed}</span> : null}
+                    {isSalesLed && !isCurrent ? <span className="rounded-md border border-slate-700 bg-slate-900/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">{copy.salesLed}</span> : null}
                   </div>
 
                   <p className="mt-5 text-3xl font-semibold tracking-[-0.035em] text-white">{formatPlanPrice(plan, copy)}</p>
