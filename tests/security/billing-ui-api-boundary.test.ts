@@ -94,7 +94,9 @@ describe('billing UI API boundary', () => {
     expect(billingPage).toContain('Only the workspace owner can open the billing portal or change subscription plans');
     expect(billingPage).toContain('Owner access required');
     expect(billingPage).toContain('Owner action required');
-    expect(billingPage).toContain('canManageBilling ? (');
+    expect(billingPage).toContain('!canManageBilling ?');
+    expect(billingPage).toContain('canManageBilling && stripeManaged');
+    expect(billingPage).toContain('canManageBilling && contractManaged');
   });
 
   it('does not present failed-payment subscriptions as a healthy current plan', () => {
