@@ -144,19 +144,61 @@ begin
     raise exception 'authenticated compliance_tasks organization mutation boundary is not backend-only';
   end if;
 
+  -- The terminal schema consolidates personal + organization SELECT into one
+  -- permissive policy while keeping personal INSERT as a dedicated policy.
   select count(*)
     into personal_task_policy_count
   from pg_policies
   where schemaname = 'public'
     and tablename = 'compliance_tasks'
-    and policyname in (
-      'rls_compliance_tasks_select_personal',
-      'rls_compliance_tasks_insert_personal'
-    )
+    and policyname = 'rls_compliance_tasks_insert_personal'
+    and cmd = 'INSERT'
     and roles = array['authenticated']::name[];
 
-  if personal_task_policy_count <> 2 then
-    raise exception 'personal compliance_tasks read/create RLS policy set is incomplete';
+  if personal_task_policy_count <> 1 then
+    raise exception 'personal compliance_tasks create RLS policy is incomplete';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'compliance_tasks'
+      and policyname = 'rls_compliance_tasks_select_scope'
+      and permissive = 'PERMISSIVE'
+      and cmd = 'SELECT'
+      and roles = array['authenticated']::name[]
+      and position(
+        'app_private.is_org_member(organization_id)'
+        in lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g'))
+      ) > 0
+      and position(
+        'organization_idisnull'
+        in lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g'))
+      ) > 0
+      and position(
+        'user_id='
+        in lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g'))
+      ) > 0
+      and position(
+        'auth.uid()'
+        in lower(regexp_replace(coalesce(qual, ''), '\s+', '', 'g'))
+      ) > 0
+  ) then
+    raise exception 'canonical consolidated compliance_tasks read policy is incomplete';
+  end if;
+
+  if exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'compliance_tasks'
+      and policyname in (
+        'rls_compliance_tasks_select_member',
+        'rls_compliance_tasks_select_personal'
+      )
+  ) then
+    raise exception 'legacy split compliance_tasks SELECT policies remain active after terminal consolidation';
   end if;
 
   if not exists (
@@ -195,15 +237,6 @@ begin
 
   if permanent_mutation_guard_count <> 2 then
     raise exception 'authenticated compliance_tasks permanent update/delete guard is incomplete';
-  end if;
-
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'compliance_tasks'
-      and policyname = 'rls_compliance_tasks_select_member'
-  ) then
-    raise exception 'canonical organization compliance_tasks read policy was not preserved';
   end if;
 
   if exists (
