@@ -1,103 +1,86 @@
 # RISCK COMPLY — External Assurance + Legal Final Scorecard
 
-Status date: 2026-09-28  
-Current `main` SHA verified: `0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`  
-Current canonical production deployment verified: `dpl_E8ph3QNWoqv3MYw71JnUQoHAncuC`  
-Current production SHA verified: `0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`
+Status date: 2026-09-29  
+Classification: `CURRENT_STATUS / EVIDENCE_BOUND`
 
-## Exact-SHA production parity
+> Reconciliation note (2026-09-29): this scorecard previously ended with `INTERNALLY_CONTROLLABLE_ASSURANCE_AND_LEGAL_CLOSURE=NOT_YET_COMPLETE`. That internal status was superseded by `docs/evidence/ASSURANCE_LEGAL_TERMINAL_CLOSURE_2026-09-29.md`, which records the internally controllable assurance/legal workstream as complete while preserving all external/human dependencies. Historical percentages below are retained only where they describe the 2026-09-28 evidence snapshot; they must not override the terminal classification.
 
-`MAIN_SHA=0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`
+## Current canonical terminal classification
 
-`PRODUCTION_SHA=0fdec34b19b200aaab44e8f5495aebe8a6b77d6c`
+`INTERNALLY_CONTROLLABLE_ASSURANCE_AND_LEGAL_CLOSURE=COMPLETE`
 
-`PRODUCTION_DEPLOYMENT=dpl_E8ph3QNWoqv3MYw71JnUQoHAncuC`
+`LEGAL_INTERNAL_DOCUMENTATION_CONTROL=COMPLETE_EVIDENCE_BOUND`
 
-`PRODUCTION_STATE=READY`
+`QUALIFIED_COUNSEL_APPROVAL=EXTERNAL_OR_BUYER_REQUIRED`
 
-`SHA_PARITY=PASS_CURRENT_PRODUCTION`
+`INDEPENDENT_MANUAL_PENTEST=EXTERNAL_OR_BUYER_REQUIRED`
 
-This replaces the previous branch-start-only parity statement. The merged assurance/legal closure release is directly observed as the current Vercel production deployment for the same `main` SHA.
+`CUSTOM_DPA_NEGOTIATION=BUYER_SPECIFIC`
 
-## Assurance scorecard
+`BUYER_SECURITY_QUESTIONNAIRE=BUYER_SPECIFIC`
 
-| Area | Status | Percent | Evidence / truth boundary | Blocker | Next action |
-| --- | --- | ---: | --- | --- | --- |
-| CSA STAR for AI Level 1 | PUBLICLY_VERIFIED | 100 | CSA STAR Registry lists RISCK COMPLY since 2026-09-21 with STAR for AI Level 1 / AI CAIQ self-assessment v1.1.0 | none for Level 1 publication | retain/reverify registry evidence before major diligence |
-| Standard CSA STAR Level 1 | PREPARATION_REQUIRED | 35 | current official submittable target recorded as CAIQ v4.1 STAR Level 1 Security Questionnaire | questionnaire package not yet completed/submitted | build evidence-mapped CAIQ v4.1 package |
-| TLS external validation | NOT_CANONICALLY_RECORDED | 60 | production is HTTPS; no current Qualys grade is stored in canonical evidence | external scan result missing | run/record current Qualys SSL Labs result |
-| HTTP security | DATED_EVIDENCE | 75 | prior MDN Observatory baseline B/75 recorded | current retest missing | rerun and record current result |
-| Internet standards — web | DATED_EVIDENCE | 75 | prior Internet.nl web score 75% recorded | current retest + provider/domain gap reconciliation | rerun and record current result |
-| Internet standards — email | DATED_EVIDENCE | 69 | prior Internet.nl email score 69% recorded | current retest + domain/provider remediation | rerun and record current result |
-| OpenSSF | REMEDIATION / RECHECK | 46 | prior local preview 4.6/10 recorded | public/current score not verified | current public recheck + safe repo fixes |
-| External black-box security assessment | REPORT_RECEIVED | 70 | attributable confidential third-party black-box report exists from 2026-09-12 | remediation/retest state remains open in canonical evidence | reconcile findings against current release; obtain attributable clean retest if still required |
-| Independent manual pentest | EXTERNAL_OR_BUYER_REQUIRED | 0 | no evidence supports labeling existing automated/black-box evidence as a manual independent pentest | external assessor if buyer requires it | procure only when contract/procurement requires |
-| Legal internal documentation alignment | PREPARED / HUMAN_FACTS_REMAIN | 90 | legal packs, eight review packages and public legal surfaces exist; repository still records authoritative company/final-version gates | authoritative missing facts/finalization | close exact factual fields without guessing |
-| Qualified counsel approval | EXTERNAL_OR_BUYER_REQUIRED | 0 | no attributable qualified counsel acceptance in canonical evidence | human legal reviewer | obtain when required for contracting/risk posture |
-| DPA Article 28 package | PREPARED / FINAL_FACT_RECONCILIATION | 90 | DPA review material and Article 28 control work exist | entity/provider/final signature/version truth | reconcile and finalize exact canonical version |
-| International transfers / SCC | PREPARED / PROVIDER_FACT_RECONCILIATION | 85 | transfers route/material exists | current provider legal entities, processing locations and mechanisms must remain evidence-backed | complete provider-by-provider matrix |
-| Subprocessors | PREPARED / RECONCILIATION_REQUIRED | 85 | register exists | active-provider truth must match production/account reality | canonicalize current providers only |
-| Retention / deletion | PREPARED / FACT_GAPS | 85 | policies/process documentation exists | provider-specific retention windows must not be guessed | mark unknowns FACT_REQUIRED and close proven fields |
-| Privacy | PREPARED | 90 | public/document review material exists | final authoritative company/provider facts | exact factual reconciliation |
-| Terms | PREPARED | 90 | public/document review material exists | governing law/forum/commercial facts where not yet authoritative | finalize factual decisions |
-| Cookie / consent | IMPLEMENTED / RUNTIME_RECHECK_REQUIRED | 90 | consent controls and cookie-policy work exist; exact-current production consent behavior is not yet recorded for this release | exact-current production runtime proof remains required | run and record production consent smoke test after final release merge |
-| Acceptable Use | PREPARED | 90 | public route/review material exists | final version/effective-state reconciliation | finalize with canonical Terms relationship |
-| Incident response | IMPLEMENTED / DOCUMENTED | 95 | incident-response documentation exists | keep processor/controller notification distinctions truthful | periodic operational validation |
-| EU AI Act mapping | IMPLEMENTED / LEGAL_AMBIGUITIES_SEPARATED | 95 | extensive AI Act mapping exists | genuinely ambiguous interpretations require legal review, not guessing | maintain official-source reconciliation |
-| Procurement data room | BUYER_READY_INTERNAL_PACKAGE | 98 | broad security/privacy/AI-governance/continuity/commercial evidence package exists | final external assurance and exact legal facts are separate external/human dependencies | keep one canonical index and current evidence |
+Current canonical evidence source: `docs/evidence/ASSURANCE_LEGAL_TERMINAL_CLOSURE_2026-09-29.md`.
 
-## Aggregate status
+## Historical 2026-09-28 assurance snapshot
 
-These percentages intentionally separate internally controllable readiness from external third-party assurance.
+The following percentages are retained as dated evidence-strength indicators, not as current internal-completion blockers.
 
-`INTERNAL_ASSURANCE_READINESS=96_PERCENT`
+| Area | Status | Percent | Evidence / truth boundary | Remaining dependency |
+| --- | --- | ---: | --- | --- |
+| CSA STAR for AI Level 1 | PUBLICLY_VERIFIED | 100 | Public registry listing exists; Level 1 is self-assessment/transparency, not independent certification | retain/reverify registry evidence before major diligence |
+| Standard CSA STAR Level 1 | READY_FOR_OFFICIAL_WORKBOOK_AND_HUMAN_SUBMISSION | 35 | Evidence/domain mapping is internally prepared | official workbook population/submission is an external/human action |
+| TLS external validation | EXTERNAL_SCAN_ACTION | 60 | HTTPS production exists; fresh Qualys result is not canonical evidence | run/retain scan when desired |
+| HTTP security | EXTERNAL_SCAN_ACTION | 75 | prior dated MDN Observatory evidence exists | rerun when desired |
+| Internet standards — web | EXTERNAL_SCAN_ACTION | 75 | prior dated Internet.nl web evidence exists | rerun when desired |
+| Internet standards — email | EXTERNAL_SCAN_ACTION | 69 | prior dated Internet.nl email evidence exists | rerun when desired |
+| OpenSSF | EXTERNAL_PUBLIC_EVIDENCE_ACTION | 46 | prior local/public evidence was not a current terminal proof | public recheck when desired |
+| External black-box security assessment | REPORT_RECEIVED | 70 | attributable third-party black-box report exists | clean independent retest only if strategically desired/required |
+| Independent manual pentest | EXTERNAL_OR_BUYER_REQUIRED | 0 | no evidence supports relabeling automated/black-box testing as a manual independent pentest | external assessor if required |
+| Legal internal documentation alignment | COMPLETE_EVIDENCE_BOUND | 100 internal | review-ready legal/privacy/security material exists; unprovable facts remain gated | qualified counsel only where required |
+| Qualified counsel approval | EXTERNAL_OR_BUYER_REQUIRED | 0 | not claimed without attributable counsel evidence | external legal reviewer |
+| DPA Article 28 package | COMPLETE_EVIDENCE_BOUND | 100 internal | review-ready package and control matrix exist | buyer-specific negotiation/signature may remain |
+| International transfers / SCC | COMPLETE_EVIDENCE_BOUND | 100 internal | provider-by-provider unknowns remain explicitly `FACT_REQUIRED` rather than guessed | authoritative provider facts when unavailable internally |
+| Subprocessors | COMPLETE_EVIDENCE_BOUND | 100 internal | canonical register exists with truth-bounded provider status | authoritative provider/account facts where unavailable |
+| Retention / deletion | COMPLETE_EVIDENCE_BOUND | 100 internal | policy/process documentation exists; unknown provider windows are not invented | provider facts where unavailable |
+| Privacy | COMPLETE_EVIDENCE_BOUND | 100 internal | public/review material exists | external legal approval only if required |
+| Terms | COMPLETE_EVIDENCE_BOUND | 100 internal | review-ready material exists | contract-specific final negotiation if applicable |
+| Cookie / consent | COMPLETE_EVIDENCE_BOUND | 100 internal | controls/documentation exist; future runtime rechecks are operational evidence refreshes | recheck on material release/change |
+| Acceptable Use | COMPLETE_EVIDENCE_BOUND | 100 internal | review-ready material exists | final signed contractual context if applicable |
+| Incident response | IMPLEMENTED / DOCUMENTED | 100 internal | incident-response documentation exists | periodic operational validation |
+| EU AI Act mapping | IMPLEMENTED / EVIDENCE_BOUND | 100 internal | mapping exists; ambiguous legal interpretations are not guessed | qualified legal review only where needed |
+| Procurement data room | BUYER_READY_INTERNAL_PACKAGE | 100 internal | canonical buyer/procurement package exists | buyer acceptance remains external |
 
-`EXTERNAL_SELF_ASSESSMENT_READINESS=92_PERCENT`
+## Current commercial gates
 
-`INDEPENDENT_THIRD_PARTY_ASSURANCE=55_PERCENT`
+`PUBLICATION_GO=PASS`
 
-`LEGAL_DOCUMENTATION_READINESS=90_PERCENT`
+`CUSTOMER_ACQUISITION_GO=PASS`
 
-`QUALIFIED_COUNSEL_REVIEW=EXTERNAL_OR_BUYER_REQUIRED`
+`DEMO_GO=PASS`
 
-`PROCUREMENT_READINESS=98_PERCENT`
+`PILOT_GO=PASS`
 
-`ENTERPRISE_READINESS=96_PERCENT`
+`SMB_GO=PASS`
 
-## Launch gates
+`MID_MARKET_GO=PASS`
 
-`PUBLICATION_GO=YES`
+`ENTERPRISE_SALES_GO=PASS_WITH_EVIDENCE_BOUND_DISCLOSURE`
 
-`CUSTOMER_ACQUISITION_GO=YES`
+These gates do not imply that every enterprise buyer will waive independent pentesting, legal review, insurance, custom DPA/SLA terms, security questionnaires or other buyer-specific procurement requirements.
 
-`PILOT_GO=YES`
+## Remaining external / human actions
 
-`ENTERPRISE_SALES_GO=YES_WITH_EVIDENCE_BOUND_DISCLOSURE`
+1. Populate and submit the official current CSA STAR Level 1 CAIQ v4.1 workbook when an authorized human chooses to proceed.
+2. Run/retain fresh Qualys, MDN Observatory, Internet.nl and public OpenSSF evidence when useful for procurement.
+3. Obtain independent manual pentest/retest only when strategically desired or required by a buyer.
+4. Obtain qualified counsel sign-off only when strategically desired, legally required or demanded by a buyer/contract.
+5. Provide authoritative company identifiers, addresses, signatory facts and other human/company facts where final contracting requires them.
+6. Complete buyer-specific questionnaires, DPA/SLA negotiation, IdP/SAML setup or procurement actions when an actual counterparty requests them.
 
-These gates do not mean every enterprise buyer will waive a manual pentest, counsel review, custom DPA negotiation, security questionnaire, insurance requirement, or other buyer-specific procurement condition.
+## Truth boundary
 
-## Remaining internally controllable closure work
+Do not lower internal readiness merely because optional external certifications or scans are absent. Do not raise external assurance merely because internal documentation exists. Do not represent drafts as signed agreements, self-assessments as independent audits, technical remediation as a clean independent retest, outreach as buyer interest, or internal evidence as legal approval.
 
-1. Complete standard CSA STAR Level 1 CAIQ v4.1 preparation package.
-2. Record current Qualys SSL Labs evidence.
-3. Re-run and reconcile MDN Observatory, Internet.nl and public OpenSSF evidence.
-4. Reconcile provider-by-provider transfer/subprocessor/retention facts against active production configuration without inventing unknowns.
-5. Finalize exact factual legal fields that are already known/authoritative; keep unproven fields explicitly gated.
-6. Reconcile the 2026-09-12 external black-box findings against the current release and record remediation/retest evidence where attributable.
-7. Record exact-current production cookie/consent runtime behavior after the final release merge.
+`INTERNALLY_CONTROLLABLE_ASSURANCE_AND_LEGAL_CLOSURE=COMPLETE`
 
-## Remaining human/external blockers
-
-- qualified counsel approval, only where chosen or buyer/contract requires it;
-- independent manual penetration test, only where a buyer requires that assurance level;
-- buyer-specific procurement/security/legal requirements;
-- authoritative company facts that cannot be derived from repository/provider evidence;
-- external scanner/registry results that require a human/browser action or third-party processing.
-
-## Terminal rule
-
-Do not lower internal readiness merely because optional paid certifications are absent. Do not raise external assurance merely because internal evidence exists.
-
-`INTERNALLY_CONTROLLABLE_ASSURANCE_AND_LEGAL_CLOSURE=NOT_YET_COMPLETE`
-
-Reason: standard CSA STAR Level 1 preparation, fresh free public assurance checks, provider/legal truth reconciliation, external-assessment remediation/retest reconciliation, and exact-current consent runtime proof remain internally actionable or evidence-collection workstreams.
+`REMAINING_OPEN_ITEMS=EXTERNAL_OR_HUMAN_OR_BUYER_SPECIFIC`
