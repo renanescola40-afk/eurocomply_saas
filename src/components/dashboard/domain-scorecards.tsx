@@ -108,37 +108,37 @@ export function DomainScorecards({ summary, basePath }: DomainScorecardsProps) {
   const scorecards = buildScorecards(summary, basePath);
 
   return (
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       {scorecards.map((scorecard) => (
         <Link
           key={scorecard.area}
           href={scorecard.href}
-          className="group rounded-3xl border border-white/10 bg-slate-950 p-5 text-white shadow-lg transition hover:-translate-y-0.5 hover:border-primary/50 hover:bg-slate-900"
+          className="group rounded-xl border border-slate-800 bg-[#0b121e] p-5 text-white transition hover:border-blue-500/40 hover:bg-[#0e1827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
         >
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{scorecard.area}</p>
-              <h3 className="mt-2 text-lg font-semibold">{scorecard.status}</h3>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">{scorecard.area}</p>
+              <h3 className="mt-2 text-sm font-semibold text-slate-100">{scorecard.status}</h3>
             </div>
-            <p className={`text-3xl font-bold ${getScoreTone(scorecard.score)}`}>{scorecard.score}%</p>
+            <p className={`font-mono text-2xl font-semibold tabular-nums ${getScoreTone(scorecard.score)}`}>{scorecard.score}%</p>
           </div>
 
-          <p className="mt-4 min-h-10 text-sm leading-5 text-slate-400">{scorecard.description}</p>
+          <p className="mt-3 min-h-10 text-sm leading-5 text-slate-400">{scorecard.description}</p>
 
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-800">
             <div className={`h-full rounded-full ${getBarTone(scorecard.score)}`} style={{ width: `${scorecard.score}%` }} />
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+          <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
             {scorecard.metrics.map((metric) => (
-              <div key={metric.label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                <p className="text-xs text-slate-500">{metric.label}</p>
-                <p className="mt-1 font-semibold text-slate-100">{metric.value}</p>
+              <div key={metric.label} className="rounded-lg border border-slate-800 bg-[#0d1624] p-3">
+                <p className="text-[10px] uppercase tracking-[0.1em] text-slate-600">{metric.label}</p>
+                <p className="mt-1 font-mono text-sm font-semibold tabular-nums text-slate-200">{metric.value}</p>
               </div>
             ))}
           </div>
 
-          <p className="mt-5 text-xs font-medium text-primary opacity-80 transition group-hover:opacity-100">Open {scorecard.area.toLowerCase()} →</p>
+          <p className="mt-4 text-xs font-medium text-blue-400 transition group-hover:text-blue-300">Open {scorecard.area.toLowerCase()} →</p>
         </Link>
       ))}
     </section>
