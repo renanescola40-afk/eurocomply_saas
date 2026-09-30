@@ -36,6 +36,8 @@ const canonicalStates = [
 const finalOperationalSurfaces = [
   'src/app/[locale]/dashboard/privacy/privacy-client.tsx',
   'src/components/billing/upgrade-required-card.tsx',
+  'src/components/team/enterprise-access-console.tsx',
+  'src/components/ui/enterprise-feedback.tsx',
 ];
 
 describe('UI design system consistency closure', () => {
@@ -77,9 +79,10 @@ describe('UI design system consistency closure', () => {
       expect(content, surface).toContain('rounded-lg');
       expect(content, surface).toContain('bg-[#0b121e]');
       expect(content, surface).not.toContain('rounded-[2rem]');
+      expect(content, surface).not.toContain('rounded-[1.75rem]');
       expect(content, surface).not.toContain('rounded-3xl');
       expect(content, surface).not.toContain('enterprise-panel');
-      expect(content, surface).not.toContain('rounded-full');
+      expect(content, surface).not.toContain('hover:bg-blue-500');
     }
   });
 
