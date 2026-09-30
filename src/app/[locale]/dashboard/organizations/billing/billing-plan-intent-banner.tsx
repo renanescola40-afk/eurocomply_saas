@@ -3,12 +3,14 @@ import { ArrowRight, CheckCircle2, LockKeyhole } from 'lucide-react';
 
 import type { BillingPlan } from '@/lib/billing/plans';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import type { OrganizationBillingContext } from '@/server/queries/billing';
 import { BillingActionButton } from './billing-action-button';
 
 type Props = {
   locale: string;
   selectedPlan: BillingPlan;
   canManageBilling: boolean;
+  billingAuthority: OrganizationBillingContext['authority'];
 };
 
 type Copy = {
@@ -75,21 +77,22 @@ function safeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
 }
 
-export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling }: Props) {
+export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling, billingAuthority }: Props) {
   const copy = copyByLocale[safeLocale(locale)];
+  const requiresSales = selectedPlan.salesLed || billingAuthority === 'signed_contract';
 
   return (
-    <aside aria-labelledby="selected-plan-title" className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.045] p-4 text-white">
+    <aside aria-labelledby="selected-plan-title" className="rounded-xl border border-slate-800 bg-[#0d1624] p-4 text-white">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0 max-w-3xl">
-          <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-emerald-100/55">
+          <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-blue-400">
             <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
             {copy.eyebrow}
           </p>
-          <h2 id="selected-plan-title" className="mt-1.5 text-base font-semibold tracking-[-0.015em] text-white/88">
+          <h2 id="selected-plan-title" className="mt-1.5 text-base font-semibold tracking-[-0.015em] text-slate-100">
             {copy.title(selectedPlan.name)}
           </h2>
-          <p className="mt-1 text-sm leading-6 text-white/46">{copy.body}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-400">{copy.body}</p>
         </div>
 
         <div className="shrink-0">
@@ -98,15 +101,15 @@ export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling
               type="button"
               disabled
               aria-disabled="true"
-              className="inline-flex h-10 max-w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-4 text-sm font-semibold text-white/35 disabled:cursor-not-allowed"
+              className="inline-flex h-10 max-w-full items-center justify-center gap-2 rounded-lg border border-slate-700 px-4 text-sm font-semibold text-slate-500 disabled:cursor-not-allowed"
             >
               <LockKeyhole className="h-4 w-4 shrink-0" aria-hidden="true" />
               {copy.ownerRequired}
             </button>
-          ) : selectedPlan.salesLed ? (
+          ) : requiresSales ? (
             <Link
               href={`/${locale}/contact?intent=sales&plan=${selectedPlan.id}&source=onboarding`}
-              className="inline-flex h-10 max-w-full items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 text-sm font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
+              className="inline-flex h-10 max-w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             >
               {copy.contactSales(selectedPlan.name)}
               <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -117,7 +120,7 @@ export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling
               locale={locale}
               planId={selectedPlan.id}
               requireLegalAcceptance
-              className="h-10 max-w-full rounded-xl bg-emerald-300 px-4 text-[#06100d] hover:bg-emerald-200"
+              className="h-10 max-w-full rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500"
             >
               {copy.continuePlan(selectedPlan.name)}
             </BillingActionButton>

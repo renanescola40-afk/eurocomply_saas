@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const billingPageRoute = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/page.tsx'), 'utf8');
 const billingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'), 'utf8');
+const billingPlanIntentBanner = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx'), 'utf8');
 const publicCheckoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const enterpriseHome = readFileSync(join(process.cwd(), 'src/components/marketing/enterprise-home.tsx'), 'utf8');
 const billingActionButton = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx'), 'utf8');
@@ -54,6 +55,14 @@ describe('billing UI API boundary', () => {
     expect(publicCheckoutPage).not.toContain('/onboarding?next=');
   });
 
+  it('routes contract-managed plan intent to sales before checkout', () => {
+    expect(billingPageRoute).toContain('billingAuthority={billing.authority}');
+    expect(billingPlanIntentBanner).toContain("billingAuthority: OrganizationBillingContext['authority']");
+    expect(billingPlanIntentBanner).toContain("selectedPlan.salesLed || billingAuthority === 'signed_contract'");
+    expect(billingPlanIntentBanner).toContain(') : requiresSales ? (');
+    expect(billingPlanIntentBanner).toContain('intent=sales&plan=${selectedPlan.id}&source=onboarding');
+  });
+
   it('keeps checkout session creation ready for European B2B billing', () => {
     expect(billingCheckoutRoute).toContain('locale,');
     expect(billingCheckoutRoute).toContain("cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`");
@@ -94,7 +103,9 @@ describe('billing UI API boundary', () => {
     expect(billingPage).toContain('Only the workspace owner can open the billing portal or change subscription plans');
     expect(billingPage).toContain('Owner access required');
     expect(billingPage).toContain('Owner action required');
-    expect(billingPage).toContain('canManageBilling ? (');
+    expect(billingPage).toContain('!canManageBilling ?');
+    expect(billingPage).toContain('canManageBilling && stripeManaged');
+    expect(billingPage).toContain('canManageBilling && contractManaged');
   });
 
   it('does not present failed-payment subscriptions as a healthy current plan', () => {
