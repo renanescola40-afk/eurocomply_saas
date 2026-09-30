@@ -1,0 +1,49 @@
+name: ENG-10 Remediation Bridge
+
+on:
+  push:
+    branches:
+      - fix/eng10-dependency-proof-20260930
+    paths:
+      - .github/workflows/eng10-remediation-bridge.yml
+
+permissions:
+  contents: write
+
+jobs:
+  remediate-lockfile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout remediation branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: fix/eng10-dependency-proof-20260930
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Reproduce non-breaking lockfile remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm audit fix --package-lock-only --ignore-scripts
+          npm audit --audit-level=moderate
+          git diff -- package-lock.json
+
+      - name: Commit only remediated lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$(git status --porcelain -- package-lock.json)"
+          test -z "$(git status --porcelain -- package.json)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "fix(security): remediate ENG-10 dependency advisories"
+          git push origin HEAD:fix/eng10-dependency-proof-20260930
