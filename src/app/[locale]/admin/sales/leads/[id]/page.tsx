@@ -65,6 +65,12 @@ async function requireSalesConsoleAccess(locale: Locale, id: string) {
   }
 }
 
+const fieldClass = 'h-10 w-full rounded-lg border border-slate-800 bg-[#0d1624] px-3 text-sm text-slate-200 outline-none transition focus:border-blue-500/60 focus-visible:ring-2 focus-visible:ring-blue-500/20';
+const panelClass = 'rounded-xl border border-slate-800 bg-[#0b121e] p-5 sm:p-6';
+const labelClass = 'text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600';
+const secondaryButtonClass = 'inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-semibold text-slate-300 transition hover:border-blue-500/50 hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30';
+const primaryButtonClass = 'inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40';
+
 export default async function SalesLeadDetailPage({ params, searchParams }: PageProps) {
   noStore();
   const { locale, id } = await params;
@@ -83,95 +89,136 @@ export default async function SalesLeadDetailPage({ params, searchParams }: Page
   const basePath = `/${safeLocale}/admin/sales/leads/${lead.id}`;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_34rem),linear-gradient(180deg,#050505_0%,#080b12_48%,#050505_100%)] text-white">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <Link href={`/${safeLocale}/admin/sales/leads`} className="text-sm font-semibold text-blue-100/70 transition hover:text-blue-50">← Back to Sales Console</Link>
-            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-blue-200/70">Lead detail</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">{lead.company_name}</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">{lead.full_name} · {lead.work_email} · {lead.role ?? 'Role not provided'}</p>
+    <main className="min-h-screen bg-[#080e18] text-white">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <header className="flex flex-col gap-5 border-b border-slate-800 pb-5 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0 max-w-3xl">
+            <Link href={`/${safeLocale}/admin/sales/leads`} className="text-sm font-semibold text-blue-400 transition hover:text-blue-300">← Back to Sales Console</Link>
+            <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">Lead detail</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-100">{lead.company_name}</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-400">{lead.full_name} · {lead.work_email} · {lead.role ?? 'Role not provided'}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white/70">
-            <span className="block text-2xl font-semibold text-white">{lead.status}</span>
+          <div className="rounded-lg border border-slate-800 bg-[#0d1624] px-4 py-3 text-sm text-slate-500">
+            <span className="block text-sm font-semibold text-slate-100">{lead.status}</span>
             current status
           </div>
         </header>
 
         {resolvedSearchParams.salesError ? (
-          <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-5 py-4 text-sm text-red-100">Sales Console update failed. Check the value and try again.</div>
+          <div className="rounded-lg border border-rose-500/25 bg-rose-500/[0.08] px-4 py-3 text-sm text-rose-100" role="alert">Sales Console update failed. Check the value and try again.</div>
         ) : null}
 
         <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-5">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
-              <h2 className="text-xl font-semibold">Lead intelligence</h2>
+            <div className={panelClass}>
+              <h2 className="text-sm font-semibold text-slate-100">Lead intelligence</h2>
               <dl className="mt-5 grid gap-4 md:grid-cols-2">
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Company size</dt><dd className="mt-1 text-white/80">{lead.company_size ?? '—'}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Region</dt><dd className="mt-1 text-white/80">{lead.region ?? '—'}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Timeline</dt><dd className="mt-1 text-white/80">{lead.timeline ?? '—'}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Source</dt><dd className="mt-1 text-white/80">{lead.source}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Created</dt><dd className="mt-1 text-white/80">{formatDate(lead.created_at)}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Next follow-up</dt><dd className="mt-1 text-white/80">{formatDate(lead.next_follow_up_at)}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Estimated value</dt><dd className="mt-1 text-white/80">{formatMoney(lead.estimated_value_cents, lead.currency)}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Plan interest</dt><dd className="mt-1 text-white/80">{lead.plan_interest ?? '—'}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Priority</dt><dd className="mt-1 text-white/80">{lead.priority}</dd></div>
-                <div><dt className="text-xs uppercase tracking-[0.18em] text-white/40">Last contacted</dt><dd className="mt-1 text-white/80">{formatDate(lead.last_contacted_at)}</dd></div>
+                <Meta label="Company size" value={lead.company_size ?? '—'} />
+                <Meta label="Region" value={lead.region ?? '—'} />
+                <Meta label="Timeline" value={lead.timeline ?? '—'} />
+                <Meta label="Source" value={lead.source} />
+                <Meta label="Created" value={formatDate(lead.created_at)} />
+                <Meta label="Next follow-up" value={formatDate(lead.next_follow_up_at)} />
+                <Meta label="Estimated value" value={formatMoney(lead.estimated_value_cents, lead.currency)} />
+                <Meta label="Plan interest" value={lead.plan_interest ?? '—'} />
+                <Meta label="Priority" value={lead.priority} />
+                <Meta label="Last contacted" value={formatDate(lead.last_contacted_at)} />
               </dl>
-              <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.18em] text-white/40">Compliance drivers</p><p className="mt-2 text-sm leading-6 text-white/75">{lead.compliance_drivers ?? '—'}</p></div>
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.18em] text-white/40">Current process</p><p className="mt-2 text-sm leading-6 text-white/75">{lead.current_process ?? '—'}</p></div>
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-xs uppercase tracking-[0.18em] text-white/40">Original message</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/75">{lead.message ?? '—'}</p></div>
-              {lead.lost_reason ? <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-4"><p className="text-xs uppercase tracking-[0.18em] text-red-100/60">Lost reason</p><p className="mt-2 text-sm leading-6 text-red-50/80">{lead.lost_reason}</p></div> : null}
+              <DetailBlock label="Compliance drivers" value={lead.compliance_drivers ?? '—'} />
+              <DetailBlock label="Current process" value={lead.current_process ?? '—'} />
+              <DetailBlock label="Original message" value={lead.message ?? '—'} preserveWhitespace />
+              {lead.lost_reason ? (
+                <div className="mt-4 rounded-lg border border-rose-500/20 bg-rose-500/[0.08] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-rose-300/70">Lost reason</p>
+                  <p className="mt-2 text-sm leading-6 text-rose-100/85">{lead.lost_reason}</p>
+                </div>
+              ) : null}
             </div>
 
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
-              <h2 className="text-xl font-semibold">Internal notes</h2>
-              <p className="mt-2 text-sm leading-6 text-white/55">Keep notes concise and avoid unnecessary personal or sensitive data.</p>
+            <div className={panelClass}>
+              <h2 className="text-sm font-semibold text-slate-100">Internal notes</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-400">Keep notes concise and avoid unnecessary personal or sensitive data.</p>
               <form className="mt-5 space-y-3" method="post" action={`${basePath}/note`}>
                 <input type="hidden" name="leadId" value={lead.id} />
-                <textarea name="body" required maxLength={2000} rows={4} className="w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-blue-200/40" placeholder="Add a concise internal follow-up note..." />
-                <button type="submit" className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200">Add note</button>
+                <textarea name="body" required maxLength={2000} rows={4} className="min-h-28 w-full resize-y rounded-lg border border-slate-800 bg-[#0d1624] px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-blue-500/60 focus-visible:ring-2 focus-visible:ring-blue-500/20" placeholder="Add a concise internal follow-up note..." />
+                <button type="submit" className={primaryButtonClass}>Add note</button>
               </form>
-              <div className="mt-6 space-y-3">
-                {notes.map((note) => <article key={note.id} className="rounded-2xl border border-white/10 bg-black/20 p-4"><p className="whitespace-pre-wrap text-sm leading-6 text-white/75">{note.body}</p><p className="mt-3 text-xs text-white/35">{formatDate(note.created_at)}</p></article>)}
-                {notes.length === 0 ? <p className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-white/45">No internal notes yet.</p> : null}
+              <div className="mt-6 divide-y divide-slate-800/80 overflow-hidden rounded-lg border border-slate-800">
+                {notes.map((note) => (
+                  <article key={note.id} className="bg-[#0d1624] p-4">
+                    <p className="whitespace-pre-wrap text-sm leading-6 text-slate-300">{note.body}</p>
+                    <p className="mt-3 text-xs text-slate-600">{formatDate(note.created_at)}</p>
+                  </article>
+                ))}
+                {notes.length === 0 ? <p className="bg-[#0d1624] p-5 text-sm text-slate-500" role="status">No internal notes yet.</p> : null}
               </div>
             </div>
           </div>
 
           <aside className="space-y-5">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
-              <h2 className="text-xl font-semibold">Quick actions</h2>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <div className={panelClass}>
+              <h2 className="text-sm font-semibold text-slate-100">Quick actions</h2>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {QUICK_ACTIONS.map(([status, label]) => (
                   <form key={status} method="post" action={`${basePath}/status`}>
                     <input type="hidden" name="leadId" value={lead.id} />
                     <input type="hidden" name="status" value={status} />
-                    <button type="submit" className="w-full rounded-full border border-white/10 bg-black/30 px-4 py-2.5 text-sm font-semibold text-white/75 transition hover:border-blue-200/35 hover:text-white">{label}</button>
+                    <button type="submit" className={`${secondaryButtonClass} w-full`}>{label}</button>
                   </form>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
-              <h2 className="text-xl font-semibold">Lead operations</h2>
+            <div className={panelClass}>
+              <h2 className="text-sm font-semibold text-slate-100">Lead operations</h2>
               <div className="mt-5 space-y-5">
-                <form className="space-y-2" method="post" action={`${basePath}/status`}><input type="hidden" name="leadId" value={lead.id} /><label className="text-xs uppercase tracking-[0.18em] text-white/40">Status</label><div className="flex gap-2"><select name="status" defaultValue={lead.status} className="h-11 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 text-sm text-white outline-none focus:border-blue-200/40">{SALES_LEAD_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select><button type="submit" className="rounded-full bg-white px-4 text-sm font-semibold text-black">Save</button></div></form>
-                <form className="space-y-2" method="post" action={`${basePath}/priority`}><input type="hidden" name="leadId" value={lead.id} /><label className="text-xs uppercase tracking-[0.18em] text-white/40">Priority</label><div className="flex gap-2"><select name="priority" defaultValue={lead.priority} className="h-11 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 text-sm text-white outline-none focus:border-blue-200/40">{SALES_LEAD_PRIORITIES.map((priority) => <option key={priority} value={priority}>{priority}</option>)}</select><button type="submit" className="rounded-full bg-white px-4 text-sm font-semibold text-black">Save</button></div></form>
-                <form className="space-y-2" method="post" action={`${basePath}/follow-up`}><input type="hidden" name="leadId" value={lead.id} /><label htmlFor="next-follow-up-at" className="text-xs uppercase tracking-[0.18em] text-white/40">Next follow-up (UTC)</label><div className="flex gap-2"><input id="next-follow-up-at" name="nextFollowUpAt" type="datetime-local" defaultValue={toDateTimeLocal(lead.next_follow_up_at)} className="h-11 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 text-sm text-white outline-none focus:border-blue-200/40" /><button type="submit" className="rounded-full bg-white px-4 text-sm font-semibold text-black">Save</button></div></form>
+                <form className="space-y-1.5" method="post" action={`${basePath}/status`}>
+                  <input type="hidden" name="leadId" value={lead.id} />
+                  <label className={labelClass}>Status</label>
+                  <div className="flex flex-col gap-2 sm:flex-row"><select name="status" defaultValue={lead.status} className={`${fieldClass} flex-1`}>{SALES_LEAD_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select><button type="submit" className={primaryButtonClass}>Save</button></div>
+                </form>
+                <form className="space-y-1.5" method="post" action={`${basePath}/priority`}>
+                  <input type="hidden" name="leadId" value={lead.id} />
+                  <label className={labelClass}>Priority</label>
+                  <div className="flex flex-col gap-2 sm:flex-row"><select name="priority" defaultValue={lead.priority} className={`${fieldClass} flex-1`}>{SALES_LEAD_PRIORITIES.map((priority) => <option key={priority} value={priority}>{priority}</option>)}</select><button type="submit" className={primaryButtonClass}>Save</button></div>
+                </form>
+                <form className="space-y-1.5" method="post" action={`${basePath}/follow-up`}>
+                  <input type="hidden" name="leadId" value={lead.id} />
+                  <label htmlFor="next-follow-up-at" className={labelClass}>Next follow-up (UTC)</label>
+                  <div className="flex flex-col gap-2 sm:flex-row"><input id="next-follow-up-at" name="nextFollowUpAt" type="datetime-local" defaultValue={toDateTimeLocal(lead.next_follow_up_at)} className={`${fieldClass} flex-1`} /><button type="submit" className={primaryButtonClass}>Save</button></div>
+                </form>
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
-              <h2 className="text-xl font-semibold">Activity timeline</h2>
-              <div className="mt-5 space-y-3">
-                {activities.map((activity) => <article key={activity.id} className="rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-sm font-semibold text-white/85">{activity.type}</p><p className="mt-2 text-sm leading-6 text-white/65">{activity.body}</p><p className="mt-2 text-xs text-white/35">{formatDate(activity.created_at)}</p></article>)}
-                {activities.length === 0 ? <p className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-white/45">No commercial activity yet.</p> : null}
+            <div className={panelClass}>
+              <h2 className="text-sm font-semibold text-slate-100">Activity timeline</h2>
+              <div className="mt-4 divide-y divide-slate-800/80 overflow-hidden rounded-lg border border-slate-800">
+                {activities.map((activity) => (
+                  <article key={activity.id} className="bg-[#0d1624] p-4">
+                    <p className="text-sm font-semibold text-slate-200">{activity.type}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">{activity.body}</p>
+                    <p className="mt-2 text-xs text-slate-600">{formatDate(activity.created_at)}</p>
+                  </article>
+                ))}
+                {activities.length === 0 ? <p className="bg-[#0d1624] p-5 text-sm text-slate-500" role="status">No commercial activity yet.</p> : null}
               </div>
             </div>
           </aside>
         </section>
       </div>
     </main>
+  );
+}
+
+function Meta({ label, value }: { label: string; value: string }) {
+  return <div><dt className={labelClass}>{label}</dt><dd className="mt-1 text-sm text-slate-300">{value}</dd></div>;
+}
+
+function DetailBlock({ label, value, preserveWhitespace = false }: { label: string; value: string; preserveWhitespace?: boolean }) {
+  return (
+    <div className="mt-4 rounded-lg border border-slate-800 bg-[#0d1624] p-4">
+      <p className={labelClass}>{label}</p>
+      <p className={`mt-2 text-sm leading-6 text-slate-300 ${preserveWhitespace ? 'whitespace-pre-wrap' : ''}`}>{value}</p>
+    </div>
   );
 }
