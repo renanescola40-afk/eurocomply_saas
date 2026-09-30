@@ -83,8 +83,10 @@ describe('UI design system consistency closure', () => {
     }
   });
 
-  it('keeps auth recovery surfaces on one auth visual system', async () => {
+  it('keeps auth recovery and entry surfaces on one auth visual system', async () => {
     const authPages = [
+      'src/app/[locale]/login/page.tsx',
+      'src/app/[locale]/recuperar-senha/page.tsx',
       'src/app/[locale]/atualizar-senha/page.tsx',
       'src/app/[locale]/reset-password/page.tsx',
       'src/app/[locale]/oauth/complete/page.tsx',
@@ -98,7 +100,17 @@ describe('UI design system consistency closure', () => {
       expect(content, page).not.toContain('rounded-[2rem]');
       expect(content, page).not.toContain('rounded-[1.75rem]');
       expect(content, page).not.toContain('rounded-full bg-white');
+      expect(content, page).not.toContain('hover:bg-blue-500');
     }
+  });
+
+  it('keeps enterprise SSO controls aligned with the auth geometry and contrast rules', async () => {
+    const content = await source('src/components/auth/enterprise-sso-login.tsx');
+    expect(content).toContain('rounded-xl');
+    expect(content).toContain('rounded-lg');
+    expect(content).toContain('h-10');
+    expect(content).not.toContain('rounded-2xl');
+    expect(content).not.toContain('hover:bg-blue-500');
   });
 
   it('keeps admin sales list and detail on the same table/form/card vocabulary', async () => {
