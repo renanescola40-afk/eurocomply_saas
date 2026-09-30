@@ -21,12 +21,12 @@ type EnterpriseStateProps = {
 };
 
 const stateConfig: Record<EnterpriseStateKind, { icon: typeof Loader2; tone: string; ariaLive: 'polite' | 'assertive' }> = {
-  loading: { icon: Loader2, tone: 'border-blue-500/25 bg-blue-500/10 text-blue-100', ariaLive: 'polite' },
-  empty: { icon: FileSearch, tone: 'border-white/10 bg-white/[0.05] text-white', ariaLive: 'polite' },
-  error: { icon: AlertTriangle, tone: 'border-red-500/30 bg-red-500/10 text-red-100', ariaLive: 'assertive' },
-  'permission-denied': { icon: EyeOff, tone: 'border-amber-500/30 bg-amber-500/10 text-amber-100', ariaLive: 'assertive' },
-  success: { icon: CheckCircle2, tone: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100', ariaLive: 'polite' },
-  offline: { icon: CloudOff, tone: 'border-slate-400/25 bg-slate-400/10 text-slate-100', ariaLive: 'assertive' },
+  loading: { icon: Loader2, tone: 'border-blue-500/25 bg-blue-500/10 text-blue-200', ariaLive: 'polite' },
+  empty: { icon: FileSearch, tone: 'border-slate-700 bg-[#0d1624] text-slate-300', ariaLive: 'polite' },
+  error: { icon: AlertTriangle, tone: 'border-rose-500/25 bg-rose-500/[0.08] text-rose-200', ariaLive: 'assertive' },
+  'permission-denied': { icon: EyeOff, tone: 'border-amber-400/25 bg-amber-400/[0.08] text-amber-200', ariaLive: 'assertive' },
+  success: { icon: CheckCircle2, tone: 'border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-200', ariaLive: 'polite' },
+  offline: { icon: CloudOff, tone: 'border-slate-700 bg-slate-800/60 text-slate-300', ariaLive: 'assertive' },
 };
 
 export function EnterpriseState({
@@ -44,18 +44,18 @@ export function EnterpriseState({
 
   return (
     <Card
-      className={cn('border-white/10 bg-[#070707]/92 text-white shadow-2xl shadow-black/20', className)}
+      className={cn('rounded-xl border-slate-800 bg-[#0b121e] text-white shadow-none', className)}
       role={kind === 'error' || kind === 'permission-denied' || kind === 'offline' ? 'alert' : 'status'}
       aria-live={config.ariaLive}
     >
-      <CardContent className="flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-4">
-          <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border', config.tone)}>
-            <Icon className={cn('h-5 w-5', kind === 'loading' && 'animate-spin')} aria-hidden="true" />
+      <CardContent className="flex flex-col items-start gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex min-w-0 gap-4">
+          <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', config.tone)}>
+            <Icon className={cn('h-4 w-4', kind === 'loading' && 'animate-spin')} aria-hidden="true" />
           </div>
-          <div className="space-y-1.5">
-            <h2 className="text-base font-semibold tracking-tight text-white">{title}</h2>
-            <p className="max-w-2xl text-sm leading-6 text-white/62">{description}</p>
+          <div className="min-w-0 space-y-1.5">
+            <h2 className="text-sm font-semibold text-slate-100">{title}</h2>
+            <p className="max-w-2xl text-sm leading-6 text-slate-400">{description}</p>
           </div>
         </div>
         {(actionLabel || secondaryActionLabel) && (
@@ -64,7 +64,7 @@ export function EnterpriseState({
               <Button
                 type="button"
                 variant="outline"
-                className="border-white/12 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:text-white focus-visible:ring-2 focus-visible:ring-white"
+                className="h-10 rounded-lg border-slate-700 bg-[#0d1624] px-4 text-slate-300 hover:border-blue-500/50 hover:bg-slate-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-500/30"
                 onClick={onSecondaryAction}
               >
                 {secondaryActionLabel}
@@ -73,7 +73,7 @@ export function EnterpriseState({
             {actionLabel && (
               <Button
                 type="button"
-                className="bg-white text-black hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white"
+                className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 onClick={onAction}
               >
                 {actionLabel}
@@ -90,11 +90,11 @@ export function EnterpriseSkeleton({ label = 'A carregar dados críticos…' }: 
   return (
     <div className="space-y-4" role="status" aria-live="polite" aria-label={label}>
       <div className="sr-only">{label}</div>
-      <div className="h-24 animate-pulse rounded-3xl border border-white/10 bg-white/[0.05]" />
+      <div className="h-24 animate-pulse rounded-xl border border-slate-800 bg-[#0d1624]" />
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="h-36 animate-pulse rounded-3xl border border-white/10 bg-white/[0.04]" />
-        <div className="h-36 animate-pulse rounded-3xl border border-white/10 bg-white/[0.04]" />
-        <div className="h-36 animate-pulse rounded-3xl border border-white/10 bg-white/[0.04]" />
+        <div className="h-36 animate-pulse rounded-xl border border-slate-800 bg-[#0b121e]" />
+        <div className="h-36 animate-pulse rounded-xl border border-slate-800 bg-[#0b121e]" />
+        <div className="h-36 animate-pulse rounded-xl border border-slate-800 bg-[#0b121e]" />
       </div>
     </div>
   );
@@ -102,7 +102,7 @@ export function EnterpriseSkeleton({ label = 'A carregar dados críticos…' }: 
 
 export function PermissionHint({ children }: { children: ReactNode }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-100">
+    <div className="inline-flex items-center gap-2 rounded-md border border-amber-400/25 bg-amber-400/[0.08] px-2.5 py-1 text-xs font-medium text-amber-200">
       <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
       {children}
     </div>
