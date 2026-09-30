@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { AlertTriangle, CheckCircle2, CloudOff, EyeOff, FileSearch, Loader2, ShieldCheck } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 type EnterpriseStateKind = 'loading' | 'empty' | 'error' | 'permission-denied' | 'success' | 'offline';
@@ -43,12 +42,12 @@ export function EnterpriseState({
   const Icon = config.icon;
 
   return (
-    <Card
-      className={cn('rounded-xl border-slate-800 bg-[#0b121e] text-white shadow-none', className)}
+    <div
+      className={cn('rounded-xl border border-slate-800 bg-[#0b121e] text-white', className)}
       role={kind === 'error' || kind === 'permission-denied' || kind === 'offline' ? 'alert' : 'status'}
       aria-live={config.ariaLive}
     >
-      <CardContent className="flex flex-col items-start gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div className="flex flex-col items-start gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="flex min-w-0 gap-4">
           <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border', config.tone)}>
             <Icon className={cn('h-4 w-4', kind === 'loading' && 'animate-spin')} aria-hidden="true" />
@@ -73,7 +72,7 @@ export function EnterpriseState({
             {actionLabel && (
               <Button
                 type="button"
-                className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 onClick={onAction}
               >
                 {actionLabel}
@@ -81,8 +80,8 @@ export function EnterpriseState({
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
