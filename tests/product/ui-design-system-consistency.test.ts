@@ -38,6 +38,8 @@ const finalOperationalSurfaces = [
   'src/components/billing/upgrade-required-card.tsx',
   'src/components/team/enterprise-access-console.tsx',
   'src/components/ui/enterprise-feedback.tsx',
+  'src/app/[locale]/ai-systems/[id]/page.tsx',
+  'src/app/[locale]/ai-systems/[id]/ai-system-edit-form.tsx',
 ];
 
 describe('UI design system consistency closure', () => {
