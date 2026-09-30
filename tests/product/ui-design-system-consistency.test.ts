@@ -118,6 +118,12 @@ describe('UI design system consistency closure', () => {
     expect(content).not.toContain('hover:bg-blue-500');
   });
 
+  it('routes GDPR privacy to the real self-service controls', async () => {
+    const page = await source('src/app/[locale]/dashboard/privacy/page.tsx');
+    expect(page).toContain("import { PrivacyAdminClient } from './privacy-client'");
+    expect(page).toContain('<PrivacyAdminClient locale={locale} />');
+  });
+
   it('removes simulated/local-only behavior from paid RACI and calendar surfaces', async () => {
     const raci = await source('src/app/[locale]/raci/raci-client.tsx');
     const calendar = await source('src/app/[locale]/calendario-compliance/compliance-calendar-client.tsx');
