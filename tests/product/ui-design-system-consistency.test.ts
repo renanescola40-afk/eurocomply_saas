@@ -14,6 +14,7 @@ const canonicalDashboardPages = [
   'src/app/[locale]/dashboard/organizations/activity/page.tsx',
   'src/app/[locale]/dashboard/organizations/clerk/page.tsx',
   'src/app/[locale]/dashboard/organizations/vendors/page.tsx',
+  'src/app/[locale]/dashboard/organizations/audit-logs/page.tsx',
 ];
 
 const canonicalForms = [
@@ -27,8 +28,14 @@ const canonicalStates = [
   'src/app/[locale]/dashboard/organizations/billing/loading.tsx',
   'src/app/[locale]/dashboard/organizations/team/error.tsx',
   'src/app/[locale]/dashboard/organizations/team/loading.tsx',
+  'src/app/[locale]/dashboard/organizations/documents/error.tsx',
   'src/app/[locale]/admin/sales/leads/error.tsx',
   'src/app/[locale]/admin/sales/leads/loading.tsx',
+];
+
+const finalOperationalSurfaces = [
+  'src/app/[locale]/dashboard/privacy/privacy-client.tsx',
+  'src/components/billing/upgrade-required-card.tsx',
 ];
 
 describe('UI design system consistency closure', () => {
@@ -60,6 +67,19 @@ describe('UI design system consistency closure', () => {
       expect(content, state).not.toContain('rounded-[2rem]');
       expect(content, state).not.toContain('rounded-3xl');
       expect(content, state).not.toContain('shadow-2xl');
+    }
+  });
+
+  it('keeps final operational surfaces on canonical cards and controls', async () => {
+    for (const surface of finalOperationalSurfaces) {
+      const content = await source(surface);
+      expect(content, surface).toContain('rounded-xl');
+      expect(content, surface).toContain('rounded-lg');
+      expect(content, surface).toContain('bg-[#0b121e]');
+      expect(content, surface).not.toContain('rounded-[2rem]');
+      expect(content, surface).not.toContain('rounded-3xl');
+      expect(content, surface).not.toContain('enterprise-panel');
+      expect(content, surface).not.toContain('rounded-full');
     }
   });
 
