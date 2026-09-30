@@ -1,7 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const DOCUMENT_COLUMNS = 'id,organization_id,name,category,status,storage_path,size_bytes,expires_at,created_at,updated_at';
+const DOCUMENT_COLUMNS = 'id,organization_id,name,category,status,storage_path,size_bytes,expires_at,created_at,updated_at,metadata';
 const DEFAULT_DOCUMENTS_PAGE_SIZE = 50;
 const MAX_DOCUMENTS_PAGE_SIZE = 100;
 
@@ -16,9 +16,10 @@ type DocumentRow = {
   expires_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
-type NormalizedDocumentRow = Omit<Required<DocumentRow>, 'name' | 'category' | 'status' | 'storage_path' | 'size_bytes' | 'expires_at' | 'created_at' | 'updated_at'> & {
+type NormalizedDocumentRow = Omit<Required<DocumentRow>, 'name' | 'category' | 'status' | 'storage_path' | 'size_bytes' | 'expires_at' | 'created_at' | 'updated_at' | 'metadata'> & {
   name: string | null;
   category: string | null;
   status: string | null;
@@ -27,6 +28,7 @@ type NormalizedDocumentRow = Omit<Required<DocumentRow>, 'name' | 'category' | '
   expires_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  metadata: Record<string, unknown>;
   title: string;
   version: number;
   download_available: boolean;
@@ -53,6 +55,7 @@ function normalizeDocumentRow(document: DocumentRow): NormalizedDocumentRow {
     expires_at: document.expires_at ?? null,
     created_at: document.created_at ?? null,
     updated_at: document.updated_at ?? null,
+    metadata: document.metadata && typeof document.metadata === 'object' ? document.metadata : {},
     title: name ?? 'Documento sem título',
     version: 1,
     download_available: Boolean(storagePath) && (sizeBytes ?? 0) > 0,

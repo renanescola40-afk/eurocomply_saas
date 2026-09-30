@@ -30,7 +30,7 @@ function EnterpriseFeedbackShell({
       <h3 className="mt-4 text-sm font-semibold text-slate-100">{title}</h3>
       {description ? <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">{description}</p> : null}
       {actionLabel && onAction ? (
-        <Button type="button" className="mt-5 h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40" onClick={onAction}>
+        <Button type="button" className="mt-5 h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500/40" onClick={onAction}>
           {actionLabel}
         </Button>
       ) : null}
@@ -44,7 +44,7 @@ export function EnterpriseEmptyFeedback(props: EnterpriseFeedbackProps) {
 
 export function EnterpriseLoadingFeedback({ title = "Loading workspace", description, className }: Partial<EnterpriseFeedbackProps>) {
   return (
-    <div className={cn("enterprise-panel rounded-xl border border-slate-800 bg-[#0b121e] p-6", className)} aria-live="polite" role="status">
+    <div className={cn("rounded-xl border border-slate-800 bg-[#0b121e] p-6", className)} aria-live="polite" role="status">
       <div className="flex items-center gap-3">
         <RefreshCw className="h-4 w-4 animate-spin text-blue-400" aria-hidden="true" />
         <p className="text-sm font-semibold text-slate-100">{title}</p>

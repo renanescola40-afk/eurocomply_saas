@@ -102,42 +102,41 @@ function LoginContent() {
     router.replace(afterSignInUrl);
   }
 
-  const inputClass = 'mt-2 w-full rounded-xl border border-white/[0.09] bg-black/20 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-blue-400/45 focus-visible:ring-2 focus-visible:ring-blue-400/45';
+  const inputClass = 'mt-2 h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-white outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/30';
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#07101a] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(37,99,235,.16),transparent_34rem),radial-gradient(circle_at_82%_76%,rgba(59,130,246,.08),transparent_30rem)]" />
-      <div className="relative mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
-        <section className="grid w-full overflow-hidden rounded-[1.75rem] border border-white/[0.09] bg-[#0a1320]/92 shadow-2xl shadow-black/35 md:grid-cols-[1.04fr_0.96fr]" aria-labelledby="login-title">
-          <div className="flex min-h-[36rem] flex-col justify-between border-b border-white/[0.07] bg-[#0d1522] p-7 md:border-b-0 md:border-r md:p-9">
+    <main className="min-h-screen bg-[#080e18] text-white">
+      <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+        <section className="grid w-full overflow-hidden rounded-xl border border-slate-800 bg-[#0b121e] md:grid-cols-[1.04fr_0.96fr]" aria-labelledby="login-title">
+          <div className="flex flex-col justify-between border-b border-slate-800 bg-[#0d1624] p-7 md:min-h-[36rem] md:border-b-0 md:border-r md:p-9">
             <div>
-              <Link href={`/${locale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
+              <Link href={`/${locale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
                 <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
               </Link>
-              <div className="mt-14 inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200">{text.badge}</div>
-              <h1 id="login-title" className="mt-5 max-w-lg text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">{text.title}</h1>
-              <p className="mt-4 max-w-md text-base leading-7 text-white/58">{text.subtitle}</p>
+              <div className="mt-10 inline-flex items-center rounded-lg border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200 md:mt-14">{text.badge}</div>
+              <h1 id="login-title" className="mt-5 max-w-lg text-4xl font-semibold tracking-[-0.045em] text-white sm:text-5xl">{text.title}</h1>
+              <p className="mt-4 max-w-md text-base leading-7 text-slate-400">{text.subtitle}</p>
             </div>
-            <div className="mt-10 border-t border-white/[0.07] pt-5 text-sm leading-6 text-white/42">{text.accessNote}</div>
+            <div className="mt-10 border-t border-slate-800 pt-5 text-sm leading-6 text-slate-500">{text.accessNote}</div>
           </div>
 
-          <div className="flex items-center bg-[#09111d] p-6 md:p-9">
+          <div className="flex items-center bg-[#0b121e] p-6 md:p-9">
             <div className="w-full">
               <div className="mb-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-300/60">Secure workspace access</p>
-                <p className="mt-2 text-sm leading-6 text-white/42">Use your organization identity or approved account credentials.</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-300">Secure workspace access</p>
+                <p className="mt-2 text-sm leading-6 text-slate-400">Use your organization identity or approved account credentials.</p>
               </div>
-              {error ? <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3 text-sm text-red-100" role="alert">{error}</div> : null}
-              <button type="button" onClick={handleProvider} disabled={busy || loading} className="w-full rounded-xl border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.google}</button>
+              {error ? <div className="mb-4 rounded-xl border border-rose-400/20 bg-rose-500/[0.08] px-4 py-3 text-sm text-rose-100" role="alert">{error}</div> : null}
+              <button type="button" onClick={handleProvider} disabled={busy || loading} className="h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.google}</button>
               <EnterpriseSsoLogin locale={locale} next={afterSignInUrl} />
-              <div className="my-6 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/28"><span className="h-px flex-1 bg-white/[0.08]" /> {text.divider} <span className="h-px flex-1 bg-white/[0.08]" /></div>
+              <div className="my-6 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500"><span className="h-px flex-1 bg-slate-800" /> {text.divider} <span className="h-px flex-1 bg-slate-800" /></div>
               <form className="space-y-4" onSubmit={handleSubmit}>
-                <label className="block text-sm font-medium text-white/62">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className={inputClass} /></label>
-                <label className="block text-sm font-medium text-white/62">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className={inputClass} /></label>
+                <label className="block text-sm font-medium text-slate-300">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className={inputClass} /></label>
+                <label className="block text-sm font-medium text-slate-300">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className={inputClass} /></label>
                 <div className="flex justify-end"><Link href={`/${locale}/recuperar-senha`} className="rounded-md text-sm font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{forgotLabel}</Link></div>
-                <button type="submit" disabled={busy || loading} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.submit}</button>
+                <button type="submit" disabled={busy || loading} className="h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.submit}</button>
               </form>
-              <p className="mt-6 text-center text-sm text-white/46">{text.createPrompt}{' '}<Link href={createAccountUrl} className="rounded-md font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{text.create}</Link></p>
+              <p className="mt-6 text-center text-sm text-slate-400">{text.createPrompt}{' '}<Link href={createAccountUrl} className="rounded-md font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{text.create}</Link></p>
             </div>
           </div>
         </section>
@@ -148,7 +147,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-[#07101a]" aria-busy="true" />}>
+    <Suspense fallback={<main className="min-h-screen bg-[#080e18]" aria-busy="true" />}>
       <LoginContent />
     </Suspense>
   );

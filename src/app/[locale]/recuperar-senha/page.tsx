@@ -138,20 +138,19 @@ export default function AccountRecoveryPage() {
   const formDisabled = !hydrated || busy;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#07101a] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,.16),transparent_34rem),radial-gradient(circle_at_bottom_right,rgba(124,58,237,.10),transparent_30rem)]" />
-      <div className="relative mx-auto flex min-h-screen max-w-lg items-center px-5 py-10">
-        <section className="w-full rounded-[1.75rem] border border-white/[0.09] bg-[#0a1320]/92 p-7 shadow-2xl shadow-black/35 backdrop-blur-xl sm:p-8">
-          <Link href={`/${locale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
+    <main className="min-h-screen bg-[#080e18] text-white">
+      <div className="mx-auto flex min-h-screen max-w-lg items-center px-5 py-8">
+        <section className="w-full rounded-xl border border-slate-800 bg-[#0b121e] p-7 sm:p-8">
+          <Link href={`/${locale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
             <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
           </Link>
-          <p className="mt-10 text-xs font-semibold uppercase tracking-[0.24em] text-blue-300/60">{text.eyebrow}</p>
+          <p className="mt-10 text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">{text.eyebrow}</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{text.title}</h1>
-          <p className="mt-3 text-sm leading-6 text-white/58">{text.subtitle}</p>
+          <p className="mt-3 text-sm leading-6 text-slate-400">{text.subtitle}</p>
 
           {notice ? (
             <div
-              className={`mt-6 rounded-2xl border px-4 py-3 text-sm leading-6 ${notice.tone === 'success' ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-100' : 'border-red-400/25 bg-red-500/10 text-red-100'}`}
+              className={`mt-6 rounded-xl border px-4 py-3 text-sm leading-6 ${notice.tone === 'success' ? 'border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-100' : 'border-rose-400/20 bg-rose-500/[0.07] text-rose-100'}`}
               role={notice.tone === 'error' ? 'alert' : 'status'}
               aria-live="polite"
             >
@@ -160,7 +159,7 @@ export default function AccountRecoveryPage() {
           ) : null}
 
           <form className="mt-6 space-y-4" onSubmit={submitRecovery} aria-busy={busy}>
-            <label className="block text-sm font-medium text-white/72">
+            <label className="block text-sm font-medium text-slate-300">
               {text.email}
               <input
                 type="email"
@@ -170,20 +169,20 @@ export default function AccountRecoveryPage() {
                 autoComplete="email"
                 inputMode="email"
                 disabled={formDisabled}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-blue-300/50 focus-visible:ring-2 focus-visible:ring-blue-400/40 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-white outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
                 placeholder="you@company.com"
               />
             </label>
             <button
               type="submit"
               disabled={formDisabled}
-              className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? text.submitting : text.submit}
             </button>
           </form>
 
-          <Link href={`/${locale}/login`} className="mt-6 flex justify-center rounded-md text-sm font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
+          <Link href={`/${locale}/login`} className="mt-6 flex justify-center rounded-md text-sm font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
             {text.back}
           </Link>
         </section>
