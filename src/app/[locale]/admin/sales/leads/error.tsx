@@ -2,19 +2,17 @@
 
 export default function SalesConsoleError({ reset }: { error: Error; reset: () => void }) {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(239,68,68,0.14),_transparent_34rem),linear-gradient(180deg,#050505_0%,#080b12_48%,#050505_100%)] text-white">
-      <div className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-12 sm:px-6 lg:px-8">
-        <section className="rounded-[2rem] border border-red-400/20 bg-red-500/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-red-100/60">Internal Lead Operations</p>
-          <h1 className="mt-3 text-3xl font-semibold">Sales Console could not load safely</h1>
-          <p className="mt-3 text-sm leading-6 text-red-50/70">
-            The request failed without exposing lead data or internal details. Retry after confirming your platform admin access.
-          </p>
-          <button type="button" onClick={reset} className="mt-6 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200">
-            Retry securely
-          </button>
-        </section>
-      </div>
+    <main className="flex min-h-screen items-center justify-center bg-[#080e18] px-4 py-8 text-white sm:px-6">
+      <section className="w-full max-w-2xl rounded-xl border border-rose-500/25 bg-rose-500/[0.08] p-6 sm:p-8" role="alert">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-rose-300/70">Internal Lead Operations</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-100">Sales Console could not load safely</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          The request failed without exposing lead data or internal details. Retry after confirming your platform admin access.
+        </p>
+        <button type="button" onClick={reset} className="mt-5 inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+          Retry securely
+        </button>
+      </section>
     </main>
   );
 }
