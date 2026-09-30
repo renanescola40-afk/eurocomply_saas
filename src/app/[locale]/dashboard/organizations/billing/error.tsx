@@ -16,20 +16,20 @@ export default function BillingError({
   }, [error]);
 
   return (
-    <main className="px-4 py-16">
-      <section className="mx-auto max-w-2xl rounded-[2rem] border bg-card p-8 shadow-xl">
+    <main className="min-h-0 bg-transparent py-6 text-white">
+      <section className="max-w-2xl rounded-xl border border-rose-500/25 bg-rose-500/[0.08] p-5 sm:p-6" role="alert">
         <div className="flex items-start gap-4">
-          <div className="rounded-2xl bg-destructive/10 p-3 text-destructive">
-            <AlertTriangle className="h-6 w-6" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-rose-500/25 bg-rose-500/10 text-rose-200">
+            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
           </div>
-          <div className="space-y-3">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Billing unavailable</p>
-            <h1 className="text-3xl font-semibold tracking-tight">We could not load billing safely.</h1>
-            <p className="text-sm leading-6 text-muted-foreground">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-rose-300/70">Billing unavailable</p>
+            <h1 className="mt-2 text-xl font-semibold tracking-[-0.025em] text-slate-100">We could not load billing safely.</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-400">
               Billing data is private and no-store. Retry to re-fetch usage and subscription state from the server.
             </p>
-            <Button type="button" onClick={reset} className="rounded-full">
-              <RotateCw className="h-4 w-4" /> Retry billing
+            <Button type="button" onClick={reset} className="mt-5 h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40">
+              <RotateCw className="h-4 w-4" aria-hidden="true" /> Retry billing
             </Button>
           </div>
         </div>
