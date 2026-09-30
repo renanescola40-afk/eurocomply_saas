@@ -17,16 +17,16 @@ const sections = [
 
 export function DashboardSectionNavigator() {
   return (
-    <nav className="sticky top-3 z-30 rounded-[1.5rem] border border-white/10 bg-slate-950/90 p-2 text-white shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-slate-950/75">
+    <nav className="sticky top-3 z-30 rounded-xl border border-slate-800 bg-[#080e18]/95 p-2 text-white shadow-lg backdrop-blur supports-[backdrop-filter]:bg-[#080e18]/85" aria-label="Dashboard sections">
       <div className="flex gap-2 overflow-x-auto pb-1">
         {sections.map((section) => (
           <a
             key={section.anchor}
             href={section.anchor}
-            className="group min-w-32 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 transition hover:border-primary/50 hover:bg-white/[0.08]"
+            className="group min-w-32 rounded-lg border border-slate-800 bg-[#0d1624] px-3 py-2.5 transition hover:border-blue-500/50 hover:bg-slate-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
           >
-            <p className="text-sm font-semibold leading-none">{section.label}</p>
-            <p className="mt-1 text-xs text-slate-500 transition group-hover:text-slate-300">{section.description}</p>
+            <p className="text-sm font-semibold leading-none text-slate-100">{section.label}</p>
+            <p className="mt-1 text-xs text-slate-600 transition group-hover:text-slate-400">{section.description}</p>
           </a>
         ))}
       </div>
