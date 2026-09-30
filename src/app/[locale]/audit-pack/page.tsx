@@ -12,207 +12,99 @@ import { assertOrganizationPermission } from '@/server/security/rbac';
 
 const copy = {
   en: {
-    eyebrow: 'Audit Evidence',
-    title: 'Audit Evidence Pack',
-    description: 'Export a structured evidence snapshot for internal audits, procurement reviews and customer due diligence.',
-    download: 'Download JSON pack',
-    verify: 'Verify exported pack',
-    restricted: 'Your current role cannot export evidence packs.',
-    businessRequired: 'Audit Evidence Pack is available on Business and Enterprise plans.',
-    sections: ['Controlled documents', 'Vendors', 'Risks', 'AI systems', 'AI incidents', 'Audit trail'],
-    nextActions: 'Recommended next actions',
-    integrity: 'Integrity protected export',
-    integrityDescription: 'Every JSON export includes a SHA-256 payload hash and can be signed with an organization-controlled signing secret for verification.',
+    eyebrow: 'Audit Evidence', title: 'Audit Evidence Pack', description: 'Export a structured evidence snapshot for internal audits, procurement reviews and customer due diligence.', download: 'Download JSON pack', verify: 'Verify exported pack', restricted: 'Your current role cannot export evidence packs.', businessRequired: 'Audit Evidence Pack is available on Business and Enterprise plans.', sections: ['Controlled documents', 'Vendors', 'Risks', 'AI systems', 'AI incidents', 'Audit trail'], nextActions: 'Recommended next actions', integrity: 'Integrity protected export', integrityDescription: 'Every JSON export includes a SHA-256 payload hash and can be signed with an organization-controlled signing secret for verification.',
   },
   pt: {
-    eyebrow: 'Evidências de Auditoria',
-    title: 'Pacote de Evidências de Auditoria',
-    description: 'Exporte uma fotografia estruturada de evidências para auditorias internas, procurement e due diligence de clientes.',
-    download: 'Baixar pacote JSON',
-    verify: 'Verificar pacote exportado',
-    restricted: 'O seu papel atual não permite exportar pacotes de evidência.',
-    businessRequired: 'O Pacote de Evidências está disponível nos planos Business e Enterprise.',
-    sections: ['Documentos controlados', 'Fornecedores', 'Riscos', 'Sistemas de IA', 'Incidentes de IA', 'Trilha de auditoria'],
-    nextActions: 'Próximas ações recomendadas',
-    integrity: 'Exportação com integridade protegida',
-    integrityDescription: 'Cada export JSON inclui hash SHA-256 do payload e pode ser assinado com um segredo controlado pela organização para verificação.',
+    eyebrow: 'Evidências de Auditoria', title: 'Pacote de Evidências de Auditoria', description: 'Exporte uma fotografia estruturada de evidências para auditorias internas, procurement e due diligence de clientes.', download: 'Baixar pacote JSON', verify: 'Verificar pacote exportado', restricted: 'O seu papel atual não permite exportar pacotes de evidência.', businessRequired: 'O Pacote de Evidências está disponível nos planos Business e Enterprise.', sections: ['Documentos controlados', 'Fornecedores', 'Riscos', 'Sistemas de IA', 'Incidentes de IA', 'Trilha de auditoria'], nextActions: 'Próximas ações recomendadas', integrity: 'Exportação com integridade protegida', integrityDescription: 'Cada export JSON inclui hash SHA-256 do payload e pode ser assinado com um segredo controlado pela organização para verificação.',
   },
   es: {
-    eyebrow: 'Evidencias de Auditoría',
-    title: 'Paquete de Evidencias de Auditoría',
-    description: 'Exporta una fotografía estructurada de evidencias para auditorías internas, procurement y due diligence de clientes.',
-    download: 'Descargar paquete JSON',
-    verify: 'Verificar paquete exportado',
-    restricted: 'Tu rol actual no permite exportar paquetes de evidencia.',
-    businessRequired: 'El Paquete de Evidencias está disponible en Business y Enterprise.',
-    sections: ['Documentos controlados', 'Proveedores', 'Riesgos', 'Sistemas de IA', 'Incidentes de IA', 'Registro de auditoría'],
-    nextActions: 'Próximas acciones recomendadas',
-    integrity: 'Exportación con integridad protegida',
-    integrityDescription: 'Cada export JSON incluye un hash SHA-256 del payload y puede firmarse con un secreto controlado por la organización para verificación.',
+    eyebrow: 'Evidencias de Auditoría', title: 'Paquete de Evidencias de Auditoría', description: 'Exporta una fotografía estructurada de evidencias para auditorías internas, procurement y due diligence de clientes.', download: 'Descargar paquete JSON', verify: 'Verificar paquete exportado', restricted: 'Tu rol actual no permite exportar paquetes de evidencia.', businessRequired: 'El Paquete de Evidencias está disponible en Business y Enterprise.', sections: ['Documentos controlados', 'Proveedores', 'Riesgos', 'Sistemas de IA', 'Incidentes de IA', 'Registro de auditoría'], nextActions: 'Próximas acciones recomendadas', integrity: 'Exportación con integridad protegida', integrityDescription: 'Cada export JSON incluye un hash SHA-256 del payload y puede firmarse con un secreto controlado por la organización para verificación.',
   },
   fr: {
-    eyebrow: 'Preuves d’audit',
-    title: 'Pack de Preuves d’Audit',
-    description: 'Exportez un instantané structuré des preuves pour audits internes, procurement et due diligence client.',
-    download: 'Télécharger le pack JSON',
-    verify: 'Vérifier le pack exporté',
-    restricted: 'Votre rôle actuel ne permet pas d’exporter ce pack.',
-    businessRequired: 'Le pack de preuves est disponible sur Business et Enterprise.',
-    sections: ['Documents contrôlés', 'Fournisseurs', 'Risques', 'Systèmes IA', 'Incidents IA', 'Journal d’audit'],
-    nextActions: 'Actions recommandées',
-    integrity: 'Export protégé par intégrité',
-    integrityDescription: 'Chaque export JSON inclut un hash SHA-256 du payload et peut être signé avec un secret contrôlé par l’organisation.',
+    eyebrow: 'Preuves d’audit', title: 'Pack de Preuves d’Audit', description: 'Exportez un instantané structuré des preuves pour audits internes, procurement et due diligence client.', download: 'Télécharger le pack JSON', verify: 'Vérifier le pack exporté', restricted: 'Votre rôle actuel ne permet pas d’exporter ce pack.', businessRequired: 'Le pack de preuves est disponible sur Business et Enterprise.', sections: ['Documents contrôlés', 'Fournisseurs', 'Risques', 'Systèmes IA', 'Incidents IA', 'Journal d’audit'], nextActions: 'Actions recommandées', integrity: 'Export protégé par intégrité', integrityDescription: 'Chaque export JSON inclut un hash SHA-256 du payload et peut être signé avec un secret contrôlé par l’organisation.',
   },
   it: {
-    eyebrow: 'Evidenze di audit',
-    title: 'Pacchetto Evidenze di Audit',
-    description: 'Esporta uno snapshot strutturato delle evidenze per audit interni, procurement e due diligence clienti.',
-    download: 'Scarica pacchetto JSON',
-    verify: 'Verifica pacchetto esportato',
-    restricted: 'Il tuo ruolo attuale non consente di esportare pacchetti di evidenze.',
-    businessRequired: 'Il pacchetto evidenze è disponibile nei piani Business ed Enterprise.',
-    sections: ['Documenti controllati', 'Fornitori', 'Rischi', 'Sistemi IA', 'Incidenti IA', 'Audit trail'],
-    nextActions: 'Azioni consigliate',
-    integrity: 'Export con integrità protetta',
-    integrityDescription: 'Ogni export JSON include un hash SHA-256 del payload e può essere firmato con un segreto controllato dall’organizzazione.',
+    eyebrow: 'Evidenze di audit', title: 'Pacchetto Evidenze di Audit', description: 'Esporta uno snapshot strutturato delle evidenze per audit interni, procurement e due diligence clienti.', download: 'Scarica pacchetto JSON', verify: 'Verifica pacchetto esportato', restricted: 'Il tuo ruolo attuale non consente di esportare pacchetti di evidenze.', businessRequired: 'Il pacchetto evidenze è disponibile nei piani Business ed Enterprise.', sections: ['Documenti controllati', 'Fornitori', 'Rischi', 'Sistemi IA', 'Incidenti IA', 'Audit trail'], nextActions: 'Azioni consigliate', integrity: 'Export con integrità protetta', integrityDescription: 'Ogni export JSON include un hash SHA-256 del payload e può essere firmato con un segreto controllato dall’organizzazione.',
   },
   de: {
-    eyebrow: 'Audit-Nachweise',
-    title: 'Audit Evidence Pack',
-    description: 'Exportieren Sie einen strukturierten Nachweis-Snapshot für interne Audits, Procurement und Kundendiligence.',
-    download: 'JSON-Paket herunterladen',
-    verify: 'Exportiertes Paket prüfen',
-    restricted: 'Ihre aktuelle Rolle darf keine Evidence Packs exportieren.',
-    businessRequired: 'Das Evidence Pack ist in Business und Enterprise verfügbar.',
-    sections: ['Kontrollierte Dokumente', 'Anbieter', 'Risiken', 'KI-Systeme', 'KI-Incidents', 'Audit Trail'],
-    nextActions: 'Empfohlene nächste Schritte',
-    integrity: 'Export mit Integritätsschutz',
-    integrityDescription: 'Jeder JSON-Export enthält einen SHA-256-Payload-Hash und kann mit einem organisationskontrollierten Secret signiert werden.',
+    eyebrow: 'Audit-Nachweise', title: 'Audit Evidence Pack', description: 'Exportieren Sie einen strukturierten Nachweis-Snapshot für interne Audits, Procurement und Kundendiligence.', download: 'JSON-Paket herunterladen', verify: 'Exportiertes Paket prüfen', restricted: 'Ihre aktuelle Rolle darf keine Evidence Packs exportieren.', businessRequired: 'Das Evidence Pack ist in Business und Enterprise verfügbar.', sections: ['Kontrollierte Dokumente', 'Anbieter', 'Risiken', 'KI-Systeme', 'KI-Incidents', 'Audit Trail'], nextActions: 'Empfohlene nächste Schritte', integrity: 'Export mit Integritätsschutz', integrityDescription: 'Jeder JSON-Export enthält einen SHA-256-Payload-Hash und kann mit einem organisationskontrollierten Secret signiert werden.',
   },
 } as const;
 
-type PageProps = {
-  params: Promise<{ locale: string }>;
-};
+type PageProps = { params: Promise<{ locale: string }> };
+
+function humanize(value: string) {
+  return value.replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, (character) => character.toUpperCase());
+}
 
 export default async function AuditPackPage({ params }: PageProps) {
   const { locale } = await params;
   const normalizedLocale = locale in copy ? (locale as keyof typeof copy) : 'en';
   const t = copy[normalizedLocale];
   const user = await getCurrentUser();
-
-  if (!user) {
-    redirect(`/${locale}/login`);
-  }
+  if (!user) redirect(`/${locale}/login`);
 
   const organization = await getCurrentOrganizationForUser(user.id);
-
-  if (!organization) {
-    redirect(`/${locale}/onboarding`);
-  }
+  if (!organization) redirect(`/${locale}/onboarding`);
 
   const entitlements = await getOrganizationEntitlements(organization.id);
-  const permission = await assertOrganizationPermission({
-    userId: user.id,
-    organizationId: organization.id,
-    permission: 'export_data',
-  });
-
+  const permission = await assertOrganizationPermission({ userId: user.id, organizationId: organization.id, permission: 'export_data' });
   const canUsePack = entitlements.executiveReports && permission.ok;
   const pack = canUsePack
-    ? await buildAuditEvidencePack({
-        organization: { id: organization.id, name: organization.name, slug: organization.slug },
-        userId: user.id,
-        role: permission.role,
-        entitlements,
-        mode: 'summary',
-      })
+    ? await buildAuditEvidencePack({ organization: { id: organization.id, name: organization.name, slug: organization.slug }, userId: user.id, role: permission.role, entitlements, mode: 'summary' })
     : null;
 
   const content = (
     <div className="min-h-0 bg-transparent text-white">
-      <div className="mx-auto max-w-7xl space-y-8">
-
+      <div className="mx-auto max-w-7xl space-y-6">
         {!entitlements.executiveReports ? (
           <UpgradeRequiredCard locale={locale} title={t.businessRequired} description={t.description} requiredPlan="Business" />
         ) : !permission.ok ? (
-          <section className="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-8 text-amber-50">
-            <LockKeyhole className="h-6 w-6" />
+          <section className="rounded-xl border border-amber-300/20 bg-amber-300/[0.08] p-6 text-amber-50">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-300/10"><LockKeyhole className="h-5 w-5" aria-hidden="true" /></div>
             <h1 className="mt-4 text-2xl font-semibold">{t.restricted}</h1>
-            <p className="mt-2 text-sm text-amber-100/80">{t.description}</p>
+            <p className="mt-2 text-sm leading-6 text-amber-100/80">{t.description}</p>
           </section>
         ) : pack ? (
           <section className="space-y-6">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/30">
-              <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <header className="rounded-xl border border-slate-800 bg-[#0b121e] p-6">
+              <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.3em] text-sky-300">{t.eyebrow}</p>
-                  <h1 className="mt-2 text-3xl font-semibold">{t.title}</h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">{t.description}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">{t.eyebrow}</p>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-tight">{t.title}</h1>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">{t.description}</p>
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Link href={`/${locale}/audit-pack/verify`} className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-                    <Fingerprint className="h-4 w-4" /> {t.verify}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Link href={`/${locale}/audit-pack/verify`} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                    <Fingerprint className="h-4 w-4" aria-hidden="true" /> {t.verify}
                   </Link>
-                  <Link href="/api/audit/evidence-pack" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-100">
-                    <Download className="h-4 w-4" /> {t.download}
+                  <Link href="/api/audit/evidence-pack" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                    <Download className="h-4 w-4" aria-hidden="true" /> {t.download}
                   </Link>
                 </div>
               </div>
+            </header>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5"><ShieldCheck className="h-5 w-5 text-emerald-300" aria-hidden="true" /><p className="mt-3 text-3xl font-semibold">{pack.summary.score}%</p><p className="mt-1 text-sm text-slate-400">{humanize(pack.summary.status)}</p></div>
+              <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5"><FileArchive className="h-5 w-5 text-blue-300" aria-hidden="true" /><p className="mt-3 text-3xl font-semibold">{pack.summary.auditEvents}</p><p className="mt-1 text-sm text-slate-400">Audit events</p></div>
+              <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5"><LockKeyhole className="h-5 w-5 text-violet-300" aria-hidden="true" /><p className="mt-3 text-2xl font-semibold">{humanize(permission.role)}</p><p className="mt-1 text-sm text-slate-400">Export role</p></div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-                <ShieldCheck className="h-5 w-5 text-emerald-300" />
-                <p className="mt-3 text-3xl font-semibold">{pack.summary.score}%</p>
-                <p className="text-sm text-slate-400">{pack.summary.status}</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-                <FileArchive className="h-5 w-5 text-sky-300" />
-                <p className="mt-3 text-3xl font-semibold">{pack.summary.auditEvents}</p>
-                <p className="text-sm text-slate-400">Audit events</p>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-                <LockKeyhole className="h-5 w-5 text-violet-300" />
-                <p className="mt-3 text-3xl font-semibold">{permission.role}</p>
-                <p className="text-sm text-slate-400">Export role</p>
-              </div>
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.08] p-5 text-emerald-50">
+              <div className="flex items-start gap-3"><div className="rounded-lg bg-emerald-300/10 p-3"><Fingerprint className="h-5 w-5" aria-hidden="true" /></div><div><h2 className="text-lg font-semibold">{t.integrity}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50/80">{t.integrityDescription}</p></div></div>
             </div>
 
-            <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-6 text-emerald-50">
-              <div className="flex items-start gap-4">
-                <div className="rounded-2xl bg-emerald-300/15 p-3">
-                  <Fingerprint className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">{t.integrity}</h2>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50/80">{t.integrityDescription}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[
-                pack.summary.documents,
-                pack.summary.vendors,
-                pack.summary.risks,
-                pack.summary.aiSystems,
-                pack.summary.aiIncidents,
-                pack.summary.auditEvents,
-              ].map((value, index) => (
-                <article key={t.sections[index]} className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-                  <p className="text-sm text-slate-400">{t.sections[index]}</p>
-                  <p className="mt-2 text-2xl font-semibold">{value}</p>
-                </article>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {[pack.summary.documents, pack.summary.vendors, pack.summary.risks, pack.summary.aiSystems, pack.summary.aiIncidents, pack.summary.auditEvents].map((value, index) => (
+                <article key={t.sections[index]} className="rounded-xl border border-slate-800 bg-[#0b121e] p-5"><p className="text-sm text-slate-400">{t.sections[index]}</p><p className="mt-2 text-2xl font-semibold">{value}</p></article>
               ))}
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+            <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-6">
               <h2 className="text-xl font-semibold">{t.nextActions}</h2>
               <ul className="mt-4 space-y-2 text-sm text-slate-300">
-                {pack.nextActions.map((action) => (
-                  <li key={action} className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3">{action}</li>
-                ))}
+                {pack.nextActions.map((action) => <li key={action} className="rounded-lg border border-slate-800 bg-[#0d1624] px-4 py-3">{action}</li>)}
               </ul>
             </div>
           </section>
