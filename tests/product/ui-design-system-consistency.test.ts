@@ -34,7 +34,7 @@ const canonicalStates = [
 ];
 
 const finalOperationalSurfaces = [
-  'src/app/[locale]/dashboard/privacy/privacy-client.tsx',
+  'src/app/[locale]/dashboard/privacy/page.tsx',
   'src/components/billing/upgrade-required-card.tsx',
   'src/components/team/enterprise-access-console.tsx',
   'src/components/ui/enterprise-feedback.tsx',
