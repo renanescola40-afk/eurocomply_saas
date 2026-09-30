@@ -20,13 +20,13 @@ export default async function ComplianceCalendarPage({ params }: PageProps) {
   if (!organization) redirect(`/${locale}/onboarding`);
 
   const entitlements = await getOrganizationEntitlements(organization.id);
-  const professionalCalendar = entitlements.licensed && ['professional', 'business', 'enterprise'].includes(entitlements.plan);
-  const tasks = professionalCalendar ? await listComplianceTasks(organization.id) : [];
+  const hasAdvancedCalendar = entitlements.licensed && entitlements.aiCalendar === 'advanced';
+  const tasks = hasAdvancedCalendar ? await listComplianceTasks(organization.id) : [];
 
   const content = (
     <div className="min-h-0 bg-transparent text-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        {professionalCalendar ? (
+        {hasAdvancedCalendar ? (
           <ComplianceCalendarClient locale={locale} plan={entitlements.plan} tasks={tasks} />
         ) : (
           <UpgradeRequiredCard
