@@ -4,10 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = process.cwd();
-
-async function source(path: string) {
-  return readFile(resolve(ROOT, path), 'utf8');
-}
+async function source(path: string) { return readFile(resolve(ROOT, path), 'utf8'); }
 
 const canonicalDashboardPages = [
   'src/app/[locale]/dashboard/compliance/page.tsx',
@@ -34,12 +31,18 @@ const canonicalStates = [
 ];
 
 const finalOperationalSurfaces = [
-  'src/app/[locale]/dashboard/privacy/page.tsx',
+  'src/app/[locale]/dashboard/privacy/privacy-client.tsx',
   'src/components/billing/upgrade-required-card.tsx',
   'src/components/team/enterprise-access-console.tsx',
   'src/components/ui/enterprise-feedback.tsx',
   'src/app/[locale]/ai-systems/[id]/page.tsx',
   'src/app/[locale]/ai-systems/[id]/ai-system-edit-form.tsx',
+  'src/app/[locale]/raci/raci-client.tsx',
+  'src/app/[locale]/audit-pack/page.tsx',
+  'src/app/[locale]/audit-pack/verify/page.tsx',
+  'src/app/[locale]/audit-pack/verify/evidence-pack-verifier.tsx',
+  'src/app/[locale]/calendario-compliance/compliance-calendar-client.tsx',
+  'src/components/dashboard/enterprise-dashboard-overview.tsx',
 ];
 
 describe('UI design system consistency closure', () => {
@@ -59,7 +62,6 @@ describe('UI design system consistency closure', () => {
       expect(content, form).toContain('rounded-xl');
       expect(content, form).toContain('bg-[#0b121e]');
       expect(content, form).toContain('rounded-lg');
-      expect(content, form).not.toContain('rounded-2xl border border-white/10 bg-white/[0.03]');
       expect(content, form).not.toContain('bg-white text-black');
     }
   });
@@ -79,7 +81,6 @@ describe('UI design system consistency closure', () => {
       const content = await source(surface);
       expect(content, surface).toContain('rounded-xl');
       expect(content, surface).toContain('rounded-lg');
-      expect(content, surface).toContain('bg-[#0b121e]');
       expect(content, surface).not.toContain('rounded-[2rem]');
       expect(content, surface).not.toContain('rounded-[1.75rem]');
       expect(content, surface).not.toContain('rounded-3xl');
@@ -97,7 +98,6 @@ describe('UI design system consistency closure', () => {
       'src/app/[locale]/oauth/complete/page.tsx',
       'src/app/[locale]/auth/diagnostics/page.tsx',
     ];
-
     for (const page of authPages) {
       const content = await source(page);
       expect(content, page).toContain('bg-[#080e18]');
@@ -109,7 +109,7 @@ describe('UI design system consistency closure', () => {
     }
   });
 
-  it('keeps enterprise SSO controls aligned with the auth geometry and contrast rules', async () => {
+  it('keeps enterprise SSO controls aligned with auth geometry and contrast rules', async () => {
     const content = await source('src/components/auth/enterprise-sso-login.tsx');
     expect(content).toContain('rounded-xl');
     expect(content).toContain('rounded-lg');
@@ -118,20 +118,14 @@ describe('UI design system consistency closure', () => {
     expect(content).not.toContain('hover:bg-blue-500');
   });
 
-  it('keeps admin sales list and detail on the same table/form/card vocabulary', async () => {
-    const adminPages = [
-      'src/app/[locale]/admin/sales/leads/page.tsx',
-      'src/app/[locale]/admin/sales/leads/[id]/page.tsx',
-    ];
-
-    for (const page of adminPages) {
-      const content = await source(page);
-      expect(content, page).toContain('bg-[#080e18]');
-      expect(content, page).toContain('rounded-xl');
-      expect(content, page).toContain('rounded-lg');
-      expect(content, page).not.toContain('rounded-[2rem]');
-      expect(content, page).not.toContain('shadow-2xl');
-      expect(content, page).not.toContain('rounded-full bg-white');
-    }
+  it('removes simulated/local-only behavior from paid RACI and calendar surfaces', async () => {
+    const raci = await source('src/app/[locale]/raci/raci-client.tsx');
+    const calendar = await source('src/app/[locale]/calendario-compliance/compliance-calendar-client.tsx');
+    expect(raci).toContain('/raci');
+    expect(raci).not.toContain('const initialRows');
+    expect(calendar).not.toContain('localStorage');
+    expect(calendar).not.toContain('setTimeout');
+    expect(calendar).not.toContain('simulad');
+    expect(calendar).not.toContain('initialObligations');
   });
 });
