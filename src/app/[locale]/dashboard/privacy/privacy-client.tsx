@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react';
 import { Download, ShieldCheck, Trash2 } from 'lucide-react';
 
 import { StepUpMfaDialog, STEP_UP_TOKEN_HEADER, type StepUpAction } from '@/components/security/step-up-mfa-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 const GDPR_DELETE_CONFIRMATION = ['DELETE', 'ORGANIZATION', 'DATA'].join(' ');
@@ -83,57 +82,92 @@ export function PrivacyAdminClient({ locale: _locale }: { locale: string }) {
   }, [downloadExport, pendingAction, requestDelete]);
 
   return (
-    <section className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
-      <div className="rounded-[2rem] border bg-background/88 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
-        <Badge className="rounded-full px-3 py-1 uppercase tracking-[0.18em]">Admin GDPR</Badge>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] md:text-5xl">Exportação e pedido de apagamento.</h1>
-        <p className="mt-3 max-w-3xl text-muted-foreground">Fluxo enterprise protegido por RBAC, step-up, tenant scope, audit trail, no-store download e preservação de retenção legal/billing.</p>
-      </div>
+    <section className="min-h-0 space-y-6 bg-transparent text-white">
+      <header className="border-b border-slate-800 pb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">Admin GDPR</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Exportação e pedido de apagamento</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+          Fluxo enterprise protegido por RBAC, step-up, tenant scope, audit trail, no-store download e preservação de retenção legal/billing.
+        </p>
+      </header>
 
-      {status ? <div className="rounded-2xl border bg-background p-4 text-sm shadow-sm">{status}</div> : null}
+      {status ? (
+        <div className="rounded-xl border border-blue-400/20 bg-blue-400/[0.07] px-4 py-3 text-sm text-blue-100" role="status" aria-live="polite">
+          {status}
+        </div>
+      ) : null}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-primary/10 p-3 text-primary"><Download className="h-5 w-5" /></div>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className="rounded-xl border border-slate-800 bg-[#0b121e] p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-400/10 text-blue-300">
+              <Download className="h-5 w-5" aria-hidden="true" />
+            </div>
             <div>
-              <h2 className="text-2xl font-semibold">Exportar dados da organização</h2>
-              <p className="text-sm text-muted-foreground">O botão inicia step-up real via MFA/IdP e descarrega a exportação no-store.</p>
+              <h2 className="text-xl font-semibold">Exportar dados da organização</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-400">O botão inicia step-up real via MFA/IdP e descarrega a exportação no-store.</p>
             </div>
           </div>
-          <label className="mt-6 block text-sm font-medium">
+          <label className="mt-6 block text-sm font-medium text-slate-200">
             Token step-up manual opcional
-            <input value={exportToken} onChange={(event) => setExportToken(event.target.value)} placeholder="x-eurocomply-step-up-token" className="mt-2 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
+            <input
+              value={exportToken}
+              onChange={(event) => setExportToken(event.target.value)}
+              placeholder="x-eurocomply-step-up-token"
+              className="mt-2 h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
           </label>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button type="button" onClick={() => setPendingAction('export_data')} className="rounded-full"><ShieldCheck className="h-4 w-4" /> Verificar e descarregar</Button>
-            <Button type="button" variant="outline" onClick={() => void downloadExport()} className="rounded-full"><Download className="h-4 w-4" /> Usar token manual</Button>
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button type="button" onClick={() => setPendingAction('export_data')} className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Verificar e descarregar
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void downloadExport()} className="h-10 rounded-lg border-slate-700 bg-[#0d1624] px-4 text-slate-100 hover:bg-slate-800 hover:text-white">
+              <Download className="h-4 w-4" aria-hidden="true" /> Usar token manual
+            </Button>
           </div>
         </section>
 
-        <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-destructive/10 p-3 text-destructive"><Trash2 className="h-5 w-5" /></div>
+        <section className="rounded-xl border border-slate-800 bg-[#0b121e] p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-400/10 text-rose-300">
+              <Trash2 className="h-5 w-5" aria-hidden="true" />
+            </div>
             <div>
-              <h2 className="text-2xl font-semibold">Solicitar apagamento GDPR</h2>
-              <p className="text-sm text-muted-foreground">Cria pedido pendente; billing/legal/audit chain não são quebrados.</p>
+              <h2 className="text-xl font-semibold">Solicitar apagamento GDPR</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-400">Cria pedido pendente; billing/legal/audit chain não são quebrados.</p>
             </div>
           </div>
-          <label className="mt-6 block text-sm font-medium">
-            Token step-up manual opcional para `gdpr_delete`
-            <input value={deleteToken} onChange={(event) => setDeleteToken(event.target.value)} className="mt-2 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
+          <label className="mt-6 block text-sm font-medium text-slate-200">
+            Token step-up manual opcional para <code className="text-slate-300">gdpr_delete</code>
+            <input
+              value={deleteToken}
+              onChange={(event) => setDeleteToken(event.target.value)}
+              className="mt-2 h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
           </label>
-          <label className="mt-4 block text-sm font-medium">
+          <label className="mt-4 block text-sm font-medium text-slate-200">
             Razão
-            <textarea value={deleteReason} onChange={(event) => setDeleteReason(event.target.value)} className="mt-2 min-h-24 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
+            <textarea
+              value={deleteReason}
+              onChange={(event) => setDeleteReason(event.target.value)}
+              className="mt-2 min-h-24 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-3 py-2 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
           </label>
-          <label className="mt-4 block text-sm font-medium">
-            Confirmação literal: <code>{GDPR_DELETE_CONFIRMATION}</code>
-            <input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className="mt-2 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
+          <label className="mt-4 block text-sm font-medium text-slate-200">
+            Confirmação literal: <code className="text-slate-300">{GDPR_DELETE_CONFIRMATION}</code>
+            <input
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              className="mt-2 h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
           </label>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button type="button" variant="destructive" onClick={() => setPendingAction('gdpr_delete')} className="rounded-full"><ShieldCheck className="h-4 w-4" /> Verificar e criar pedido</Button>
-            <Button type="button" variant="outline" onClick={() => void requestDelete()} className="rounded-full"><Trash2 className="h-4 w-4" /> Usar token manual</Button>
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button type="button" variant="destructive" onClick={() => setPendingAction('gdpr_delete')} className="h-10 rounded-lg px-4">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Verificar e criar pedido
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void requestDelete()} className="h-10 rounded-lg border-slate-700 bg-[#0d1624] px-4 text-slate-100 hover:bg-slate-800 hover:text-white">
+              <Trash2 className="h-4 w-4" aria-hidden="true" /> Usar token manual
+            </Button>
           </div>
         </section>
       </div>
