@@ -65,7 +65,7 @@ const billingCopy: Record<Locale, BillingCopy> = {
     eyebrow: 'Facturación y ajustes', manageTitle: 'Gestiona tu plan RISCK COMPLY', reviewTitle: 'Revisa tu plan RISCK COMPLY', subtitle: 'Revisa uso, límites de suscripción y estado de facturación sin exponer datos internos de pago.', signals: ['historial de facturación revisable', 'acciones según rol', 'portal de pago alojado'], readOnlyTitle: 'La facturación es de solo lectura para tu rol', readOnlyBody: 'Solo el propietario del espacio de trabajo puede abrir el portal o cambiar planes. Pide al propietario cualquier cambio de facturación.', viewTeam: 'Ver equipo del espacio de trabajo', actionFailed: 'No se pudo completar la acción de facturación', checkoutCompleted: 'Pago completado', checkoutCompletedBody: 'El plan se actualizará cuando termine la sincronización de la suscripción.', checkoutCancelled: 'Pago cancelado', checkoutCancelledBody: 'No se realizaron cambios de facturación.', currentPlan: 'Plan actual', currentPlanDescription: 'Estado de la suscripción y próxima acción de facturación.', usageGuidance: 'Revisa uso y límites antes de cambiar la suscripción.', openPortal: 'Abrir portal de facturación', continueToDashboard: 'Continuar al panel', ownerAccessRequired: 'Se requiere acceso del propietario', availablePlans: 'Planes disponibles', current: 'Actual', salesLed: 'Asistido por ventas', ownerActionRequired: 'Se requiere acción del propietario', talkToSales: 'Hablar con ventas', upgradePlan: 'Cambiar plan', unlimited: 'Ilimitado', contactSales: 'Contactar ventas', from: 'Desde', month: '/mes', users: 'usuarios', documents: 'documentos', vendors: 'proveedores', risks: 'riesgos', included: 'incluidos', noActiveSubscription: 'Sin suscripción activa', status: { active: 'Activa', trialing: 'En prueba', past_due: 'Pago atrasado', unpaid: 'No pagada', canceled: 'Cancelada', incomplete: 'Incompleta' },
   },
   fr: {
-    eyebrow: 'Facturation et paramètres', manageTitle: 'Gérez votre plan RISCK COMPLY', reviewTitle: 'Consultez votre plan RISCK COMPLY', subtitle: 'Consultez utilisation, limites d’abonnement et état de facturation sans exposer les détails internes de paiement.', signals: ['historique de facturation vérifiable', 'actions selon le rôle', 'portail de paiement hébergé'], readOnlyTitle: 'La facturation est en lecture seule pour votre rôle', readOnlyBody: 'Seul le propriétaire de l’espace de travail peut ouvrir le portail ou changer de plan. Demandez au propriétaire si une modification est nécessaire.', viewTeam: 'Voir l’équipe de l’espace de travail', actionFailed: 'Impossible de terminer l’action de facturation', checkoutCompleted: 'Paiement terminé', checkoutCompletedBody: 'Le plan sera mis à jour après la synchronisation de l’abonnement.', checkoutCancelled: 'Paiement annulé', checkoutCancelledBody: 'Aucune modification de facturation n’a été effectuée.', currentPlan: 'Plan actuel', currentPlanDescription: 'État de l’abonnement et prochaine action de facturation.', usageGuidance: 'Consultez utilisation et limites avant de modifier l’abonnement.', openPortal: 'Ouvrir le portail de facturation', continueToDashboard: 'Continuer vers le tableau de bord', ownerAccessRequired: 'Accès du propriétaire requis', availablePlans: 'Plans disponibles', current: 'Actuel', salesLed: 'Assisté par les ventes', ownerActionRequired: 'Action du propriétaire requise', talkToSales: 'Contacter les ventes', upgradePlan: 'Changer de plan', unlimited: 'Illimité', contactSales: 'Contacter les ventes', from: 'À partir de', month: '/mois', users: 'utilisateurs', documents: 'documents', vendors: 'fournisseurs', risks: 'risques', included: 'inclus', noActiveSubscription: 'Aucun abonnement actif', status: { active: 'Actif', trialing: 'En essai', past_due: 'Paiement en retard', unpaid: 'Impayé', canceled: 'Annulé', incomplete: 'Incomplet' },
+    eyebrow: 'Facturation et paramètres', manageTitle: 'Gérez votre plan RISCK COMPLY', reviewTitle: 'Consultez votre plan RISCK COMPLY', subtitle: 'Consultez utilisation, limites d’abonnement et état de facturation sans exposer les détails internes de paiement.', signals: ['historique de facturation vérifiable', 'actions selon le rôle', 'portail de paiement hébergé'], readOnlyTitle: 'La facturation est en lecture seule pour votre rôle', readOnlyBody: 'Seul le propriétaire de l’espace de travail peut ouvrir le portail ou changer de plan. Demandez au propriétaire si une modification est nécessaire.', viewTeam: 'Voir l’équipe du espace de travail', actionFailed: 'Impossible de terminer l’action de facturation', checkoutCompleted: 'Paiement terminé', checkoutCompletedBody: 'Le plan sera mis à jour après la synchronisation de l’abonnement.', checkoutCancelled: 'Paiement annulé', checkoutCancelledBody: 'Aucune modification de facturation n’a été effectuée.', currentPlan: 'Plan actuel', currentPlanDescription: 'État de l’abonnement et prochaine action de facturation.', usageGuidance: 'Consultez utilisation et limites avant de modifier l’abonnement.', openPortal: 'Ouvrir le portail de facturation', continueToDashboard: 'Continuer vers le tableau de bord', ownerAccessRequired: 'Accès du propriétaire requis', availablePlans: 'Plans disponibles', current: 'Actuel', salesLed: 'Assisté par les ventes', ownerActionRequired: 'Action du propriétaire requise', talkToSales: 'Contacter les ventes', upgradePlan: 'Changer de plan', unlimited: 'Illimité', contactSales: 'Contacter les ventes', from: 'À partir de', month: '/mois', users: 'utilisateurs', documents: 'documents', vendors: 'fournisseurs', risks: 'risques', included: 'inclus', noActiveSubscription: 'Aucun abonnement actif', status: { active: 'Actif', trialing: 'En essai', past_due: 'Paiement en retard', unpaid: 'Impayé', canceled: 'Annulé', incomplete: 'Incomplet' },
   },
   it: {
     eyebrow: 'Fatturazione e impostazioni', manageTitle: 'Gestisci il tuo piano RISCK COMPLY', reviewTitle: 'Consulta il tuo piano RISCK COMPLY', subtitle: 'Consulta utilizzo, limiti dell’abbonamento e stato di fatturazione senza esporre dettagli interni di pagamento.', signals: ['storico di fatturazione verificabile', 'azioni in base al ruolo', 'portale di pagamento ospitato'], readOnlyTitle: 'La fatturazione è in sola lettura per il tuo ruolo', readOnlyBody: 'Solo il proprietario dello spazio di lavoro può aprire il portale o cambiare piano. Chiedi al proprietario se serve una modifica.', viewTeam: 'Vedi il team dello spazio di lavoro', actionFailed: 'Impossibile completare l’azione di fatturazione', checkoutCompleted: 'Pagamento completato', checkoutCompletedBody: 'Il piano verrà aggiornato al termine della sincronizzazione.', checkoutCancelled: 'Pagamento annullato', checkoutCancelledBody: 'Nessuna modifica di fatturazione effettuata.', currentPlan: 'Piano attuale', currentPlanDescription: 'Stato dell’abbonamento e prossima azione di fatturazione.', usageGuidance: 'Controlla utilizzo e limiti prima di modificare l’abbonamento.', openPortal: 'Apri portale di fatturazione', continueToDashboard: 'Continua al pannello', ownerAccessRequired: 'Accesso del proprietario richiesto', availablePlans: 'Piani disponibili', current: 'Attuale', salesLed: 'Assistito dalle vendite', ownerActionRequired: 'Azione del proprietario richiesta', talkToSales: 'Parla con vendite', upgradePlan: 'Cambia piano', unlimited: 'Illimitato', contactSales: 'Parla con vendite', from: 'Da', month: '/mese', users: 'utenti', documents: 'documenti', vendors: 'fornitori', risks: 'rischi', included: 'inclusi', noActiveSubscription: 'Nessun abbonamento attivo', status: { active: 'Attivo', trialing: 'In prova', past_due: 'Pagamento in ritardo', unpaid: 'Non pagato', canceled: 'Annullato', incomplete: 'Incompleto' },
@@ -97,10 +97,10 @@ function formatPlanPrice(plan: (typeof BILLING_PLANS)[number], copy: BillingCopy
 
 function ReadOnlyBillingNotice({ locale, copy }: { locale: string; copy: BillingCopy }) {
   return (
-    <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4 text-sm text-amber-100" role="status">
+    <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.07] px-4 py-3 text-sm text-amber-100" role="status">
       <div className="flex items-start gap-3">
         <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <div>
+        <div className="min-w-0">
           <p className="font-semibold">{copy.readOnlyTitle}</p>
           <p className="mt-1 leading-6 text-amber-100/70">{copy.readOnlyBody}</p>
           <Link href={`/${locale}/dashboard/organizations/team`} className="mt-3 inline-flex rounded-md font-semibold text-amber-100 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-100">{copy.viewTeam}</Link>
@@ -122,73 +122,81 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
   return (
     <main className="min-h-0 bg-transparent text-white">
       <div className="w-full space-y-6">
-        <header className="border-b border-slate-800 pb-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{copy.eyebrow}</p>
-          <h1 id="billing-title" className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">{canManageBilling ? copy.manageTitle : copy.reviewTitle}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{copy.subtitle}</p>
-          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-slate-500">
+        <header className="flex flex-col gap-5 border-b border-slate-800 pb-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0 max-w-3xl">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{copy.eyebrow}</p>
+            <h1 id="billing-title" className="mt-2 max-w-4xl text-3xl font-semibold tracking-[-0.035em] text-white">{canManageBilling ? copy.manageTitle : copy.reviewTitle}</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-400">{copy.subtitle}</p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[11px] text-slate-500 xl:max-w-md xl:justify-end">
             {copy.signals.map((label) => (
               <span key={label} className="rounded-md border border-slate-800 bg-[#0d1624] px-2.5 py-1">{label}</span>
             ))}
           </div>
         </header>
 
-        <section className="grid gap-px overflow-hidden rounded-xl border border-slate-800 bg-slate-800 lg:grid-cols-[1fr_auto]" aria-label={copy.currentPlan}>
-          <div className="bg-[#0d1624] px-5 py-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-600">{copy.currentPlan}</p>
-              {contractManaged ? <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-300">{copy.salesLed}</span> : null}
+        <section className="overflow-hidden rounded-xl border border-slate-800 bg-[#0b121e]" aria-label={copy.currentPlan}>
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+            <div className="px-5 py-5 sm:px-6">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-600">{copy.currentPlan}</p>
+                {contractManaged ? <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-300">{copy.salesLed}</span> : null}
+              </div>
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 className="text-xl font-semibold text-slate-100">{hasActivePlan ? currentPlan.name : copy.noActiveSubscription}</h2>
+                <span className="text-xs font-medium text-slate-500">{formatStatus(billing.status, copy)}</span>
+              </div>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">{copy.currentPlanDescription}</p>
+              <p className="mt-3 text-xs leading-5 text-slate-600">{copy.usageGuidance}</p>
             </div>
-            <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h2 className="text-xl font-semibold text-slate-100">{hasActivePlan ? currentPlan.name : copy.noActiveSubscription}</h2>
-              <span className="text-xs font-medium text-slate-500">{formatStatus(billing.status, copy)}</span>
+            <div className="flex flex-wrap items-center gap-2 border-t border-slate-800 bg-[#080e18] px-5 py-4 sm:px-6 lg:border-l lg:border-t-0 lg:justify-end">
+              {canManageBilling && stripeManaged ? (
+                <BillingActionButton action="portal" locale={locale} className="rounded-lg bg-blue-600 text-white hover:bg-blue-500">{copy.openPortal}</BillingActionButton>
+              ) : null}
+              {canManageBilling && contractManaged ? (
+                <Link href={`/${locale}/contact?intent=sales&plan=${currentPlan.id}`} className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.talkToSales}</Link>
+              ) : null}
+              {!canManageBilling ? (
+                <button type="button" disabled aria-disabled="true" className="h-10 rounded-lg border border-slate-700 px-4 text-sm font-semibold text-slate-500 disabled:cursor-not-allowed">{copy.ownerAccessRequired}</button>
+              ) : null}
+              {hasActivePlan ? (
+                <Link href={`/${locale}/dashboard`} className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-semibold text-slate-300 transition hover:border-blue-500/50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.continueToDashboard}</Link>
+              ) : null}
             </div>
-            <p className="mt-1 text-sm text-slate-400">{copy.currentPlanDescription}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 bg-[#0d1624] px-5 py-4 lg:justify-end">
-            {canManageBilling && stripeManaged ? (
-              <BillingActionButton action="portal" locale={locale} className="rounded-lg bg-blue-600 text-white hover:bg-blue-500">{copy.openPortal}</BillingActionButton>
-            ) : null}
-            {canManageBilling && contractManaged ? (
-              <Link href={`/${locale}/contact?intent=sales&plan=${currentPlan.id}`} className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.talkToSales}</Link>
-            ) : null}
-            {!canManageBilling ? (
-              <button type="button" disabled aria-disabled="true" className="h-10 rounded-lg border border-slate-700 px-4 text-sm font-semibold text-slate-500 disabled:cursor-not-allowed">{copy.ownerAccessRequired}</button>
-            ) : null}
-            {hasActivePlan ? (
-              <Link href={`/${locale}/dashboard`} className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/40 px-4 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.continueToDashboard}</Link>
-            ) : null}
           </div>
         </section>
 
         {!canManageBilling ? <ReadOnlyBillingNotice locale={locale} copy={copy} /> : null}
 
         {billingError && !contractManaged ? (
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/[0.06] p-4 text-rose-100" role="alert">
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/[0.07] px-4 py-3 text-rose-100" role="alert">
             <p className="font-semibold">{copy.actionFailed}</p>
             <p className="mt-1 text-sm text-rose-100/70">{billingError}</p>
           </div>
         ) : null}
         {checkout === 'success' ? (
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4 text-emerald-100" role="status">
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] px-4 py-3 text-emerald-100" role="status">
             <p className="font-semibold">{copy.checkoutCompleted}</p>
             <p className="mt-1 text-sm text-emerald-100/70">{copy.checkoutCompletedBody}</p>
           </div>
         ) : null}
         {checkout === 'cancelled' ? (
-          <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4 text-amber-100" role="status">
+          <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.07] px-4 py-3 text-amber-100" role="status">
             <p className="font-semibold">{copy.checkoutCancelled}</p>
             <p className="mt-1 text-sm text-amber-100/70">{copy.checkoutCancelledBody}</p>
           </div>
         ) : null}
 
         <section className="space-y-3" aria-labelledby="available-plans-title">
-          <div className="flex items-center justify-between gap-4">
-            <h2 id="available-plans-title" className="text-sm font-semibold text-slate-200">{copy.availablePlans}</h2>
-            <span className="text-xs text-slate-600">{BILLING_PLANS.length}</span>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 id="available-plans-title" className="text-sm font-semibold text-slate-100">{copy.availablePlans}</h2>
+              <p className="mt-1 text-xs text-slate-600">{copy.usageGuidance}</p>
+            </div>
+            <span className="rounded-md border border-slate-800 bg-[#0d1624] px-2.5 py-1 font-mono text-xs font-semibold tabular-nums text-slate-400">{BILLING_PLANS.length}</span>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
             {BILLING_PLANS.map((plan) => {
               const isCurrent = hasActivePlan && plan.id === currentPlan.id;
               const isSalesLed = plan.salesLed;
@@ -202,18 +210,18 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
               ];
 
               return (
-                <article key={plan.id} className={`flex min-h-[360px] flex-col rounded-xl border bg-[#0d1624] p-5 ${isCurrent ? 'border-blue-500/40' : 'border-slate-800'}`}>
-                  <div className="flex items-start justify-between gap-3">
+                <article key={plan.id} className={`flex flex-col overflow-hidden rounded-xl border bg-[#0b121e] ${isCurrent ? 'border-blue-500/40' : 'border-slate-800'}`}>
+                  <div className="flex items-start justify-between gap-3 px-5 pt-5">
                     <div className="min-w-0">
                       <h3 className="text-base font-semibold text-slate-100">{plan.name}</h3>
                       <p className="mt-1.5 text-sm leading-6 text-slate-500">{description}</p>
                     </div>
-                    {isCurrent ? <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-blue-300">{copy.current}</span> : null}
-                    {isSalesLed && !isCurrent ? <span className="rounded-md border border-slate-700 bg-slate-900/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">{copy.salesLed}</span> : null}
+                    {isCurrent ? <span className="shrink-0 rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-blue-300">{copy.current}</span> : null}
+                    {isSalesLed && !isCurrent ? <span className="shrink-0 rounded-md border border-slate-700 bg-slate-900/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">{copy.salesLed}</span> : null}
                   </div>
 
-                  <p className="mt-5 text-3xl font-semibold tracking-[-0.035em] text-white">{formatPlanPrice(plan, copy)}</p>
-                  <ul className="mt-5 divide-y divide-slate-800 border-y border-slate-800 text-sm text-slate-400">
+                  <p className="px-5 pt-4 text-2xl font-semibold tracking-[-0.035em] text-white">{formatPlanPrice(plan, copy)}</p>
+                  <ul className="mx-5 mt-4 divide-y divide-slate-800 border-y border-slate-800 text-sm text-slate-400">
                     {limitRows.map((highlight) => (
                       <li key={highlight} className="flex gap-2 py-2.5">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-500/80" aria-hidden="true" />
@@ -222,7 +230,7 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
                     ))}
                   </ul>
 
-                  <div className="mt-auto pt-5">
+                  <div className="mt-auto border-t border-slate-800 bg-[#080e18] p-4">
                     {!canManageBilling ? (
                       <button type="button" disabled aria-disabled="true" className="h-10 w-full rounded-lg border border-slate-700 px-4 text-sm font-semibold text-slate-500 disabled:cursor-not-allowed">{copy.ownerActionRequired}</button>
                     ) : isCurrent ? (
