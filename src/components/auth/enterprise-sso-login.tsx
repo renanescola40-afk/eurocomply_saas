@@ -46,11 +46,11 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
   }
 
   return (
-    <div className="mt-5 rounded-2xl border border-blue-400/15 bg-blue-500/[0.055] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200/70">
+    <div className="mt-5 rounded-xl border border-blue-400/15 bg-blue-500/[0.055] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200">
         {locale === 'pt' ? 'Acesso Enterprise' : 'Enterprise access'}
       </p>
-      <p className="mt-2 text-sm leading-6 text-white/55">
+      <p className="mt-2 text-sm leading-6 text-slate-400">
         {locale === 'pt'
           ? 'Use o email profissional para entrar pelo SAML SSO configurado pela sua empresa.'
           : 'Use your work email to sign in through your organization’s configured SAML SSO.'}
@@ -59,7 +59,7 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
         <input
           aria-label={locale === 'pt' ? 'Email profissional para SSO' : 'Work email for SSO'}
           autoComplete="email"
-          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-blue-300/50 focus-visible:ring-2 focus-visible:ring-blue-400/40"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/30"
           onChange={(event) => setEmail(event.target.value)}
           placeholder="name@company.com"
           required
@@ -67,7 +67,7 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
           value={email}
         />
         <button
-          className="rounded-xl border border-blue-300/25 bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={busy}
           type="submit"
         >
@@ -76,7 +76,7 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
             : (locale === 'pt' ? 'Entrar com SSO' : 'Sign in with SSO')}
         </button>
       </form>
-      {error ? <p className="mt-3 text-sm text-red-200" role="alert">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-rose-200" role="alert">{error}</p> : null}
     </div>
   );
 }
