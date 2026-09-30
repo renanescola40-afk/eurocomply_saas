@@ -17,21 +17,21 @@ export default function Error({
   reset?: () => void;
 }) {
   return (
-    <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-[#050505] p-4 text-center text-white">
-      <div className="max-w-md space-y-3 rounded-3xl border border-white/10 bg-white/[0.04] p-8">
-        <div className="text-2xl font-semibold">Algo correu mal</div>
-        <p className="text-sm leading-6 text-white/58">
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#080e18] p-4 text-center text-white">
+      <div className="w-full max-w-md rounded-xl border border-slate-800 bg-[#0b121e] p-6 sm:p-8">
+        <div className="text-xl font-semibold tracking-[-0.02em] text-slate-100">Algo correu mal</div>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
           Não foi possível carregar esta área com segurança. Tente novamente ou volte ao painel.
         </p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           {reset && (
-            <Button onClick={reset} className="bg-white text-black hover:bg-white/90">
+            <Button onClick={reset} className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500/40">
               Tentar novamente
             </Button>
           )}
           <Button
             variant="outline"
-            className="border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:text-white"
+            className="h-10 rounded-lg border-slate-700 bg-[#0d1624] px-4 text-slate-300 hover:border-blue-500/50 hover:bg-slate-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-500/30"
             onClick={() => {
               window.location.href = `${getLocalePrefix()}/dashboard`;
             }}

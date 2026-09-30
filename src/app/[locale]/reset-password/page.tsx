@@ -197,85 +197,84 @@ export default function ResetPasswordPage() {
     }
   }
 
+  const fieldClass = 'mt-1.5 h-10 w-full rounded-lg border border-slate-800 bg-[#0d1624] px-3 text-sm text-slate-100 outline-none transition focus:border-blue-500/60 focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60';
+
   return (
-    <main className="min-h-screen overflow-hidden bg-[#07101a] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,.16),transparent_34rem),radial-gradient(circle_at_bottom_right,rgba(124,58,237,.10),transparent_30rem)]" />
-      <div className="relative mx-auto flex min-h-screen max-w-lg items-center px-5 py-10">
-        <section className="w-full rounded-[1.75rem] border border-white/[0.09] bg-[#0a1320]/92 p-7 shadow-2xl shadow-black/35 backdrop-blur-xl sm:p-8">
-          <Link href={`/${locale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
-            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
-          </Link>
-          <p className="mt-10 text-xs font-semibold uppercase tracking-[0.24em] text-blue-300/60">{text.eyebrow}</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-            {state === 'success' ? text.successTitle : text.title}
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-white/58">
-            {state === 'success' ? text.success : text.subtitle}
-          </p>
+    <main className="flex min-h-screen items-center justify-center bg-[#080e18] px-4 py-8 text-white">
+      <section className="w-full max-w-lg rounded-xl border border-slate-800 bg-[#0b121e] p-6 sm:p-8">
+        <Link href={`/${locale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+          <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
+        </Link>
+        <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{text.eyebrow}</p>
+        <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-slate-100 sm:text-3xl">
+          {state === 'success' ? text.successTitle : text.title}
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          {state === 'success' ? text.success : text.subtitle}
+        </p>
 
-          {state === 'checking' ? (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/65" role="status" aria-live="polite">
-              {text.checking}
+        {state === 'checking' ? (
+          <div className="mt-6 rounded-lg border border-slate-800 bg-[#0d1624] px-4 py-3 text-sm text-slate-400" role="status" aria-live="polite">
+            {text.checking}
+          </div>
+        ) : null}
+
+        {state === 'invalid' ? (
+          <div className="mt-6 space-y-4">
+            <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.08] px-4 py-3 text-sm leading-6 text-amber-100" role="alert">
+              {text.invalid}
             </div>
-          ) : null}
-
-          {state === 'invalid' ? (
-            <div className="mt-6 space-y-4">
-              <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm leading-6 text-amber-100" role="alert">
-                {text.invalid}
-              </div>
-              <Link href={`/${locale}/recuperar-senha`} className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
-                {text.request}
-              </Link>
-            </div>
-          ) : null}
-
-          {state === 'ready' ? (
-            <form className="mt-6 space-y-4" onSubmit={updatePassword}>
-              {error ? (
-                <div className="rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100" role="alert" aria-live="polite">
-                  {error}
-                </div>
-              ) : null}
-              <label className="block text-sm font-medium text-white/72">
-                {text.password}
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  disabled={busy}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition focus:border-blue-300/50 focus-visible:ring-2 focus-visible:ring-blue-400/40 disabled:cursor-not-allowed disabled:opacity-60"
-                />
-              </label>
-              <label className="block text-sm font-medium text-white/72">
-                {text.confirm}
-                <input
-                  type="password"
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  disabled={busy}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition focus:border-blue-300/50 focus-visible:ring-2 focus-visible:ring-blue-400/40 disabled:cursor-not-allowed disabled:opacity-60"
-                />
-              </label>
-              <button type="submit" disabled={busy} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-60">
-                {busy ? text.submitting : text.submit}
-              </button>
-            </form>
-          ) : null}
-
-          {state === 'success' ? (
-            <Link href={`/${locale}/login`} className="mt-6 flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
-              {text.signIn}
+            <Link href={`/${locale}/recuperar-senha`} className="flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+              {text.request}
             </Link>
-          ) : null}
-        </section>
-      </div>
+          </div>
+        ) : null}
+
+        {state === 'ready' ? (
+          <form className="mt-6 space-y-4" onSubmit={updatePassword}>
+            {error ? (
+              <div className="rounded-lg border border-rose-500/25 bg-rose-500/[0.08] px-4 py-3 text-sm leading-6 text-rose-100" role="alert" aria-live="polite">
+                {error}
+              </div>
+            ) : null}
+            <label className="block text-xs font-medium text-slate-400">
+              {text.password}
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                disabled={busy}
+                className={fieldClass}
+              />
+            </label>
+            <label className="block text-xs font-medium text-slate-400">
+              {text.confirm}
+              <input
+                type="password"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                disabled={busy}
+                className={fieldClass}
+              />
+            </label>
+            <button type="submit" disabled={busy} className="h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-60">
+              {busy ? text.submitting : text.submit}
+            </button>
+          </form>
+        ) : null}
+
+        {state === 'success' ? (
+          <Link href={`/${locale}/login`} className="mt-6 flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+            {text.signIn}
+          </Link>
+        ) : null}
+      </section>
     </main>
   );
 }

@@ -55,21 +55,21 @@ export default function AuthDiagnosticsPage() {
   }, [expectedDashboard]);
 
   return (
-    <main className="min-h-screen bg-[#050505] px-6 py-10 text-white">
+    <main className="min-h-screen bg-[#080e18] px-4 py-8 text-white sm:px-6">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-200/80">Auth diagnostics</p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight">Google login production check</h1>
-          <p className="mt-3 text-sm leading-6 text-white/55">
+        <header className="border-b border-slate-800 pb-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">Auth diagnostics</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-100">Google login production check</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             Use this page after a Google login attempt to confirm whether Supabase created a browser session and which callback URL must be allowlisted.
           </p>
-        </div>
+        </header>
 
-        <section className="rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-2xl">
+        <section className="rounded-xl border border-slate-800 bg-[#0b121e] p-5 sm:p-6">
           {!state ? (
-            <p className="text-sm text-white/55">Checking auth state...</p>
+            <p className="text-sm text-slate-400" role="status">Checking auth state...</p>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-2">
               <DiagnosticRow label="Session detected" value={state.hasSession ? 'Yes' : 'No'} tone={state.hasSession ? 'good' : 'bad'} />
               <DiagnosticRow label="User email" value={state.userEmail ?? 'No authenticated user'} />
               <DiagnosticRow label="OAuth code in current URL" value={state.hasCodeInUrl ? 'Yes' : 'No'} tone={state.hasCodeInUrl ? 'warn' : 'neutral'} />
@@ -81,8 +81,8 @@ export default function AuthDiagnosticsPage() {
           )}
         </section>
 
-        <section className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 text-sm leading-6 text-white/60">
-          <p className="font-semibold text-white">Supabase checklist</p>
+        <section className="rounded-xl border border-slate-800 bg-[#0b121e] p-5 text-sm leading-6 text-slate-400 sm:p-6">
+          <p className="font-semibold text-slate-100">Supabase checklist</p>
           <ul className="mt-3 list-disc space-y-2 pl-5">
             <li>Add the displayed callback URL in Supabase Authentication → URL Configuration → Redirect URLs.</li>
             <li>Add your production domain as Site URL.</li>
@@ -91,11 +91,11 @@ export default function AuthDiagnosticsPage() {
           </ul>
         </section>
 
-        <div className="flex flex-wrap gap-3">
-          <Link href={`/${locale}/login`} className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-black hover:bg-white/90">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Link href={`/${locale}/login`} className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
             Back to login
           </Link>
-          <Link href={expectedDashboard} className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold hover:bg-white/10">
+          <Link href={expectedDashboard} className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-semibold text-slate-300 transition hover:border-blue-500/50 hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30">
             Open dashboard
           </Link>
         </div>
@@ -106,15 +106,15 @@ export default function AuthDiagnosticsPage() {
 
 function DiagnosticRow({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'good' | 'bad' | 'warn' }) {
   const toneClass = {
-    neutral: 'text-white/80',
-    good: 'text-emerald-200',
-    bad: 'text-rose-200',
-    warn: 'text-amber-200',
+    neutral: 'text-slate-300',
+    good: 'text-emerald-300',
+    bad: 'text-rose-300',
+    warn: 'text-amber-300',
   }[tone];
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-white/35">{label}</p>
+    <div className="rounded-lg border border-slate-800 bg-[#0d1624] p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">{label}</p>
       <p className={`mt-2 break-words text-sm font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
