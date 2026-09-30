@@ -54,7 +54,7 @@ describe('incident response and continuity megapack', () => {
     for (const policy of expectedPolicies) expect(migration).toContain(policy);
   });
 
-  it('pins fixed brace-expansion releases and rejects vulnerable versions', () => {
+  it('pins remediated brace-expansion releases and rejects vulnerable versions', () => {
     const installedBraceExpansion = Object.entries(packageLock.packages ?? {})
       .filter(([path]) => path.endsWith('node_modules/brace-expansion'))
       .map(([path, entry]) => ({ path, version: entry.version ?? '' }));
@@ -63,11 +63,11 @@ describe('incident response and continuity megapack', () => {
     );
 
     expect(installedBraceExpansion.length).toBeGreaterThan(0);
-    expect(installedVersions.has('1.1.18')).toBe(true);
-    expect(installedVersions.has('5.0.9')).toBe(true);
+    expect(installedVersions.has('1.1.21')).toBe(true);
+    expect(installedVersions.has('5.0.12')).toBe(true);
     expect(
       installedBraceExpansion.filter(({ version }) =>
-        ['1.1.17', '5.0.8'].includes(version),
+        ['1.1.17', '1.1.18', '5.0.8', '5.0.9'].includes(version),
       ),
     ).toEqual([]);
   });
