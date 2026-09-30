@@ -25,7 +25,7 @@ export default function Error({
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           {reset && (
-            <Button onClick={reset} className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40">
+            <Button onClick={reset} className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500/40">
               Tentar novamente
             </Button>
           )}
