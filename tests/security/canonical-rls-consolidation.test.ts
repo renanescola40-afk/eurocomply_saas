@@ -7,7 +7,7 @@ const migrationPath = 'supabase/migrations/20260812225906_consolidate_canonical_
 const sql = fs.readFileSync(path.join(root, migrationPath), 'utf8');
 
 describe('canonical production RLS consolidation', () => {
-  it('removes legacy permissive policies that overlap or broaden authorization', () => {
+  it('retains the complete legacy-policy removal catalog', () => {
     for (const policy of [
       'Owners can manage subscriptions',
       'Members can view subscriptions',
@@ -34,8 +34,16 @@ describe('canonical production RLS consolidation', () => {
       'Users can view their memberships',
       'Users can view their organizations',
     ]) {
-      expect(sql).toContain(`drop policy if exists ${policy.startsWith('live_') ? policy : `"${policy}"`}`);
+      expect(sql).toContain(`'${policy}'`);
     }
+    expect(sql).toContain("execute format('drop policy if exists %I on public.%I', policy_name, target_table)");
+  });
+
+  it('is clean-replay safe while still hardening every table that exists', () => {
+    expect(sql).toContain("to_regclass(format('public.%I', target_table)) is not null");
+    expect(sql).toContain("execute format('alter table public.%I enable row level security', target_table)");
+    expect(sql).toContain("execute format('alter table public.%I force row level security', target_table)");
+    expect(sql).toContain("where to_regclass(format('public.%I', r.tablename)) is not null");
   });
 
   it('keeps billing and backend-owned ledgers read-only to authenticated clients', () => {
@@ -59,7 +67,7 @@ describe('canonical production RLS consolidation', () => {
     expect(sql).not.toContain('grant insert on table public.notifications to authenticated');
   });
 
-  it('requires the canonical policy catalog to exist after cleanup', () => {
+  it('requires the canonical policy catalog for objects present at replay time', () => {
     for (const policy of [
       'rls_subscriptions_select_member',
       'rls_subscriptions_insert_backend_only',
