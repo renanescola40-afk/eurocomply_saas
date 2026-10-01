@@ -49,14 +49,14 @@ describe('foreign key index coverage migration', () => {
   });
 
   it('only attempts an index when its historical table and all target columns exist', () => {
-    expect(sql).toContain("to_regclass(format('public.%I', table_name)) is not null");
-    expect(sql).toContain('from unnest(target_columns) as required_column(column_name)');
+    expect(sql).toContain("to_regclass(format('public.%I', v_table_name)) is not null");
+    expect(sql).toContain('from unnest(v_target_columns) as required_column(column_name)');
     expect(sql).toContain("from information_schema.columns c");
     expect(sql).toContain("c.table_schema = 'public'");
-    expect(sql).toContain('c.table_name = table_name');
+    expect(sql).toContain('c.table_name = v_table_name');
     expect(sql).toContain('c.column_name = required_column.column_name');
-    expect(sql).toContain('if missing_columns = 0 then');
-    expect(sql).toContain('execute create_sql');
+    expect(sql).toContain('if v_missing_columns = 0 then');
+    expect(sql).toContain('execute v_create_sql');
   });
 
   it('keeps composite foreign-key index column order aligned with the constraint', () => {
