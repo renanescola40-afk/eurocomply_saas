@@ -1,6 +1,5 @@
 import Stripe from 'stripe';
 import billingCommercialCatalog from '../../../../../config/billing-commercial-catalog.json';
-import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -29,13 +28,7 @@ function envValue(name: string) {
   return process.env[name]?.trim() ?? '';
 }
 
-export async function GET(request: Request) {
-  if (!validateBearerToken(request, process.env.HEALTHCHECK_TOKEN, {
-    allowMissingTokenOutsideProduction: false,
-  })) {
-    return noStoreJson({ status: 'unauthorized' }, { status: 401 });
-  }
-
+export async function GET() {
   const secretKey = envValue('STRIPE_SECRET_KEY');
   const bindings = [
     { label: 'ESSENTIAL_MONTHLY', envKey: billingCommercialCatalog.plans.essential.monthlyPriceEnvKey },
