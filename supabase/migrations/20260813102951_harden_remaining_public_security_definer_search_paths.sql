@@ -1,16 +1,27 @@
-alter function public.append_audit_event_chained(uuid, uuid, uuid, text, text, text, jsonb, timestamptz, text, text, text, text)
-  set search_path = pg_catalog;
+-- Historical clean-replay compatibility: creator migrations for these helpers
+-- are not guaranteed to exist in the production migration ledger. Harden each
+-- existing signature and keep ACL/search_path verification fail-closed for it.
+do $remaining_security_definer_apply$
+begin
+  if to_regprocedure('public.append_audit_event_chained(uuid,uuid,uuid,text,text,text,jsonb,timestamptz,text,text,text,text)') is not null then
+    execute 'alter function public.append_audit_event_chained(uuid, uuid, uuid, text, text, text, jsonb, timestamptz, text, text, text, text) set search_path = pg_catalog';
+  end if;
 
-alter function public.apply_enterprise_entitlement_snapshot_atomic(uuid, uuid, text, bigint, text, integer, integer, integer, jsonb, text, timestamptz, timestamptz, timestamptz, uuid)
-  set search_path = pg_catalog;
+  if to_regprocedure('public.apply_enterprise_entitlement_snapshot_atomic(uuid,uuid,text,bigint,text,integer,integer,integer,jsonb,text,timestamptz,timestamptz,timestamptz,uuid)') is not null then
+    execute 'alter function public.apply_enterprise_entitlement_snapshot_atomic(uuid, uuid, text, bigint, text, integer, integer, integer, jsonb, text, timestamptz, timestamptz, timestamptz, uuid) set search_path = pg_catalog';
+  end if;
 
-alter function public.consume_enterprise_seat_reservation_atomic(uuid, uuid, uuid, bigint, uuid)
-  set search_path = pg_catalog;
+  if to_regprocedure('public.consume_enterprise_seat_reservation_atomic(uuid,uuid,uuid,bigint,uuid)') is not null then
+    execute 'alter function public.consume_enterprise_seat_reservation_atomic(uuid, uuid, uuid, bigint, uuid) set search_path = pg_catalog';
+  end if;
 
-alter function public.reserve_enterprise_seat_atomic(uuid, text, text, bigint, uuid, uuid, text, integer)
-  set search_path = pg_catalog;
+  if to_regprocedure('public.reserve_enterprise_seat_atomic(uuid,text,text,bigint,uuid,uuid,text,integer)') is not null then
+    execute 'alter function public.reserve_enterprise_seat_atomic(uuid, text, text, bigint, uuid, uuid, text, integer) set search_path = pg_catalog';
+  end if;
+end
+$remaining_security_definer_apply$;
 
-do $$
+do $remaining_security_definer_guard$
 declare
   bad_search_path integer;
   exposed_execute integer;
@@ -39,4 +50,5 @@ begin
     and p.proname in ('append_audit_event_chained','apply_enterprise_entitlement_snapshot_atomic','consume_enterprise_seat_reservation_atomic','reserve_enterprise_seat_atomic')
     and not pg_catalog.has_function_privilege('service_role', p.oid, 'EXECUTE');
   if missing_service_role <> 0 then raise exception 'security definer service role execute boundary verification failed'; end if;
-end $$;
+end
+$remaining_security_definer_guard$;

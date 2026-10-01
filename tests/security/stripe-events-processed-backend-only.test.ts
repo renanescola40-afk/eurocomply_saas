@@ -8,13 +8,17 @@ const migration = readFileSync(
 ).toLowerCase();
 
 describe('Stripe processed-event ledger backend-only hardening', () => {
-  it('removes all client-facing table grants', () => {
+  it('is clean-replay safe when the historical table creator is absent', () => {
+    expect(migration).toContain("to_regclass('public.stripe_events_processed') is not null");
+  });
+
+  it('removes all client-facing table grants when the table exists', () => {
     expect(migration).toContain(
       'revoke all on table public.stripe_events_processed from public, anon, authenticated',
     );
   });
 
-  it('forces RLS as defense in depth', () => {
+  it('forces RLS as defense in depth when the table exists', () => {
     expect(migration).toContain(
       'alter table public.stripe_events_processed force row level security',
     );
