@@ -8,13 +8,13 @@ begin;
 -- index creation remains fail-closed.
 do $fk_covering_indexes_apply$
 declare
-  index_name text;
-  table_name text;
-  target_columns text[];
-  create_sql text;
-  missing_columns integer;
+  v_index_name text;
+  v_table_name text;
+  v_target_columns text[];
+  v_create_sql text;
+  v_missing_columns integer;
 begin
-  for index_name, table_name, target_columns, create_sql in
+  for v_index_name, v_table_name, v_target_columns, v_create_sql in
     select * from (values
       ('idx_ai_assessments_ai_system_fk','ai_assessments',array['ai_system_id']::text[],'create index if not exists idx_ai_assessments_ai_system_fk on public.ai_assessments (ai_system_id)'),
       ('idx_ai_assessments_created_by_fk','ai_assessments',array['created_by']::text[],'create index if not exists idx_ai_assessments_created_by_fk on public.ai_assessments (created_by)'),
@@ -45,19 +45,19 @@ begin
       ('idx_vendors_owner_fk','vendors',array['owner_id']::text[],'create index if not exists idx_vendors_owner_fk on public.vendors (owner_id)')
     ) as expected(index_name, table_name, target_columns, create_sql)
   loop
-    if to_regclass(format('public.%I', table_name)) is not null then
-      select count(*) into missing_columns
-      from unnest(target_columns) as required_column(column_name)
+    if to_regclass(format('public.%I', v_table_name)) is not null then
+      select count(*) into v_missing_columns
+      from unnest(v_target_columns) as required_column(column_name)
       where not exists (
         select 1
         from information_schema.columns c
         where c.table_schema = 'public'
-          and c.table_name = table_name
+          and c.table_name = v_table_name
           and c.column_name = required_column.column_name
       );
 
-      if missing_columns = 0 then
-        execute create_sql;
+      if v_missing_columns = 0 then
+        execute v_create_sql;
       end if;
     end if;
   end loop;
