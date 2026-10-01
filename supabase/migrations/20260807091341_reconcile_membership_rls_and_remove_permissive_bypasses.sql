@@ -72,6 +72,12 @@ drop policy if exists "Authenticated can write vendors" on public.vendors;
 drop policy if exists "Authenticated can read subscriptions" on public.subscriptions;
 drop policy if exists "Authenticated can write subscriptions" on public.subscriptions;
 
+-- Fail closed on the policy domains this reconciliation owns directly. The
+-- historical compliance_tasks policy names are intentionally not asserted here:
+-- that surface is reconciled by later forward-only migrations into a newer,
+-- stricter personal/organization/commercial policy model. Keeping those legacy
+-- names in this early guard makes a clean replay fail before the authoritative
+-- compliance_tasks reconciliation can run.
 do $migration_guard$
 declare
   required_policy record;
@@ -85,10 +91,6 @@ begin
       ('organization_members', 'rls_organization_members_delete_backend_only'),
       ('audit_logs', 'rls_audit_logs_select_member'),
       ('audit_logs', 'rls_audit_logs_insert_backend_only'),
-      ('compliance_tasks', 'rls_compliance_tasks_select_member'),
-      ('compliance_tasks', 'rls_compliance_tasks_insert_writer'),
-      ('compliance_tasks', 'rls_compliance_tasks_update_writer'),
-      ('compliance_tasks', 'rls_compliance_tasks_delete_admin'),
       ('documents', 'rls_documents_select_member'),
       ('documents', 'rls_documents_insert_writer'),
       ('documents', 'rls_documents_update_writer'),
@@ -115,8 +117,7 @@ begin
         and policy.policyname = required_policy.policy_name
     ) then
       raise exception 'Required tenant-safe RLS policy %.% is missing',
-        required_policy.table_name,
-        required_policy.policy_name;
+        required_policy.table_name, required_policy.policy_name;
     end if;
   end loop;
 
