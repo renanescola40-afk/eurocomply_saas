@@ -31,10 +31,10 @@ begin
 end
 $legacy_delete_rpc$;`;
 const liveIndexStatementPattern = /create index if not exists ([a-z][a-z0-9_]*) on public\.([a-z][a-z0-9_]*) \(([^)]+)\);/g;
-const liveIndexDefinitionPattern = /\('([a-z][a-z0-9_]*)','([a-z][a-z0-9_]*)','create index if not exists \1 on public\.\2 \(([^)]+)\)'\)/g;
+const liveIndexDefinitionPattern = /\('([a-z][a-z0-9_]*)','([a-z][a-z0-9_]*)',array\[((?:'[a-z][a-z0-9_]*'(?:,'[a-z][a-z0-9_]*')*))\]::text\[\],'create index if not exists \1 on public\.\2 \(([^)]+)\)'\)/g;
 const liveIndexVerificationPattern = /do \$\$\ndeclare\n  missing integer;[\s\S]*?end \$\$;/;
 const nativeReplaySafeIndexMarker = "to_regclass(format('public.%I', table_name)) is not null";
-const nativeReplaySafeGuardMarker = "where to_regclass(format('public.%I', required.table_name)) is not null";
+const nativeReplaySafeGuardMarker = "if to_regclass(format('public.%I', required.table_name)) is not null then";
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary-v2.mjs');
 
 function fail(message) {
@@ -57,6 +57,14 @@ function parseColumns(indexName, columnsSource) {
   return columns;
 }
 
+function parseTargetColumns(indexName, targetColumnsSource) {
+  const columns = targetColumnsSource.split(',').map((column) => column.trim().replace(/^'|'$/g, ''));
+  if (!columns.length || columns.some((column) => !/^[a-z][a-z0-9_]*$/.test(column))) {
+    fail(`Unsupported target-column declaration for ${indexName}: ${targetColumnsSource}`);
+  }
+  return columns;
+}
+
 function parseLiveIndexSpecs(sql) {
   let specs = [...sql.matchAll(liveIndexStatementPattern)].map((match) => {
     const [, indexName, tableName, columnsSource] = match;
@@ -73,12 +81,17 @@ function parseLiveIndexSpecs(sql) {
   // guarded EXECUTE loop rather than as unconditional top-level statements.
   if (specs.length === 0 && sql.includes(nativeReplaySafeIndexMarker)) {
     specs = [...sql.matchAll(liveIndexDefinitionPattern)].map((match) => {
-      const [, indexName, tableName, columnsSource] = match;
+      const [, indexName, tableName, targetColumnsSource, columnsSource] = match;
+      const columns = parseColumns(indexName, columnsSource);
+      const targetColumns = parseTargetColumns(indexName, targetColumnsSource);
+      if (columns.length !== targetColumns.length || columns.some((column, index) => column !== targetColumns[index])) {
+        fail(`Target columns drift from CREATE INDEX definition for ${indexName}`);
+      }
       return {
         statement: match[0],
         indexName,
         tableName,
-        columns: parseColumns(indexName, columnsSource),
+        columns,
       };
     });
   }
