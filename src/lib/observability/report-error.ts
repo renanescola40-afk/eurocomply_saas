@@ -17,8 +17,24 @@ function buildSafeSentryError(error: unknown) {
   return { safeError, sanitizedError };
 }
 
+function safeProviderErrorMetadata(error: unknown): Record<string, unknown> {
+  if (!error || typeof error !== 'object') return {};
+
+  const candidate = error as Record<string, unknown>;
+  const metadata: Record<string, unknown> = {};
+
+  if (typeof candidate.type === 'string') metadata.providerErrorType = candidate.type;
+  if (typeof candidate.code === 'string') metadata.providerErrorCode = candidate.code;
+  if (typeof candidate.statusCode === 'number') metadata.providerStatusCode = candidate.statusCode;
+
+  return metadata;
+}
+
 export function reportError(error: unknown, context: ReportErrorContext = {}) {
-  const sanitizedContext = sanitizeContext(context);
+  const sanitizedContext = sanitizeContext({
+    ...context,
+    ...safeProviderErrorMetadata(error),
+  });
   const { safeError, sanitizedError } = buildSafeSentryError(error);
   const report = { error: sanitizedError, context: sanitizedContext };
 

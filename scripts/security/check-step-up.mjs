@@ -136,7 +136,7 @@ const tokenChecks = {
     'security:step-up', 'security:step-up:runtime', 'RISCK_COMPLY_ENTERPRISE_RELEASE=true npm run security:step-up',
   ],
   [paths.runtimeEvidence]: [
-    'risck-comply.step-up-mfa-runtime-evidence.v2', 'step-up-mfa-validation', 'Open', 'blocked',
+    'risck-comply.step-up-mfa-runtime-evidence.v2', 'step-up-mfa-validation',
     'manualBooleanProofAccepted', 'generatedFromLiveProvider', 'protectedWorkflowProvenance',
     'scripts/security/run-step-up-mfa-runtime-validation.mjs', 'POST /api/security/step-up/challenge',
     'POST /api/security/step-up/verify', 'step_up_challenge_created', 'step_up_verified', 'step_up_failed',
