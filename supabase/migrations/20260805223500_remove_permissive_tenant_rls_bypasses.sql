@@ -2,8 +2,10 @@
 -- tenant-scoped policies and therefore bypass organization isolation.
 --
 -- This migration is intentionally subtractive. It does not replace or broaden
--- access. It fails closed unless the expected tenant-safe policies already
--- exist, preventing an accidental lockout on an incomplete migration chain.
+-- access. On a clean replay that predates the canonical tenant-safe policy
+-- foundation, zero canonical policies is an expected historical state; the
+-- later reconciliation 20260807091341 materializes and verifies the full chain.
+-- Any partial canonical state still fails closed here.
 
 begin;
 
@@ -50,56 +52,105 @@ drop policy if exists "Authenticated can read subscriptions"
 drop policy if exists "Authenticated can write subscriptions"
   on public.subscriptions;
 
--- Fail closed if the tenant-safe policy chain is not present. Policy names are
--- checked together with their table so similarly named policies cannot satisfy
--- the guard accidentally.
+-- Fail closed for partially-materialized canonical policy chains. A clean
+-- historical replay can legitimately have zero canonical policies at this point;
+-- 20260807091341 is the authoritative reconciliation and full-chain guard.
 do $migration_guard$
 declare
   required_policy record;
+  canonical_policy_count integer;
 begin
-  for required_policy in
-    select *
-    from (values
-      ('organization_members', 'rls_organization_members_select_member'),
-      ('organization_members', 'rls_organization_members_insert_backend_only'),
-      ('organization_members', 'rls_organization_members_update_backend_only'),
-      ('organization_members', 'rls_organization_members_delete_backend_only'),
-      ('audit_logs', 'rls_audit_logs_select_member'),
-      ('audit_logs', 'rls_audit_logs_insert_backend_only'),
-      ('compliance_tasks', 'rls_compliance_tasks_select_member'),
-      ('compliance_tasks', 'rls_compliance_tasks_insert_writer'),
-      ('compliance_tasks', 'rls_compliance_tasks_update_writer'),
-      ('compliance_tasks', 'rls_compliance_tasks_delete_admin'),
-      ('documents', 'rls_documents_select_member'),
-      ('documents', 'rls_documents_insert_writer'),
-      ('documents', 'rls_documents_update_writer'),
-      ('documents', 'rls_documents_delete_admin'),
-      ('risks', 'rls_risks_select_member'),
-      ('risks', 'rls_risks_insert_writer'),
-      ('risks', 'rls_risks_update_writer'),
-      ('risks', 'rls_risks_delete_admin'),
-      ('vendors', 'rls_vendors_select_member'),
-      ('vendors', 'rls_vendors_insert_writer'),
-      ('vendors', 'rls_vendors_update_writer'),
-      ('vendors', 'rls_vendors_delete_admin'),
-      ('subscriptions', 'rls_subscriptions_select_member'),
-      ('subscriptions', 'rls_subscriptions_insert_backend_only'),
-      ('subscriptions', 'rls_subscriptions_update_backend_only'),
-      ('subscriptions', 'rls_subscriptions_delete_backend_only')
-    ) as expected(table_name, policy_name)
-  loop
-    if not exists (
-      select 1
-      from pg_catalog.pg_policies policy
-      where policy.schemaname = 'public'
-        and policy.tablename = required_policy.table_name
-        and policy.policyname = required_policy.policy_name
-    ) then
-      raise exception 'Required tenant-safe RLS policy %.% is missing',
-        required_policy.table_name,
-        required_policy.policy_name;
-    end if;
-  end loop;
+  select count(*)::integer
+    into canonical_policy_count
+  from pg_catalog.pg_policies policy
+  where policy.schemaname = 'public'
+    and (
+      (policy.tablename = 'organization_members' and policy.policyname in (
+        'rls_organization_members_select_member',
+        'rls_organization_members_insert_backend_only',
+        'rls_organization_members_update_backend_only',
+        'rls_organization_members_delete_backend_only'
+      ))
+      or (policy.tablename = 'audit_logs' and policy.policyname in (
+        'rls_audit_logs_select_member',
+        'rls_audit_logs_insert_backend_only'
+      ))
+      or (policy.tablename = 'compliance_tasks' and policy.policyname in (
+        'rls_compliance_tasks_select_member',
+        'rls_compliance_tasks_insert_writer',
+        'rls_compliance_tasks_update_writer',
+        'rls_compliance_tasks_delete_admin'
+      ))
+      or (policy.tablename = 'documents' and policy.policyname in (
+        'rls_documents_select_member',
+        'rls_documents_insert_writer',
+        'rls_documents_update_writer',
+        'rls_documents_delete_admin'
+      ))
+      or (policy.tablename = 'risks' and policy.policyname in (
+        'rls_risks_select_member',
+        'rls_risks_insert_writer',
+        'rls_risks_update_writer',
+        'rls_risks_delete_admin'
+      ))
+      or (policy.tablename = 'vendors' and policy.policyname in (
+        'rls_vendors_select_member',
+        'rls_vendors_insert_writer',
+        'rls_vendors_update_writer',
+        'rls_vendors_delete_admin'
+      ))
+      or (policy.tablename = 'subscriptions' and policy.policyname in (
+        'rls_subscriptions_select_member',
+        'rls_subscriptions_insert_backend_only',
+        'rls_subscriptions_update_backend_only',
+        'rls_subscriptions_delete_backend_only'
+      ))
+    );
+
+  if canonical_policy_count > 0 then
+    for required_policy in
+      select *
+      from (values
+        ('organization_members', 'rls_organization_members_select_member'),
+        ('organization_members', 'rls_organization_members_insert_backend_only'),
+        ('organization_members', 'rls_organization_members_update_backend_only'),
+        ('organization_members', 'rls_organization_members_delete_backend_only'),
+        ('audit_logs', 'rls_audit_logs_select_member'),
+        ('audit_logs', 'rls_audit_logs_insert_backend_only'),
+        ('compliance_tasks', 'rls_compliance_tasks_select_member'),
+        ('compliance_tasks', 'rls_compliance_tasks_insert_writer'),
+        ('compliance_tasks', 'rls_compliance_tasks_update_writer'),
+        ('compliance_tasks', 'rls_compliance_tasks_delete_admin'),
+        ('documents', 'rls_documents_select_member'),
+        ('documents', 'rls_documents_insert_writer'),
+        ('documents', 'rls_documents_update_writer'),
+        ('documents', 'rls_documents_delete_admin'),
+        ('risks', 'rls_risks_select_member'),
+        ('risks', 'rls_risks_insert_writer'),
+        ('risks', 'rls_risks_update_writer'),
+        ('risks', 'rls_risks_delete_admin'),
+        ('vendors', 'rls_vendors_select_member'),
+        ('vendors', 'rls_vendors_insert_writer'),
+        ('vendors', 'rls_vendors_update_writer'),
+        ('vendors', 'rls_vendors_delete_admin'),
+        ('subscriptions', 'rls_subscriptions_select_member'),
+        ('subscriptions', 'rls_subscriptions_insert_backend_only'),
+        ('subscriptions', 'rls_subscriptions_update_backend_only'),
+        ('subscriptions', 'rls_subscriptions_delete_backend_only')
+      ) as expected(table_name, policy_name)
+    loop
+      if not exists (
+        select 1
+        from pg_catalog.pg_policies policy
+        where policy.schemaname = 'public'
+          and policy.tablename = required_policy.table_name
+          and policy.policyname = required_policy.policy_name
+      ) then
+        raise exception 'Required tenant-safe RLS policy %.% is missing',
+          required_policy.table_name, required_policy.policy_name;
+      end if;
+    end loop;
+  end if;
 
   if exists (
     select 1
