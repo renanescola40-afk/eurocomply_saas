@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 import billingCommercialCatalog from '../../../../../config/billing-commercial-catalog.json';
+import { requireEnterpriseRateLimit } from '@/server/security/api-guards';
+import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -28,7 +30,21 @@ function envValue(name: string) {
   return process.env[name]?.trim() ?? '';
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimitDenied = await requireEnterpriseRateLimit(request, {
+    policy: 'health-internal',
+    action: 'stripe_diagnostic_auth',
+    route: '/api/internal/stripe-diagnostic',
+    failureMode: 'fail-closed',
+  });
+  if (rateLimitDenied) return rateLimitDenied;
+
+  if (!validateBearerToken(request, process.env.HEALTHCHECK_TOKEN, {
+    allowMissingTokenOutsideProduction: false,
+  })) {
+    return noStoreJson({ status: 'unauthorized' }, { status: 401 });
+  }
+
   const secretKey = envValue('STRIPE_SECRET_KEY');
   const bindings = [
     { label: 'ESSENTIAL_MONTHLY', envKey: billingCommercialCatalog.plans.essential.monthlyPriceEnvKey },
