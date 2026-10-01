@@ -72,12 +72,11 @@ drop policy if exists "Authenticated can write vendors" on public.vendors;
 drop policy if exists "Authenticated can read subscriptions" on public.subscriptions;
 drop policy if exists "Authenticated can write subscriptions" on public.subscriptions;
 
--- Fail closed on the policy domains this reconciliation owns directly. The
--- historical compliance_tasks policy names are intentionally not asserted here:
--- that surface is reconciled by later forward-only migrations into a newer,
--- stricter personal/organization/commercial policy model. Keeping those legacy
--- names in this early guard makes a clean replay fail before the authoritative
--- compliance_tasks reconciliation can run.
+-- Fail closed on the membership policy chain this reconciliation owns directly.
+-- Other table-specific canonical policy families are reconciled by their own
+-- forward-only migrations; this historical migration only removes their legacy
+-- permissive bypasses. Asserting future policy names here makes clean replay
+-- impossible even though the final state remains fail-closed.
 do $migration_guard$
 declare
   required_policy record;
@@ -88,25 +87,7 @@ begin
       ('organization_members', 'rls_organization_members_select_member'),
       ('organization_members', 'rls_organization_members_insert_backend_only'),
       ('organization_members', 'rls_organization_members_update_backend_only'),
-      ('organization_members', 'rls_organization_members_delete_backend_only'),
-      ('audit_logs', 'rls_audit_logs_select_member'),
-      ('audit_logs', 'rls_audit_logs_insert_backend_only'),
-      ('documents', 'rls_documents_select_member'),
-      ('documents', 'rls_documents_insert_writer'),
-      ('documents', 'rls_documents_update_writer'),
-      ('documents', 'rls_documents_delete_admin'),
-      ('risks', 'rls_risks_select_member'),
-      ('risks', 'rls_risks_insert_writer'),
-      ('risks', 'rls_risks_update_writer'),
-      ('risks', 'rls_risks_delete_admin'),
-      ('vendors', 'rls_vendors_select_member'),
-      ('vendors', 'rls_vendors_insert_writer'),
-      ('vendors', 'rls_vendors_update_writer'),
-      ('vendors', 'rls_vendors_delete_admin'),
-      ('subscriptions', 'rls_subscriptions_select_member'),
-      ('subscriptions', 'rls_subscriptions_insert_backend_only'),
-      ('subscriptions', 'rls_subscriptions_update_backend_only'),
-      ('subscriptions', 'rls_subscriptions_delete_backend_only')
+      ('organization_members', 'rls_organization_members_delete_backend_only')
     ) as expected(table_name, policy_name)
   loop
     if not exists (
