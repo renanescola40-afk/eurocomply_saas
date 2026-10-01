@@ -9,220 +9,40 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 env:
   RELEASE_SHA: b5cf5fcbe9fb73934397860ba1e81e561b3cbabf
-  PREVIEW_BASE_URL: https://eurocomply-saas-git-stripe-p-ee236b-renanescola40-afks-projects.vercel.app
-  TEST_SUBSCRIPTION_ID: sub_1ULUfVGt3cgjPOtqNOmzoa9I
-  ORGANIZATION_ID: 13ff8175-04f8-45c9-80d4-46d76bfd1895
-  EXPECTED_PLAN_CODE: professional
-  EXPECTED_FULL_SEAT_LIMIT: '25'
-  EXPECTED_PARTICIPANT_SEAT_LIMIT: '50'
-  EXPECTED_VIEWER_SEAT_LIMIT: '100'
 
 jobs:
-  bootstrap:
-    name: Bootstrap protected Stripe test proof
+  probe-production-secret-availability:
+    name: Probe protected proof secret availability
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    environment: staging
+    timeout-minutes: 5
+    environment: Production
     env:
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY || secrets.STRIPE_SECRET_KEY }}
+      STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       GITHUB_TOKEN: ${{ github.token }}
-      PGSSLMODE: require
-
     steps:
-      - name: Check out exact release SHA
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-        with:
-          ref: ${{ env.RELEASE_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Authorize bounded test-only execution
+      - name: Check exact current main
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           current_main="$(curl --fail --silent --show-error \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$current_main" = "$RELEASE_SHA"
-          case "$STRIPE_SECRET_KEY" in sk_test_*) ;; *) echo 'Stripe staging key is not test mode' >&2; exit 1 ;; esac
-          test -n "$VERCEL_AUTOMATION_BYPASS_SECRET"
-          test -n "$SUPABASE_DB_POOLER_URL"
-          case "$SUPABASE_DB_POOLER_URL" in postgresql://*|postgres://*) ;; *) echo 'Invalid database URI' >&2; exit 1 ;; esac
-
-      - name: Validate protected exact-SHA preview health
+      - name: Report bounded availability only
         shell: bash
         run: |
           set -euo pipefail
-          response_file="$(mktemp)"
-          status="$(curl --silent --show-error \
-            --output "$response_file" \
-            --write-out '%{http_code}' \
-            --connect-timeout 10 \
-            --max-time 20 \
-            -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" \
-            -H 'Accept: application/json' \
-            "$PREVIEW_BASE_URL/api/health")"
-          test "$status" = '200'
-          jq -e '.' "$response_file" >/dev/null
-          echo 'Protected exact-SHA preview health: PASS'
-
-      - name: Install PostgreSQL client
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -y >/dev/null
-          sudo apt-get install -y postgresql-client >/dev/null
-
-      - name: Bind test webhook temporarily and create controlled event
-        id: event
-        shell: bash
-        run: |
-          set -euo pipefail
-          endpoints="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $STRIPE_SECRET_KEY" \
-            'https://api.stripe.com/v1/webhook_endpoints?limit=100')"
-          endpoint_id="$(jq -r '.data[] | select(.livemode == false and .status == "enabled" and (.description // "" | startswith("RISCK COMPLY exact-SHA Stripe test webhook"))) | .id' <<<"$endpoints" | head -n1)"
-          test -n "$endpoint_id"
-          old_url="$(jq -r --arg id "$endpoint_id" '.data[] | select(.id == $id) | .url' <<<"$endpoints")"
-          test -n "$old_url"
-          printf '%s\n%s\n' "$endpoint_id" "$old_url" > "$RUNNER_TEMP/stripe-webhook-restore.txt"
-
-          new_url="$PREVIEW_BASE_URL/api/stripe/webhook?x-vercel-protection-bypass=$VERCEL_AUTOMATION_BYPASS_SECRET"
-          curl --fail --silent --show-error \
-            -X POST \
-            -H "Authorization: Bearer $STRIPE_SECRET_KEY" \
-            --data-urlencode "url=$new_url" \
-            "https://api.stripe.com/v1/webhook_endpoints/$endpoint_id" >/dev/null
-
-          marker="pentest-proof-$(date +%s)"
-          curl --fail --silent --show-error \
-            -X POST \
-            -H "Authorization: Bearer $STRIPE_SECRET_KEY" \
-            --data-urlencode "metadata[proof_sequence]=$marker" \
-            "https://api.stripe.com/v1/subscriptions/$TEST_SUBSCRIPTION_ID" >/dev/null
-
-          event_id=''
-          for attempt in $(seq 1 15); do
-            events="$(curl --fail --silent --show-error \
-              -G \
-              -H "Authorization: Bearer $STRIPE_SECRET_KEY" \
-              --data-urlencode 'type=customer.subscription.updated' \
-              --data-urlencode 'limit=25' \
-              'https://api.stripe.com/v1/events')"
-            event_id="$(jq -r --arg sub "$TEST_SUBSCRIPTION_ID" --arg marker "$marker" '.data[] | select(.livemode == false and .data.object.id == $sub and .data.object.metadata.proof_sequence == $marker) | .id' <<<"$events" | head -n1)"
-            if [[ "$event_id" =~ ^evt_[A-Za-z0-9_]+$ ]]; then break; fi
-            sleep 2
-          done
-          [[ "$event_id" =~ ^evt_[A-Za-z0-9_]+$ ]]
-          echo "event_id=$event_id" >> "$GITHUB_OUTPUT"
-          echo "Controlled Stripe test event created: $event_id"
-
-      - name: Wait for signed delivery and entitlement reconciliation
-        id: db
-        shell: bash
-        env:
-          STRIPE_EVENT_ID: ${{ steps.event.outputs.event_id }}
-        run: |
-          set -euo pipefail
-          [[ "$STRIPE_EVENT_ID" =~ ^evt_[A-Za-z0-9_]+$ ]]
-          status=''
-          error=''
-          for attempt in $(seq 1 20); do
-            row="$(psql "$SUPABASE_DB_POOLER_URL" -At -F '|' \
-              -v ON_ERROR_STOP=1 \
-              -v event_id="$STRIPE_EVENT_ID" \
-              -c "select coalesce(status,''), coalesce(error,'') from public.stripe_events_processed where id = :'event_id' limit 1;" 2>/dev/null || true)"
-            status="${row%%|*}"
-            error="${row#*|}"
-            if [[ "$status" == 'processed' || "$status" == 'failed' ]]; then break; fi
-            sleep 3
-          done
-          echo "Observed event status: ${status:-missing}"
-          if [[ "$status" != 'processed' ]]; then
-            echo "Sanitized failure classification: ${error:-none}" >&2
-            exit 1
-          fi
-
-          mkdir -p artifacts/stripe-runtime-proof
-          psql "$SUPABASE_DB_POOLER_URL" \
-            --set ON_ERROR_STOP=1 \
-            --set stripe_event_id="$STRIPE_EVENT_ID" \
-            --set organization_id="$ORGANIZATION_ID" \
-            --file scripts/enterprise/stripe-runtime-proof.sql \
-            > artifacts/stripe-runtime-proof/catalog.txt
-          node scripts/enterprise/build-stripe-runtime-proof.mjs artifacts/stripe-runtime-proof/catalog.txt
-          rm -f artifacts/stripe-runtime-proof/catalog.txt
-          node scripts/enterprise/finalize-stripe-runtime-proof.mjs artifacts/stripe-runtime-proof
-          jq '{status,validationStatus,failedChecks}' artifacts/stripe-runtime-proof/evidence.json
-          jq -e '.status == "Complete" and .validationStatus == "passed"' artifacts/stripe-runtime-proof/evidence.json >/dev/null
-
-      - name: Dispatch official exact-SHA entitlement proof
-        shell: bash
-        env:
-          STRIPE_EVENT_ID: ${{ steps.event.outputs.event_id }}
-        run: |
-          set -euo pipefail
-          body="$(jq -n \
-            --arg ref 'main' \
-            --arg release_sha "$RELEASE_SHA" \
-            --arg target_environment 'staging' \
-            --arg stripe_event_id "$STRIPE_EVENT_ID" \
-            --arg organization_id "$ORGANIZATION_ID" \
-            --arg expected_plan_code "$EXPECTED_PLAN_CODE" \
-            --arg expected_full_seat_limit "$EXPECTED_FULL_SEAT_LIMIT" \
-            --arg expected_participant_seat_limit "$EXPECTED_PARTICIPANT_SEAT_LIMIT" \
-            --arg expected_viewer_seat_limit "$EXPECTED_VIEWER_SEAT_LIMIT" \
-            '{ref:$ref,inputs:{release_sha:$release_sha,target_environment:$target_environment,stripe_event_id:$stripe_event_id,organization_id:$organization_id,expected_plan_code:$expected_plan_code,expected_full_seat_limit:$expected_full_seat_limit,expected_participant_seat_limit:$expected_participant_seat_limit,expected_viewer_seat_limit:$expected_viewer_seat_limit,stripe_test_mode_confirmed:"true",confirmation:"PROVE_STRIPE_ENTITLEMENT_RUNTIME"}}')"
-          curl --fail --silent --show-error \
-            -X POST \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            -H 'Content-Type: application/json' \
-            --data "$body" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/stripe-entitlement-runtime-proof.yml/dispatches"
-          echo "Official Stripe Entitlement Runtime Proof dispatched for $STRIPE_EVENT_ID"
-
-      - name: Restore previous Stripe test webhook URL
-        if: always()
-        shell: bash
-        run: |
-          set +e
-          restore_file="$RUNNER_TEMP/stripe-webhook-restore.txt"
-          if [[ -s "$restore_file" && -n "${STRIPE_SECRET_KEY:-}" ]]; then
-            endpoint_id="$(sed -n '1p' "$restore_file")"
-            old_url="$(sed -n '2p' "$restore_file")"
-            if [[ "$endpoint_id" =~ ^we_ && -n "$old_url" ]]; then
-              curl --fail --silent --show-error \
-                -X POST \
-                -H "Authorization: Bearer $STRIPE_SECRET_KEY" \
-                --data-urlencode "url=$old_url" \
-                "https://api.stripe.com/v1/webhook_endpoints/$endpoint_id" >/dev/null
-              echo 'Stripe test webhook URL restored.'
-            fi
-          fi
-
-      - name: Publish bounded bootstrap summary
-        if: always()
-        shell: bash
-        env:
-          STRIPE_EVENT_ID: ${{ steps.event.outputs.event_id }}
-        run: |
-          {
-            echo '### Stripe test proof bootstrap'
-            echo "- Release SHA: $RELEASE_SHA"
-            echo '- Environment: staging / Stripe test mode'
-            echo "- Event: ${STRIPE_EVENT_ID:-not-produced}"
-            echo '- Production billing mutation: none'
-            echo '- Real customer data mutation: none'
-            echo '- Webhook URL restoration attempted: yes'
-          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$STRIPE_TEST_SECRET_KEY" == sk_test_* ]]; then stripe_test='present'; else stripe_test='missing'; fi
+          if [[ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]]; then bypass='present'; else bypass='missing'; fi
+          case "$SUPABASE_DB_POOLER_URL" in postgresql://*|postgres://*) db='present' ;; *) db='missing' ;; esac
+          printf 'STRIPE_TEST_SECRET_KEY=%s\nVERCEL_AUTOMATION_BYPASS_SECRET=%s\nSUPABASE_DB_POOLER_URL=%s\n' "$stripe_test" "$bypass" "$db"
+          test "$stripe_test" = 'present'
+          test "$bypass" = 'present'
+          test "$db" = 'present'
