@@ -31,7 +31,10 @@ begin
 end
 $legacy_delete_rpc$;`;
 const liveIndexStatementPattern = /create index if not exists ([a-z][a-z0-9_]*) on public\.([a-z][a-z0-9_]*) \(([^)]+)\);/g;
+const liveIndexDefinitionPattern = /\('([a-z][a-z0-9_]*)','([a-z][a-z0-9_]*)','create index if not exists \1 on public\.\2 \(([^)]+)\)'\)/g;
 const liveIndexVerificationPattern = /do \$\$\ndeclare\n  missing integer;[\s\S]*?end \$\$;/;
+const nativeReplaySafeIndexMarker = "to_regclass(format('public.%I', table_name)) is not null";
+const nativeReplaySafeGuardMarker = "where to_regclass(format('public.%I', required.table_name)) is not null";
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary-v2.mjs');
 
 function fail(message) {
@@ -46,22 +49,41 @@ function sqlLiteral(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
 }
 
+function parseColumns(indexName, columnsSource) {
+  const columns = columnsSource.split(',').map((column) => column.trim());
+  if (!columns.length || columns.some((column) => !/^[a-z][a-z0-9_]*$/.test(column))) {
+    fail(`Unsupported live-index column expression for ${indexName}: ${columnsSource}`);
+  }
+  return columns;
+}
+
 function parseLiveIndexSpecs(sql) {
-  const specs = [...sql.matchAll(liveIndexStatementPattern)].map((match) => {
+  let specs = [...sql.matchAll(liveIndexStatementPattern)].map((match) => {
     const [, indexName, tableName, columnsSource] = match;
-    const columns = columnsSource.split(',').map((column) => column.trim());
-    if (!columns.length || columns.some((column) => !/^[a-z][a-z0-9_]*$/.test(column))) {
-      fail(`Unsupported live-index column expression for ${indexName}: ${columnsSource}`);
-    }
     return {
       statement: match[0],
       indexName,
       tableName,
-      columns,
+      columns: parseColumns(indexName, columnsSource),
     };
   });
 
-  if (specs.length !== 27) fail(`Expected 27 advisor-backed live index statements, found ${specs.length}`);
+  // The canonical migration may already be natively replay-safe. In that form,
+  // the 27 CREATE INDEX definitions live as validated data rows consumed by a
+  // guarded EXECUTE loop rather than as unconditional top-level statements.
+  if (specs.length === 0 && sql.includes(nativeReplaySafeIndexMarker)) {
+    specs = [...sql.matchAll(liveIndexDefinitionPattern)].map((match) => {
+      const [, indexName, tableName, columnsSource] = match;
+      return {
+        statement: match[0],
+        indexName,
+        tableName,
+        columns: parseColumns(indexName, columnsSource),
+      };
+    });
+  }
+
+  if (specs.length !== 27) fail(`Expected 27 advisor-backed live index definitions, found ${specs.length}`);
   if (new Set(specs.map(({ indexName }) => indexName)).size !== specs.length) {
     fail('Live advisor index names are not unique');
   }
@@ -74,6 +96,12 @@ function columnPresenceSql(tableName, columns) {
 }
 
 function buildLiveIndexReplaySql(sql, specs) {
+  // New canonical form is already safe for absent historical tables and keeps
+  // its own fail-closed postcondition. Do not derive a second replay rewrite.
+  if (sql.includes(nativeReplaySafeIndexMarker) && sql.includes(nativeReplaySafeGuardMarker)) {
+    return sql;
+  }
+
   let replay = sql;
   specs.forEach((spec, index) => {
     const tag = `$replay_idx_${index}$`;
@@ -133,7 +161,10 @@ function validateBoundary() {
 
   const liveIndexSql = readFileSync(liveIndexPath, 'utf8');
   parseLiveIndexSpecs(liveIndexSql);
-  if (!liveIndexSql.includes("where to_regclass('public.' || required.index_name) is null")
+  const hasLegacyGuard = liveIndexSql.includes("where to_regclass('public.' || required.index_name) is null");
+  const hasNativeGuard = liveIndexSql.includes(nativeReplaySafeGuardMarker)
+    && liveIndexSql.includes("and to_regclass('public.' || required.index_name) is null");
+  if ((!hasLegacyGuard && !hasNativeGuard)
       || !liveIndexSql.includes('missing required foreign-key covering indexes after reconciliation')) {
     fail('Live advisor index migration no longer contains its fail-closed production verification');
   }
@@ -157,8 +188,11 @@ function main() {
     held = true;
     writeFileSync(liveAclPath, liveAclSql.replace(legacyDeleteHardening, legacyDeleteReplayCompatibility), 'utf8');
     aclCompatibilityStaged = true;
-    writeFileSync(liveIndexPath, buildLiveIndexReplaySql(liveIndexSql, liveIndexSpecs), 'utf8');
-    indexCompatibilityStaged = true;
+    const replayIndexSql = buildLiveIndexReplaySql(liveIndexSql, liveIndexSpecs);
+    if (replayIndexSql !== liveIndexSql) {
+      writeFileSync(liveIndexPath, replayIndexSql, 'utf8');
+      indexCompatibilityStaged = true;
+    }
     execFileSync(process.execPath, [delegate], { stdio: 'inherit', env: process.env });
   } catch (error) {
     replayError = error;
@@ -184,7 +218,7 @@ function main() {
   appendGithubEnv('RECOVERY_EPHEMERAL_OPTIONAL_LEGACY_RPC_HARDENING_FILE_COUNT', '1');
   appendGithubEnv('RECOVERY_EPHEMERAL_LIVE_AUDIT_INDEX_COMPAT_FILE_COUNT', '1');
   process.stdout.write(
-    `Disposable replay held ${migrationName} behind the unresolved membership helper, made the live-only delete_user_account hardening conditional on object presence, applied all ${liveIndexSpecs.length} advisor-backed covering indexes whose tables and target columns exist in the reconstructed schema, required every applicable index, and restored canonical bytes.\n`,
+    `Disposable replay held ${migrationName} behind the unresolved membership helper, made the live-only delete_user_account hardening conditional on object presence, validated all ${liveIndexSpecs.length} advisor-backed covering-index definitions with replay-safe table guards, required every applicable index, and restored canonical bytes.\n`,
   );
 }
 
