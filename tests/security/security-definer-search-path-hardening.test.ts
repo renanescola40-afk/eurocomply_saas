@@ -13,11 +13,21 @@ const finalMigration = readFileSync(
 
 describe('SECURITY DEFINER search-path hardening', () => {
   it.each([
-    'app_private.is_org_member(uuid)',
-    'app_private.has_org_role(uuid, text[])',
-    'public.prevent_client_notification_scope_change()',
-  ])('pins %s to pg_catalog only in the first hardening batch', (signature) => {
-    expect(firstMigration).toContain(`alter function ${signature}\n  set search_path = pg_catalog`);
+    {
+      lookup: 'app_private.is_org_member(uuid)',
+      alter: 'alter function app_private.is_org_member(uuid) set search_path = pg_catalog',
+    },
+    {
+      lookup: 'app_private.has_org_role(uuid,text[])',
+      alter: 'alter function app_private.has_org_role(uuid, text[]) set search_path = pg_catalog',
+    },
+    {
+      lookup: 'public.prevent_client_notification_scope_change()',
+      alter: 'alter function public.prevent_client_notification_scope_change() set search_path = pg_catalog',
+    },
+  ])('conditionally pins $lookup to pg_catalog in the first hardening batch', ({ lookup, alter }) => {
+    expect(firstMigration).toContain(`to_regprocedure('${lookup}') is not null`);
+    expect(firstMigration).toContain(`execute '${alter}'`);
   });
 
   it.each([
