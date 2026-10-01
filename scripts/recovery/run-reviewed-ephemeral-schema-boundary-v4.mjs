@@ -33,7 +33,7 @@ $legacy_delete_rpc$;`;
 const liveIndexStatementPattern = /create index if not exists ([a-z][a-z0-9_]*) on public\.([a-z][a-z0-9_]*) \(([^)]+)\);/g;
 const liveIndexDefinitionPattern = /\('([a-z][a-z0-9_]*)','([a-z][a-z0-9_]*)',array\[((?:'[a-z][a-z0-9_]*'(?:,'[a-z][a-z0-9_]*')*))\]::text\[\],'create index if not exists \1 on public\.\2 \(([^)]+)\)'\)/g;
 const liveIndexVerificationPattern = /do \$\$\ndeclare\n  missing integer;[\s\S]*?end \$\$;/;
-const nativeReplaySafeIndexMarker = "to_regclass(format('public.%I', table_name)) is not null";
+const nativeReplaySafeIndexMarker = "to_regclass(format('public.%I', v_table_name)) is not null";
 const nativeReplaySafeGuardMarker = "if to_regclass(format('public.%I', required.table_name)) is not null then";
 const delegate = join(root, 'scripts', 'recovery', 'run-reviewed-ephemeral-schema-boundary-v2.mjs');
 
