@@ -13,6 +13,7 @@ permissions:
 
 env:
   TARGET_SHA: ${{ github.sha }}
+  RELEASE_PRODUCTION_URL: https://www.risckcomply.com
 
 jobs:
   production-stripe-binding-probe:
@@ -25,7 +26,6 @@ jobs:
         shell: bash
         env:
           HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
-          RELEASE_PRODUCTION_URL: ${{ secrets.RELEASE_PRODUCTION_URL || vars.RELEASE_PRODUCTION_URL }}
         run: |
           set -euo pipefail
           test -n "$HEALTHCHECK_TOKEN"
