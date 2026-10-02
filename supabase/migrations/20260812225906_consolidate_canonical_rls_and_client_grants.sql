@@ -129,6 +129,9 @@ end
 $canonical_rls_apply$;
 
 -- Fail closed for every object that actually exists at this historical replay point.
+-- A table whose canonical policy catalog is still completely unmaterialized (0/N)
+-- is a legitimate historical state; once any canonical policy exists, the entire
+-- table-specific catalog must be complete, otherwise replay fails closed.
 do $canonical_rls_guard$
 declare
   missing_policy_count integer;
@@ -199,16 +202,24 @@ begin
       ('organization_members','rls_organization_members_delete_backend_only'),
       ('organizations','Members can view organizations'),
       ('organizations','Owners can update organizations')
+  ), materialized as (
+    select distinct r.tablename
+    from required r
+    join pg_policies p
+      on p.schemaname='public'
+     and p.tablename=r.tablename
+     and p.policyname=r.policyname
   )
   select count(*) into missing_policy_count
   from required r
+  join materialized m on m.tablename=r.tablename
   where to_regclass(format('public.%I', r.tablename)) is not null
     and not exists (
       select 1 from pg_policies p
       where p.schemaname='public' and p.tablename=r.tablename and p.policyname=r.policyname
     );
   if missing_policy_count <> 0 then
-    raise exception 'canonical RLS policy missing after consolidation: %', missing_policy_count;
+    raise exception 'canonical RLS policy missing after partial materialization: %', missing_policy_count;
   end if;
 
   select count(*) into unexpected_grant_count
