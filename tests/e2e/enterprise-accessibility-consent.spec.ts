@@ -18,6 +18,14 @@ async function startWithAnalyticsDenied(page: Page) {
   await page.addInitScript((key) => window.localStorage.setItem(key, 'denied'), CONSENT_STORAGE_KEY);
 }
 
+async function waitForKeyboardAuditReadiness(page: Page) {
+  await expect(page.locator('main:visible, [role="main"]:visible').first()).toBeVisible();
+  await expect.poll(
+    () => page.locator('a[href]:visible, button:visible, input:not([type="hidden"]):visible, select:visible, textarea:visible, [tabindex]:not([tabindex="-1"]):visible').count(),
+    { message: 'page should hydrate enough focusable controls for the keyboard audit' },
+  ).toBeGreaterThanOrEqual(3);
+}
+
 async function focusConsentPolicyLink(page: Page) {
   await page.keyboard.press('Tab');
   const policyLink = page.getByRole('link', { name: 'Cookie Policy and settings' });
@@ -112,6 +120,7 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
 
     for (const route of PUBLIC_ROUTES) {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await waitForKeyboardAuditReadiness(page);
       const visited = new Set<string>();
 
       for (let index = 0; index < 24; index += 1) {
