@@ -67,7 +67,7 @@ describe('canonical production RLS consolidation', () => {
     expect(sql).not.toContain('grant insert on table public.notifications to authenticated');
   });
 
-  it('requires the canonical policy catalog for objects present at replay time', () => {
+  it('retains the canonical policy catalog and only enforces it after materialization starts', () => {
     for (const policy of [
       'rls_subscriptions_select_member',
       'rls_subscriptions_insert_backend_only',
@@ -91,11 +91,14 @@ describe('canonical production RLS consolidation', () => {
     ]) {
       expect(sql).toContain(`'${policy}'`);
     }
+    expect(sql).toContain('materialized as (');
+    expect(sql).toContain('join materialized m on m.tablename=r.tablename');
+    expect(sql).toContain("p.policyname=r.policyname");
   });
 
-  it('fails closed if legacy policies or excess grants survive', () => {
+  it('fails closed for partial canonical catalogs, legacy policies, or excess grants', () => {
     expect(sql).toContain("raise exception 'legacy permissive policies survived canonical RLS consolidation: %'");
-    expect(sql).toContain("raise exception 'canonical RLS policy missing after consolidation: %'");
+    expect(sql).toContain("raise exception 'canonical RLS policy missing after partial materialization: %'");
     expect(sql).toContain("raise exception 'unexpected client table privileges survived canonical RLS consolidation: %'");
     expect(sql).toContain("p.grantee in ('PUBLIC','anon','authenticated')");
     expect(sql).toContain("p.privilege_type in ('SELECT','UPDATE','DELETE')");
