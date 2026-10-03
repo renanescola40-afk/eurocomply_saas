@@ -20,7 +20,7 @@ export const TRUST_ALLOWED_CLAIMS = [
   'Audit activity for security and compliance-relevant events.',
   'Managed-provider backups and availability, subject to production configuration and restore evidence.',
   'Responsible disclosure contact is available by email.',
-  'Formal certifications and external assurance reports are not yet complete.',
+  'A third-party black-box web application assessment was completed on 2026-09-12; formal certifications and a clean independent retest/terminal assurance are not yet complete.',
   'RISCK COMPLY supports readiness and evidence preparation, but does not provide legal advice or guarantee compliance outcomes.',
 ] as const;
 
@@ -51,20 +51,20 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
     sections: [
       { title: 'Security overview', body: 'RISCK COMPLY is designed as a B2B SaaS workspace for AI governance operations and AI Act readiness support. It uses authenticated workspaces, organization-scoped records, role-based access patterns, audit activity and managed cloud providers.' },
       { title: 'Architecture summary', body: 'The product is a Next.js application backed by managed authentication, database, storage and server-side operations. Customer records are modeled around organizations and organization-scoped resources.', bullets: ['Localized public routes for customer review', 'Authenticated dashboard routes for customers', 'Server-side checks before organization data is queried', 'Managed providers for hosting, authentication, database and storage'] },
-      { title: 'Current limitations', body: 'The assurance package is intentionally conservative.', bullets: ['No SOC 2 report is available yet.', 'No ISO 27001 certification is complete yet.', 'No third-party security assessment report is complete yet.', 'No public 24/7 human monitoring promise is made.', 'This material is not legal advice and does not guarantee compliance.'] },
+      { title: 'Current limitations', body: 'The assurance package is intentionally conservative.', bullets: ['No SOC 2 report is available yet.', 'No ISO 27001 certification is complete yet.', 'A third-party black-box web application assessment was completed on 2026-09-12; technical remediation evidence exists, while a clean independent retest/terminal assurance remains open.', 'No public 24/7 human monitoring promise is made.', 'This material is not legal advice and does not guarantee compliance.'] },
     ],
   },
   security: {
     navLabel: 'Security',
     title: 'Security',
     subtitle: 'Application and infrastructure controls used to protect customer workspaces.',
-    status: 'Security posture disclosure. Formal external assurance is pending.',
+    status: 'Security posture disclosure. External black-box assessment completed; clean independent retest/terminal assurance remains open.',
     sections: [
       { title: 'Access control', body: 'Workspace access is authenticated and designed around organization membership, roles and server-side query boundaries.' },
       { title: 'Tenant isolation', body: 'Customer data is designed to be scoped by organization_id. Managed database policies and server-side organization checks are used to reduce cross-tenant access risk.' },
       { title: 'Encryption', body: 'Encryption in transit is provided through HTTPS/TLS by managed hosting and provider connections. Encryption at rest is handled by managed infrastructure providers where available. RISCK COMPLY does not claim end-to-end encryption.' },
       { title: 'Audit logs', body: 'Security-relevant and compliance-relevant events are designed to be recorded for review and investigation. Audit records should not be marketed as externally immutable unless separate evidence exists.' },
-      { title: 'Backups and availability', body: 'Backups and availability depend on managed provider capabilities and production configuration. Restore testing and formal disaster recovery evidence remain on the assurance roadmap.' },
+      { title: 'Backups and availability', body: 'Backups and availability depend on managed provider capabilities and production configuration. A dedicated non-production recovery exercise on 2026-10-03 proved canonical database migration replay (113/113) and RLS-enable/table parity; customer-data/PITR restore, Storage-object recovery, full recovered-application smoke, and measured RPO remain open and are not claimed as proven.' },
       { title: 'Incident response', body: `Security reports use ${contact}; public incident communication uses ${statusPage}. Incident updates should be evidence-based and must not expose sensitive customer or security details.` },
     ],
   },
