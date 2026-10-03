@@ -110,7 +110,10 @@ export default async function OrganizationDashboardPage({ params, searchParams }
     ? `/${safeLocale}/dashboard/organizations/billing?plan=${encodeURIComponent(requestedPlan?.id ?? '')}`
     : `/${safeLocale}/dashboard/organizations/team`;
   const teamActivation = await getTeamActivationStatus(data.organization.id);
-  const hasClassifiedAiSystem = data.aiSystemSummary.previews.some((system) => Boolean(system.risk_level));
+  const hasClassifiedAiSystem = data.aiSystemSummary.high
+    + data.aiSystemSummary.unacceptable
+    + data.aiSystemSummary.limited
+    + data.aiSystemSummary.minimal > 0;
   const activationState = {
     hasOrganization: true,
     hasMembers: teamActivation.hasMembers,
