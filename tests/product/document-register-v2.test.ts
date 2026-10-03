@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const DOCUMENTS_PAGE = new URL('../../src/app/[locale]/dashboard/organizations/documents/page.tsx', import.meta.url);
 const DOCUMENTS_QUERY = new URL('../../src/server/queries/documents.ts', import.meta.url);
 const DOCUMENT_DOWNLOAD_ACTION = new URL('../../src/server/actions/document-downloads.ts', import.meta.url);
+const DOCUMENT_DOWNLOAD_BUTTON = new URL('../../src/components/documents/document-download-button.tsx', import.meta.url);
 
 describe('enterprise document register V2', () => {
   it('preserves no-store, permissions, quotas and signed-download actions', async () => {
@@ -31,7 +32,7 @@ describe('enterprise document register V2', () => {
     expect(source).toContain('const expiringDocuments = documents.filter');
   });
 
-  it('never exposes a download action for records without a materialized file', async () => {
+  it('allows materialized draft uploads while keeping placeholders non-downloadable', async () => {
     const [pageSource, querySource, actionSource] = await Promise.all([
       readFile(DOCUMENTS_PAGE, 'utf8'),
       readFile(DOCUMENTS_QUERY, 'utf8'),
@@ -43,6 +44,15 @@ describe('enterprise document register V2', () => {
     expect(pageSource).toContain('document.download_available ?');
     expect(pageSource).toContain('File not generated yet');
     expect(actionSource).toContain("reason: 'document_file_not_materialized'");
-    expect(actionSource).toContain("sizeBytes <= 0 || normalizedStatus === 'draft' || normalizedStatus === 'suggested'");
+    expect(actionSource).toContain("sizeBytes <= 0 || normalizedStatus === 'suggested'");
+    expect(actionSource).not.toContain("normalizedStatus === 'draft' || normalizedStatus === 'suggested'");
+  });
+
+  it('uses localized safe copy instead of exposing Server Action errors', async () => {
+    const source = await readFile(DOCUMENT_DOWNLOAD_BUTTON, 'utf8');
+
+    expect(source).toContain('setError(copy.downloadError)');
+    expect(source).not.toContain('err instanceof Error ? err.message');
+    expect(source).not.toContain('createSupportReference');
   });
 });

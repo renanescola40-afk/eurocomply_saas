@@ -189,7 +189,10 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
 
   const normalizedStatus = String(document.status ?? '').trim().toLowerCase();
   const sizeBytes = typeof document.size_bytes === 'number' ? document.size_bytes : 0;
-  if (sizeBytes <= 0 || normalizedStatus === 'draft' || normalizedStatus === 'suggested') {
+  // A stored upload can legitimately remain in the workflow's draft/pending state.
+  // File materialization is determined by a tenant-scoped storage path + positive size;
+  // only placeholder/suggested records remain non-downloadable here.
+  if (sizeBytes <= 0 || normalizedStatus === 'suggested') {
     await auditRejectedDownloadUrl({
       documentId: safeDocumentId,
       userId: user.id,

@@ -22,8 +22,8 @@ export function DocumentDownloadButton({ locale, documentId, onCreateSignedUrl }
     try {
       const result = await onCreateSignedUrl(documentId);
       window.location.assign(result.signedUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : copy.downloadError);
+    } catch {
+      setError(copy.downloadError);
       setLoading(false);
     }
   }
