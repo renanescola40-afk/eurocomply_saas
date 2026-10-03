@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - perf/enterprise-scale-closure-20261003
+      - perf/enterprise-scale-closure-20261003-v2
     paths:
       - '.github/workflows/performance-isolated-benchmark.yml'
       - 'scripts/performance/run-isolated-performance-benchmark.py'
@@ -55,6 +56,24 @@ jobs:
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check --no-cache-dir 'psycopg[binary]==3.2.10' 'asyncpg==0.30.0'
 
+      - name: Validate loopback DSN guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          module_path = Path("scripts/performance/run-isolated-performance-benchmark.py")
+          spec = importlib.util.spec_from_file_location("perf_bench", module_path)
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          assert mod.is_loopback_dsn("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
+          assert mod.is_loopback_dsn("postgresql://postgres:postgres@[::1]:5432/postgres")
+          assert mod.is_loopback_dsn("postgresql://postgres:postgres@localhost:5432/postgres")
+          assert not mod.is_loopback_dsn("postgresql://db.example.com/postgres?application_name=localhost")
+          assert not mod.is_loopback_dsn("postgresql://localhost.evil.example/postgres")
+          PY
+
       - name: Run synthetic index and pooled concurrency benchmark
         env:
           BENCH_DB_URL: ${{ env.RECOVERY_ISOLATED_DATABASE_URL }}
@@ -76,6 +95,9 @@ jobs:
           assert d['database_url_loopback_only'] is True
           assert d['index_benchmark']['synthetic_rows']==500000
           assert len(d['pooled_load']['stages'])==7
+          assert d['load_all_stages_zero_error'] is True
+          assert all(s['errors'] == 0 for s in d['pooled_load']['stages'])
+          assert all(s['error_rate_pct'] == 0 for s in d['pooled_load']['stages'])
           before=d['index_benchmark']['before_index']['latency']['p95_ms']
           after=d['index_benchmark']['after_index']['latency']['p95_ms']
           assert before is not None and after is not None
