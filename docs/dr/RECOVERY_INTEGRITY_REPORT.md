@@ -1,51 +1,75 @@
-# Recovery Integrity Report — 2026-10-03
+# Recovery Integrity Report — reconciled 2026-10-04
 
-## Recovery target
+## Evidence model
 
-Dedicated non-production Supabase DR project:
-- `golphfkmphanlntboxah`
-- parent Production: `tganhbbhfxcpblmgqprg`
-- final state: `FUNCTIONS_DEPLOYED`
+Recovery integrity is supported by two complementary runtime proofs:
 
-## Canonical migration integrity
+1. a **real provider-managed physical backup clone** on 2026-09-19, proving Production-snapshot data/Auth/RLS restore capability;
+2. a **current canonical clean replay** on 2026-10-03, proving the present 113-migration schema/control plane can be reconstructed.
+
+Neither proof is discarded or silently promoted beyond its scope.
+
+## Provider-managed restore integrity — 2026-09-19
+
+Successful evidence run `35454743996` records:
+- provider-managed restore: PASS
+- backup observed on source: PASS
+- distinct source/restore databases: PASS
+- same organization: PASS
+- same region: PASS
+- critical data counts observed and validated: PASS
+- restored counts not ahead of source: PASS
+- Auth-user integrity: PASS
+- RLS after restore: PASS
+- RLS policies present: PASS
+- migration history matches source: PASS
+- no foreign servers/tables in restored target: PASS
+- forward reconciliation postconditions executed and passed: PASS
+- no Production dump created on GitHub runner: PASS
+
+`CUSTOMER_DATA_RESTORE_INTEGRITY=PASS`
+`AUTH_DATA_RESTORE_INTEGRITY=PASS`
+`POST_RESTORE_RLS_INTEGRITY=PASS`
+
+## Current canonical migration integrity — 2026-10-03
 
 - canonical migrations expected: **113**
 - canonical migrations applied: **113**
 - canonical migrations missing: **0**
 
-`CANONICAL_MIGRATION_INTEGRITY=PASS`
+`CURRENT_CANONICAL_MIGRATION_INTEGRITY=PASS`
 
-## Table / RLS integrity
+## Current table / RLS integrity
 
-Final DR:
+Current clean replay:
 - public tables: **107**
 - RLS-enabled public tables: **107**
 
-Production:
+Production snapshot at the time of the exercise:
 - public tables: **107**
 - RLS-enabled public tables: **107**
 
-`PUBLIC_TABLE_PARITY=PASS`
-`RLS_ENABLE_PARITY=PASS`
+`CURRENT_PUBLIC_TABLE_PARITY=PASS`
+`CURRENT_RLS_ENABLE_PARITY=PASS`
 
 ## Referential integrity
 
-DR:
+October clean replay:
 - public foreign keys: **238**
 - unvalidated foreign keys: **0**
 
-Production:
+Production at that exercise:
 - public foreign keys: **250**
 - unvalidated foreign keys: **1**
 
-All foreign keys materialized in the recovered DR environment are validated. Exact FK-count parity is not claimed.
+All foreign keys materialized in the recovered clean-replay environment were validated.
 
 `RECOVERED_FK_VALIDATION=PASS`
 `EXACT_FK_PARITY=OPEN`
 
 ## Auxiliary-object parity
 
-Final counts:
+October clean-replay counts:
 
 | Object | DR | Production |
 |---|---:|---:|
@@ -54,44 +78,37 @@ Final counts:
 | Public triggers | 68 | 73 |
 | Public foreign keys | 238 | 250 |
 
-The recovery exercise proves canonical migration completion and table/RLS parity, but these counts show that the Production database retains auxiliary objects not recreated by the canonical branch replay plus the explicit compatibility bridges.
+The current clean replay proves canonical migration completion and table/RLS parity, but it does not prove byte-for-byte auxiliary-object identity.
 
 `EXACT_AUXILIARY_OBJECT_PARITY=OPEN`
 
-This residual must not be hidden by calling the schemas byte-for-byte identical.
+## Storage boundary
 
-## Data isolation
+Provider-managed database restore proves database data and Storage metadata stored in Postgres. It does **not** prove restoration of the underlying Storage objects.
 
-The DR branch used `with_data=false`. Core checks during the exercise showed no copied production users, organizations, memberships, entitlement sources or Stripe events.
+`STORAGE_METADATA_DATABASE_RECOVERY=SUPPORTED_BY_DATABASE_RESTORE`
+`STORAGE_OBJECT_RECOVERY=OPEN`
 
-`PRODUCTION_DATA_COPIED=NO`
+## Current-exact-SHA boundary
 
-## Tenant-isolation runtime test
-
-A new two-tenant synthetic Auth fixture was attempted against the isolated branch. The connected execution environment blocked writes to `auth.users`. That restriction was not bypassed.
+The last provider-managed data restore proof predates the current 113-migration schema. The current schema replay is newer but intentionally contains no Production rows.
 
 Therefore:
-- RLS schema and canonical authority migrations: PROVEN
-- fresh synthetic cross-tenant runtime test in this exercise: NOT EXECUTED
-
-`FRESH_TENANT_RUNTIME_TEST=TOOL_BLOCKED`
-
-## Security advisor evidence
-
-Post-replay security advisors were captured:
-- 31 RLS-enabled/no-policy INFO findings
-- 1 mutable-search-path WARN
-- 2 authenticated-executable SECURITY DEFINER WARN findings
-
-These require intent/Production comparison and are not automatically treated as vulnerabilities or ignored.
+- provider-managed data-restore capability: PROVEN
+- current schema reconstructability: PROVEN
+- current-exact-SHA provider data clone: OPEN
+- full application smoke against current provider-restored clone: OPEN
 
 ## Verdict
 
-- CANONICAL_REPLAY_INTEGRITY=PASS
-- PUBLIC_TABLE_PARITY=PASS
-- RLS_ENABLE_PARITY=PASS
+- PROVIDER_MANAGED_BACKUP_RESTORE_INTEGRITY=PASS
+- CUSTOMER_DATA_RESTORE_INTEGRITY=PASS
+- AUTH_RESTORE_INTEGRITY=PASS
+- POST_RESTORE_RLS_INTEGRITY=PASS
+- CURRENT_CANONICAL_REPLAY_INTEGRITY=PASS
+- CURRENT_PUBLIC_TABLE_PARITY=PASS
+- CURRENT_RLS_ENABLE_PARITY=PASS
 - RECOVERED_FK_VALIDATION=PASS
-- DATA_ISOLATION=PASS
+- STORAGE_OBJECT_RECOVERY=OPEN
 - EXACT_AUXILIARY_OBJECT_PARITY=OPEN
-- FRESH_TENANT_RUNTIME_TEST=TOOL_BLOCKED
-- CUSTOMER_DATA_RESTORE_INTEGRITY=NOT_APPLICABLE_NOT_RESTORED
+- CURRENT_EXACT_SHA_PROVIDER_CLONE=OPEN
