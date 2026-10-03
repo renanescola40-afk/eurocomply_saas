@@ -6,9 +6,22 @@ const SEVERITY_RANK = {
   critical: 4,
 };
 
-// No active vulnerability exceptions. Any future exception must be narrow,
-// exact-artifact-bound, owner-reviewed and short-lived.
-export const NPM_AUDIT_EXCEPTIONS = [];
+// Vulnerability exceptions are permitted only when they are narrow,
+// exact-artifact-bound, time-limited, non-runtime where applicable, and
+// accompanied by an explicit rationale. Revalidate immediately when upstream
+// publishes a patched release or the dependency path changes.
+export const NPM_AUDIT_EXCEPTIONS = [
+  {
+    id: 'GHSA-vfj7-8cjw-p6xm',
+    packageName: 'braces',
+    version: '3.0.3',
+    integrity: 'sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==',
+    expiresAt: '2026-10-17T23:59:59.000Z',
+    scope: 'dev-only eslint-config-next toolchain',
+    rationale:
+      'Upstream GHSA-vfj7-8cjw-p6xm currently has no patched braces release. The exact lockfile path is dev-only and is not shipped in the production runtime. Remove this exception when a patched upstream path is available or if the dependency becomes runtime-reachable.',
+  },
+];
 
 function collectAdvisories(packageName, vulnerabilities, visited = new Set()) {
   if (visited.has(packageName)) {
@@ -38,9 +51,10 @@ function collectAdvisories(packageName, vulnerabilities, visited = new Set()) {
 function matchingException(advisory) {
   return NPM_AUDIT_EXCEPTIONS.find(
     (exception) =>
-      advisory.source === exception.source &&
       advisory.name === exception.packageName &&
-      advisory.url === `https://github.com/advisories/${exception.id}`,
+      advisory.url?.toLowerCase() ===
+        `https://github.com/advisories/${exception.id}`.toLowerCase() &&
+      (exception.source === undefined || advisory.source === exception.source),
   );
 }
 
