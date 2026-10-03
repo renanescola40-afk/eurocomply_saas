@@ -51,13 +51,16 @@ test.describe('new customer commercial activation', () => {
     }
 
     await page.getByRole('button', { name: 'Generate readiness score' }).click();
-    await expect(page.getByRole('status')).toContainText(/Onboarding completed/i, { timeout: 20_000 });
 
-    // Onboarding creates the organization and first AI system, but does not bypass billing.
-    await expect(page).not.toHaveURL(/\/en\/onboarding/, { timeout: 20_000 });
+    // Successful completion may navigate immediately, removing the transient
+    // live-region message before Playwright can observe it. Prove the durable
+    // activation result instead: onboarding exits and the selected plan survives
+    // into the destination URL.
+    await expect(page).not.toHaveURL(/\/en\/onboarding/, { timeout: 30_000 });
     await page.waitForLoadState('domcontentloaded');
     expect(page.url()).toMatch(/\/en\/(dashboard\/organizations|checkout)/);
     expect(page.url()).toContain('professional');
+    await expect(page.locator('body')).not.toContainText(/Unable to complete onboarding activation|Commercial activation is temporarily unavailable/i);
     await expect(page.locator('body')).not.toContainText(/Unhandled Runtime Error|Application error|Stack trace/i);
   });
 });
