@@ -1,0 +1,99 @@
+name: Performance Isolated Benchmark
+
+on:
+  push:
+    branches:
+      - perf/enterprise-scale-closure-20261003
+    paths:
+      - '.github/workflows/performance-isolated-benchmark.yml'
+      - 'scripts/performance/run-isolated-performance-benchmark.py'
+      - 'scripts/recovery/**'
+      - 'supabase/migrations/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-isolated-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Benchmark isolated replayed PostgreSQL runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout exact performance SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.101.0
+
+      - name: Verify runner PostgreSQL client
+        run: node scripts/recovery/verify-postgresql-client.mjs
+
+      - name: Start isolated project database with reviewed migrations
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start-project
+
+      - name: Install benchmark-only Python clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --no-cache-dir 'psycopg[binary]==3.2.10' 'asyncpg==0.30.0'
+
+      - name: Run synthetic index and pooled concurrency benchmark
+        env:
+          BENCH_DB_URL: ${{ env.RECOVERY_ISOLATED_DATABASE_URL }}
+          PERFORMANCE_BENCHMARK_EVIDENCE: ${{ runner.temp }}/performance-isolated-benchmark.json
+        run: python3 scripts/performance/run-isolated-performance-benchmark.py
+
+      - name: Validate benchmark evidence
+        shell: bash
+        env:
+          EVIDENCE: ${{ runner.temp }}/performance-isolated-benchmark.json
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          p=os.environ['EVIDENCE']
+          d=json.load(open(p))
+          assert d['schema']=='risck-comply.performance-isolated-benchmark.v1'
+          assert d['production_targeted'] is False
+          assert d['database_url_loopback_only'] is True
+          assert d['index_benchmark']['synthetic_rows']==500000
+          assert len(d['pooled_load']['stages'])==7
+          before=d['index_benchmark']['before_index']['latency']['p95_ms']
+          after=d['index_benchmark']['after_index']['latency']['p95_ms']
+          assert before is not None and after is not None
+          print(f'index_p95_before_ms={before}')
+          print(f'index_p95_after_ms={after}')
+          print(f'index_p95_improvement_pct={d["index_p95_improvement_pct"]}')
+          for s in d['pooled_load']['stages']:
+              print('stage', s['concurrency'], 'p95_ms', s['p95_ms'], 'p99_ms', s['p99_ms'], 'rps', s['throughput_rps'], 'errors', s['errors'])
+          PY
+
+      - name: Upload benchmark evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: performance-isolated-benchmark-${{ env.EXPECTED_HEAD_SHA }}
+          path: ${{ runner.temp }}/performance-isolated-benchmark.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Stop isolated project database
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
