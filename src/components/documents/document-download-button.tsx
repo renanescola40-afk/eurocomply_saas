@@ -10,6 +10,22 @@ type DocumentDownloadButtonProps = {
   onCreateSignedUrl: (documentId: string) => Promise<{ signedUrl: string }>;
 };
 
+function createSupportReference() {
+  try {
+    return crypto.randomUUID().slice(0, 8).toUpperCase();
+  } catch {
+    return Math.random().toString(36).slice(2, 10).toUpperCase();
+  }
+}
+
+function safeDownloadError(locale: string, reference: string) {
+  if (locale === 'pt') {
+    return `Não foi possível descarregar este documento. Tente novamente ou contacte o suporte com a referência: ${reference}.`;
+  }
+
+  return `Unable to download this document. Please try again or contact support with reference: ${reference}.`;
+}
+
 export function DocumentDownloadButton({ locale, documentId, onCreateSignedUrl }: DocumentDownloadButtonProps) {
   const copy = getCoreWorkflowCopy(locale).documents;
   const [loading, setLoading] = useState(false);
@@ -22,8 +38,8 @@ export function DocumentDownloadButton({ locale, documentId, onCreateSignedUrl }
     try {
       const result = await onCreateSignedUrl(documentId);
       window.location.assign(result.signedUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : copy.downloadError);
+    } catch {
+      setError(safeDownloadError(locale, createSupportReference()));
       setLoading(false);
     }
   }
