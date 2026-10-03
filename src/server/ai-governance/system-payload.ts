@@ -40,6 +40,16 @@ export const aiSystemBodySchema = z.object({
     biometric_categorisation_sensitive_traits: triStateAnswerSchema,
     real_time_remote_biometric_public_space: triStateAnswerSchema,
   }).strict().optional(),
+}).superRefine((body, ctx) => {
+  const usesPersonalData = body.usesPersonalData === true || body.usesPersonalData === 'true' || body.usesPersonalData === 'on';
+
+  if (usesPersonalData && !body.processedData?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['processedData'],
+      message: 'Describe the personal data processed by this AI system.',
+    });
+  }
 });
 
 export type ParsedAiSystemBody = z.infer<typeof aiSystemBodySchema>;
