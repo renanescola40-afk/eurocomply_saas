@@ -16,9 +16,13 @@ describe('dashboard AI-system functional QA regressions', () => {
     expect(dashboardQuerySource).not.toContain(".eq('risk_level', 'limited')");
   });
 
-  it('derives activation risk classification from AI-system classification', () => {
-    expect(dashboardPageSource).toContain('const hasClassifiedAiSystem = data.aiSystemSummary.previews.some');
+  it('derives activation risk classification from canonical AI-system buckets', () => {
+    expect(dashboardPageSource).toContain('const hasClassifiedAiSystem = data.aiSystemSummary.high');
+    expect(dashboardPageSource).toContain('+ data.aiSystemSummary.unacceptable');
+    expect(dashboardPageSource).toContain('+ data.aiSystemSummary.limited');
+    expect(dashboardPageSource).toContain('+ data.aiSystemSummary.minimal > 0');
     expect(dashboardPageSource).toContain('hasRiskClassification: hasClassifiedAiSystem');
     expect(dashboardPageSource).not.toContain('hasRiskClassification: data.summary.totals.risks > 0');
+    expect(dashboardPageSource).not.toContain('data.aiSystemSummary.previews.some');
   });
 });
