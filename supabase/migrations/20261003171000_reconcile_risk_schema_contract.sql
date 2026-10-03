@@ -5,15 +5,29 @@ alter table public.risks
   add column if not exists mitigation text,
   add column if not exists due_date date;
 
-update public.risks
-set owner_user_id = owner_id
-where owner_user_id is null
-  and owner_id is not null;
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'risks'
+      and column_name = 'owner_id'
+  ) then
+    execute 'update public.risks set owner_user_id = owner_id where owner_user_id is null and owner_id is not null';
+  end if;
 
-update public.risks
-set mitigation = treatment_plan
-where mitigation is null
-  and treatment_plan is not null;
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'risks'
+      and column_name = 'treatment_plan'
+  ) then
+    execute 'update public.risks set mitigation = treatment_plan where mitigation is null and treatment_plan is not null';
+  end if;
+end;
+$$;
 
 create index if not exists idx_risks_owner_user_id_fk
   on public.risks (owner_user_id);
