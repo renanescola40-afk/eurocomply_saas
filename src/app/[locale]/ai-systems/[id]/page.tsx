@@ -31,6 +31,16 @@ function humanize(value: string | null | undefined, fallback = 'Not set') {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function formatDateTime(value: string | null | undefined, locale: string, fallback: string) {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale, {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 function getEnterpriseReadinessCopy(locale: string) {
   const copy = {
     en: {
@@ -47,6 +57,11 @@ function getEnterpriseReadinessCopy(locale: string) {
       openReadiness: 'Open governance center',
       realData: 'Real organization data only',
       ownerLocked: 'Your role can view this governance context, but changes require AI governance management permission.',
+      dashboard: 'Dashboard', aiSystems: 'AI systems', status: 'Status', owner: 'Owner', unassigned: 'Unassigned', category: 'Category', market: 'Country / market', notSet: 'Not set',
+      systemFacts: 'System facts', vendorLabel: 'Vendor', model: 'Model', role: 'Role', riskDomain: 'Risk domain', lastReassessed: 'Last reassessed', notReassessed: 'Not reassessed yet', created: 'Created', dataProcessed: 'Data processed', useCase: 'Use case', nextActions: 'Next actions', obligations: 'Required documents / obligations', reassessmentLocked: 'Reassessment locked', reassessmentLockedBody: 'Your organization role can view this AI system, but reassessment changes require AI governance management permission.',
+      evidenceReady: (count: number) => `${count} obligation signals ready for evidence packaging.`,
+      vendorRequired: (name: string) => `${name} requires vendor diligence before a procurement-review export is prepared.`,
+      highRiskRequired: 'High-risk workflow required before approval.',
     },
     pt: {
       title: 'Visão de governação enterprise',
@@ -62,6 +77,11 @@ function getEnterpriseReadinessCopy(locale: string) {
       openReadiness: 'Abrir centro de governação',
       realData: 'Apenas dados reais da organização',
       ownerLocked: 'O seu perfil pode consultar este contexto de governação, mas as alterações exigem permissão de gestão de IA.',
+      dashboard: 'Dashboard', aiSystems: 'Sistemas de IA', status: 'Estado', owner: 'Responsável', unassigned: 'Não atribuído', category: 'Categoria', market: 'País / mercado', notSet: 'Não definido',
+      systemFacts: 'Dados do sistema', vendorLabel: 'Fornecedor', model: 'Modelo', role: 'Papel', riskDomain: 'Domínio de risco', lastReassessed: 'Última reavaliação', notReassessed: 'Ainda não reavaliado', created: 'Criado', dataProcessed: 'Dados processados', useCase: 'Caso de uso', nextActions: 'Próximas ações', obligations: 'Documentos / obrigações exigidos', reassessmentLocked: 'Reavaliação bloqueada', reassessmentLockedBody: 'O seu perfil pode consultar este sistema de IA, mas alterações de reavaliação exigem permissão de gestão de IA.',
+      evidenceReady: (count: number) => `${count} sinais de obrigação prontos para preparação de evidências.`,
+      vendorRequired: (name: string) => `${name} requer due diligence do fornecedor antes de preparar uma exportação para procurement.`,
+      highRiskRequired: 'É necessário um workflow de alto risco antes da aprovação.',
     },
   } as const;
 
@@ -108,9 +128,9 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
         <header className="flex flex-col gap-4 border-b border-slate-800 pb-6 md:flex-row md:items-end md:justify-between">
           <div>
             <nav aria-label="Breadcrumb" className="text-sm text-slate-500">
-              <Link href={`/${locale}/dashboard/organizations`} className="rounded-md hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Dashboard</Link>
+              <Link href={`/${locale}/dashboard/organizations`} className="rounded-md hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{t.dashboard}</Link>
               <span className="px-2">/</span>
-              <Link href={`/${locale}/ai-systems`} className="rounded-md hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">AI systems</Link>
+              <Link href={`/${locale}/ai-systems`} className="rounded-md hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{t.aiSystems}</Link>
               <span className="px-2">/</span>
               <span className="text-slate-300">{system.name}</span>
             </nav>
@@ -118,16 +138,16 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{system.classification_summary}</p>
           </div>
           <Badge variant="outline" className={`w-fit rounded-md px-3 py-1 ${riskTone(system.risk_level)}`}>
-            {humanize(system.risk_level)}
+            {humanize(system.risk_level, t.notSet)}
           </Badge>
         </header>
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="AI system summary">
           {[
-            ['Status', humanize(system.lifecycle_status)],
-            ['Owner', system.owner_team ?? 'Unassigned'],
-            ['Category', humanize(system.category ?? system.risk_domain)],
-            ['Country / market', system.country_market ?? 'Not set'],
+            [t.status, humanize(system.lifecycle_status, t.notSet)],
+            [t.owner, system.owner_team ?? t.unassigned],
+            [t.category, system.category ? humanize(system.category, t.notSet) : t.notSet],
+            [t.market, system.country_market ?? t.notSet],
           ].map(([label, value]) => (
             <div key={label} className="rounded-xl border border-slate-800 bg-[#0b121e] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
@@ -150,15 +170,15 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
           <div className="mt-5 grid gap-3 lg:grid-cols-3">
             <div className="rounded-lg border border-slate-800 bg-[#0d1624] p-4">
               <h3 className="font-semibold">{t.evidence}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{system.obligations.length > 0 ? `${system.obligations.length} obligation signals ready for evidence packaging.` : t.emptyEvidence}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{system.obligations.length > 0 ? t.evidenceReady(system.obligations.length) : t.emptyEvidence}</p>
             </div>
             <div className="rounded-lg border border-slate-800 bg-[#0d1624] p-4">
               <h3 className="font-semibold">{t.vendor}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{hasVendor ? `${system.vendor_name} requires vendor diligence before a procurement-review export is prepared.` : t.emptyVendor}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{hasVendor ? t.vendorRequired(system.vendor_name!) : t.emptyVendor}</p>
             </div>
             <div className="rounded-lg border border-slate-800 bg-[#0d1624] p-4">
               <h3 className="font-semibold">{t.risk}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{requiresRiskWorkflow ? 'High-risk workflow required before approval.' : t.emptyRisk}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{requiresRiskWorkflow ? t.highRiskRequired : t.emptyRisk}</p>
             </div>
           </div>
           {!canManageAiGovernance ? <p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-400/[0.08] p-3 text-sm text-amber-50/90">{t.ownerLocked}</p> : null}
@@ -167,15 +187,15 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
         <section className="grid gap-4 lg:grid-cols-[1fr_0.75fr]">
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5">
-              <h2 className="text-xl font-semibold">System facts</h2>
+              <h2 className="text-xl font-semibold">{t.systemFacts}</h2>
               <dl className="mt-4 grid gap-3 md:grid-cols-2">
                 {[
-                  ['Vendor', system.vendor_name ?? 'Not set'],
-                  ['Model', system.model_name ?? 'Not set'],
-                  ['Role', humanize(system.role)],
-                  ['Risk domain', humanize(system.risk_domain)],
-                  ['Last reassessed', system.last_reassessed_at ?? 'Not reassessed yet'],
-                  ['Created', system.created_at],
+                  [t.vendorLabel, system.vendor_name ?? t.notSet],
+                  [t.model, system.model_name ?? t.notSet],
+                  [t.role, humanize(system.role, t.notSet)],
+                  [t.riskDomain, humanize(system.risk_domain, t.notSet)],
+                  [t.lastReassessed, formatDateTime(system.last_reassessed_at, locale, t.notReassessed)],
+                  [t.created, formatDateTime(system.created_at, locale, t.notSet)],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-lg border border-slate-800 bg-[#0d1624] p-3">
                     <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</dt>
@@ -183,11 +203,11 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
                   </div>
                 ))}
                 <div className="rounded-lg border border-slate-800 bg-[#0d1624] p-3 md:col-span-2">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Data processed</dt>
-                  <dd className="mt-1 text-sm text-slate-300">{system.processed_data ?? 'Not set'}</dd>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t.dataProcessed}</dt>
+                  <dd className="mt-1 text-sm text-slate-300">{system.processed_data ?? t.notSet}</dd>
                 </div>
                 <div className="rounded-lg border border-slate-800 bg-[#0d1624] p-3 md:col-span-2">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Use case</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t.useCase}</dt>
                   <dd className="mt-1 text-sm text-slate-300">{system.use_case}</dd>
                 </div>
               </dl>
@@ -197,19 +217,19 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
               <AiSystemEditForm system={system} locale={locale} businessWorkflowsEnabled={businessWorkflowsEnabled} enterpriseEvidenceEnabled={enterpriseEvidenceEnabled} />
             ) : (
               <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5">
-                <h2 className="text-xl font-semibold">Reassessment locked</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-400">Your organization role can view this AI system, but reassessment changes require AI governance management permission.</p>
+                <h2 className="text-xl font-semibold">{t.reassessmentLocked}</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-400">{t.reassessmentLockedBody}</p>
               </div>
             )}
           </div>
 
           <aside className="space-y-4">
             <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5">
-              <h2 className="font-semibold">Next actions</h2>
+              <h2 className="font-semibold">{t.nextActions}</h2>
               <ul className="mt-3 space-y-2 text-sm text-slate-400">{system.next_actions.map((item) => <li key={item}>• {item}</li>)}</ul>
             </div>
             <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5">
-              <h2 className="font-semibold">Required documents / obligations</h2>
+              <h2 className="font-semibold">{t.obligations}</h2>
               <ul className="mt-3 space-y-2 text-sm text-slate-400">{system.obligations.map((item) => <li key={item}>• {item}</li>)}</ul>
             </div>
             <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5">
@@ -220,7 +240,7 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
                 ) : history.map((event) => (
                   <div key={event.id} className="rounded-lg border border-slate-800 bg-[#0d1624] p-3">
                     <p className="text-sm font-medium">{humanize(event.action)}</p>
-                    <time className="mt-1 block text-xs text-slate-500" dateTime={new Date(event.created_at).toISOString()}>{new Date(event.created_at).toLocaleString(locale)}</time>
+                    <time className="mt-1 block text-xs text-slate-500" dateTime={new Date(event.created_at).toISOString()}>{formatDateTime(event.created_at, locale, t.notSet)}</time>
                   </div>
                 ))}
               </div>
