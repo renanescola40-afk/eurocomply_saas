@@ -45,7 +45,7 @@ export function ReportsGovernanceWorkspace({
   vendorsRequiringReview = [],
   documentsExpiringSoon = [],
 }: ReportsGovernanceWorkspaceProps) {
-  const reportsHref = `${basePath}/reports-governance`;
+  const reportsHref = `${basePath}/reports`;
 
   return (
     <div className="space-y-6 scroll-smooth">
