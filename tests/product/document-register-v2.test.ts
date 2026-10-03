@@ -48,12 +48,11 @@ describe('enterprise document register V2', () => {
     expect(actionSource).not.toContain("normalizedStatus === 'draft' || normalizedStatus === 'suggested'");
   });
 
-  it('does not expose production Server Action error text to the document user', async () => {
+  it('uses localized safe copy instead of exposing Server Action errors', async () => {
     const source = await readFile(DOCUMENT_DOWNLOAD_BUTTON, 'utf8');
 
-    expect(source).toContain('safeDownloadError');
-    expect(source).toContain('createSupportReference');
-    expect(source).toContain('Não foi possível descarregar este documento');
+    expect(source).toContain('setError(copy.downloadError)');
     expect(source).not.toContain('err instanceof Error ? err.message');
+    expect(source).not.toContain('createSupportReference');
   });
 });
