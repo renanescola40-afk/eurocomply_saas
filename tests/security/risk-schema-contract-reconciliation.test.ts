@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const migrationPath = 'supabase/migrations/20261003171000_reconcile_risk_schema_contract.sql';
+const migrationPath = 'supabase/migrations/20261003171225_reconcile_risk_schema_contract.sql';
 const migration = readFileSync(migrationPath, 'utf8');
 
 describe('risk schema contract reconciliation', () => {
