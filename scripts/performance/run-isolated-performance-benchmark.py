@@ -2,11 +2,13 @@
 import asyncio
 import json
 import math
+import ipaddress
 import os
 import random
 import statistics
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import asyncpg
 import psycopg
@@ -150,12 +152,28 @@ async def pooled_load(dsn, max_connections):
         await pool.close()
 
 
+def is_loopback_dsn(dsn):
+    try:
+        parsed = urlparse(dsn)
+    except ValueError:
+        return False
+    host = parsed.hostname
+    if not host:
+        return False
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def main():
     dsn = os.environ.get("BENCH_DB_URL") or os.environ.get("RECOVERY_DB_URL") or os.environ.get("DATABASE_URL")
     if not dsn:
         raise SystemExit("BENCH_DB_URL/RECOVERY_DB_URL/DATABASE_URL is required")
-    if not any(x in dsn for x in ("127.0.0.1", "localhost", "::1")):
-        raise SystemExit("Refusing benchmark: database URL is not loopback/disposable")
+    if not is_loopback_dsn(dsn):
+        raise SystemExit("Refusing benchmark: parsed database hostname is not loopback/disposable")
 
     evidence_path = Path(os.environ.get("PERFORMANCE_BENCHMARK_EVIDENCE", "/tmp/performance-benchmark.json"))
     evidence_path.parent.mkdir(parents=True, exist_ok=True)
