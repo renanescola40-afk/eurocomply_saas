@@ -44,7 +44,12 @@ describe('operational command center boundaries', () => {
     const progress = read('src/components/onboarding/onboarding-progress-card.tsx');
 
     expect(page).toContain('hasFirstAiSystem: data.aiSystemSummary.total > 0');
-    expect(page).toContain('hasRiskClassification: data.summary.totals.risks > 0');
+    expect(page).toContain('const hasClassifiedAiSystem = data.aiSystemSummary.high');
+    expect(page).toContain('+ data.aiSystemSummary.unacceptable');
+    expect(page).toContain('+ data.aiSystemSummary.limited');
+    expect(page).toContain('+ data.aiSystemSummary.minimal > 0');
+    expect(page).toContain('hasRiskClassification: hasClassifiedAiSystem');
+    expect(page).not.toContain('hasRiskClassification: data.summary.totals.risks > 0');
     expect(page).toContain('hasDocumentSuggestions: data.summary.totals.documents > 0');
     expect(page).toContain('hasInitialTasks: data.summary.totals.tasks > 0');
     expect(page).toContain('<OnboardingProgressCard state={activationState} compact locale={safeLocale} />');
