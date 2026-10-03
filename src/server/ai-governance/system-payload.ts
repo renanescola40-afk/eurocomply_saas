@@ -9,6 +9,7 @@ import {
 import {
   assessProhibitedPractices,
   type ProhibitedPracticeAnswers,
+  type ProhibitedPracticeAssessment,
 } from '@/server/ai-governance/prohibited-practices';
 
 const triStateAnswerSchema = z.union([z.boolean(), z.enum(['yes', 'no', 'unknown']), z.null()]).optional();
@@ -62,6 +63,23 @@ export function asBoolean(value: unknown) {
   return value === true || value === 'true' || value === 'on';
 }
 
+function prohibitedPracticeNextActions(assessment: ProhibitedPracticeAssessment) {
+  if (assessment.positiveSignals.length > 0) {
+    return [
+      'Complete the Article 5 prohibited-practice review before production use.',
+      `Resolve ${assessment.positiveSignals.length} positive prohibited-practice signal(s) with supporting evidence and accountable legal/compliance review.`,
+    ];
+  }
+
+  if (assessment.unknownSignals.length > 0) {
+    return [
+      `Complete the Article 5 prohibited-practice screening: ${assessment.unknownSignals.length} signal(s) remain unresolved.`,
+    ];
+  }
+
+  return [];
+}
+
 export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
   const role = normalizeAiSystemRole(body.role);
   const lifecycleStatus = normalizeAiSystemStatus(body.lifecycleStatus);
@@ -103,7 +121,10 @@ export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
       riskLevel: decision.riskLevel,
       summary: decision.summary,
       obligations: decision.obligations,
-      nextActions: Array.from(new Set([...decision.nextActions, ...prohibitedPracticeAssessment.requiredActions])),
+      nextActions: Array.from(new Set([
+        ...decision.nextActions,
+        ...prohibitedPracticeNextActions(prohibitedPracticeAssessment),
+      ])),
     },
     prohibitedPracticeAssessment,
     roleAssessment: decision.roleAssessment,
