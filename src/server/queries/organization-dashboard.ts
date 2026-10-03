@@ -249,10 +249,10 @@ async function getDashboardAiSystemSummary(organizationId: string): Promise<Dash
       .order('updated_at', { ascending: false })
       .range(0, DASHBOARD_AI_SYSTEM_PREVIEW_SIZE - 1),
     supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
-    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'high'),
-    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'unacceptable'),
-    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'limited'),
-    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'minimal'),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'high_risk_review'),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'prohibited_review'),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'limited_transparency'),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'minimal_or_low'),
   ]);
 
   if (previewResult.error) {
