@@ -58,7 +58,7 @@ describe('verified public assurance authorities', () => {
     const trustContent = read('src/lib/trust-center/content.ts');
 
     expect(statusPage).toContain('does not promise a contractual uptime percentage');
-    expect(trustContent).toContain('Formal certifications and external assurance reports are not yet complete.');
+    expect(trustContent).toContain('A third-party black-box web application assessment was completed on 2026-09-12; formal certifications and a clean independent retest/terminal assurance are not yet complete.');
     expect(trustContent).toContain('does not provide legal advice or guarantee compliance outcomes');
   });
 });
