@@ -25,18 +25,17 @@ export async function createNotification(input: NotificationInput) {
     return { persisted: false };
   }
 
-  const metadata = {
-    ...(input.metadata ?? {}),
-    appNotificationType: input.type,
-    title: input.title ?? null,
-  };
+  // Production notifications currently persist title/message/type only.
+  // Keep caller metadata as an application-level input until the database
+  // contract explicitly gains a metadata column through a reviewed migration.
+  void input.metadata;
 
   const { error } = await supabase.from('notifications').insert({
     organization_id: input.organizationId,
     user_id: input.userId ?? null,
+    title: input.title ?? null,
     type: toPersistedNotificationType(input.type),
     message: input.message,
-    metadata,
   });
 
   if (error) {
