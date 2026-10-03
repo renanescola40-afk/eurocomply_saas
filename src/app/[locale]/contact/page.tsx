@@ -8,6 +8,7 @@ const contactMailbox = ['comercial', 'risckcomply.com'].join('@');
 
 type ContactSearchParams = {
   intent?: string | string[];
+  plan?: string | string[];
 };
 
 type PageProps = {
@@ -53,8 +54,16 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
   const resolvedSearchParams: ContactSearchParams = searchParams ? await searchParams : {};
   const activeLocale = (locales.includes(requestedLocale as Locale) ? requestedLocale : defaultLocale) as Locale;
   const intent = first(resolvedSearchParams.intent);
+  const plan = first(resolvedSearchParams.plan)?.trim();
   const copy = copyFor(activeLocale, intent);
-  const mailto = `mailto:${contactMailbox}?subject=${encodeURIComponent(copy.subject)}`;
+  const subject = plan ? `${copy.subject} — ${plan}` : copy.subject;
+  const bodyLines = [
+    activeLocale === 'pt' ? 'Olá, gostaria de falar com a equipa comercial da RISCK COMPLY.' : 'Hello, I would like to speak with the RISCK COMPLY sales team.',
+    '',
+    `intent=${intent ?? 'sales'}`,
+    `plan=${plan ?? 'not-specified'}`,
+  ];
+  const mailto = `mailto:${contactMailbox}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\\n'))}`;
 
   return (
     <main className="min-h-screen bg-[#050913] px-4 py-10 text-white sm:px-6 lg:px-8">
@@ -73,12 +82,12 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
               <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-6xl">{copy.title}</h1>
               <p className="mt-5 text-sm leading-7 text-white/60 md:text-base">{copy.subtitle}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
+                <a
                   href={mailto}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
                 >
                   <Mail className="h-4 w-4" /> {copy.emailLabel}
-                </Link>
+                </a>
                 <Link
                   href={`/${activeLocale}`}
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
