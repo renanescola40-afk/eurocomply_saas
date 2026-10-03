@@ -46,8 +46,8 @@ jobs:
       - name: Verify runner PostgreSQL client
         run: node scripts/recovery/verify-postgresql-client.mjs
 
-      - name: Start isolated project database with reviewed migrations
-        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs start-project
+      - name: Start reviewed isolated replay runtime
+        run: node scripts/recovery/run-reviewed-ephemeral-schema-boundary-v4.mjs
 
       - name: Install benchmark-only Python clients
         shell: bash
