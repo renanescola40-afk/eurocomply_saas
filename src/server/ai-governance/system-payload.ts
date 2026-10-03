@@ -80,10 +80,22 @@ function prohibitedPracticeNextActions(assessment: ProhibitedPracticeAssessment)
   return [];
 }
 
+function contextualRiskDomain(body: ParsedAiSystemBody) {
+  const selected = normalizeAiRiskDomain(body.riskDomain);
+  if (selected !== 'general_productivity') return selected;
+
+  const category = asText(body.category).toLocaleLowerCase();
+  const purpose = body.useCase.toLocaleLowerCase();
+  const employmentCategory = /recruit|recrut|human resources|recursos humanos|\bhr\b|\brh\b/.test(category);
+  const employmentPurpose = /candidate|candidato|applicant|candidatura|curr[ií]cul|\bcv\b|interview|entrevista|hiring|contrata|selection|sele[cç][aã]o/.test(purpose);
+
+  return employmentCategory && employmentPurpose ? 'employment' : selected;
+}
+
 export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
   const role = normalizeAiSystemRole(body.role);
   const lifecycleStatus = normalizeAiSystemStatus(body.lifecycleStatus);
-  const riskDomain = normalizeAiRiskDomain(body.riskDomain);
+  const riskDomain = contextualRiskDomain(body);
   const usesPersonalData = asBoolean(body.usesPersonalData);
   const interactsWithPeople = asBoolean(body.interactsWithPeople);
   const generatesContent = asBoolean(body.generatesContent);
