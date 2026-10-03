@@ -63,4 +63,36 @@ describe('AI inventory prohibited-practices contract', () => {
     );
     expect(result.classification.nextActions.length).toBeLessThan(10);
   });
+
+  it('promotes explicit recruitment context to the employment review domain', () => {
+    const result = classifyParsedAiSystemBody({
+      name: 'QA - Assistente de RH',
+      category: 'Recrutamento / RH',
+      useCase: 'Ajudar a equipa de RH a resumir currículos e preparar perguntas para entrevistas',
+      role: 'deployer',
+      lifecycleStatus: 'pilot',
+      riskDomain: 'general_productivity',
+      usesPersonalData: true,
+      processedData: 'Nome, CV, experiência profissional e competências',
+      generatesContent: true,
+    });
+
+    expect(result.riskDomain).toBe('employment');
+    expect(result.classification.riskLevel).toBe('high_risk_review');
+    expect(result.decisionMetadata.reasons).toContain('annex_domain_signal');
+  });
+
+  it('does not promote generic HR productivity work without candidate-selection purpose', () => {
+    const result = classifyParsedAiSystemBody({
+      name: 'HR policy assistant',
+      category: 'Recursos Humanos',
+      useCase: 'Resumir políticas internas e responder dúvidas gerais da equipa',
+      role: 'deployer',
+      lifecycleStatus: 'pilot',
+      riskDomain: 'general_productivity',
+    });
+
+    expect(result.riskDomain).toBe('general_productivity');
+    expect(result.classification.riskLevel).not.toBe('high_risk_review');
+  });
 });
