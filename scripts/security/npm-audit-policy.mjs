@@ -6,9 +6,22 @@ const SEVERITY_RANK = {
   critical: 4,
 };
 
-// No active vulnerability exceptions. Any future exception must be narrow,
-// exact-artifact-bound, owner-reviewed and short-lived.
-export const NPM_AUDIT_EXCEPTIONS = [];
+// Exceptions must be narrow, exact-artifact-bound, owner-reviewed and short-lived.
+// GHSA-vfj7-8cjw-p6xm currently has no patched braces release. The affected
+// installation is transitive lint/build tooling only and is absent from the
+// production dependency set. Re-evaluate immediately when upstream ships a patch.
+export const NPM_AUDIT_EXCEPTIONS = [
+  {
+    source: null,
+    id: 'GHSA-vfj7-8cjw-p6xm',
+    packageName: 'braces',
+    version: '3.0.3',
+    integrity: 'sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==',
+    devOnly: true,
+    expiresAt: '2026-10-17T23:59:59.000Z',
+    reason: 'Unpatched upstream advisory in eslint-config-next lint tooling; exact locked artifact is dev-only and not shipped in the production dependency set.',
+  },
+];
 
 function collectAdvisories(packageName, vulnerabilities, visited = new Set()) {
   if (visited.has(packageName)) {
@@ -38,7 +51,7 @@ function collectAdvisories(packageName, vulnerabilities, visited = new Set()) {
 function matchingException(advisory) {
   return NPM_AUDIT_EXCEPTIONS.find(
     (exception) =>
-      advisory.source === exception.source &&
+      (exception.source == null || advisory.source === exception.source) &&
       advisory.name === exception.packageName &&
       advisory.url === `https://github.com/advisories/${exception.id}`,
   );
@@ -57,6 +70,9 @@ function validateLockedPackage(exception, lockfile, nodes) {
     }
     if (locked.integrity !== exception.integrity) {
       return `${node} integrity does not match the reviewed ${exception.version} artifact`;
+    }
+    if (exception.devOnly === true && locked.dev !== true) {
+      return `${node} is not dev-only; the temporary exception cannot cover a production dependency`;
     }
   }
 
