@@ -1,3 +1,33 @@
+do $preflight$
+declare
+  obligations_type text;
+  next_actions_type text;
+begin
+  select format_type(a.atttypid, a.atttypmod)
+  into obligations_type
+  from pg_attribute a
+  where a.attrelid = 'public.ai_systems'::regclass
+    and a.attname = 'obligations'
+    and a.attnum > 0
+    and not a.attisdropped;
+
+  select format_type(a.atttypid, a.atttypmod)
+  into next_actions_type
+  from pg_attribute a
+  where a.attrelid = 'public.ai_systems'::regclass
+    and a.attname = 'next_actions'
+    and a.attnum > 0
+    and not a.attisdropped;
+
+  if obligations_type is null
+     or next_actions_type is null
+     or obligations_type <> next_actions_type
+     or obligations_type not in ('jsonb', 'text[]') then
+    raise exception 'ai_systems obligations/next_actions schema is outside the reviewed jsonb/text[] contracts';
+  end if;
+end
+$preflight$;
+
 create or replace function public.create_ai_system_atomic(
   p_organization_id uuid,
   p_actor_user_id uuid,
@@ -13,6 +43,8 @@ declare
   v_plan text;
   v_limit integer;
   v_count integer := 0;
+  v_obligations public.ai_systems.obligations%type;
+  v_next_actions public.ai_systems.next_actions%type;
 begin
   if p_organization_id is null or p_actor_user_id is null or p_system is null or jsonb_typeof(p_system) <> 'object' then
     return query select 'invalid_input'::text, null::jsonb; return;
@@ -38,6 +70,16 @@ begin
     or exists (select 1 from jsonb_array_elements(p_system -> 'next_actions') as item(value) where jsonb_typeof(item.value) <> 'string') then
     return query select 'invalid_input'::text, null::jsonb; return;
   end if;
+
+  select populated.obligations, populated.next_actions
+  into v_obligations, v_next_actions
+  from jsonb_populate_record(
+    null::public.ai_systems,
+    jsonb_build_object(
+      'obligations', p_system -> 'obligations',
+      'next_actions', p_system -> 'next_actions'
+    )
+  ) as populated;
 
   v_plan := app_private.resolve_commercial_plan(p_organization_id);
   if v_plan is null then
@@ -95,8 +137,8 @@ begin
     (p_system ->> 'manipulative_or_exploitative')::boolean,
     lower(trim(p_system ->> 'risk_level')),
     p_system ->> 'classification_summary',
-    array(select jsonb_array_elements_text(p_system -> 'obligations')),
-    array(select jsonb_array_elements_text(p_system -> 'next_actions')),
+    v_obligations,
+    v_next_actions,
     now()
   ) returning * into v_created;
 
@@ -137,6 +179,8 @@ as $$
 declare
   v_current public.ai_systems%rowtype;
   v_updated public.ai_systems%rowtype;
+  v_obligations public.ai_systems.obligations%type;
+  v_next_actions public.ai_systems.next_actions%type;
 begin
   if p_system_id is null or p_organization_id is null or p_expected_updated_at is null or p_actor_user_id is null or p_patch is null or jsonb_typeof(p_patch) <> 'object' then
     return query select 'invalid_input'::text,null::jsonb; return;
@@ -162,6 +206,16 @@ begin
     or exists (select 1 from jsonb_array_elements(p_patch -> 'next_actions') as item(value) where jsonb_typeof(item.value) <> 'string') then
     return query select 'invalid_input'::text,null::jsonb; return;
   end if;
+
+  select populated.obligations, populated.next_actions
+  into v_obligations, v_next_actions
+  from jsonb_populate_record(
+    null::public.ai_systems,
+    jsonb_build_object(
+      'obligations', p_patch -> 'obligations',
+      'next_actions', p_patch -> 'next_actions'
+    )
+  ) as populated;
 
   select s.* into v_current
   from public.ai_systems s
@@ -190,8 +244,8 @@ begin
     manipulative_or_exploitative=(p_patch ->> 'manipulative_or_exploitative')::boolean,
     risk_level=lower(trim(p_patch ->> 'risk_level')),
     classification_summary=p_patch ->> 'classification_summary',
-    obligations=array(select jsonb_array_elements_text(p_patch -> 'obligations')),
-    next_actions=array(select jsonb_array_elements_text(p_patch -> 'next_actions')),
+    obligations=v_obligations,
+    next_actions=v_next_actions,
     last_reassessed_at=now()
   where s.id=p_system_id and s.organization_id=p_organization_id and s.updated_at is not distinct from p_expected_updated_at
   returning s.* into v_updated;
