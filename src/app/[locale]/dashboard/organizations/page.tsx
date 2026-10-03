@@ -110,6 +110,10 @@ export default async function OrganizationDashboardPage({ params, searchParams }
     ? `/${safeLocale}/dashboard/organizations/billing?plan=${encodeURIComponent(requestedPlan?.id ?? '')}`
     : `/${safeLocale}/dashboard/organizations/team`;
   const teamActivation = await getTeamActivationStatus(data.organization.id);
+  const hasClassifiedAiSystem = data.aiSystemSummary.high
+    + data.aiSystemSummary.unacceptable
+    + data.aiSystemSummary.limited
+    + data.aiSystemSummary.minimal > 0;
   const activationState = {
     hasOrganization: true,
     hasMembers: teamActivation.hasMembers,
@@ -118,7 +122,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
     hasRisks: data.summary.totals.risks > 0 || data.topRisks.length > 0,
     hasVendors: data.summary.totals.vendors > 0 || data.vendorsRequiringReview.length > 0,
     hasFirstAiSystem: data.aiSystemSummary.total > 0,
-    hasRiskClassification: data.summary.totals.risks > 0,
+    hasRiskClassification: hasClassifiedAiSystem,
     hasDocumentSuggestions: data.summary.totals.documents > 0,
     hasInitialTasks: data.summary.totals.tasks > 0,
     hasReadinessScore: data.summary.totals.tasks + data.summary.totals.risks + data.summary.totals.documents + data.summary.totals.vendors > 0,
@@ -177,6 +181,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             trendComparison={data.trendComparison}
             workflowReadiness={data.workflowReadiness}
             basePath={localizedDashboardBasePath}
+            locale={safeLocale}
             vendorsRequiringReview={data.vendorsRequiringReview}
             documentsExpiringSoon={data.documentsExpiringSoon}
           />

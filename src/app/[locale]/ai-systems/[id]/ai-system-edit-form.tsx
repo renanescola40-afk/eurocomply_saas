@@ -82,7 +82,7 @@ export function AiSystemEditForm({ system, locale, businessWorkflowsEnabled, ent
   const executiveSignals = useMemo(() => [
     [t.executiveSignalLabels.system, system.name],
     [t.executiveSignalLabels.risk, system.risk_level],
-    [t.executiveSignalLabels.market, form.countryMarket || 'EU'],
+    [t.executiveSignalLabels.market, form.countryMarket || t.notSet],
     [t.executiveSignalLabels.vendor, form.vendorName || t.notSet],
     [t.executiveSignalLabels.obligations, String(system.obligations.length)],
     [t.executiveSignalLabels.nextActions, String(system.next_actions.length)],
@@ -110,7 +110,8 @@ export function AiSystemEditForm({ system, locale, businessWorkflowsEnabled, ent
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setNotice({ type: 'error', message: payload?.message ?? t.saveError });
+        const baseMessage = payload?.message ?? t.saveError;
+        setNotice({ type: 'error', message: payload?.requestId ? `${baseMessage} [${payload.requestId}]` : baseMessage });
         return;
       }
       setNotice({ type: 'success', message: t.saveSuccess });

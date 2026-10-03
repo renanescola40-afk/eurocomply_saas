@@ -10,6 +10,7 @@ type DashboardHomeOverviewProps = {
   trendComparison?: DashboardTrendComparison;
   workflowReadiness?: OrganizationWorkflowReadiness;
   basePath?: string;
+  locale?: string;
   vendorsRequiringReview?: Array<{ id: string; name?: string | null; risk_level?: string | null; review_status?: string | null; next_review_at?: string | null }>;
   documentsExpiringSoon?: Array<{ id: string; title?: string | null; name?: string | null; status?: string | null; expires_at?: string | null; category?: string | null }>;
 };
@@ -19,6 +20,7 @@ export function DashboardHomeOverview({
   tasks,
   workflowReadiness,
   basePath = '/dashboard/organizations',
+  locale = 'en',
   vendorsRequiringReview = [],
   documentsExpiringSoon = [],
 }: DashboardHomeOverviewProps) {
@@ -27,7 +29,7 @@ export function DashboardHomeOverview({
   return (
     <div className="space-y-4 scroll-smooth md:space-y-5">
       <section id="recommended-focus" className="scroll-mt-28">
-        <NextBestActions summary={summary} basePath={basePath} workflowReadiness={workflowReadiness} />
+        <NextBestActions summary={summary} basePath={basePath} workflowReadiness={workflowReadiness} locale={locale} />
       </section>
       <section id="calendar" className="scroll-mt-28">
         <ComplianceTimeline
