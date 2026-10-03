@@ -34,14 +34,21 @@ describe('AI system functional QA regressions', () => {
     expect(result.success).toBe(true);
   });
 
-  it('converts AI-system JSON arrays to PostgreSQL text arrays in create and reassess RPCs', () => {
-    expect(rpcMigration).toContain("array(select jsonb_array_elements_text(p_system -> 'obligations'))");
-    expect(rpcMigration).toContain("array(select jsonb_array_elements_text(p_system -> 'next_actions'))");
-    expect(rpcMigration).toContain("obligations=array(select jsonb_array_elements_text(p_patch -> 'obligations'))");
-    expect(rpcMigration).toContain("next_actions=array(select jsonb_array_elements_text(p_patch -> 'next_actions'))");
+  it('adapts AI-system JSON arrays to the live jsonb or text[] column contract', () => {
+    expect(rpcMigration).toContain("obligations_type not in ('jsonb', 'text[]')");
+    expect(rpcMigration).toContain('v_obligations public.ai_systems.obligations%type;');
+    expect(rpcMigration).toContain('v_next_actions public.ai_systems.next_actions%type;');
+    expect(rpcMigration).toContain('from jsonb_populate_record(');
+    expect(rpcMigration).toContain('null::public.ai_systems');
+    expect(rpcMigration).toContain("'obligations', p_system -> 'obligations'");
+    expect(rpcMigration).toContain("'next_actions', p_system -> 'next_actions'");
+    expect(rpcMigration).toContain("'obligations', p_patch -> 'obligations'");
+    expect(rpcMigration).toContain("'next_actions', p_patch -> 'next_actions'");
+    expect(rpcMigration).not.toContain("array(select jsonb_array_elements_text(p_system -> 'obligations'))");
+    expect(rpcMigration).not.toContain("obligations=array(select jsonb_array_elements_text(p_patch -> 'obligations'))");
   });
 
-  it('rejects non-string elements before converting JSON arrays to text arrays', () => {
+  it('rejects non-string elements before adapting JSON arrays to the database row type', () => {
     expect(rpcMigration).toContain("jsonb_array_elements(p_system -> 'obligations')");
     expect(rpcMigration).toContain("jsonb_array_elements(p_system -> 'next_actions')");
     expect(rpcMigration).toContain("jsonb_array_elements(p_patch -> 'obligations')");
