@@ -1,0 +1,98 @@
+name: Performance Clean Replay Proof
+
+on:
+  push:
+    branches:
+      - perf/enterprise-scale-closure-20261003
+    paths:
+      - '.github/workflows/performance-clean-replay-proof.yml'
+      - 'scripts/recovery/**'
+      - 'scripts/security/generate-beagle-reviewed-replay-bundle.mjs'
+      - 'supabase/migrations/**'
+      - 'docs/security/evidence/human-review/**'
+      - 'docs/security/decisions/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-clean-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    name: Prove reviewed clean replay on isolated Supabase runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout exact performance SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Bind runner-local evidence paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH=$RUNNER_TEMP/performance-reviewed-replay-bundle.sql" >> "$GITHUB_ENV"
+          echo "RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH=$RUNNER_TEMP/performance-reviewed-replay-manifest.json" >> "$GITHUB_ENV"
+
+      - name: Set up pinned Supabase CLI
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.101.0
+
+      - name: Verify runner PostgreSQL client
+        run: node scripts/recovery/verify-postgresql-client.mjs
+
+      - name: Run reviewed isolated clean replay
+        run: node scripts/security/generate-beagle-reviewed-replay-bundle.mjs
+
+      - name: Validate replay manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH"
+          test -s "$RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync(process.env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH, 'utf8'));
+          if (manifest.subjectSha !== process.env.EXPECTED_HEAD_SHA) throw new Error('subject SHA mismatch');
+          if (manifest.containsSeedData !== false) throw new Error('seed data boundary failed');
+          if (manifest.containsProductionRows !== false) throw new Error('production-row boundary failed');
+          if (manifest.productionWriteAuthorized !== false) throw new Error('production write boundary failed');
+          if (!Number.isSafeInteger(manifest.replayFileCount) || manifest.replayFileCount < 1) throw new Error('replay file count invalid');
+          console.log(JSON.stringify({
+            subjectSha: manifest.subjectSha,
+            replayFileCount: manifest.replayFileCount,
+            bundleSha256: manifest.bundleSha256,
+            excludedSeedReplayFileCount: manifest.excludedSeedReplayFileCount,
+            containsSeedData: manifest.containsSeedData,
+            containsProductionRows: manifest.containsProductionRows,
+            productionWriteAuthorized: manifest.productionWriteAuthorized
+          }));
+          NODE
+
+      - name: Upload performance replay evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: performance-clean-replay-${{ env.EXPECTED_HEAD_SHA }}
+          path: |
+            ${{ env.RECOVERY_BEAGLE_REPLAY_BUNDLE_PATH }}
+            ${{ env.RECOVERY_BEAGLE_REPLAY_MANIFEST_PATH }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Stop disposable runtime
+        if: always()
+        run: node scripts/recovery/manage-ephemeral-recovery-database.mjs stop
