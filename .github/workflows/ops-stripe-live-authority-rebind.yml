@@ -4,20 +4,18 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/ops-stripe-live-authority-rebind.yml
 
 permissions:
   contents: read
 
 concurrency:
   group: ops-stripe-live-authority-rebind
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   rebind:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment: Production
     env:
       RELEASE_SHA: ${{ github.sha }}
@@ -25,6 +23,7 @@ jobs:
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out trusted current main
@@ -95,3 +94,78 @@ jobs:
 
       - name: Re-read Vercel Production bindings
         run: node scripts/security/load-vercel-stripe-price-bindings.mjs
+
+      - name: Revalidate main after provider mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+
+      - name: Create fresh Production deployment from exact rebound SHA
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          payload="$(jq -n \
+            --arg name "$VERCEL_PROJECT_NAME" \
+            --arg project "$VERCEL_PROJECT_ID" \
+            --arg org "${GITHUB_REPOSITORY%%/*}" \
+            --arg repo "${GITHUB_REPOSITORY#*/}" \
+            --arg sha "$RELEASE_SHA" \
+            '{name:$name,project:$project,target:"production",gitSource:{type:"github",org:$org,repo:$repo,ref:"main",sha:$sha}}')"
+          response="$(curl --fail-with-body --silent --show-error \
+            -X POST "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_TEAM_ID" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$payload")"
+          deployment_id="$(jq -r '.id // empty' <<<"$response")"
+          test "$deployment_id" != ""
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for rebound Production deployment and verify exact SHA
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_ID"
+          state=""
+          deployment_json=""
+          for _ in $(seq 1 120); do
+            deployment_json="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID?teamId=$VERCEL_TEAM_ID&withGitRepoInfo=true")"
+            state="$(jq -r '.readyState // .status // empty' <<<"$deployment_json")"
+            case "$state" in
+              READY) break ;;
+              ERROR|CANCELED|BLOCKED) echo "Production deployment failed closed: $state" >&2; exit 1 ;;
+            esac
+            sleep 5
+          done
+          test "$state" = "READY"
+          deployed_sha="$(jq -r '.meta.githubCommitSha // .gitSource.sha // empty' <<<"$deployment_json")"
+          test "${deployed_sha,,}" = "${RELEASE_SHA,,}"
+
+      - name: Prove canonical Production health and authenticated readiness after cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$HEALTHCHECK_TOKEN"
+          ready_ok=false
+          for _ in $(seq 1 24); do
+            health_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "https://www.risckcomply.com/api/health" || true)"
+            ready_body="$(curl --silent --show-error \
+              -H "Authorization: Bearer $HEALTHCHECK_TOKEN" \
+              -H "Accept: application/json" \
+              "https://www.risckcomply.com/api/ready" || true)"
+            ready_status="$(jq -r '.status // empty' <<<"$ready_body" 2>/dev/null || true)"
+            if [ "$health_status" = "200" ] && [ "$ready_status" = "ready" ]; then
+              ready_ok=true
+              break
+            fi
+            sleep 5
+          done
+          test "$ready_ok" = true
