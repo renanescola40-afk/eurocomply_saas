@@ -1,5 +1,8 @@
+import { randomUUID } from 'node:crypto';
+
 import type { NextRequest } from 'next/server';
 
+import { sendEmail } from '@/lib/email/server-sender';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -17,6 +20,7 @@ const LEAD_CAPTURE_BODY_MAX_BYTES = 16 * 1024;
 
 const LEAD_CAPTURE_ROUTE = '/api/leads';
 const LEAD_CAPTURE_ACTION = 'lead_capture';
+const SALES_MAILBOX = 'comercial@risckcomply.com';
 
 type LeadRecord = {
   full_name: string;
@@ -122,6 +126,101 @@ async function saveToSupabase(record: LeadRecord) {
   return true;
 }
 
+
+function escapeHtml(value: string | null | undefined) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function localizedAcknowledgement(locale: string | null, fullName: string) {
+  const pt = locale === 'pt';
+  const safeName = escapeHtml(fullName);
+
+  if (pt) {
+    return {
+      subject: 'Recebemos o seu pedido — RISCK COMPLY',
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a"><h2>Recebemos o seu pedido</h2><p>Olá ${safeName},</p><p>Obrigado por contactar a RISCK COMPLY. Recebemos o seu pedido comercial e a nossa equipa está a analisar as informações enviadas.</p><p>Entraremos em contacto através deste endereço de email assim que tivermos o próximo passo.</p><p>RISCK COMPLY</p></div>`,
+      text: `Olá ${fullName},\n\nObrigado por contactar a RISCK COMPLY. Recebemos o seu pedido comercial e a nossa equipa está a analisar as informações enviadas.\n\nEntraremos em contacto através deste endereço de email assim que tivermos o próximo passo.\n\nRISCK COMPLY`,
+    };
+  }
+
+  return {
+    subject: 'We received your request — RISCK COMPLY',
+    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a"><h2>We received your request</h2><p>Hello ${safeName},</p><p>Thank you for contacting RISCK COMPLY. We received your sales request and our team is reviewing the information you provided.</p><p>We will contact you at this email address with the appropriate next step.</p><p>RISCK COMPLY</p></div>`,
+    text: `Hello ${fullName},\n\nThank you for contacting RISCK COMPLY. We received your sales request and our team is reviewing the information you provided.\n\nWe will contact you at this email address with the appropriate next step.\n\nRISCK COMPLY`,
+  };
+}
+
+function internalLeadNotification(record: LeadRecord) {
+  const rows = [
+    ['Nome', record.full_name],
+    ['Email', record.work_email],
+    ['Empresa', record.company_name],
+    ['Função', record.role],
+    ['Dimensão', record.company_size],
+    ['Região', record.region],
+    ['Origem', record.source],
+    ['Idioma', record.locale],
+    ['Mensagem', record.message],
+  ].filter(([, value]) => Boolean(value));
+
+  const htmlRows = rows
+    .map(([label, value]) => `<tr><td style="padding:6px 10px;font-weight:700;vertical-align:top">${escapeHtml(label)}</td><td style="padding:6px 10px">${escapeHtml(value)}</td></tr>`)
+    .join('');
+
+  return {
+    subject: `Novo pedido comercial — ${record.company_name}`,
+    html: `<div style="font-family:Arial,sans-serif;color:#0f172a"><h2>Novo pedido comercial RISCK COMPLY</h2><table style="border-collapse:collapse">${htmlRows}</table><p>Responda a este email para contactar diretamente o cliente.</p></div>`,
+    text: ['Novo pedido comercial RISCK COMPLY', ...rows.map(([label, value]) => `${label}: ${value}`), '', 'Responda a este email para contactar diretamente o cliente.'].join('\n'),
+  };
+}
+
+async function sendLeadEmails(record: LeadRecord) {
+  const requestId = randomUUID();
+  const internal = internalLeadNotification(record);
+  const acknowledgement = localizedAcknowledgement(record.locale, record.full_name);
+
+  const [internalResult, acknowledgementResult] = await Promise.allSettled([
+    sendEmail({
+      to: SALES_MAILBOX,
+      replyTo: record.work_email,
+      subject: internal.subject,
+      html: internal.html,
+      text: internal.text,
+      template: 'sales_lead_internal',
+      idempotencyKey: `sales-lead/internal/${requestId}`,
+      metadata: { source: record.source, locale: record.locale, company: record.company_name },
+    }),
+    sendEmail({
+      to: record.work_email,
+      replyTo: SALES_MAILBOX,
+      subject: acknowledgement.subject,
+      html: acknowledgement.html,
+      text: acknowledgement.text,
+      template: 'sales_lead_acknowledgement',
+      idempotencyKey: `sales-lead/ack/${requestId}`,
+      metadata: { source: record.source, locale: record.locale },
+    }),
+  ]);
+
+  const internalSent = internalResult.status === 'fulfilled' && internalResult.value.sent;
+  const acknowledgementSent = acknowledgementResult.status === 'fulfilled' && acknowledgementResult.value.sent;
+
+  if (!internalSent) {
+    console.error('[leads] Internal sales notification delivery failed');
+  }
+
+  if (!acknowledgementSent) {
+    console.error('[leads] Customer acknowledgement delivery failed');
+  }
+
+  return { internalSent, acknowledgementSent };
+}
+
 async function sendWebhook(record: LeadRecord) {
   const webhookUrl = process.env.RISCK_COMPLY_LEAD_WEBHOOK_URL;
   if (!webhookUrl) return false;
@@ -196,6 +295,8 @@ export async function POST(request: NextRequest) {
       { status: 503 },
     );
   }
+
+  await sendLeadEmails(record);
 
   return noStoreJson({ ok: true }, { status: 201 });
 }
