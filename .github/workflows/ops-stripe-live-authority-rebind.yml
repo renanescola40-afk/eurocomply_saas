@@ -72,6 +72,7 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_ENV, [
             `VERCEL_PROJECT_ID=${target.projectId}`,
             `VERCEL_TEAM_ID=${target.teamId}`,
+            `VERCEL_TEAM_SLUG=renanescola40-afks-projects`,
             `VERCEL_PROJECT_NAME=${target.projectName}`,
             '',
           ].join('\n'));
@@ -114,7 +115,7 @@ jobs:
           candidate_url="$(
             npx --yes "vercel@56.3.2" deploy --prod --skip-domain \
               --project="$VERCEL_PROJECT_ID" \
-              --scope="$VERCEL_TEAM_ID" \
+              --scope="$VERCEL_TEAM_SLUG" \
               --token="$VERCEL_TOKEN" | tail -n 1 | tr -d '\r'
           )"
           if [[ ! "$candidate_url" =~ ^https://[^[:space:]]+$ ]]; then
@@ -153,7 +154,7 @@ jobs:
           test -n "$CANDIDATE_URL"
           npx --yes "vercel@56.3.2" promote "$CANDIDATE_URL" --yes \
             --project="$VERCEL_PROJECT_ID" \
-            --scope="$VERCEL_TEAM_ID" \
+            --scope="$VERCEL_TEAM_SLUG" \
             --token="$VERCEL_TOKEN"
 
       - name: Verify canonical Production alias resolves to promoted exact SHA
