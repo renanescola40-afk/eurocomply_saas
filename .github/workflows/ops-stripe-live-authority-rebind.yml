@@ -3,7 +3,7 @@ name: One-shot Stripe LIVE authority rebind
 on:
   push:
     branches:
-      - ops/rebind-stripe-live-authority-20261004
+      - main
     paths:
       - .github/workflows/ops-stripe-live-authority-rebind.yml
 
@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 15
     environment: Production
     env:
-      RELEASE_SHA: ee1b354975069015e46226a70ce8efb59740186f
+      RELEASE_SHA: ${{ github.sha }}
       STRIPE_ACCOUNT_BOOTSTRAP_CONFIRMATION: PROVISION_NEW_STRIPE_LIVE_ACCOUNT
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
@@ -47,7 +47,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Load reviewed account and Vercel authority
+      - name: Load reviewed account authority
         shell: bash
         run: |
           set -euo pipefail
