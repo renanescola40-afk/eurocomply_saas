@@ -101,6 +101,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/security/step-up/verify/route.ts` | high-risk | Step-up verification; auth, tenant context, origin, rate limit, provider verification and audit required. |
 | `src/app/api/documents/upload/route.ts` | high-risk | File upload; manage_documents, content scan, tenant validation and origin/rate limits required. |
 | `src/app/api/documents/[id]/approval/route.ts` | high-risk | Resource mutation; fetch document and validate `organization_id` before update. |
+| `src/app/api/gap-analysis/report/route.ts` | high-risk | Gap Analysis PDF export; authenticated organization context, `read_ai_governance`, trusted origin, bounded Zod JSON, distributed fail-closed rate limiting, assessment ownership validation by organization + user, private no-store PDF response and sanitized errors required. |
 | `src/app/api/gdpr/export/route.ts` | high-risk | Export path; auth, tenant scope, plan/permission, audit and no-store required. |
 | `src/app/api/gdpr/delete-request/route.ts` | high-risk | Data deletion workflow; trusted origin, rate limit, validation and audit required. |
 | `src/app/api/audit/evidence-pack/route.ts` | high-risk | Evidence pack export; auth, tenant context, RBAC, step-up, signed integrity, audit. |

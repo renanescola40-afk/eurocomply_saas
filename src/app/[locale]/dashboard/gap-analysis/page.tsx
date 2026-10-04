@@ -53,10 +53,10 @@ const copy: Record<Locale, {
   loginRequired: string;
 }> = {
   en: {
-    back: 'Back to dashboard', badge: 'EU AI Act Gap Analysis', title: 'Measure your compliance readiness', subtitle: 'Answer a focused questionnaire mapped to the main EU AI Act obligations for high-risk AI systems.', yes: 'Yes', partial: 'Partial', no: 'No', unanswered: 'Unanswered', score: 'Compliance Score', readiness: 'Readiness', critical: 'Critical gaps', attention: 'Needs attention', ready: 'Ready', questions: 'Questions', completed: 'completed', actionPlan: 'Action plan', actionSubtitle: 'Recommended actions generated from your answers.', noActions: 'No critical gaps found yet. Keep your evidence updated.', articleBreakdown: 'Article breakdown', export: 'Save & generate report', saveNote: 'Saves your assessment and creates remediation work when persistence is available.', saving: 'Saving assessment...', saved: 'Assessment saved. Findings and tasks were generated.', localOnly: 'Report generated. Database persistence is not available yet.', loginRequired: 'Sign in to save this assessment.',
+    back: 'Back to dashboard', badge: 'EU AI Act Gap Analysis', title: 'Measure your compliance readiness', subtitle: 'Answer a focused questionnaire mapped to the main EU AI Act obligations for high-risk AI systems.', yes: 'Yes', partial: 'Partial', no: 'No', unanswered: 'Unanswered', score: 'Compliance Score', readiness: 'Readiness', critical: 'Critical gaps', attention: 'Needs attention', ready: 'Ready', questions: 'Questions', completed: 'completed', actionPlan: 'Action plan', actionSubtitle: 'Recommended actions generated from your answers.', noActions: 'No critical gaps found yet. Keep your evidence updated.', articleBreakdown: 'Article breakdown', export: 'Save & generate PDF report', saveNote: 'Saves the assessment, creates remediation work and generates a corporate PDF report.', saving: 'Saving assessment...', saved: 'Assessment saved. Findings and tasks were generated.', localOnly: 'Report generated. Database persistence is not available yet.', loginRequired: 'Sign in to save this assessment.',
   },
   pt: {
-    back: 'Voltar ao dashboard', badge: 'Gap Analysis EU AI Act', title: 'Meça sua prontidão de compliance', subtitle: 'Responda um questionário focado nas principais obrigações do EU AI Act para sistemas de IA de alto risco.', yes: 'Sim', partial: 'Parcial', no: 'Não', unanswered: 'Sem resposta', score: 'Score de Compliance', readiness: 'Prontidão', critical: 'Lacunas críticas', attention: 'Precisa atenção', ready: 'Pronto', questions: 'Perguntas', completed: 'respondidas', actionPlan: 'Plano de ação', actionSubtitle: 'Ações recomendadas geradas a partir das suas respostas.', noActions: 'Nenhuma lacuna crítica encontrada ainda. Mantenha as evidências atualizadas.', articleBreakdown: 'Resumo por artigo', export: 'Salvar e gerar relatório', saveNote: 'Salva sua avaliação e cria tarefas de correção quando a persistência estiver disponível.', saving: 'Salvando avaliação...', saved: 'Avaliação salva. Findings e tarefas foram gerados.', localOnly: 'Relatório gerado. Persistência no banco ainda não disponível.', loginRequired: 'Entre na conta para salvar esta avaliação.',
+    back: 'Voltar ao dashboard', badge: 'Gap Analysis EU AI Act', title: 'Meça sua prontidão de compliance', subtitle: 'Responda um questionário focado nas principais obrigações do EU AI Act para sistemas de IA de alto risco.', yes: 'Sim', partial: 'Parcial', no: 'Não', unanswered: 'Sem resposta', score: 'Score de Compliance', readiness: 'Prontidão', critical: 'Lacunas críticas', attention: 'Precisa atenção', ready: 'Pronto', questions: 'Perguntas', completed: 'respondidas', actionPlan: 'Plano de ação', actionSubtitle: 'Ações recomendadas geradas a partir das suas respostas.', noActions: 'Nenhuma lacuna crítica encontrada ainda. Mantenha as evidências atualizadas.', articleBreakdown: 'Resumo por artigo', export: 'Salvar e gerar relatório PDF', saveNote: 'Salva a avaliação, cria as ações de correção e gera um PDF corporativo pronto para partilha.', saving: 'Salvando avaliação...', saved: 'Avaliação salva. Findings e tarefas foram gerados.', localOnly: 'Relatório gerado. Persistência no banco ainda não disponível.', loginRequired: 'Entre na conta para salvar esta avaliação.',
   },
   es: {
     back: 'Volver al panel', badge: 'Gap Analysis EU AI Act', title: 'Mide tu preparación de cumplimiento', subtitle: 'Responde un cuestionario enfocado en las principales obligaciones del EU AI Act para sistemas de IA de alto riesgo.', yes: 'Sí', partial: 'Parcial', no: 'No', unanswered: 'Sin respuesta', score: 'Puntuación de cumplimiento', readiness: 'Preparación', critical: 'Brechas críticas', attention: 'Requiere atención', ready: 'Listo', questions: 'Preguntas', completed: 'respondidas', actionPlan: 'Plan de acción', actionSubtitle: 'Acciones recomendadas generadas a partir de tus respuestas.', noActions: 'No se encontraron brechas críticas aún. Mantén tus evidencias actualizadas.', articleBreakdown: 'Resumen por artículo', export: 'Guardar y generar informe', saveNote: 'Guarda tu evaluación y crea trabajo de remediación cuando la persistencia esté disponible.', saving: 'Guardando evaluación...', saved: 'Evaluación guardada. Se generaron hallazgos y tareas.', localOnly: 'Informe generado. La persistencia en base de datos aún no está disponible.', loginRequired: 'Inicia sesión para guardar esta evaluación.',
@@ -177,24 +177,39 @@ export default function GapAnalysisPage() {
   const status = statusForScore(result.score, t);
   const StatusIcon = status.icon;
 
-  const downloadReport = () => {
-    const lines = [
-      'RISCK COMPLY - EU AI Act Gap Analysis',
-      `${t.score}: ${result.score}%`,
-      `${t.questions}: ${result.completed}/${result.total}`,
-      '',
-      t.articleBreakdown,
-      ...Object.entries(result.byArticle).map(([article, item]) => `${article}: ${item.total}%`),
-      '',
-      t.actionPlan,
-      ...(result.actions.length ? result.actions.map((a) => `${a.article}: ${a.recommendation}`) : [t.noActions]),
-    ];
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const downloadPdfReport = async (assessmentId: string) => {
+    const response = await fetch('/api/gap-analysis/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assessmentId, locale }),
+    });
+
+    if (!response.ok) {
+      throw new Error('gap_analysis_pdf_generation_failed');
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.toLowerCase().includes('application/pdf')) {
+      throw new Error('gap_analysis_pdf_invalid_content_type');
+    }
+
+    const blob = await response.blob();
+    const header = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+    if (String.fromCharCode(...header) !== '%PDF') {
+      throw new Error('gap_analysis_pdf_invalid_header');
+    }
+
+    const disposition = response.headers.get('content-disposition') || '';
+    const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+    const filename = filenameMatch?.[1] || `RISCK-COMPLY_Gap-Analysis_${new Date().toISOString().slice(0, 10)}.pdf`;
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'risck-comply-gap-analysis.txt';
+    link.download = filename;
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     URL.revokeObjectURL(url);
   };
 
@@ -203,7 +218,6 @@ export default function GapAnalysisPage() {
 
     if (!user?.id) {
       setSaveMessage(t.loginRequired);
-      downloadReport();
       return;
     }
 
@@ -224,20 +238,28 @@ export default function GapAnalysisPage() {
         answers: result.persistedAnswers,
       });
 
-      if (assessmentResult.ok) {
-        await tryCreateFindingsAndTasks({
-          workspaceId: null,
-          userId: user.id,
-          assessmentId: assessmentResult.assessmentId,
-          actions: result.actions,
-        });
-        setSaveMessage(t.saved);
-      } else {
-        setSaveMessage(t.localOnly);
+      if (!assessmentResult.ok) {
+        setSaveMessage(locale === 'pt'
+          ? 'Não foi possível salvar a avaliação. O relatório não foi gerado.'
+          : 'The assessment could not be saved. The report was not generated.');
+        return;
       }
+
+      await tryCreateFindingsAndTasks({
+        workspaceId: null,
+        userId: user.id,
+        assessmentId: assessmentResult.assessmentId,
+        actions: result.actions,
+      });
+
+      await downloadPdfReport(assessmentResult.assessmentId);
+      setSaveMessage(locale === 'pt' ? 'Relatório PDF gerado com sucesso.' : 'PDF report generated successfully.');
+    } catch {
+      setSaveMessage(locale === 'pt'
+        ? 'Não foi possível gerar o relatório PDF. Tente novamente.'
+        : 'The PDF report could not be generated. Please try again.');
     } finally {
       setSaving(false);
-      downloadReport();
     }
   };
 
