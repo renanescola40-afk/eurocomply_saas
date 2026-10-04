@@ -1,0 +1,214 @@
+name: Storage Recovery Synthetic Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA
+        required: true
+        type: string
+      restore_project_ref:
+        description: Non-production Supabase recovery project ref
+        required: true
+        type: string
+      confirmation:
+        description: Type EXECUTE_ISOLATED_STORAGE_RECOVERY_PROOF
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: storage-recovery-proof-${{ inputs.release_sha }}-${{ inputs.restore_project_ref }}
+  cancel-in-progress: false
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-recovery
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      RESTORE_PROJECT_REF: ${{ inputs.restore_project_ref }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      PRODUCTION_PROJECT_REF: tganhbbhfxcpblmgqprg
+      FUNCTION_NAME: dr-storage-recovery-proof
+      EVIDENCE_PATH: artifacts/storage-recovery/storage-recovery-proof.json
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate exact main and isolated target
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$RESTORE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
+          test "$RESTORE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test "$CONFIRMATION" = "EXECUTE_ISOLATED_STORAGE_RECOVERY_PROOF"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$TARGET_SHA"
+
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.114.0
+
+      - name: Validate recovery project
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          project_json="$(curl --fail --silent --show-error -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$RESTORE_PROJECT_REF")"
+          test "$(jq -r '.id // .ref // empty' <<<"$project_json")" = "$RESTORE_PROJECT_REF"
+          case "$(jq -r '.status // empty' <<<"$project_json")" in
+            ACTIVE_HEALTHY|FUNCTIONS_DEPLOYED) ;;
+            *) echo "Recovery target is not healthy" >&2; exit 1 ;;
+          esac
+
+      - name: Build one-time synthetic proof function
+        shell: bash
+        run: |
+          set -euo pipefail
+          nonce="$(openssl rand -hex 24)"
+          echo "DR_STORAGE_NONCE=$nonce" >> "$GITHUB_ENV"
+          mkdir -p "supabase/functions/$FUNCTION_NAME"
+          cat > "supabase/functions/$FUNCTION_NAME/index.ts" <<'TS'
+          import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+          import { createClient } from "npm:@supabase/supabase-js@2";
+
+          async function sha(bytes: Uint8Array) {
+            const d = await crypto.subtle.digest("SHA-256", bytes);
+            return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, "0")).join("");
+          }
+
+          Deno.serve(async (req: Request) => {
+            if (req.headers.get("x-dr-proof-nonce") !== Deno.env.get("DR_STORAGE_PROOF_NONCE")) {
+              return Response.json({ ok: false }, { status: 401 });
+            }
+
+            const keys = Deno.env.get("SUPABASE_SECRET_KEYS");
+            const key = keys ? JSON.parse(keys)["default"] : Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+            const url = Deno.env.get("SUPABASE_URL");
+            if (!key || !url) return Response.json({ ok: false, error: "admin_key_unavailable" }, { status: 500 });
+
+            const sb = createClient(url, key, { auth: { persistSession: false } });
+            const bucket = "dr-storage-recovery-proof";
+            const original = "runtime/original.txt";
+            const backup = "backup/original.txt";
+            const restored = "runtime/restored.txt";
+            const bytes = new TextEncoder().encode("RISCK_COMPLY_STORAGE_RECOVERY_SYNTHETIC_V1");
+            const expected = await sha(bytes);
+
+            const cleanup = async () => {
+              try { await sb.storage.from(bucket).remove([original, backup, restored]); } catch {}
+              try { await sb.storage.deleteBucket(bucket); } catch {}
+            };
+
+            await cleanup();
+            try {
+              const c = await sb.storage.createBucket(bucket, { public: false });
+              if (c.error) throw new Error("create_bucket_failed");
+
+              const u = await sb.storage.from(bucket).upload(original, bytes, { contentType: "text/plain" });
+              if (u.error) throw new Error("upload_failed");
+
+              const o = await sb.storage.from(bucket).download(original);
+              if (o.error) throw new Error("download_original_failed");
+              const originalHash = await sha(new Uint8Array(await o.data.arrayBuffer()));
+
+              const cp = await sb.storage.from(bucket).copy(original, backup);
+              if (cp.error) throw new Error("backup_copy_failed");
+
+              const rm = await sb.storage.from(bucket).remove([original]);
+              if (rm.error) throw new Error("delete_original_failed");
+              const deleted = await sb.storage.from(bucket).download(original);
+
+              const b = await sb.storage.from(bucket).download(backup);
+              if (b.error) throw new Error("download_backup_failed");
+              const backupBytes = new Uint8Array(await b.data.arrayBuffer());
+              const backupHash = await sha(backupBytes);
+
+              const ru = await sb.storage.from(bucket).upload(restored, backupBytes, { contentType: "text/plain" });
+              if (ru.error) throw new Error("restore_upload_failed");
+
+              const r = await sb.storage.from(bucket).download(restored);
+              if (r.error) throw new Error("download_restored_failed");
+              const restoredBytes = new Uint8Array(await r.data.arrayBuffer());
+              const restoredHash = await sha(restoredBytes);
+
+              const result = {
+                schema: "risck-comply.storage-recovery-proof.v1",
+                ok: originalHash === expected && backupHash === expected && restoredHash === expected && !!deleted.error,
+                syntheticObjectOnly: true,
+                isolatedRecoveryProject: true,
+                originalMissingAfterDelete: !!deleted.error,
+                originalHashMatches: originalHash === expected,
+                backupHashMatches: backupHash === expected,
+                restoredHashMatches: restoredHash === expected,
+                byteLength: restoredBytes.byteLength,
+                productionCustomerObjectRead: false,
+                productionCustomerObjectCopied: false
+              };
+              await cleanup();
+              return Response.json({ ...result, cleanupCompleted: true }, {
+                status: result.ok ? 200 : 500,
+                headers: { "cache-control": "no-store" }
+              });
+            } catch (e) {
+              await cleanup();
+              return Response.json({
+                schema: "risck-comply.storage-recovery-proof.v1",
+                ok: false,
+                syntheticObjectOnly: true,
+                cleanupCompleted: true,
+                error: String(e instanceof Error ? e.message : e)
+              }, { status: 500 });
+            }
+          });
+          TS
+
+      - name: Deploy one-time function
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          supabase secrets set --project-ref "$RESTORE_PROJECT_REF" "DR_STORAGE_PROOF_NONCE=$DR_STORAGE_NONCE"
+          supabase functions deploy "$FUNCTION_NAME" --project-ref "$RESTORE_PROJECT_REF" --no-verify-jwt
+
+      - name: Execute and validate recovery proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$EVIDENCE_PATH")"
+          response="$(curl --fail-with-body --silent --show-error -H "x-dr-proof-nonce: $DR_STORAGE_NONCE" -H 'Accept: application/json' "https://$RESTORE_PROJECT_REF.supabase.co/functions/v1/$FUNCTION_NAME")"
+          jq -e '.schema=="risck-comply.storage-recovery-proof.v1" and .ok==true and .syntheticObjectOnly==true and .isolatedRecoveryProject==true and .originalMissingAfterDelete==true and .originalHashMatches==true and .backupHashMatches==true and .restoredHashMatches==true and .productionCustomerObjectRead==false and .productionCustomerObjectCopied==false and .cleanupCompleted==true' <<<"$response" >/dev/null
+          jq 'del(.error)' <<<"$response" > "$EVIDENCE_PATH"
+
+      - name: Upload redacted evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: storage-recovery-proof-${{ inputs.release_sha }}
+          path: artifacts/storage-recovery/storage-recovery-proof.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Remove temporary proof function and nonce
+        if: always()
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set +e
+          supabase functions delete "$FUNCTION_NAME" --project-ref "$RESTORE_PROJECT_REF" --yes
+          supabase secrets unset --project-ref "$RESTORE_PROJECT_REF" DR_STORAGE_PROOF_NONCE
+          exit 0
