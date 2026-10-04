@@ -105,57 +105,72 @@ jobs:
           test "$main_sha" = "$RELEASE_SHA"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
 
-      - name: Create fresh Production deployment from exact rebound SHA
+      - name: Build non-promoted Production candidate from exact rebound SHA
         id: deploy
         shell: bash
         run: |
           set -euo pipefail
           test -n "$VERCEL_TOKEN"
-          payload="$(jq -n \
-            --arg name "$VERCEL_PROJECT_NAME" \
-            --arg project "$VERCEL_PROJECT_ID" \
-            --arg org "${GITHUB_REPOSITORY%%/*}" \
-            --arg repo "${GITHUB_REPOSITORY#*/}" \
-            --arg sha "$RELEASE_SHA" \
-            '{name:$name,project:$project,target:"production",gitSource:{type:"github",org:$org,repo:$repo,ref:"main",sha:$sha}}')"
-          response="$(curl --fail-with-body --silent --show-error \
-            -X POST "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_TEAM_ID" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data "$payload")"
-          deployment_id="$(jq -r '.id // empty' <<<"$response")"
-          test "$deployment_id" != ""
-          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          candidate_url="$(
+            npx --yes "vercel@56.3.2" deploy --prod --skip-domain \
+              --project="$VERCEL_PROJECT_ID" \
+              --scope="$VERCEL_TEAM_ID" \
+              --token="$VERCEL_TOKEN" | tail -n 1 | tr -d '\r'
+          )"
+          if [[ ! "$candidate_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "Non-promoted Vercel candidate URL missing." >&2
+            exit 1
+          fi
+          deployment_host="${candidate_url#https://}"
+          deployment_host="${deployment_host%%/*}"
+          deployment_json="$(
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/$deployment_host?teamId=$VERCEL_TEAM_ID"
+          )"
+          deployed_sha="$(jq -r '.meta.githubCommitSha // .gitSource.sha // empty' <<<"$deployment_json")"
+          deployed_target="$(jq -r '.target // empty' <<<"$deployment_json")"
+          deployed_state="$(jq -r '.readyState // .state // empty' <<<"$deployment_json")"
+          test "${deployed_sha,,}" = "${RELEASE_SHA,,}"
+          test "$deployed_target" = "production"
+          test "$deployed_state" = "READY"
+          echo "candidate_url=$candidate_url" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for rebound Production deployment and verify exact SHA
+      - name: Revalidate exact current main before Production promotion
         shell: bash
-        env:
-          DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
         run: |
           set -euo pipefail
-          test -n "$DEPLOYMENT_ID"
-          state=""
-          deployment_json=""
-          for _ in $(seq 1 120); do
-            deployment_json="$(curl --fail --silent --show-error \
-              -H "Authorization: Bearer $VERCEL_TOKEN" \
-              "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID?teamId=$VERCEL_TEAM_ID&withGitRepoInfo=true")"
-            state="$(jq -r '.readyState // .status // empty' <<<"$deployment_json")"
-            case "$state" in
-              READY) break ;;
-              ERROR|CANCELED|BLOCKED) echo "Production deployment failed closed: $state" >&2; exit 1 ;;
-            esac
-            sleep 5
-          done
-          test "$state" = "READY"
-          deployed_sha="$(jq -r '.meta.githubCommitSha // .gitSource.sha // empty' <<<"$deployment_json")"
-          test "${deployed_sha,,}" = "${RELEASE_SHA,,}"
-          deployment_target="$(jq -r '.target // empty' <<<"$deployment_json")"
-          test "$deployment_target" = "production"
-          alias_error="$(jq -r '.aliasError.code // empty' <<<"$deployment_json")"
-          test "$alias_error" = ""
-          canonical_alias_present="$(jq -r '([.alias[]?] | index("www.risckcomply.com")) != null' <<<"$deployment_json")"
-          test "$canonical_alias_present" = "true"
+          main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+
+      - name: Promote exact-SHA candidate to Production
+        shell: bash
+        env:
+          CANDIDATE_URL: ${{ steps.deploy.outputs.candidate_url }}
+        run: |
+          set -euo pipefail
+          test -n "$CANDIDATE_URL"
+          npx --yes "vercel@56.3.2" promote "$CANDIDATE_URL" --yes \
+            --project="$VERCEL_PROJECT_ID" \
+            --scope="$VERCEL_TEAM_ID" \
+            --token="$VERCEL_TOKEN"
+
+      - name: Verify canonical Production alias resolves to promoted exact SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          production_json="$(
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/www.risckcomply.com?teamId=$VERCEL_TEAM_ID"
+          )"
+          production_sha="$(jq -r '.meta.githubCommitSha // .gitSource.sha // empty' <<<"$production_json")"
+          production_state="$(jq -r '.readyState // .state // empty' <<<"$production_json")"
+          production_target="$(jq -r '.target // empty' <<<"$production_json")"
+          test "${production_sha,,}" = "${RELEASE_SHA,,}"
+          test "$production_target" = "production"
+          test "$production_state" = "READY"
 
       - name: Prove canonical Production health and authenticated readiness after cutover
         shell: bash
