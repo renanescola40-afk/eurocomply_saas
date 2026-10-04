@@ -11,6 +11,8 @@ export type EmailTemplateKey =
   | 'qualified-review-reminder'
   | 'export_ready'
   | 'security_alert'
+  | 'sales_lead_internal'
+  | 'sales_lead_acknowledgement'
   | 'trial_upgrade'
   | 'document_expiring'
   | 'vendor_review';

@@ -20,6 +20,7 @@ export type SendEmailInput = {
   html: string;
   text?: string;
   from?: string;
+  replyTo?: string;
   template?: EmailTemplateKey;
   organizationId?: string | null;
   userId?: string | null;
@@ -304,6 +305,7 @@ async function sendWithResend(input: SendEmailInput, apiKey: string, from: strin
       subject: input.subject,
       html: input.html,
       text: input.text,
+      reply_to: input.replyTo,
       headers: buildListUnsubscribeHeaders(input),
     }),
     signal: AbortSignal.timeout(RESEND_REQUEST_TIMEOUT_MS),
