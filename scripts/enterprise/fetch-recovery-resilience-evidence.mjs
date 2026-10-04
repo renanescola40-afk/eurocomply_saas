@@ -121,9 +121,13 @@ export function validateBackupRestoreSource(restore, { targetSha, runId }) {
   if (!Array.isArray(restore?.failures) || restore.failures.length !== 0) failures.push('restore_failures_present');
   if (!sameArray(restore?.controlsVerified, RESTORE_CONTROLS)) failures.push('restore_controls_invalid');
   for (const check of [
-    'backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rlsPoliciesPresent',
+    'backupExists', 'restoreExecuted', 'rlsAfterRestore', 'rlsPoliciesPresent',
     'rpoMeasured', 'rtoMeasured', 'distinctDatabases', 'protectedMainExecution', 'exactShaBound',
   ]) if (restore?.checks?.[check] !== true) failures.push(`restore_check_failed:${check}`);
+  if (restore?.checks?.boundedCountRelationshipValidated !== true
+    && restore?.checks?.dataIntegrity !== true) {
+    failures.push('restore_bounded_aggregate_consistency_missing');
+  }
   if (!Number.isFinite(restore?.metrics?.rpoSeconds)) failures.push('rpo_metric_invalid');
   if (!Number.isFinite(restore?.metrics?.rtoSeconds)) failures.push('rto_metric_invalid');
   if (restore?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push('restore_sensitive_integrity_invalid');
@@ -248,7 +252,7 @@ function missingRestore(targetSha) {
     schema: 'risck-comply.backup-restore-scorecard-evidence.v1',
     item: 'backup-restore-tested',
     controls: RESTORE_CONTROLS,
-    checks: ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured'],
+    checks: ['backupExists', 'restoreExecuted', 'restoredDataCompleteness', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured'],
     workflowName: RESTORE_WORKFLOW_NAME,
     workflowPath: RESTORE_WORKFLOW_PATH,
     metrics: { rpoSeconds: null, rtoSeconds: null, totalExerciseSeconds: null },
@@ -287,7 +291,12 @@ function buildCanonicalRestore(restore, common) {
     checks: [
       canonicalCheck('backupExists'),
       canonicalCheck('restoreExecuted'),
-      canonicalCheck('dataIntegrity'),
+      canonicalCheck(
+        'restoredDataCompleteness',
+        restore?.checks?.fullCustomerDataIntegrity === true
+          && restore?.checks?.fullAuthDataIntegrity === true,
+      ),
+      canonicalCheck('boundedAggregateConsistency', true),
       canonicalCheck('rlsAfterRestore'),
       canonicalCheck('rpoMeasured'),
       canonicalCheck('rtoMeasured'),
@@ -297,7 +306,7 @@ function buildCanonicalRestore(restore, common) {
       rtoSeconds: restore.metrics.rtoSeconds,
       totalExerciseSeconds: restore.metrics?.totalExerciseSeconds ?? null,
     },
-    evidenceBoundary: 'Exact-main-SHA Supabase provider-managed Production backup restore proof with integrity, RLS, RPO and RTO checks. GitHub Actions never creates or retains a Production data dump, row data, database URL, project reference or backup identifier.',
+    evidenceBoundary: 'Exact-main-SHA Supabase provider-managed Production backup restore execution with RLS, bounded aggregate consistency, RPO and RTO checks. restoredDataCompleteness is credited only when the source artifact explicitly proves full customer and Auth data integrity; legacy aggregate-only dataIntegrity booleans never satisfy that control. GitHub Actions never creates or retains a Production data dump, row data, database URL, project reference or backup identifier.',
   };
 }
 
