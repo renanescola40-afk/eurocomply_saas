@@ -107,6 +107,25 @@ Four representative application/tenant tables matched exactly on row count and d
 
 This is stronger than count-only evidence, but it remains representative ID-lineage evidence rather than full content completeness for every restored row/table. It is independent from the 2026-09-19 provider-timed clone and must not be merged into a single fictitious exercise.
 
+## Restored-project tenant-isolation runtime revalidation — 2026-10-04
+
+A read-only session test was executed against the active isolated recovery project `wsjswdrwhyughactoxcf` using an existing restored Auth identity. No user, membership, organization or application row was created or modified.
+
+The test switched the database session to the `authenticated` role with a bounded JWT claim for the selected restored identity, then evaluated one owned organization and one organization for which that identity had no membership.
+
+Observed booleans:
+- own organization visible: **true**
+- foreign organization visible: **false**
+- own organization membership visible: **true**
+- foreign organization membership visible: **false**
+
+No user or organization identifiers are retained in this evidence.
+
+`RESTORED_PROJECT_AUTHENTICATED_RLS_RUNTIME=PASS`
+`RESTORED_PROJECT_CROSS_TENANT_READ_DENIED=PASS`
+
+This proves tenant-isolation behavior on the historical data-bearing recovery project. It is not a substitute for repeating the test on a new current-release provider-managed clone.
+
 ## Current-exact-SHA boundary
 
 The last provider-managed data restore proof predates the current 113-migration schema. The current schema replay is newer but intentionally contains no Production rows.
