@@ -20,9 +20,19 @@ describe('sales lead email notifications', () => {
 
     expect(source).toContain('to: record.work_email');
     expect(source).toContain('replyTo: SALES_MAILBOX');
+    expect(source).toContain('reference: acknowledgement.reference');
+    expect(source).toContain('plan: acknowledgement.plan');
     expect(source).toContain("template: 'sales_lead_acknowledgement'");
-    expect(source).toContain('Recebemos o seu pedido');
-    expect(source).toContain('We received your request');
+    expect(source).toContain('Recebemos o seu pedido comercial');
+    expect(source).toContain('We received your sales request');
+    expect(source).toContain('Resumo do pedido');
+    expect(source).toContain('Request summary');
+    expect(source).toContain('Próximos passos');
+    expect(source).toContain('Next steps');
+    expect(source).toContain('Enterprise AI Act Compliance');
+    expect(source).toContain('Enterprise-grade AI Act compliance');
+    expect(source).toContain('RC-SALES-');
+    expect(source).toContain('www.risckcomply.com');
   });
 
   it('preserves the lead even if an email provider delivery fails', async () => {
