@@ -30,7 +30,7 @@ describe('sales lead email notifications', () => {
     expect(source).toContain('Request summary');
     expect(source).toContain('Próximos passos');
     expect(source).toContain('Next steps');
-    expect(source).toContain('Enterprise AI Act Compliance');
+    expect(source).toContain('AI Act Readiness & Evidence');
     expect(source).toContain('AI Act compliance readiness & evidence operations');
     expect(source).toContain('www.risckcomply.com');
   });
