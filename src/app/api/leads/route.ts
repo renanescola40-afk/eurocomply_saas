@@ -211,11 +211,11 @@ async function sendLeadEmails(record: LeadRecord) {
   const acknowledgementSent = acknowledgementResult.status === 'fulfilled' && acknowledgementResult.value.sent;
 
   if (!internalSent) {
-    console.error('[leads] Internal sales notification delivery failed', { reason: 'internal_sales_email_failed' });
+    console.error('[leads] Internal sales notification delivery failed');
   }
 
   if (!acknowledgementSent) {
-    console.error('[leads] Customer acknowledgement delivery failed', { reason: 'customer_ack_email_failed' });
+    console.error('[leads] Customer acknowledgement delivery failed');
   }
 
   return { internalSent, acknowledgementSent };
@@ -296,14 +296,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const emailDelivery = await sendLeadEmails(record);
+  await sendLeadEmails(record);
 
-  return noStoreJson(
-    {
-      ok: true,
-      notificationQueued: emailDelivery.internalSent,
-      acknowledgementQueued: emailDelivery.acknowledgementSent,
-    },
-    { status: 201 },
-  );
+  return noStoreJson({ ok: true }, { status: 201 });
 }
