@@ -20,8 +20,9 @@ describe('sales lead email notifications', () => {
 
     expect(source).toContain('to: record.work_email');
     expect(source).toContain('replyTo: SALES_MAILBOX');
-    expect(source).toContain('reference: acknowledgement.reference');
     expect(source).toContain('plan: acknowledgement.plan');
+    expect(source).toContain("const match = source.match(/^contact-sales-([a-z0-9_-]+)$/i)");
+    expect(source).toContain('const plan = getBillingPlan(match?.[1])');
     expect(source).toContain("template: 'sales_lead_acknowledgement'");
     expect(source).toContain('Recebemos o seu pedido comercial');
     expect(source).toContain('We received your sales request');
@@ -30,8 +31,7 @@ describe('sales lead email notifications', () => {
     expect(source).toContain('Próximos passos');
     expect(source).toContain('Next steps');
     expect(source).toContain('Enterprise AI Act Compliance');
-    expect(source).toContain('Enterprise-grade AI Act compliance');
-    expect(source).toContain('RC-SALES-');
+    expect(source).toContain('AI Act compliance readiness & evidence operations');
     expect(source).toContain('www.risckcomply.com');
   });
 
