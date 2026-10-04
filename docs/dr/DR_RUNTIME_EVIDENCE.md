@@ -107,6 +107,9 @@ At reconciliation time:
 - CURRENT_SCHEMA_RTO_WITHIN_4H=PROVEN
 - CURRENT_MAIN_PRODUCTION_SHA_ALIGNMENT=PROVEN
 - VERCEL_ROLLBACK_CANDIDATE_IDENTIFICATION=PROVEN
+- LIVE_VERCEL_ROLLBACK_EXECUTION=PROVEN
+- VERCEL_FORWARD_RESTORE_TO_INTENDED_DEPLOYMENT=PROVEN
+- POST_ROLLBACK_PRODUCTION_HEALTH=PROVEN
 
 ## Residual scope that remains open
 
@@ -133,9 +136,19 @@ Therefore the following must not be represented as current-exact-SHA proof:
 - PROVIDER_RESTORE_RTO=PROVEN (measured historical provider-managed restore: 10s)
 - CURRENT_SCHEMA_REPLAY=PASS
 - CURRENT_SCHEMA_RTO=PASS
+- LIVE_VERCEL_ROLLBACK=PASS
+- PRODUCTION_RETURN_AFTER_ROLLBACK=PASS
 - FULL_APPLICATION_RECOVERY_CURRENT_SHA=OPEN
 - STORAGE_OBJECT_RECOVERY=OPEN
 - CURRENT_EXACT_SHA_PROVIDER_CLONE=OPEN
+
+## Live deployment rollback exercise — 2026-10-04
+
+A controlled Vercel rollback was executed from deployment `dpl_DEJ4TPCEPeC7xoyDWdzaJ2wd1TnW` / SHA `bd435ac11b46cab2f0f84a215d74cc63784a6b65` to prior READY deployment `dpl_AkWMF5d9XuBye6Vp8bXNLMoKCEUE` / SHA `8489f7001cd4e98c8d93deb24593fc4cd6937719`.
+
+The production aliases were observed on the rollback target. The intended current deployment was then promoted back. Final Vercel hostname resolution for `www.risckcomply.com` returned `dpl_DEJ4TPCEPeC7xoyDWdzaJ2wd1TnW`, and `/api/health` returned HTTP 200 with `{"status":"ok"}` and no-store cache headers.
+
+See `docs/dr/ROLLBACK_REHEARSAL.md`.
 
 ## Safety attestations
 
