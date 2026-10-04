@@ -151,7 +151,7 @@ function extractPlan(source: string) {
   return plan?.name ?? null;
 }
 
-function localizedAcknowledgement(record: LeadRecord, requestId: string) {
+function localizedAcknowledgement(record: LeadRecord) {
   const pt = record.locale === 'pt';
   const submittedAt = formatSubmittedAt(record.locale);
   const plan = extractPlan(record.source);
@@ -188,7 +188,7 @@ function localizedAcknowledgement(record: LeadRecord, requestId: string) {
                   <tr>
                     <td>
                       <div style="font-size:18px;font-weight:800;letter-spacing:.02em;">RISCK COMPLY</div>
-                      <div style="margin-top:5px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#9fb4cc;">Enterprise AI Act Compliance</div>
+                      <div style="margin-top:5px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#9fb4cc;">AI Act Readiness & Evidence</div>
                     </td>
                     <td align="right" style="font-size:12px;color:#9fb4cc;">${pt ? 'Pedido comercial' : 'Sales request'}</td>
                   </tr>
@@ -331,7 +331,7 @@ function internalLeadNotification(record: LeadRecord) {
 async function sendLeadEmails(record: LeadRecord) {
   const requestId = randomUUID();
   const internal = internalLeadNotification(record);
-  const acknowledgement = localizedAcknowledgement(record, requestId);
+  const acknowledgement = localizedAcknowledgement(record);
 
   const [internalResult, acknowledgementResult] = await Promise.allSettled([
     sendEmail({
