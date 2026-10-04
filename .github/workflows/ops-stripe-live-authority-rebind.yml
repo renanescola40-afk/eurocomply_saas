@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - .github/workflows/ops-stripe-live-authority-rebind.yml
 
 permissions:
   contents: read
@@ -148,6 +150,12 @@ jobs:
           test "$state" = "READY"
           deployed_sha="$(jq -r '.meta.githubCommitSha // .gitSource.sha // empty' <<<"$deployment_json")"
           test "${deployed_sha,,}" = "${RELEASE_SHA,,}"
+          deployment_target="$(jq -r '.target // empty' <<<"$deployment_json")"
+          test "$deployment_target" = "production"
+          alias_error="$(jq -r '.aliasError.code // empty' <<<"$deployment_json")"
+          test "$alias_error" = ""
+          canonical_alias_present="$(jq -r '([.alias[]?] | index("www.risckcomply.com")) != null' <<<"$deployment_json")"
+          test "$canonical_alias_present" = "true"
 
       - name: Prove canonical Production health and authenticated readiness after cutover
         shell: bash
@@ -169,3 +177,11 @@ jobs:
             sleep 5
           done
           test "$ready_ok" = true
+
+      - name: Verify canonical runtime release SHA after cutover
+        shell: bash
+        env:
+          RELEASE_DEPLOYMENT_URL: https://www.risckcomply.com
+          RELEASE_COMMIT_SHA: ${{ github.sha }}
+          RELEASE_BUILD_SHA: ${{ github.sha }}
+        run: node scripts/release/verify-runtime-release-sha.mjs
