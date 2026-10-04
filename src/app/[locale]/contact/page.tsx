@@ -1,10 +1,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, CheckCircle2, Mail } from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckCircle2, Send } from 'lucide-react';
 import { PublicFooter } from '@/components/marketing/public-footer';
+import { SalesContactForm } from '@/components/marketing/sales-contact-form';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
-
-const contactMailbox = ['comercial', 'risckcomply.com'].join('@');
 
 type ContactSearchParams = {
   intent?: string | string[];
@@ -27,7 +26,7 @@ function copyFor(locale: Locale, intent?: string) {
       eyebrow: demoIntent ? 'Marcar demo' : 'Falar com vendas',
       title: demoIntent ? 'Veja como o RISCK COMPLY organiza AI Act readiness.' : 'Fale connosco sobre rollout enterprise.',
       subtitle: 'Conte-nos o contexto da empresa, número de equipas, países, sistemas de IA e necessidades de procurement. Respondemos com o próximo passo mais adequado.',
-      emailLabel: 'Enviar pedido por email',
+      emailLabel: 'Abrir formulário comercial',
       back: 'Voltar à landing',
       scope: 'Escopo da conversa',
       disclaimer: 'Sem garantia legal. Apenas readiness e workflow de evidências.',
@@ -40,7 +39,7 @@ function copyFor(locale: Locale, intent?: string) {
     eyebrow: demoIntent ? 'Book demo' : 'Talk to sales',
     title: demoIntent ? 'See how RISCK COMPLY organizes AI Act readiness.' : 'Talk to us about enterprise rollout.',
     subtitle: 'Share your company context, teams, countries, AI systems and procurement needs. We will respond with the most relevant next step.',
-    emailLabel: 'Send request by email',
+    emailLabel: 'Open sales form',
     back: 'Back to landing',
     scope: 'Buyer conversation scope',
     disclaimer: 'No legal guarantee. Readiness and evidence workflow only.',
@@ -56,14 +55,7 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
   const intent = first(resolvedSearchParams.intent);
   const plan = first(resolvedSearchParams.plan)?.trim();
   const copy = copyFor(activeLocale, intent);
-  const subject = plan ? `${copy.subject} — ${plan}` : copy.subject;
-  const bodyLines = [
-    activeLocale === 'pt' ? 'Olá, gostaria de falar com a equipa comercial da RISCK COMPLY.' : 'Hello, I would like to speak with the RISCK COMPLY sales team.',
-    '',
-    `intent=${intent ?? 'sales'}`,
-    `plan=${plan ?? 'not-specified'}`,
-  ];
-  const mailto = `mailto:${contactMailbox}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\\n'))}`;
+
 
   return (
     <main className="min-h-screen bg-[#050913] px-4 py-10 text-white sm:px-6 lg:px-8">
@@ -83,10 +75,10 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
               <p className="mt-5 text-sm leading-7 text-white/60 md:text-base">{copy.subtitle}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a
-                  href={mailto}
+                  href="#sales-contact-form"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
                 >
-                  <Mail className="h-4 w-4" /> {copy.emailLabel}
+                  <Send className="h-4 w-4" /> {copy.emailLabel}
                 </a>
                 <Link
                   href={`/${activeLocale}`}
@@ -115,6 +107,11 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
           </div>
         </div>
       </section>
+      <SalesContactForm
+        locale={activeLocale}
+        intent={intent ?? 'sales'}
+        plan={plan || 'enterprise'}
+      />
       <PublicFooter locale={activeLocale} />
     </main>
   );
