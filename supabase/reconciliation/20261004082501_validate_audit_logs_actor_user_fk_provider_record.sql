@@ -1,0 +1,16 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20261004082501
+--   provider name: validate_audit_logs_actor_user_fk
+--
+-- Canonical repository source representing the same migration body:
+--   canonical source version: 20261004002000
+--   local source: supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql
+--   local source SHA-256: ef34adade10fd4879b1fcaa10c39f1205950811e706f41f8fb60d081e9f072d2
+--
+-- Production recorded this reviewed validation under a provider-generated ledger
+-- timestamp that differs from the canonical repository filename timestamp.
+--
+-- This file binds only the observed remote identity to the reviewed local source.
+-- No DDL. No SQL execution. No migration-history repair. No database write.

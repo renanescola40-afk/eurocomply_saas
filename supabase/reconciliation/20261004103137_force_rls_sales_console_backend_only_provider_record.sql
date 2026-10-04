@@ -1,0 +1,16 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20261004103137
+--   provider name: force_rls_sales_console_backend_only
+--
+-- Canonical repository source representing the same migration body:
+--   canonical source version: 20261004104500
+--   local source: supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql
+--   local source SHA-256: 0b1feea5d63c8ec9ba38b8d90d5c95d1809385b2a79e319378ef7ebab5fc5fc2
+--
+-- Production recorded this reviewed hardening under a provider-generated ledger
+-- timestamp that differs from the canonical repository filename timestamp.
+--
+-- This file binds only the observed remote identity to the reviewed local source.
+-- No DDL. No SQL execution. No migration-history repair. No database write.
