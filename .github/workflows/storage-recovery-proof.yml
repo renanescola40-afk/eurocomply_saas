@@ -15,6 +15,10 @@ on:
         description: Type EXECUTE_ISOLATED_STORAGE_RECOVERY_PROOF
         required: true
         type: string
+      restore_attestation:
+        description: Type SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -32,6 +36,7 @@ jobs:
       TARGET_SHA: ${{ inputs.release_sha }}
       RESTORE_PROJECT_REF: ${{ inputs.restore_project_ref }}
       CONFIRMATION: ${{ inputs.confirmation }}
+      RESTORE_ATTESTATION: ${{ inputs.restore_attestation }}
       PRODUCTION_PROJECT_REF: tganhbbhfxcpblmgqprg
       FUNCTION_NAME: dr-storage-recovery-proof
       EVIDENCE_PATH: artifacts/storage-recovery/storage-recovery-proof.json
@@ -52,6 +57,7 @@ jobs:
           [[ "$RESTORE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
           test "$RESTORE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
           test "$CONFIRMATION" = "EXECUTE_ISOLATED_STORAGE_RECOVERY_PROOF"
+          test "$RESTORE_ATTESTATION" = "SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$main_sha" = "$TARGET_SHA"
