@@ -145,11 +145,23 @@ jobs:
             const expected = await sha(bytes);
 
             const cleanup = async (strict: boolean) => {
-              const empty = await sb.storage.emptyBucket(bucket);
-              if (empty.error && strict) return false;
-              const del = await sb.storage.deleteBucket(bucket);
-              if (del.error && strict) return false;
-              return true;
+              for (let attempt = 1; attempt <= 4; attempt++) {
+                const empty = await sb.storage.emptyBucket(bucket);
+                if (empty.error && empty.error.message !== "Bucket not found" && strict) return false;
+
+                // Storage deletion can be eventually consistent after
+                // emptyBucket succeeds. Retry the bucket delete with a
+                // short bounded delay rather than failing the proof on
+                // the propagation window.
+                await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+
+                const del = await sb.storage.deleteBucket(bucket);
+                if (!del.error || del.error.message === "Bucket not found") return true;
+
+                const stillNotEmpty = del.error.message.toLowerCase().includes("not empty");
+                if (!stillNotEmpty) return strict ? false : true;
+              }
+              return !strict;
             };
 
             await cleanup(false);
