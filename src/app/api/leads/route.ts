@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 
 import { sendEmail } from '@/lib/email/server-sender';
+import { getBillingPlan } from '@/lib/billing/plans';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -136,23 +137,171 @@ function escapeHtml(value: string | null | undefined) {
     .replaceAll("'", '&#39;');
 }
 
-function localizedAcknowledgement(locale: string | null, fullName: string) {
-  const pt = locale === 'pt';
-  const safeName = escapeHtml(fullName);
+function formatSubmittedAt(locale: string | null, now = new Date()) {
+  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : 'en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Europe/Lisbon',
+  }).format(now);
+}
 
-  if (pt) {
-    return {
-      subject: 'Recebemos o seu pedido — RISCK COMPLY',
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a"><h2>Recebemos o seu pedido</h2><p>Olá ${safeName},</p><p>Obrigado por contactar a RISCK COMPLY. Recebemos o seu pedido comercial e a nossa equipa está a analisar as informações enviadas.</p><p>Entraremos em contacto através deste endereço de email assim que tivermos o próximo passo.</p><p>RISCK COMPLY</p></div>`,
-      text: `Olá ${fullName},\n\nObrigado por contactar a RISCK COMPLY. Recebemos o seu pedido comercial e a nossa equipa está a analisar as informações enviadas.\n\nEntraremos em contacto através deste endereço de email assim que tivermos o próximo passo.\n\nRISCK COMPLY`,
-    };
-  }
+function extractPlan(source: string) {
+  const match = source.match(/^contact-sales-([a-z0-9_-]+)$/i);
+  const plan = getBillingPlan(match?.[1]);
+  return plan?.name ?? null;
+}
 
-  return {
-    subject: 'We received your request — RISCK COMPLY',
-    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a"><h2>We received your request</h2><p>Hello ${safeName},</p><p>Thank you for contacting RISCK COMPLY. We received your sales request and our team is reviewing the information you provided.</p><p>We will contact you at this email address with the appropriate next step.</p><p>RISCK COMPLY</p></div>`,
-    text: `Hello ${fullName},\n\nThank you for contacting RISCK COMPLY. We received your sales request and our team is reviewing the information you provided.\n\nWe will contact you at this email address with the appropriate next step.\n\nRISCK COMPLY`,
-  };
+function localizedAcknowledgement(record: LeadRecord) {
+  const pt = record.locale === 'pt';
+  const submittedAt = formatSubmittedAt(record.locale);
+  const plan = extractPlan(record.source);
+  const safeName = escapeHtml(record.full_name);
+  const safeCompany = escapeHtml(record.company_name);
+  const safeEmail = escapeHtml(record.work_email);
+  const safePlan = escapeHtml(plan);
+  const safeSubmittedAt = escapeHtml(submittedAt);
+
+  const subject = pt
+    ? 'Recebemos o seu pedido comercial — RISCK COMPLY'
+    : 'We received your sales request — RISCK COMPLY';
+
+  const preheader = pt
+    ? 'A nossa equipa recebeu o seu pedido e está a analisar o contexto enviado.'
+    : 'Our team received your request and is reviewing the submitted context.';
+
+  const greeting = pt ? `Olá ${safeName},` : `Hello ${safeName},`;
+  const intro = pt
+    ? 'Obrigado por contactar a RISCK COMPLY. Recebemos o seu pedido comercial com sucesso e a nossa equipa está a analisar as informações submetidas para preparar o próximo passo mais adequado ao seu contexto.'
+    : 'Thank you for contacting RISCK COMPLY. We successfully received your sales request and our team is reviewing the information provided to prepare the most appropriate next step for your context.';
+
+  const html = `<!doctype html>
+<html lang="${pt ? 'pt' : 'en'}">
+  <body style="margin:0;padding:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(preheader)}</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fb;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:680px;background:#ffffff;border:1px solid #dbe3ee;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="background:#08111f;padding:26px 32px;color:#ffffff;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td>
+                      <div style="font-size:18px;font-weight:800;letter-spacing:.02em;">RISCK COMPLY</div>
+                      <div style="margin-top:5px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#9fb4cc;">AI Act Readiness & Evidence</div>
+                    </td>
+                    <td align="right" style="font-size:12px;color:#9fb4cc;">${pt ? 'Pedido comercial' : 'Sales request'}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:34px 32px 18px;">
+                <div style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#2563eb;">${pt ? 'Confirmação de contacto' : 'Contact confirmation'}</div>
+                <h1 style="margin:10px 0 14px;font-size:30px;line-height:1.2;color:#0b1220;">${pt ? 'Recebemos o seu pedido comercial' : 'We received your sales request'}</h1>
+                <p style="margin:0 0 12px;font-size:16px;line-height:1.7;color:#334155;">${greeting}</p>
+                <p style="margin:0;font-size:16px;line-height:1.7;color:#334155;">${intro}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 32px 10px;">
+                <div style="border:1px solid #dbe3ee;border-radius:14px;background:#f8fafc;padding:20px;">
+                  <div style="margin-bottom:14px;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#475569;">${pt ? 'Resumo do pedido' : 'Request summary'}</div>
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size:14px;color:#334155;">
+                    <tr><td style="padding:7px 0;color:#64748b;width:38%;">${pt ? 'Empresa' : 'Company'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safeCompany}</td></tr>
+                    <tr><td style="padding:7px 0;color:#64748b;">${pt ? 'Email de contacto' : 'Contact email'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safeEmail}</td></tr>
+                    ${plan ? `<tr><td style="padding:7px 0;color:#64748b;">${pt ? 'Plano' : 'Plan'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safePlan}</td></tr>` : ''}
+
+                    <tr><td style="padding:7px 0;color:#64748b;">${pt ? 'Submetido em' : 'Submitted at'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safeSubmittedAt}</td></tr>
+                  </table>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 32px 8px;">
+                <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#475569;">${pt ? 'Próximos passos' : 'Next steps'}</div>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:12px;font-size:15px;line-height:1.6;color:#334155;">
+                  <tr><td style="width:26px;vertical-align:top;color:#2563eb;font-weight:800;">01</td><td style="padding-bottom:10px;">${pt ? 'Análise do contexto e das informações submetidas.' : 'Review of the context and information submitted.'}</td></tr>
+                  <tr><td style="width:26px;vertical-align:top;color:#2563eb;font-weight:800;">02</td><td style="padding-bottom:10px;">${pt ? 'Validação comercial inicial e, quando aplicável, alinhamento de procurement.' : 'Initial commercial validation and, where applicable, procurement alignment.'}</td></tr>
+                  <tr><td style="width:26px;vertical-align:top;color:#2563eb;font-weight:800;">03</td><td>${pt ? 'Contacto da nossa equipa através deste endereço de email.' : 'Follow-up from our team through this email address.'}</td></tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 32px 34px;">
+                <div style="border-left:3px solid #2563eb;padding:12px 16px;background:#f8fafc;color:#475569;font-size:14px;line-height:1.6;">
+                  ${pt ? 'Se pretender acrescentar contexto adicional, basta responder diretamente a esta mensagem.' : 'If you would like to add more context, simply reply directly to this message.'}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="border-top:1px solid #e2e8f0;padding:22px 32px;background:#fbfdff;font-size:12px;line-height:1.7;color:#64748b;">
+                <strong style="color:#0f172a;">RISCK COMPLY</strong><br/>
+                AI Act compliance readiness & evidence operations<br/>
+                <a href="https://www.risckcomply.com" style="color:#2563eb;text-decoration:none;">www.risckcomply.com</a> ·
+                <a href="mailto:comercial@risckcomply.com" style="color:#2563eb;text-decoration:none;">comercial@risckcomply.com</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  const text = pt
+    ? [
+        'RISCK COMPLY — Confirmação de contacto',
+        '',
+        `Olá ${record.full_name},`,
+        '',
+        'Obrigado por contactar a RISCK COMPLY. Recebemos o seu pedido comercial com sucesso e a nossa equipa está a analisar as informações submetidas.',
+        '',
+        'Resumo do pedido',
+        `Empresa: ${record.company_name}`,
+        `Email de contacto: ${record.work_email}`,
+        ...(plan ? [`Plano: ${plan}`] : []),
+        `Submetido em: ${submittedAt}`,
+        '',
+        'Próximos passos:',
+        '1. Análise do contexto e das informações submetidas.',
+        '2. Validação comercial inicial e, quando aplicável, alinhamento de procurement.',
+        '3. Contacto da nossa equipa através deste endereço de email.',
+        '',
+        'Se pretender acrescentar contexto adicional, responda diretamente a esta mensagem.',
+        '',
+        'RISCK COMPLY',
+        'AI Act compliance readiness & evidence operations',
+        'www.risckcomply.com',
+        SALES_MAILBOX,
+      ].join('\n')
+    : [
+        'RISCK COMPLY — Contact confirmation',
+        '',
+        `Hello ${record.full_name},`,
+        '',
+        'Thank you for contacting RISCK COMPLY. We successfully received your sales request and our team is reviewing the information provided.',
+        '',
+        'Request summary',
+        `Company: ${record.company_name}`,
+        `Contact email: ${record.work_email}`,
+        ...(plan ? [`Plan: ${plan}`] : []),
+        `Submitted at: ${submittedAt}`,
+        '',
+        'Next steps:',
+        '1. Review of the context and information submitted.',
+        '2. Initial commercial validation and, where applicable, procurement alignment.',
+        '3. Follow-up from our team through this email address.',
+        '',
+        'If you would like to add more context, reply directly to this message.',
+        '',
+        'RISCK COMPLY',
+        'AI Act compliance readiness & evidence operations',
+        'www.risckcomply.com',
+        SALES_MAILBOX,
+      ].join('\n');
+
+  return { subject, html, text, plan, submittedAt };
 }
 
 function internalLeadNotification(record: LeadRecord) {
@@ -182,7 +331,7 @@ function internalLeadNotification(record: LeadRecord) {
 async function sendLeadEmails(record: LeadRecord) {
   const requestId = randomUUID();
   const internal = internalLeadNotification(record);
-  const acknowledgement = localizedAcknowledgement(record.locale, record.full_name);
+  const acknowledgement = localizedAcknowledgement(record);
 
   const [internalResult, acknowledgementResult] = await Promise.allSettled([
     sendEmail({
@@ -203,7 +352,11 @@ async function sendLeadEmails(record: LeadRecord) {
       text: acknowledgement.text,
       template: 'sales_lead_acknowledgement',
       idempotencyKey: `sales-lead/ack/${requestId}`,
-      metadata: { source: record.source, locale: record.locale },
+      metadata: {
+        source: record.source,
+        locale: record.locale,
+        plan: acknowledgement.plan,
+      },
     }),
   ]);
 
