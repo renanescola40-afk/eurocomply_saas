@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$main_sha" = "$RELEASE_SHA"
 
       - name: Set up Node.js
@@ -54,11 +54,41 @@ jobs:
           EXPECTED_STRIPE_ACCOUNT_ID="$(node -e "const fs=require('node:fs');const a=JSON.parse(fs.readFileSync('config/stripe-live-account-authority.json','utf8'));if(a.schema!=='risck-comply.stripe-live-account-authority.v1'||a.mode!=='live'||!/^acct_[A-Za-z0-9]+$/.test(a.accountId))process.exit(1);process.stdout.write(a.accountId)")"
           echo "EXPECTED_STRIPE_ACCOUNT_ID=$EXPECTED_STRIPE_ACCOUNT_ID" >> "$GITHUB_ENV"
 
+      - name: Load reviewed Vercel target authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const doc = JSON.parse(fs.readFileSync('config/production-provider-targets.json', 'utf8'));
+          const target = doc?.vercel;
+          if (
+            doc?.schema !== 'risck-comply.production-provider-targets.v1'
+            || !/^prj_[A-Za-z0-9]+$/.test(String(target?.projectId ?? ''))
+            || !/^team_[A-Za-z0-9]+$/.test(String(target?.teamId ?? ''))
+            || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(String(target?.projectName ?? ''))
+          ) process.exit(1);
+          fs.appendFileSync(process.env.GITHUB_ENV, [
+            `VERCEL_PROJECT_ID=${target.projectId}`,
+            `VERCEL_TEAM_ID=${target.teamId}`,
+            `VERCEL_PROJECT_NAME=${target.projectName}`,
+            '',
+          ].join('\n'));
+          NODE
+
       - name: Fail closed on incompatible Vercel binding types
         run: node scripts/security/check-vercel-stripe-binding-types.mjs
 
       - name: Verify protected Stripe authority before mutation
         run: node scripts/security/check-stripe-live-account-bootstrap-preflight.mjs
+
+      - name: Revalidate exact current remote main immediately before provider mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
 
       - name: Rebind canonical LIVE authority and prices to Vercel Production
         run: node scripts/ops/provision-stripe-live-account.mjs
