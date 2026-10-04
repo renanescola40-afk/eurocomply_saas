@@ -17,9 +17,10 @@ Successful evidence run `35454743996` records:
 - distinct source/restore databases: PASS
 - same organization: PASS
 - same region: PASS
-- critical data counts observed and validated: PASS
-- restored counts not ahead of source: PASS
-- Auth-user integrity: PASS
+- critical aggregate counts observed: PASS
+- restored counts not ahead of then-live source: PASS
+- exact customer-row completeness against backup-time values: NOT PROVEN
+- exact Auth-row completeness against backup-time values: NOT PROVEN
 - RLS after restore: PASS
 - RLS policies present: PASS
 - migration history matches source: PASS
@@ -27,8 +28,10 @@ Successful evidence run `35454743996` records:
 - forward reconciliation postconditions executed and passed: PASS
 - no Production dump created on GitHub runner: PASS
 
-`CUSTOMER_DATA_RESTORE_INTEGRITY=PASS`
-`AUTH_DATA_RESTORE_INTEGRITY=PASS`
+`PROVIDER_MANAGED_RESTORE_EXECUTION=PASS`
+`BOUNDED_AGGREGATE_RESTORE_CONSISTENCY=PASS`
+`CUSTOMER_DATA_RESTORE_COMPLETENESS=NOT_FULLY_PROVEN`
+`AUTH_DATA_RESTORE_COMPLETENESS=NOT_FULLY_PROVEN`
 `POST_RESTORE_RLS_INTEGRITY=PASS`
 
 ## Current canonical migration integrity — 2026-10-03
@@ -101,9 +104,10 @@ Therefore:
 
 ## Verdict
 
-- PROVIDER_MANAGED_BACKUP_RESTORE_INTEGRITY=PASS
-- CUSTOMER_DATA_RESTORE_INTEGRITY=PASS
-- AUTH_RESTORE_INTEGRITY=PASS
+- PROVIDER_MANAGED_BACKUP_RESTORE_EXECUTION=PASS
+- BOUNDED_AGGREGATE_RESTORE_CONSISTENCY=PASS
+- CUSTOMER_DATA_RESTORE_COMPLETENESS=OPEN
+- AUTH_DATA_RESTORE_COMPLETENESS=OPEN
 - POST_RESTORE_RLS_INTEGRITY=PASS
 - CURRENT_CANONICAL_REPLAY_INTEGRITY=PASS
 - CURRENT_PUBLIC_TABLE_PARITY=PASS
