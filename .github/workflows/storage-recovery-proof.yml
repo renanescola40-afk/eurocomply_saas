@@ -12,16 +12,8 @@ on:
         description: Exact current main SHA
         required: true
         type: string
-      restore_project_ref:
-        description: Non-production Supabase recovery project ref
-        required: true
-        type: string
       confirmation:
         description: Type EXECUTE_ISOLATED_STORAGE_RECOVERY_PROOF
-        required: true
-        type: string
-      restore_attestation:
-        description: Type SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED
         required: true
         type: string
 
@@ -29,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: storage-recovery-proof-${{ inputs.release_sha }}-${{ inputs.restore_project_ref }}
+  group: storage-recovery-proof-${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -39,46 +31,57 @@ jobs:
     environment: production-recovery
     env:
       TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.sha }}
-      RESTORE_PROJECT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.restore_project_ref || 'wsjswdrwhyughactoxcf' }}
       CONFIRMATION: ${{ github.event_name == 'workflow_dispatch' && inputs.confirmation || 'EXECUTE_ISOLATED_STORAGE_RECOVERY_PROOF' }}
-      RESTORE_ATTESTATION: ${{ github.event_name == 'workflow_dispatch' && inputs.restore_attestation || 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED' }}
+      RECOVERY_PROJECT_REF: wsjswdrwhyughactoxcf
       PRODUCTION_PROJECT_REF: tganhbbhfxcpblmgqprg
+      RECOVERY_EVIDENCE_FILE: docs/trust/BACKUP_RESTORE_EVIDENCE_2026-09-24.md
+      RECOVERY_EVIDENCE_BLOB_SHA: 4fdc57665ad72dc4b8035ea6e72d46efc6e4e0b9
       FUNCTION_NAME: dr-storage-recovery-proof
       EVIDENCE_PATH: artifacts/storage-recovery/storage-recovery-proof.json
+
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ inputs.release_sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.sha }}
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Validate exact main and isolated target
+      - name: Validate exact main and trusted isolated target
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$RESTORE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]
-          test "$RESTORE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test "$GITHUB_REF_NAME" = "main"
+          test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$CONFIRMATION" = "EXECUTE_ISOLATED_STORAGE_RECOVERY_PROOF"
-          test "$RESTORE_ATTESTATION" = "SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED"
+          test "$RECOVERY_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+
+          main_sha="$(curl --fail --silent --show-error             -H "Authorization: Bearer $GH_TOKEN"             -H 'Accept: application/vnd.github+json'             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$main_sha" = "$TARGET_SHA"
+
+          test -f "$RECOVERY_EVIDENCE_FILE"
+          test "$(git hash-object "$RECOVERY_EVIDENCE_FILE")" = "$RECOVERY_EVIDENCE_BLOB_SHA"
+          grep -Fq -- "- project: \`$RECOVERY_PROJECT_REF\`" "$RECOVERY_EVIDENCE_FILE"
+          grep -Fq 'REPRESENTATIVE_ROWSET_LINEAGE_REVALIDATED_2026_10_04=PASS_4_OF_4' "$RECOVERY_EVIDENCE_FILE"
+          grep -Fq 'BACKUP_MECHANISM_SOURCE=NOT_INDEPENDENTLY_ATTESTED' "$RECOVERY_EVIDENCE_FILE"
 
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
         with:
           version: 2.114.0
 
-      - name: Validate recovery project
+      - name: Validate allowlisted recovery project
         shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          project_json="$(curl --fail --silent --show-error -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$RESTORE_PROJECT_REF")"
-          test "$(jq -r '.id // .ref // empty' <<<"$project_json")" = "$RESTORE_PROJECT_REF"
+          project_json="$(curl --fail --silent --show-error             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             "https://api.supabase.com/v1/projects/$RECOVERY_PROJECT_REF")"
+          test "$(jq -r '.id // .ref // empty' <<<"$project_json")" = "$RECOVERY_PROJECT_REF"
+          test "$(jq -r '.name // empty' <<<"$project_json")" = "risck-comply-s1-restore-2026-09-02"
+          test "$(jq -r '.region // empty' <<<"$project_json")" = "eu-west-1"
           case "$(jq -r '.status // empty' <<<"$project_json")" in
             ACTIVE_HEALTHY|FUNCTIONS_DEPLOYED) ;;
             *) echo "Recovery target is not healthy" >&2; exit 1 ;;
@@ -115,15 +118,19 @@ jobs:
             const original = "runtime/original.txt";
             const backup = "backup/original.txt";
             const restored = "runtime/restored.txt";
-            const bytes = new TextEncoder().encode("RISCK_COMPLY_STORAGE_RECOVERY_SYNTHETIC_V1");
+            const bytes = new TextEncoder().encode("RISCK_COMPLY_STORAGE_RECOVERY_SYNTHETIC_V2");
             const expected = await sha(bytes);
 
-            const cleanup = async () => {
-              try { await sb.storage.from(bucket).remove([original, backup, restored]); } catch {}
-              try { await sb.storage.deleteBucket(bucket); } catch {}
+            const cleanup = async (strict: boolean) => {
+              const empty = await sb.storage.emptyBucket(bucket);
+              if (empty.error && strict) return false;
+              const del = await sb.storage.deleteBucket(bucket);
+              if (del.error && strict) return false;
+              return true;
             };
 
-            await cleanup();
+            await cleanup(false);
+
             try {
               const c = await sb.storage.createBucket(bucket, { public: false });
               if (c.error) throw new Error("create_bucket_failed");
@@ -140,7 +147,13 @@ jobs:
 
               const rm = await sb.storage.from(bucket).remove([original]);
               if (rm.error) throw new Error("delete_original_failed");
-              const deleted = await sb.storage.from(bucket).download(original);
+
+              const deletedListing = await sb.storage.from(bucket).list("runtime", {
+                limit: 100,
+                search: "original.txt"
+              });
+              if (deletedListing.error) throw new Error("delete_verification_list_failed");
+              const originalMissingAfterDelete = !deletedListing.data.some((entry) => entry.name === "original.txt");
 
               const b = await sb.storage.from(bucket).download(backup);
               if (b.error) throw new Error("download_backup_failed");
@@ -155,31 +168,42 @@ jobs:
               const restoredBytes = new Uint8Array(await r.data.arrayBuffer());
               const restoredHash = await sha(restoredBytes);
 
-              const result = {
-                schema: "risck-comply.storage-recovery-proof.v1",
-                ok: originalHash === expected && backupHash === expected && restoredHash === expected && !!deleted.error,
+              const mechanicsOk =
+                originalHash === expected &&
+                backupHash === expected &&
+                restoredHash === expected &&
+                originalMissingAfterDelete;
+
+              const cleanupCompleted = await cleanup(true);
+              const ok = mechanicsOk && cleanupCompleted;
+
+              return Response.json({
+                schema: "risck-comply.storage-recovery-proof.v2",
+                ok,
                 syntheticObjectOnly: true,
-                isolatedRecoveryProject: true,
-                originalMissingAfterDelete: !!deleted.error,
+                allowlistedRecoveryProject: true,
+                providerRestoreProvenanceClaimed: false,
+                originalMissingAfterDelete,
                 originalHashMatches: originalHash === expected,
                 backupHashMatches: backupHash === expected,
                 restoredHashMatches: restoredHash === expected,
                 byteLength: restoredBytes.byteLength,
                 productionCustomerObjectRead: false,
-                productionCustomerObjectCopied: false
-              };
-              await cleanup();
-              return Response.json({ ...result, cleanupCompleted: true }, {
-                status: result.ok ? 200 : 500,
+                productionCustomerObjectCopied: false,
+                cleanupCompleted
+              }, {
+                status: ok ? 200 : 500,
                 headers: { "cache-control": "no-store" }
               });
             } catch (e) {
-              await cleanup();
+              const cleanupCompleted = await cleanup(true);
               return Response.json({
-                schema: "risck-comply.storage-recovery-proof.v1",
+                schema: "risck-comply.storage-recovery-proof.v2",
                 ok: false,
                 syntheticObjectOnly: true,
-                cleanupCompleted: true,
+                allowlistedRecoveryProject: true,
+                providerRestoreProvenanceClaimed: false,
+                cleanupCompleted,
                 error: String(e instanceof Error ? e.message : e)
               }, { status: 500 });
             }
@@ -192,23 +216,36 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          supabase secrets set --project-ref "$RESTORE_PROJECT_REF" "DR_STORAGE_PROOF_NONCE=$DR_STORAGE_NONCE"
-          supabase functions deploy "$FUNCTION_NAME" --project-ref "$RESTORE_PROJECT_REF" --no-verify-jwt
+          supabase secrets set --project-ref "$RECOVERY_PROJECT_REF" "DR_STORAGE_PROOF_NONCE=$DR_STORAGE_NONCE"
+          supabase functions deploy "$FUNCTION_NAME" --project-ref "$RECOVERY_PROJECT_REF" --no-verify-jwt
 
       - name: Execute and validate recovery proof
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$(dirname "$EVIDENCE_PATH")"
-          response="$(curl --fail-with-body --silent --show-error -H "x-dr-proof-nonce: $DR_STORAGE_NONCE" -H 'Accept: application/json' "https://$RESTORE_PROJECT_REF.supabase.co/functions/v1/$FUNCTION_NAME")"
-          jq -e '.schema=="risck-comply.storage-recovery-proof.v1" and .ok==true and .syntheticObjectOnly==true and .isolatedRecoveryProject==true and .originalMissingAfterDelete==true and .originalHashMatches==true and .backupHashMatches==true and .restoredHashMatches==true and .productionCustomerObjectRead==false and .productionCustomerObjectCopied==false and .cleanupCompleted==true' <<<"$response" >/dev/null
+          response="$(curl --fail-with-body --silent --show-error             -H "x-dr-proof-nonce: $DR_STORAGE_NONCE"             -H 'Accept: application/json'             "https://$RECOVERY_PROJECT_REF.supabase.co/functions/v1/$FUNCTION_NAME")"
+          jq -e '
+            .schema=="risck-comply.storage-recovery-proof.v2" and
+            .ok==true and
+            .syntheticObjectOnly==true and
+            .allowlistedRecoveryProject==true and
+            .providerRestoreProvenanceClaimed==false and
+            .originalMissingAfterDelete==true and
+            .originalHashMatches==true and
+            .backupHashMatches==true and
+            .restoredHashMatches==true and
+            .productionCustomerObjectRead==false and
+            .productionCustomerObjectCopied==false and
+            .cleanupCompleted==true
+          ' <<<"$response" >/dev/null
           jq 'del(.error)' <<<"$response" > "$EVIDENCE_PATH"
 
       - name: Upload redacted evidence
-        if: always()
+        if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: storage-recovery-proof-${{ inputs.release_sha }}
+          name: storage-recovery-proof-${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.sha }}
           path: artifacts/storage-recovery/storage-recovery-proof.json
           if-no-files-found: error
           retention-days: 90
@@ -219,7 +256,27 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          set +e
-          supabase functions delete "$FUNCTION_NAME" --project-ref "$RESTORE_PROJECT_REF" --yes
-          supabase secrets unset --project-ref "$RESTORE_PROJECT_REF" DR_STORAGE_PROOF_NONCE
-          exit 0
+          set -u
+          function_ok=0
+          secret_ok=0
+
+          for attempt in 1 2 3; do
+            if supabase functions delete "$FUNCTION_NAME" --project-ref "$RECOVERY_PROJECT_REF" --yes; then
+              function_ok=1
+              break
+            fi
+            sleep $((attempt * 2))
+          done
+
+          for attempt in 1 2 3; do
+            if supabase secrets unset --project-ref "$RECOVERY_PROJECT_REF" DR_STORAGE_PROOF_NONCE; then
+              secret_ok=1
+              break
+            fi
+            sleep $((attempt * 2))
+          done
+
+          if [ "$function_ok" -ne 1 ] || [ "$secret_ok" -ne 1 ]; then
+            echo "Temporary recovery proof cleanup could not be confirmed" >&2
+            exit 1
+          fi
