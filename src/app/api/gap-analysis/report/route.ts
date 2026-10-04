@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -348,6 +349,31 @@ export async function POST(request: Request) {
       permission: 'read_ai_governance',
     });
     if (!authorization.ok) return permissionDeniedResponse(authorization);
+
+    const rateLimit = await checkDistributedRateLimit({
+      key: `gap-analysis-report:${organization.id}:${user.id}`,
+      policy: 'general-api',
+      userId: user.id,
+      organizationId: organization.id,
+      route: '/api/gap-analysis/report',
+      action: 'gap-analysis.report.export',
+      limit: 20,
+      windowMs: 60_000,
+      failureMode: 'fail-closed',
+    });
+    if (!rateLimit.allowed) {
+      const retryAfter = Math.max(1, Math.ceil((rateLimit.resetAt - Date.now()) / 1000));
+      return Response.json(
+        { error: rateLimit.reason ? 'security_control_unavailable' : 'rate_limit_exceeded' },
+        {
+          status: rateLimit.reason ? 503 : 429,
+          headers: {
+            'Cache-Control': 'private, no-store, max-age=0',
+            'Retry-After': String(retryAfter),
+          },
+        },
+      );
+    }
 
     const body = await parseJsonBodyWithZod(request, { schema: bodySchema, maxBytes: 8 * 1024 });
     const supabase = createAdminClient();
