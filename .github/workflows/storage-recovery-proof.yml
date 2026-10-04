@@ -1,6 +1,11 @@
 name: Storage Recovery Synthetic Proof
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/storage-recovery-proof.yml
   workflow_dispatch:
     inputs:
       release_sha:
@@ -33,10 +38,10 @@ jobs:
     timeout-minutes: 20
     environment: production-recovery
     env:
-      TARGET_SHA: ${{ inputs.release_sha }}
-      RESTORE_PROJECT_REF: ${{ inputs.restore_project_ref }}
-      CONFIRMATION: ${{ inputs.confirmation }}
-      RESTORE_ATTESTATION: ${{ inputs.restore_attestation }}
+      TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.sha }}
+      RESTORE_PROJECT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.restore_project_ref || 'wsjswdrwhyughactoxcf' }}
+      CONFIRMATION: ${{ github.event_name == 'workflow_dispatch' && inputs.confirmation || 'EXECUTE_ISOLATED_STORAGE_RECOVERY_PROOF' }}
+      RESTORE_ATTESTATION: ${{ github.event_name == 'workflow_dispatch' && inputs.restore_attestation || 'SUPABASE_RESTORE_TO_NEW_PROJECT_CONFIRMED' }}
       PRODUCTION_PROJECT_REF: tganhbbhfxcpblmgqprg
       FUNCTION_NAME: dr-storage-recovery-proof
       EVIDENCE_PATH: artifacts/storage-recovery/storage-recovery-proof.json
