@@ -69,7 +69,7 @@ jobs:
           npm run test
           npm run build
           if [ "${{ github.event_name }}" != pull_request ] || ! git diff --quiet HEAD^ HEAD -- package.json package-lock.json npm-shrinkwrap.json; then
-            npm audit --audit-level=moderate
+            npm run security:npm-audit:all
           fi
           node scripts/security/run-security-ci-without-audit.mjs
           npm run quality:routes
