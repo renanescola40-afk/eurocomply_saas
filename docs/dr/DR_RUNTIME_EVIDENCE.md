@@ -23,8 +23,8 @@ The retained `backup-restore-tested.json` is schema `risck-comply.backup-restore
 - `restoreExecuted=true`
 - `providerManagedRestore=true`
 - `providerBackupObserved=true`
-- `dataIntegrity=true`
-- `authUsersIntegrity=true`
+- legacy v2 `dataIntegrity=true` (bounded aggregate relationship only; **not** exact row completeness)
+- legacy v2 `authUsersIntegrity=true` (bounded aggregate relationship only; **not** exact Auth-row completeness)
 - `rlsAfterRestore=true`
 - `rlsPoliciesPresent=true`
 - `migrationHistoryMatchesSource=true`
@@ -41,6 +41,8 @@ Measured values from that real provider-managed clone:
 - forward postconditions: executed and passed
 
 The evidence explicitly states that GitHub Actions did not create or retain a Production data dump, row data, credentials, project references, backup identifiers or database URLs.
+
+Important integrity boundary: the retained v2 verifier compared aggregate counts observed after restore with the then-live source and required restored counts not to be ahead of the source. It did **not** retain backup-time expected row counts or row/content digests for the restored clone. Therefore it proves provider-managed restore execution, bounded aggregate consistency, migration/RLS invariants and measured timing, but not exact customer/Auth row completeness.
 
 ### 2. Provider backup capability revalidation — 2026-09-28
 
@@ -91,9 +93,11 @@ At reconciliation time:
 - SOURCE_RECOVERY=PROVEN
 - PROVIDER_MANAGED_BACKUP_AVAILABILITY=PROVEN
 - PROVIDER_MANAGED_PHYSICAL_BACKUP_CLONE=PROVEN
-- CUSTOMER_DATA_BACKUP_RESTORE_CAPABILITY=PROVEN
-- AUTH_DATA_RESTORE_CAPABILITY=PROVEN
+- PROVIDER_MANAGED_DATA_RESTORE_EXECUTION=PROVEN
+- CUSTOMER_DATA_RESTORE_COMPLETENESS=NOT_FULLY_PROVEN
+- AUTH_DATA_RESTORE_COMPLETENESS=NOT_FULLY_PROVEN
 - RESTORED_RLS_VALIDATION=PROVEN
+- HISTORICAL_RESTORED_PROJECT_TENANT_ISOLATION_RUNTIME=PROVEN
 - RESTORED_POLICY_VALIDATION=PROVEN
 - RESTORED_MIGRATION_LEDGER_MATCH=PROVEN
 - RPO_MEASUREMENT_CAPABILITY=PROVEN
@@ -104,6 +108,9 @@ At reconciliation time:
 - CURRENT_SCHEMA_RTO_WITHIN_4H=PROVEN
 - CURRENT_MAIN_PRODUCTION_SHA_ALIGNMENT=PROVEN
 - VERCEL_ROLLBACK_CANDIDATE_IDENTIFICATION=PROVEN
+- LIVE_VERCEL_ROLLBACK_EXECUTION=PROVEN
+- VERCEL_FORWARD_RESTORE_TO_INTENDED_DEPLOYMENT=PROVEN
+- POST_ROLLBACK_PRODUCTION_HEALTH=PROVEN
 
 ## Residual scope that remains open
 
@@ -122,16 +129,28 @@ Therefore the following must not be represented as current-exact-SHA proof:
 - BACKUP=PASS
 - PROVIDER_BACKUP_INVENTORY=PASS
 - RESTORE_CAPABILITY=PASS
-- CUSTOMER_DATA_RESTORE_CAPABILITY=PASS
-- AUTH_RESTORE_CAPABILITY=PASS
+- PROVIDER_MANAGED_DATA_RESTORE_EXECUTION=PASS
+- CUSTOMER_DATA_RESTORE_COMPLETENESS=OPEN
+- AUTH_DATA_RESTORE_COMPLETENESS=OPEN
 - POST_RESTORE_RLS=PASS
+- HISTORICAL_POST_RESTORE_TENANT_ISOLATION=PASS
 - RPO=PROVEN (measured historical provider-managed restore: ~11h27m20s)
 - PROVIDER_RESTORE_RTO=PROVEN (measured historical provider-managed restore: 10s)
 - CURRENT_SCHEMA_REPLAY=PASS
 - CURRENT_SCHEMA_RTO=PASS
+- LIVE_VERCEL_ROLLBACK=PASS
+- PRODUCTION_RETURN_AFTER_ROLLBACK=PASS
 - FULL_APPLICATION_RECOVERY_CURRENT_SHA=OPEN
 - STORAGE_OBJECT_RECOVERY=OPEN
 - CURRENT_EXACT_SHA_PROVIDER_CLONE=OPEN
+
+## Live deployment rollback exercise — 2026-10-04
+
+A controlled Vercel rollback was executed from deployment `dpl_DEJ4TPCEPeC7xoyDWdzaJ2wd1TnW` / SHA `bd435ac11b46cab2f0f84a215d74cc63784a6b65` to prior READY deployment `dpl_AkWMF5d9XuBye6Vp8bXNLMoKCEUE` / SHA `8489f7001cd4e98c8d93deb24593fc4cd6937719`.
+
+The production aliases were observed on the rollback target. The intended current deployment was then promoted back. Final Vercel hostname resolution for `www.risckcomply.com` returned `dpl_DEJ4TPCEPeC7xoyDWdzaJ2wd1TnW`, and `/api/health` returned HTTP 200 with `{"status":"ok"}` and no-store cache headers.
+
+See `docs/dr/ROLLBACK_REHEARSAL.md`.
 
 ## Safety attestations
 

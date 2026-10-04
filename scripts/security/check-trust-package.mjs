@@ -186,10 +186,14 @@ const consistencyRules = [
   {
     label: 'restore/RTO/RPO boundary',
     pass:
-      canonicalReadme.includes('data-bearing snapshot whose representative tenant/application row counts and deterministic ID digests match the bounded production lineage')
-      && canonicalReadme.includes('measured RTO/RPO are not independently evidenced')
-      && questionnaire.includes('A data-bearing isolated recovery snapshot is evidenced')
-      && questionnaire.includes('measured RPO/RTO are not independently evidenced'),
+      canonicalReadme.includes('provider-managed isolated database restore was successfully exercised on 2026-09-19')
+      && canonicalReadme.includes('10-second provider restore interval')
+      && canonicalReadme.includes('11h27m20s backup-age/RPO interval')
+      && canonicalReadme.includes('Current-release application recovery against a newly restored database remains open')
+      && questionnaire.includes('provider-managed isolated database restore was successfully exercised on 2026-09-19')
+      && questionnaire.includes('10-second provider restore interval')
+      && questionnaire.includes('11h27m20s backup-age/RPO interval')
+      && questionnaire.includes('Current-release application recovery against a newly restored database'),
   },
   {
     label: 'current-release tenant isolation boundary',

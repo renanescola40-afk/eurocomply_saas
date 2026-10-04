@@ -16,8 +16,9 @@ Evidence:
 - exact SHA: `3ca4fb6ee913e686071bcd427db60cd4f7e60991`
 - evidence schema: `risck-comply.backup-restore-evidence.v2`
 - provider-managed physical backup clone: PASS
-- data integrity: PASS
-- Auth-user integrity: PASS
+- bounded critical-table aggregate relationship check: PASS
+- bounded Auth-user aggregate relationship check: PASS
+- exact customer/Auth row completeness: NOT PROVEN
 - RLS after restore: PASS
 - migration-history match: PASS
 

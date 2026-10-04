@@ -22,7 +22,7 @@ const documents = [
     schema: 'risck-comply.backup-restore-scorecard-evidence.v1',
     item: 'backup-restore-tested',
     controls: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'],
-    checks: ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured'],
+    checks: ['backupExists', 'restoreExecuted', 'restoredDataCompleteness', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured'],
     workflowName: 'Supabase Forward Reconciliation Rehearsal',
     workflowFile: '.github/workflows/supabase-forward-reconciliation-rehearsal.yml',
   },
@@ -67,8 +67,27 @@ for (const contract of documents) {
 
   for (const name of contract.checks) {
     const matches = Array.isArray(evidence.checks) ? evidence.checks.filter((check) => check?.name === name) : [];
-    if (matches.length !== 1 || matches[0]?.passed !== complete) {
+    if (matches.length !== 1) {
+      failures.push(`${contract.label} check ${name} must exist exactly once`);
+      continue;
+    }
+    if (contract.label === 'restore' && name === 'restoredDataCompleteness') {
+      if (typeof matches[0]?.passed !== 'boolean') {
+        failures.push('restore data-completeness check must be an explicit boolean');
+      }
+      continue;
+    }
+    if (matches[0]?.passed !== complete) {
       failures.push(`${contract.label} check ${name} must be ${complete ? 'passed' : 'unverified'} exactly once`);
+    }
+  }
+
+  if (contract.label === 'restore' && complete) {
+    const bounded = Array.isArray(evidence.checks)
+      ? evidence.checks.filter((check) => check?.name === 'boundedAggregateConsistency')
+      : [];
+    if (bounded.length !== 1 || bounded[0]?.passed !== true) {
+      failures.push('restore bounded aggregate consistency must pass exactly once');
     }
   }
 

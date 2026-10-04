@@ -17,9 +17,10 @@ Successful evidence run `35454743996` records:
 - distinct source/restore databases: PASS
 - same organization: PASS
 - same region: PASS
-- critical data counts observed and validated: PASS
-- restored counts not ahead of source: PASS
-- Auth-user integrity: PASS
+- critical aggregate counts observed: PASS
+- restored counts not ahead of then-live source: PASS
+- exact customer-row completeness against backup-time values: NOT PROVEN
+- exact Auth-row completeness against backup-time values: NOT PROVEN
 - RLS after restore: PASS
 - RLS policies present: PASS
 - migration history matches source: PASS
@@ -27,8 +28,10 @@ Successful evidence run `35454743996` records:
 - forward reconciliation postconditions executed and passed: PASS
 - no Production dump created on GitHub runner: PASS
 
-`CUSTOMER_DATA_RESTORE_INTEGRITY=PASS`
-`AUTH_DATA_RESTORE_INTEGRITY=PASS`
+`PROVIDER_MANAGED_RESTORE_EXECUTION=PASS`
+`BOUNDED_AGGREGATE_RESTORE_CONSISTENCY=PASS`
+`CUSTOMER_DATA_RESTORE_COMPLETENESS=NOT_FULLY_PROVEN`
+`AUTH_DATA_RESTORE_COMPLETENESS=NOT_FULLY_PROVEN`
 `POST_RESTORE_RLS_INTEGRITY=PASS`
 
 ## Current canonical migration integrity — 2026-10-03
@@ -89,6 +92,40 @@ Provider-managed database restore proves database data and Storage metadata stor
 `STORAGE_METADATA_DATABASE_RECOVERY=SUPPORTED_BY_DATABASE_RESTORE`
 `STORAGE_OBJECT_RECOVERY=OPEN`
 
+## Independent representative data-bearing lineage revalidation — 2026-10-04
+
+The still-active isolated recovery project `wsjswdrwhyughactoxcf` was compared read-only against Production bounded to the recovery project's provider creation cutoff (`2026-09-02T15:12:12.483578Z`).
+
+Four representative application/tenant tables matched exactly on row count and deterministic SHA-256 digest of the ordered ID set:
+
+- organizations: 255 / 255 — digest MATCH
+- organization_members: 193 / 193 — digest MATCH
+- ai_systems: 3 / 3 — digest MATCH
+- documents: 72 / 72 — digest MATCH
+
+`REPRESENTATIVE_DATA_BEARING_LINEAGE=PASS_4_OF_4`
+
+This is stronger than count-only evidence, but it remains representative ID-lineage evidence rather than full content completeness for every restored row/table. It is independent from the 2026-09-19 provider-timed clone and must not be merged into a single fictitious exercise.
+
+## Restored-project tenant-isolation runtime revalidation — 2026-10-04
+
+A read-only session test was executed against the active isolated recovery project `wsjswdrwhyughactoxcf` using an existing restored Auth identity. No user, membership, organization or application row was created or modified.
+
+The test switched the database session to the `authenticated` role with a bounded JWT claim for the selected restored identity, then evaluated one owned organization and one organization for which that identity had no membership.
+
+Observed booleans:
+- own organization visible: **true**
+- foreign organization visible: **false**
+- own organization membership visible: **true**
+- foreign organization membership visible: **false**
+
+No user or organization identifiers are retained in this evidence.
+
+`RESTORED_PROJECT_AUTHENTICATED_RLS_RUNTIME=PASS`
+`RESTORED_PROJECT_CROSS_TENANT_READ_DENIED=PASS`
+
+This proves tenant-isolation behavior on the historical data-bearing recovery project. It is not a substitute for repeating the test on a new current-release provider-managed clone.
+
 ## Current-exact-SHA boundary
 
 The last provider-managed data restore proof predates the current 113-migration schema. The current schema replay is newer but intentionally contains no Production rows.
@@ -101,9 +138,10 @@ Therefore:
 
 ## Verdict
 
-- PROVIDER_MANAGED_BACKUP_RESTORE_INTEGRITY=PASS
-- CUSTOMER_DATA_RESTORE_INTEGRITY=PASS
-- AUTH_RESTORE_INTEGRITY=PASS
+- PROVIDER_MANAGED_BACKUP_RESTORE_EXECUTION=PASS
+- BOUNDED_AGGREGATE_RESTORE_CONSISTENCY=PASS
+- CUSTOMER_DATA_RESTORE_COMPLETENESS=OPEN
+- AUTH_DATA_RESTORE_COMPLETENESS=OPEN
 - POST_RESTORE_RLS_INTEGRITY=PASS
 - CURRENT_CANONICAL_REPLAY_INTEGRITY=PASS
 - CURRENT_PUBLIC_TABLE_PARITY=PASS

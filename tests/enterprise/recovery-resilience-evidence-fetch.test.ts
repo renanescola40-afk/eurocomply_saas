@@ -53,6 +53,9 @@ function restoreSource() {
       backupExists: true, restoreExecuted: true, dataIntegrity: true, rlsAfterRestore: true,
       rlsPoliciesPresent: true, rpoMeasured: true, rtoMeasured: true, distinctDatabases: true,
       protectedMainExecution: true, exactShaBound: true,
+      boundedCountRelationshipValidated: true,
+      fullCustomerDataIntegrity: false,
+      fullAuthDataIntegrity: false,
     },
     metrics: { rpoSeconds: 4, rtoSeconds: 27, totalExerciseSeconds: 42 },
     evidenceIntegrity: {
@@ -134,13 +137,15 @@ describe('recovery resilience scorecard promotion', () => {
     for (const check of ['rollbackTargetConfigured', 'distinctDeployment', 'rollbackExecuted', 'postRollbackHealth']) {
       expect(evaluateEvidenceDocument(evidence.rollback, check)).toBe('PASS');
     }
-    for (const check of ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
+    for (const check of ['backupExists', 'restoreExecuted', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
       expect(evaluateEvidenceDocument(evidence.restore, check)).toBe('PASS');
     }
     expect(evidence.rollback.runId).toBe(rollbackRunId);
     expect(evidence.restore.runId).toBe(restoreRunId);
     expect(evidence.rollback.sourceWorkflow.file).toBe(workflowPath);
     expect(evidence.restore.sourceWorkflow.file).toBe(restoreWorkflowPath);
+    expect(evaluateEvidenceDocument(evidence.restore, 'restoredDataCompleteness')).not.toBe('PASS');
+    expect(evaluateEvidenceDocument(evidence.restore, 'boundedAggregateConsistency')).toBe('PASS');
     expect([...evidence.rollback.controlsVerified, ...evidence.restore.controlsVerified])
       .toEqual(Array.from({ length: 10 }, (_, index) => `REC-${String(index + 1).padStart(2, '0')}`));
     expect(JSON.stringify(evidence)).not.toContain('databaseUrl');
@@ -159,9 +164,19 @@ describe('recovery resilience scorecard promotion', () => {
     }
     expect(evidence.restore.status).toBe('Complete');
     expect(evidence.restore.sourceWorkflow.file).toBe(restoreWorkflowPath);
-    for (const check of ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
+    for (const check of ['backupExists', 'restoreExecuted', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
       expect(evaluateEvidenceDocument(evidence.restore, check)).toBe('PASS');
     }
+    expect(validateCanonicalDocuments(evidence).status).toBe(0);
+  });
+
+  it('credits REC-07 only when full customer and Auth restore integrity are explicitly proven', () => {
+    const source = restoreSource();
+    source.checks.fullCustomerDataIntegrity = true;
+    source.checks.fullAuthDataIntegrity = true;
+    const evidence = buildCanonicalRecoveryDrillEvidence(source, { targetSha, runId: restoreRunId });
+    expect(evaluateEvidenceDocument(evidence.restore, 'restoredDataCompleteness')).toBe('PASS');
+    expect(evaluateEvidenceDocument(evidence.restore, 'boundedAggregateConsistency')).toBe('PASS');
     expect(validateCanonicalDocuments(evidence).status).toBe(0);
   });
 
@@ -172,7 +187,7 @@ describe('recovery resilience scorecard promotion', () => {
     expect(evidence.restore.runId).toBeNull();
     expect(evidence.restore.sourceWorkflow.file).toBe(restoreWorkflowPath);
     expect(evidence.restore.evidenceIntegrity.sourceRunBound).toBe(false);
-    for (const check of ['backupExists', 'restoreExecuted', 'dataIntegrity', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
+    for (const check of ['backupExists', 'restoreExecuted', 'rlsAfterRestore', 'rpoMeasured', 'rtoMeasured']) {
       expect(evaluateEvidenceDocument(evidence.restore, check)).not.toBe('PASS');
     }
     expect(evidence.rollback.status).toBe('Complete');
