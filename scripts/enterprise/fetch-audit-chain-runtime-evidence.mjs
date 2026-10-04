@@ -331,7 +331,16 @@ export async function fetchAuditChainRuntimeEvidence({ root, repository, token, 
     let sourceContract = providedSourceContract;
     if (!sourceContract || typeof sourceContract !== 'object' || Array.isArray(sourceContract)) {
       try {
-        sourceContract = JSON.parse(readFileSync(join(root, EVIDENCE_PATH), 'utf8'));
+        // Read the immutable source contract from the exact checked-out Git blob.
+        // Earlier fan-in hydration steps are allowed to replace the workspace evidence
+        // file with retained runtime artifacts, so reading the mutable working tree here
+        // can accidentally treat hydrated evidence as the canonical source contract.
+        const versionedSourceContract = execFileSync(
+          'git',
+          ['-C', root, 'show', `HEAD:${EVIDENCE_PATH}`],
+          { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 },
+        );
+        sourceContract = JSON.parse(versionedSourceContract);
       } catch {
         throw new Error('audit_chain_source_contract_invalid');
       }
