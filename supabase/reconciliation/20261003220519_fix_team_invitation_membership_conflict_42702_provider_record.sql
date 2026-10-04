@@ -1,0 +1,16 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+--
+-- Production migration identity observed read-only:
+--   version: 20261003220519
+--   provider name: fix_team_invitation_membership_conflict_42702
+--
+-- Canonical repository source representing the same migration body:
+--   canonical source version: 20261003221500
+--   local source: supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql
+--   local source SHA-256: d38c662d44f47170c1bd43846c3349b108f0104925f10ee35def57da593fbee6
+--
+-- Production recorded this reviewed hotfix under a provider-generated ledger
+-- timestamp that differs from the canonical repository filename timestamp.
+--
+-- This file binds only the observed remote identity to the reviewed local source.
+-- No DDL. No SQL execution. No migration-history repair. No database write.
