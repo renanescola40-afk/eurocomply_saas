@@ -39,7 +39,7 @@ function copyFor(locale: Locale, intent?: string) {
     eyebrow: demoIntent ? 'Book demo' : 'Talk to sales',
     title: demoIntent ? 'See how RISCK COMPLY organizes AI Act readiness.' : 'Talk to us about enterprise rollout.',
     subtitle: 'Share your company context, teams, countries, AI systems and procurement needs. We will respond with the most relevant next step.',
-    emailLabel: 'Send request by email',
+    emailLabel: 'Open sales form',
     back: 'Back to landing',
     scope: 'Buyer conversation scope',
     disclaimer: 'No legal guarantee. Readiness and evidence workflow only.',
