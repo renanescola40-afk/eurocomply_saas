@@ -149,6 +149,35 @@ test('accepts aggregate-only provider restore evidence with identical migration 
   assert.deepEqual(result.restoreVersions, migrations);
 });
 
+test('documents that bounded aggregate acceptance is not exact customer-data completeness proof', () => {
+  const result = validateProviderManagedSnapshot({
+    source: snapshot(),
+    restore: snapshot({
+      organizations: 0,
+      organization_members: 0,
+      audit_logs: 0,
+      auth_users: 0,
+    }),
+  });
+
+  assert.equal(result.restoredCounts.organizations, 0);
+  assert.equal(result.restoredAuthUsers, 0);
+  assert.deepEqual(result.restoreVersions, migrations);
+});
+
+test('emitted restore evidence keeps legacy booleans explicitly bounded from full data integrity', async () => {
+  const script = await readFile(
+    new URL('../../scripts/recovery/verify-supabase-provider-managed-restore.mjs', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(script, /fullCustomerDataIntegrity: false/);
+  assert.match(script, /fullAuthDataIntegrity: false/);
+  assert.match(script, /boundedCountRelationshipValidated: true/);
+  assert.match(script, /validationScope: 'bounded-aggregate-relationship-only'/);
+  assert.match(script, /MUST NOT be interpreted as exact row completeness/);
+});
+
 test('fails closed when provider restore migration history differs', () => {
   assert.throws(
     () => validateProviderManagedSnapshot({ source: snapshot(), restore: snapshot({ migration_versions: ['20260822120617'] }) }),
