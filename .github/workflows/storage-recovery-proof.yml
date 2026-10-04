@@ -108,10 +108,33 @@ jobs:
               return Response.json({ ok: false }, { status: 401 });
             }
 
-            const keys = Deno.env.get("SUPABASE_SECRET_KEYS");
-            const key = keys ? JSON.parse(keys)["default"] : Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
             const url = Deno.env.get("SUPABASE_URL");
-            if (!key || !url) return Response.json({ ok: false, error: "admin_key_unavailable" }, { status: 500 });
+            let key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+            const rawSecretKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
+            if (rawSecretKeys) {
+              try {
+                const parsed = JSON.parse(rawSecretKeys);
+                if (parsed && typeof parsed === "object" && typeof parsed.default === "string" && parsed.default.length > 0) {
+                  key = parsed.default;
+                }
+              } catch {
+                // Keep the legacy service-role fallback. The proof must fail closed
+                // only if no valid admin key is available at all.
+              }
+            }
+
+            if (!key || !url) {
+              return Response.json({
+                schema: "risck-comply.storage-recovery-proof.v2",
+                ok: false,
+                syntheticObjectOnly: true,
+                allowlistedRecoveryProject: true,
+                providerRestoreProvenanceClaimed: false,
+                cleanupCompleted: false,
+                error: "admin_key_unavailable"
+              }, { status: 500 });
+            }
 
             const sb = createClient(url, key, { auth: { persistSession: false } });
             const bucket = "dr-storage-recovery-proof";
@@ -224,7 +247,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$(dirname "$EVIDENCE_PATH")"
-          response="$(curl --fail-with-body --silent --show-error             -H "x-dr-proof-nonce: $DR_STORAGE_NONCE"             -H 'Accept: application/json'             "https://$RECOVERY_PROJECT_REF.supabase.co/functions/v1/$FUNCTION_NAME")"
+          response="$(curl --silent --show-error             -H "x-dr-proof-nonce: $DR_STORAGE_NONCE"             -H 'Accept: application/json'             "https://$RECOVERY_PROJECT_REF.supabase.co/functions/v1/$FUNCTION_NAME")"
+          printf '%s\n' "$response" | jq -e . >/dev/null
           jq -e '
             .schema=="risck-comply.storage-recovery-proof.v2" and
             .ok==true and
