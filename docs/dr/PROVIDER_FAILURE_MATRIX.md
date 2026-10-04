@@ -5,7 +5,7 @@
 | Supabase database/schema loss | freeze risky writes; identify intended recovery point | isolated reconstruction/replay; validate migrations, RLS, FKs and application contract | **SCHEMA REPLAY PROVEN** — dedicated branch reached 113/113 canonical migrations and FUNCTIONS_DEPLOYED |
 | Supabase production-data loss | freeze writes; identify provider backup/PITR recovery point | restore backup/PITR into isolated target; validate rows and integrity | **NOT PROVEN HERE** — branch used with_data=false |
 | Supabase Storage object loss | preserve DB metadata/object references | restore/export Storage objects separately and validate checksums/policies | **NOT RUNTIME-PROVEN** |
-| Vercel deployment failure | identify current and prior READY releases | select provider rollback candidate under incident approval | **FORMALLY REHEARSED NON-DESTRUCTIVELY** |
+| Vercel deployment failure | identify current and prior READY releases | execute provider rollback, validate production hostname/health, then restore intended version | **LIVE ROLLBACK PROVEN** — production aliases switched to a prior READY deployment and were then restored to the intended current deployment; final /api/health=200 |
 | Stripe outage | preserve durable server-authoritative entitlement state; never fabricate payment success | reconcile signed Stripe events after recovery | DOCUMENTED; not exercised by this DR run |
 | Google Auth outage | fail closed for new OAuth flows while preserving secure existing-session rules | provider recovery / approved alternate login policy if configured | DOCUMENTED; not exercised here |
 | DNS failure | verify registrar/DNS/domain bindings | restore known-good DNS configuration | DOCUMENTED; not exercised here |
@@ -31,7 +31,7 @@ Database branching/replay and database backup evidence must not be conflated wit
 ## Safety
 
 - Production database mutation: NO
-- Vercel production mutation: NO
+- Vercel production mutation: YES — controlled rollback drill on 2026-10-04; intended deployment restored and health revalidated
 - Stripe mutation: NO
 - Auth production mutation: NO
 - MaaSec target mutation: NO
