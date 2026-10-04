@@ -311,8 +311,14 @@ async function verify() {
     exactShaBound: true,
     backupExists: true,
     restoreExecuted: true,
+    // Legacy v2 compatibility booleans. They mean the bounded aggregate
+    // relationship checks below passed; they are NOT proof of exact row
+    // completeness or backup-time content equality.
     dataIntegrity: true,
     authUsersIntegrity: true,
+    fullCustomerDataIntegrity: false,
+    fullAuthDataIntegrity: false,
+    boundedCountRelationshipValidated: true,
     rlsAfterRestore: true,
     rlsPoliciesPresent: true,
     rpoMeasured: true,
@@ -351,6 +357,9 @@ async function verify() {
       criticalCountsObserved: true,
       authUserCountObserved: true,
       countRelationshipValidated: true,
+      validationScope: 'bounded-aggregate-relationship-only',
+      fullCustomerDataIntegrityProven: false,
+      fullAuthDataIntegrityProven: false,
       migrationVersionCount: snapshot.sourceVersions.length,
       recoveryMode: 'supabase-provider-managed-physical-backup-clone',
       backupIdentifierStored: false,
@@ -375,7 +384,7 @@ async function verify() {
       providerBackupIdentifierStored: false,
       providerProjectReferencesStored: false,
     },
-    evidenceBoundary: 'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. Production observation uses the Supabase Management API read-only SQL endpoint with fixed aggregate-only SQL. Validator includes are accepted only from an explicit allowlist and each included validator is executed separately by the workflow. Exact aggregate counts are transient and are not retained. Only timing metrics, booleans and redacted provenance are stored.',
+    evidenceBoundary: 'Supabase Restore to a New Project is used as the Production-snapshot transport boundary. GitHub Actions never creates, downloads, stores, or replays a Production data dump. Production observation uses the Supabase Management API read-only SQL endpoint with fixed aggregate-only SQL. Validator includes are accepted only from an explicit allowlist and each included validator is executed separately by the workflow. Exact aggregate counts are transient and are not retained. The legacy v2 dataIntegrity and authUsersIntegrity booleans mean only that bounded aggregate relationship checks passed; they MUST NOT be interpreted as exact row completeness, backup-time equality, or content-digest integrity. Only timing metrics, booleans and redacted provenance are stored.',
   };
 
   mkdirSync(dirname(output), { recursive: true });
