@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2026-09-24.enterprise-trust-evidence.v2",
   "product": "RISCK COMPLY",
-  "lastReviewedAt": "2026-09-24",
+  "lastReviewedAt": "2026-10-04",
   "classification": "internal-trust-evidence",
   "disclaimer": "This manifest tracks internal evidence readiness. Do not represent draft, planned, or partial items as certified, externally audited, contractually committed, or production-proven without the required evidence and approval.",
   "claims": [
@@ -143,34 +143,41 @@
       "id": "disaster-recovery-tested",
       "question": "Is disaster recovery tested?",
       "status": "implemented_evidence_bound",
-      "customerAnswer": "A non-destructive disaster recovery tabletop was completed on 2026-09-24. Live failover and measured RTO/RPO are not claimed.",
+      "customerAnswer": "A non-destructive tabletop was completed on 2026-09-24 and a provider-managed isolated database restore completed successfully on 2026-09-19. The historical database-restore drill measured a 10-second provider restore interval and an 11h27m20s backup-age/RPO interval. Current-release full-application failover and Storage-object recovery remain open.",
       "evidence": [
         "docs/trust/DR_TABLETOP_2026-09-24.md",
-        "docs/trust/DISASTER_RECOVERY_TEST_PLAN.md",
-        "docs/trust/INCIDENT_RESPONSE.md"
+        "docs/dr/DR_RUNTIME_EVIDENCE.md",
+        "docs/dr/RTO_RPO_RUNTIME_RESULTS.md"
       ],
       "blockers": [
-        "Live technical failover/restore evidence and measured RTO/RPO are not available."
+        "Current-release full-application recovery against a newly restored clone has not been proven.",
+        "Storage-object recovery has not been proven.",
+        "Historical provider restore timing must not be represented as current-release full-service RTO."
       ],
       "nextActions": [
-        "Run a safe technical recovery exercise when provider-backed recovery evidence is required and record measured RTO/RPO."
+        "Run a current-release provider-managed clone and bind application smoke to it when exact-release recovery proof is required.",
+        "Add explicit Storage-object backup/recovery evidence before claiming file recovery."
       ]
     },
     {
       "id": "backup-restore-tested",
       "question": "Is backup restore tested?",
       "status": "implemented_evidence_bound",
-      "customerAnswer": "An isolated data-bearing recovery snapshot is evidenced. Representative tenant/application row counts and deterministic ID digests match the bounded production lineage. The provider restore mechanism and measured recovery objectives are not independently evidenced.",
+      "customerAnswer": "A provider-managed isolated Supabase Restore-to-New-Project drill completed successfully on 2026-09-19. Provider restore execution, migration/RLS invariants, bounded aggregate relationships and measured timing were retained. Exact restored customer/Auth row completeness is not claimed because backup-time expected row counts or content digests were not retained for that clone.",
       "evidence": [
-        "docs/trust/BACKUP_RESTORE_EVIDENCE_2026-09-24.md",
-        "docs/trust/BACKUP_RESTORE_TEST_PLAN.md"
+        "docs/dr/DR_RUNTIME_EVIDENCE.md",
+        "docs/dr/RTO_RPO_RUNTIME_RESULTS.md",
+        "docs/dr/RECOVERY_INTEGRITY_REPORT.md"
       ],
       "blockers": [
-        "The provider restore/duplicate mechanism that produced the isolated recovery project is not independently attested in the retained evidence.",
-        "Measured restore duration and RPO are not available."
+        "Exact customer/Auth row completeness against backup-time expected values is not proven by the retained v2 aggregate-only verifier.",
+        "The historical restore predates the current release and is not current-exact-SHA full-application recovery evidence.",
+        "Underlying Supabase Storage objects are outside the database backup restore boundary."
       ],
       "nextActions": [
-        "When measured recovery objectives are required, run a timed provider-supported isolated restore and retain the requested recovery point, start/ready timestamps and integrity checks."
+        "For stronger data-completeness assurance, retain backup-bound expected counts/digests or equivalent provider evidence in a future isolated restore.",
+        "Run current-release application smoke against a newly restored clone when exact-release recovery proof is required.",
+        "Add Storage-object recovery evidence."
       ]
     },
     {
