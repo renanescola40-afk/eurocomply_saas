@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 
 import { sendEmail } from '@/lib/email/server-sender';
+import { getBillingPlan } from '@/lib/billing/plans';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -145,20 +146,19 @@ function formatSubmittedAt(locale: string | null, now = new Date()) {
 }
 
 function extractPlan(source: string) {
-  const match = source.match(/contact-sales-([a-z0-9_-]+)/i);
-  return match?.[1] || 'enterprise';
+  const match = source.match(/^contact-sales-([a-z0-9_-]+)$/i);
+  const plan = getBillingPlan(match?.[1]);
+  return plan?.name ?? null;
 }
 
 function localizedAcknowledgement(record: LeadRecord, requestId: string) {
   const pt = record.locale === 'pt';
   const submittedAt = formatSubmittedAt(record.locale);
-  const reference = `RC-SALES-${requestId.split('-')[0]?.toUpperCase()}`;
   const plan = extractPlan(record.source);
   const safeName = escapeHtml(record.full_name);
   const safeCompany = escapeHtml(record.company_name);
   const safeEmail = escapeHtml(record.work_email);
   const safePlan = escapeHtml(plan);
-  const safeReference = escapeHtml(reference);
   const safeSubmittedAt = escapeHtml(submittedAt);
 
   const subject = pt
@@ -190,7 +190,7 @@ function localizedAcknowledgement(record: LeadRecord, requestId: string) {
                       <div style="font-size:18px;font-weight:800;letter-spacing:.02em;">RISCK COMPLY</div>
                       <div style="margin-top:5px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#9fb4cc;">Enterprise AI Act Compliance</div>
                     </td>
-                    <td align="right" style="font-size:12px;color:#9fb4cc;">${safeReference}</td>
+                    <td align="right" style="font-size:12px;color:#9fb4cc;">${pt ? 'Pedido comercial' : 'Sales request'}</td>
                   </tr>
                 </table>
               </td>
@@ -210,8 +210,8 @@ function localizedAcknowledgement(record: LeadRecord, requestId: string) {
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size:14px;color:#334155;">
                     <tr><td style="padding:7px 0;color:#64748b;width:38%;">${pt ? 'Empresa' : 'Company'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safeCompany}</td></tr>
                     <tr><td style="padding:7px 0;color:#64748b;">${pt ? 'Email de contacto' : 'Contact email'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safeEmail}</td></tr>
-                    <tr><td style="padding:7px 0;color:#64748b;">${pt ? 'Plano' : 'Plan'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;text-transform:capitalize;">${safePlan}</td></tr>
-                    <tr><td style="padding:7px 0;color:#64748b;">${pt ? 'Referência' : 'Reference'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safeReference}</td></tr>
+                    ${plan ? `<tr><td style="padding:7px 0;color:#64748b;">${pt ? 'Plano' : 'Plan'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safePlan}</td></tr>` : ''}
+
                     <tr><td style="padding:7px 0;color:#64748b;">${pt ? 'Submetido em' : 'Submitted at'}</td><td style="padding:7px 0;font-weight:700;color:#0f172a;">${safeSubmittedAt}</td></tr>
                   </table>
                 </div>
@@ -237,7 +237,7 @@ function localizedAcknowledgement(record: LeadRecord, requestId: string) {
             <tr>
               <td style="border-top:1px solid #e2e8f0;padding:22px 32px;background:#fbfdff;font-size:12px;line-height:1.7;color:#64748b;">
                 <strong style="color:#0f172a;">RISCK COMPLY</strong><br/>
-                Enterprise-grade AI Act compliance<br/>
+                AI Act compliance readiness & evidence operations<br/>
                 <a href="https://www.risckcomply.com" style="color:#2563eb;text-decoration:none;">www.risckcomply.com</a> ·
                 <a href="mailto:comercial@risckcomply.com" style="color:#2563eb;text-decoration:none;">comercial@risckcomply.com</a>
               </td>
@@ -260,8 +260,7 @@ function localizedAcknowledgement(record: LeadRecord, requestId: string) {
         'Resumo do pedido',
         `Empresa: ${record.company_name}`,
         `Email de contacto: ${record.work_email}`,
-        `Plano: ${plan}`,
-        `Referência: ${reference}`,
+        ...(plan ? [`Plano: ${plan}`] : []),
         `Submetido em: ${submittedAt}`,
         '',
         'Próximos passos:',
@@ -272,7 +271,7 @@ function localizedAcknowledgement(record: LeadRecord, requestId: string) {
         'Se pretender acrescentar contexto adicional, responda diretamente a esta mensagem.',
         '',
         'RISCK COMPLY',
-        'Enterprise-grade AI Act compliance',
+        'AI Act compliance readiness & evidence operations',
         'www.risckcomply.com',
         SALES_MAILBOX,
       ].join('\n')
@@ -286,8 +285,7 @@ function localizedAcknowledgement(record: LeadRecord, requestId: string) {
         'Request summary',
         `Company: ${record.company_name}`,
         `Contact email: ${record.work_email}`,
-        `Plan: ${plan}`,
-        `Reference: ${reference}`,
+        ...(plan ? [`Plan: ${plan}`] : []),
         `Submitted at: ${submittedAt}`,
         '',
         'Next steps:',
@@ -298,12 +296,12 @@ function localizedAcknowledgement(record: LeadRecord, requestId: string) {
         'If you would like to add more context, reply directly to this message.',
         '',
         'RISCK COMPLY',
-        'Enterprise-grade AI Act compliance',
+        'AI Act compliance readiness & evidence operations',
         'www.risckcomply.com',
         SALES_MAILBOX,
       ].join('\n');
 
-  return { subject, html, text, reference, plan, submittedAt };
+  return { subject, html, text, plan, submittedAt };
 }
 
 function internalLeadNotification(record: LeadRecord) {
@@ -357,7 +355,6 @@ async function sendLeadEmails(record: LeadRecord) {
       metadata: {
         source: record.source,
         locale: record.locale,
-        reference: acknowledgement.reference,
         plan: acknowledgement.plan,
       },
     }),
