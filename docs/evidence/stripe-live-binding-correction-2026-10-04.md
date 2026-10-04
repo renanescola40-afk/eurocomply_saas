@@ -23,11 +23,17 @@ The Vercel Production binding was corrected in-place to the canonical LIVE Busin
 
 No Stripe secret, webhook signing secret, payment data, customer PII, or card data is recorded here.
 
+## Production secret binding correction
+
+The same closure found that `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` were scoped to Preview only. Their existing Vercel secret records were updated in-place to target both Preview and Production without reading, copying, or exposing the secret values.
+
+This removes the Production-scope configuration defect. A fresh production deployment created after this target correction is still required before Stripe runtime authority can be credited to the deployed application.
+
 ## Runtime boundary
 
-A fresh production deployment is required after the environment-variable correction before the fixed binding can be treated as deployed runtime state.
+The production deployment that incorporated the Business monthly Price correction completed successfully, but it was created before the Stripe secret target correction. Therefore it must not be treated as the final Stripe runtime proof.
 
-The post-deploy closure must revalidate production READY state, intended main SHA, health/readiness, safe Price binding readback, and the absence of new Stripe runtime errors.
+The next production deployment must revalidate READY state, intended main SHA, health/readiness, safe Price binding readback, secret presence by non-secret metadata or fail-closed runtime proof, and the absence of new Stripe runtime errors.
 
 ## Commercial evidence boundary
 
