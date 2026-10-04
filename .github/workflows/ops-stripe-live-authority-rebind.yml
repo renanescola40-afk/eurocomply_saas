@@ -1,0 +1,67 @@
+name: One-shot Stripe LIVE authority rebind
+
+on:
+  push:
+    branches:
+      - ops/rebind-stripe-live-authority-20261004
+    paths:
+      - .github/workflows/ops-stripe-live-authority-rebind.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-stripe-live-authority-rebind
+  cancel-in-progress: false
+
+jobs:
+  rebind:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: Production
+    env:
+      RELEASE_SHA: ee1b354975069015e46226a70ce8efb59740186f
+      STRIPE_ACCOUNT_BOOTSTRAP_CONFIRMATION: PROVISION_NEW_STRIPE_LIVE_ACCOUNT
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out trusted current main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Require exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          main_sha="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$main_sha" = "$RELEASE_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+
+      - name: Load reviewed account and Vercel authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_STRIPE_ACCOUNT_ID="$(node -e "const fs=require('node:fs');const a=JSON.parse(fs.readFileSync('config/stripe-live-account-authority.json','utf8'));if(a.schema!=='risck-comply.stripe-live-account-authority.v1'||a.mode!=='live'||!/^acct_[A-Za-z0-9]+$/.test(a.accountId))process.exit(1);process.stdout.write(a.accountId)")"
+          echo "EXPECTED_STRIPE_ACCOUNT_ID=$EXPECTED_STRIPE_ACCOUNT_ID" >> "$GITHUB_ENV"
+
+      - name: Fail closed on incompatible Vercel binding types
+        run: node scripts/security/check-vercel-stripe-binding-types.mjs
+
+      - name: Verify protected Stripe authority before mutation
+        run: node scripts/security/check-stripe-live-account-bootstrap-preflight.mjs
+
+      - name: Rebind canonical LIVE authority and prices to Vercel Production
+        run: node scripts/ops/provision-stripe-live-account.mjs
+
+      - name: Re-read Vercel Production bindings
+        run: node scripts/security/load-vercel-stripe-price-bindings.mjs
