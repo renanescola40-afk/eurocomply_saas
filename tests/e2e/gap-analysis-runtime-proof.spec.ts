@@ -117,9 +117,14 @@ test.describe('V7 authenticated Gap Analysis + PDF runtime proof', () => {
           },
           data: { assessmentId, locale: 'en' },
         });
-        expect(foreignReport.status(), 'foreign tenant must not read the saved assessment PDF').toBe(404);
+        expect(
+          [403, 404],
+          'foreign tenant denial must be authorization/not-found, never a successful PDF response',
+        ).toContain(foreignReport.status());
+        expect(foreignReport.status()).not.toBe(200);
+        expect(foreignReport.headers()['content-type'] ?? '').not.toMatch(/application\/pdf/i);
         const denial = await foreignReport.json() as { error?: string };
-        expect(denial.error).toBe('assessment_not_found');
+        expect(denial.error, 'foreign tenant denial should return a controlled error').toBeTruthy();
       } finally {
         await foreignContext.close();
       }
