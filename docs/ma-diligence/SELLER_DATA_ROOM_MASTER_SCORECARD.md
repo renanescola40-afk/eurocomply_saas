@@ -19,14 +19,14 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 | Measure | Score | Meaning |
 |---|---:|---|
 | INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
-| AUDITABLE_MA_EVIDENCE_CLOSURE | **33.67%** | 33.0 evidence points closed out of the original 98 requirements using the published scoring rule. |
-| AUDITABLE_MA_EVIDENCE_REMAINING | **66.33%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
+| AUDITABLE_MA_EVIDENCE_CLOSURE | **34.18%** | 33.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **65.82%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
 
 ```text
-TOTAL_EVIDENCE_POINTS=33.0
+TOTAL_EVIDENCE_POINTS=33.5
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=33.67%
-AUDITABLE_MA_EVIDENCE_REMAINING=66.33%
+AUDITABLE_MA_EVIDENCE_CLOSURE=34.18%
+AUDITABLE_MA_EVIDENCE_REMAINING=65.82%
 INTERNAL_DOCUMENT_READINESS=100%
 MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
@@ -54,8 +54,8 @@ The auditable evidence score is recalculable line by line. Commercial evidence a
 
 ## Earlier evidence improvements
 
-- 300-commit contributor sample reconciled: 220 primary account, 77 automation/commit account, 3 Dependabot.
-- No additional human contributor identity appeared in that sample.
+- Full repository contributor history reconciled: 18,030 commits across 12 observed author identities.
+- Repository metadata alone does not establish employment, contractor status, work-for-hire, assignment or seller legal title for non-primary identities.
 - PostHog DPA completion independently verified from corporate mailbox evidence.
 - Stripe live account identity strengthened by direct Stripe corporate-mail evidence.
 - Candidate company NIPC preserved as a lookup aid but kept unverified until official registry evidence.
@@ -134,8 +134,8 @@ FINANCIAL_SOURCE_RECORDS_OPEN=YES
 TAX_SOURCE_RECORDS_OPEN=YES
 PROVIDER_TRANSFER_CLOSURE_OPEN=YES
 OVERALL_TRANSACTION_100=NO
-EXACT_PERCENT_COMPLETE=33.67
-EXACT_PERCENT_REMAINING=66.33
+EXACT_PERCENT_COMPLETE=34.18
+EXACT_PERCENT_REMAINING=65.82
 ```
 
 ## Priority closure order
