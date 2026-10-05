@@ -9,7 +9,7 @@ import { DocumentDownloadButton } from '@/components/documents/document-download
 import { getCoreWorkflowCopy } from '@/lib/i18n/core-workflow-copy';
 import { roleHasPermission } from '@/lib/security/permissions';
 import { createDocumentSignedDownloadUrl } from '@/server/actions/document-downloads';
-import { deleteDocument, uploadDocument } from '@/server/actions/documents';
+import { DocumentUploadValidationError, deleteDocument, uploadDocument } from '@/server/actions/documents';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
@@ -117,9 +117,18 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
     const organization = await getCurrentOrganizationForUser(currentUser.id);
     if (!organization) redirect(`/${params.locale}/onboarding`);
 
-    await uploadDocument({ organizationId: organization.id, name: input.name, category: input.category, expiresAt: input.expiresAt }, input.file);
+    try {
+      await uploadDocument({ organizationId: organization.id, name: input.name, category: input.category, expiresAt: input.expiresAt }, input.file);
+    } catch (error) {
+      if (error instanceof DocumentUploadValidationError) {
+        return { ok: false as const, code: 'invalid_upload' as const };
+      }
+      throw error;
+    }
+
     revalidatePath(`/${params.locale}/dashboard/organizations/documents`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
+    return { ok: true as const };
   }
 
   async function createDownloadUrlAction(documentId: string) {
