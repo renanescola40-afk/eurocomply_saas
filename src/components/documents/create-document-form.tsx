@@ -16,7 +16,7 @@ export type UploadDocumentFormInput = {
 
 const inputClass = 'h-10 rounded-lg border-slate-800 bg-[#0d1624] text-slate-200 placeholder:text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-500/30';
 
-export type UploadDocumentFormResult = { ok: true } | { ok: false; error: string };
+export type UploadDocumentFormResult = { ok: true } | { ok: false; code: 'invalid_upload' };
 
 export function CreateDocumentForm({ locale, onSubmit }: { locale: string; onSubmit: (input: UploadDocumentFormInput) => Promise<UploadDocumentFormResult> }) {
   const copy = getCoreWorkflowCopy(locale).documents;
@@ -41,7 +41,7 @@ export function CreateDocumentForm({ locale, onSubmit }: { locale: string; onSub
     try {
       const result = await onSubmit({ name, category, expiresAt: expiresAt || null, file });
       if (!result.ok) {
-        setError(result.error);
+        setError(copy.uploadError);
         return;
       }
       captureAnalyticsEvent(analyticsEvents.documentUploaded, { source: 'documents_form', count: 1 });
