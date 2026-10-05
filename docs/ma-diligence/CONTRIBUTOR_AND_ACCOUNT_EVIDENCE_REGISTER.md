@@ -4,17 +4,21 @@ Date: 2026-10-05
 Purpose: supplemental M&A factual evidence register  
 Status: `SUPPLEMENTAL_EVIDENCE=PASS / LEGAL_TITLE_NOT_INFERRED`
 
-## Git contributor sample
+## Git contributor history review
 
-The 300 most recent commits on the primary repository were reviewed as a bounded sample.
+The initial 300-commit sample was expanded on 2026-10-05 through exact review cutoff SHA `ad5ae2b99875659c54b6139d35addbbc2a9cfad9`. The earlier baseline SHA `6219f52c463c367848c1139158e5389d35298ca2` had 17,959 reachable commits and the cutoff is 76 commits ahead, supporting at least **18,035 reachable commits** at that snapshot. This remains a bounded factual review because the API walk had not yet reached an empty final page at the time of this update.
 
 | Identity | Count | Classification |
 |---|---:|---|
-| `renanescola40-afk` | 220 | Primary owner-linked GitHub account |
-| `sastestezoer-commits` | 77 | Automation/commit account; control/relationship documentation required |
-| `dependabot[bot]` | 3 | GitHub automation bot |
+| `renanescola40-afk` | dominant across reviewed history | Primary owner-linked GitHub account |
+| `sastestezoer-commits` | recurring | Commit/merge account; control/relationship documentation required |
+| `renansilva2002-tech` | recurring historical identity | Separate GitHub identity; sample commits are merge commits into the same repository. Relationship/title must be documented rather than inferred. |
+| `soltomstorevendas-web` | recurring historical identity | Separate GitHub identity; sample commits are merge/branch integration activity. Relationship/title must be documented rather than inferred. |
+| `dependabot[bot]` | recurring bot | GitHub dependency automation |
+| `github-actions[bot]` | recurring bot | GitHub Actions automation |
+| `actions` / `security-bot` / PR-specific noreply identities | sparse automation/service identities | Treat as automation unless underlying evidence shows a human author relationship |
 
-No fourth author identity appeared in this 300-commit sample.
+The review therefore disproves the earlier implication that only three identities existed in the repository history. It does **not** prove that the additional account identities are third-party contributors.
 
 Boundary: this is factual attribution only. It does not establish employment status, authorship law, assignment, work-for-hire status or seller ownership.
 
@@ -39,7 +43,9 @@ Buyer-facing representations must prefer:
 A lower-ranked source must never be upgraded into a higher-ranked fact.
 
 ```text
-CONTRIBUTOR_SAMPLE_RECONCILED=300
+CONTRIBUTOR_HISTORY_REVIEW_CUTOFF_SHA=ad5ae2b99875659c54b6139d35addbbc2a9cfad9
+CONTRIBUTOR_HISTORY_REACHABLE_AT_CUTOFF_GTE=18035_COMMITS
+CONTRIBUTOR_HISTORY_FINAL_EMPTY_PAGE=NOT_YET_REACHED
 POSTHOG_DPA_COMPLETION_EMAIL=PASS
 STRIPE_LIVE_ACCOUNT_MAIL_EVIDENCE=PASS_LIMITED
 GOOGLE_DOMAIN_OPERATIONAL_EVIDENCE=PASS_LIMITED

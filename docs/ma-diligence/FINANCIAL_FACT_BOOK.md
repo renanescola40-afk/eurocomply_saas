@@ -75,6 +75,26 @@ VAT_VIES_SELLER_STATUS=NOT_PROVEN_BY_PROVIDER_INVOICES
 DOMAIN_LEGAL_TITLE=NOT_PROVEN_BY_BILLING_INVOICE
 ```
 
+### Authenticated Vercel billing evidence — 2026-10-05
+
+Authenticated Vercel API evidence for team `team_wu3LZI6ReFxO16xipv73GLwG` (Pro) was reviewed on 2026-10-05. The team has one confirmed member, `renanescola40-afk`, with role `OWNER`, and project `eurocomply-saas` is linked to GitHub `renanescola40-afk/eurocomply_saas`.
+
+Bounded billing windows successfully returned provider-generated FOCUS billing data:
+- 2026-08-23 through 2026-08-31: **USD 5.666039543434 billed cost**; **USD 49.867071903739 effective cost**.
+- 2026-09-30 through 2026-10-05: **USD 41.392330372013 billed cost**; **USD 41.392330372013 effective cost**.
+
+These bounded windows are primary provider evidence of real infrastructure/subscription spend. They are not a complete OPEX figure. June and July returned `costs_not_found`; the September full-month query exceeded the connector response limit and is not treated as a complete or zero-cost month.
+
+Do not add these USD amounts to the Google EUR total or FX-convert them without an approved accounting policy.
+
+```text
+VERCEL_TEAM_PLAN=PRO
+VERCEL_AUTHENTICATED_TEAM_OWNER=renanescola40-afk
+VERCEL_BOUNDED_BILLED_COST_USD_AUG23_AUG31=5.666039543434
+VERCEL_BOUNDED_BILLED_COST_USD_SEP30_OCT05=41.392330372013
+VERCEL_COMPLETE_OPEX=NOT_PROVEN
+```
+
 ## Cost-base summary template
 
 Capture monthly and trailing-12-month amounts for:

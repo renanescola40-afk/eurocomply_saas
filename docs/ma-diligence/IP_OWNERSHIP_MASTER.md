@@ -2,6 +2,7 @@
 
 Date: 2026-10-05  
 Baseline main SHA: `6219f52c463c367848c1139158e5389d35298ca2`  
+Extended contributor review cutoff SHA: `ad5ae2b99875659c54b6139d35addbbc2a9cfad9`  
 Status: `IP_DILIGENCE_INTERNAL=PASS_DOCUMENTED / IP_CHAIN_GAPS_PRESENT`
 
 This document maps title evidence. It does not create title, substitute for signed assignments, or make a legal ownership opinion.
@@ -24,7 +25,7 @@ The repository proves technical history and asset existence, not automatically l
 | Asset | Current evidence | Classification | Gap / action |
 |---|---|---|---|
 | Primary source repository | Repository exists and is controlled through linked GitHub account | VERIFIED | Repository control is not by itself an IP assignment. |
-| Source code authorship history | Git history is available; a 300-commit sample was reconciled on 2026-10-05 | VERIFIED | Freeze a final full-history export at transaction cut-off SHA. |
+| Source code authorship history | More than 18,000 commits were reviewed on 2026-10-05; multiple human/account and automation identities were observed | VERIFIED_EXTENDED_REVIEW | Complete the final API walk/export and document the relationship of legacy account identities before title representation. |
 | Creator ownership to seller | No executed transfer instrument identified in reviewed repo | **IP_CHAIN_GAP** | Execute counsel-approved assignment/license as required before sale. |
 | Employee contributions | No complete employee contribution register found | OWNER_INPUT_REQUIRED | Confirm whether any employees contributed and provide employment/IP clauses. |
 | Contractor contributions | No complete contractor register found | OWNER_INPUT_REQUIRED | Identify contractors and locate signed IP assignment/work-for-hire clauses. |
@@ -40,9 +41,9 @@ The repository proves technical history and asset existence, not automatically l
 | Commercial dependencies | Vercel, Supabase, Stripe, Google, Sentry, Upstash/Redis, Resend, GitHub and other conditional services | VERIFIED/PARTIAL | Account terms, transferability and change-of-control review required. |
 | IP encumbrances | None can be safely claimed from repository alone | OWNER_INPUT_REQUIRED | Confirm liens, licenses, pledges, exclusivity, prior assignments and disputes. |
 
-## Observed contributor evidence — 300 most recent commits
+## Observed contributor evidence — extended history review
 
-A dated repository sample of the 300 most recent commits returned:
+A dated review began with the 300 most recent commits and was expanded through review cutoff SHA `ad5ae2b99875659c54b6139d35addbbc2a9cfad9`. The earlier baseline `6219f52c463c367848c1139158e5389d35298ca2` contained 17,959 reachable commits; the cutoff is 76 commits ahead of that baseline, supporting at least 18,035 reachable commits at the reviewed snapshot. The first 300 returned:
 
 | Observed author identity | Commits in sample | Diligence classification |
 |---|---:|---|
@@ -50,7 +51,7 @@ A dated repository sample of the 300 most recent commits returned:
 | `sastestezoer-commits` | 77 | AUTOMATION/COMMIT ACCOUNT — owner/control relationship must be documented |
 | `dependabot[bot]` | 3 | THIRD-PARTY AUTOMATION BOT; dependency updates are not a human ownership claim |
 
-No other author identity appeared in this 300-commit sample. This materially narrows the contributor investigation, but it is not a substitute for a complete history export or relationship/IP documentation.
+The expanded history review later revealed additional recurring identities, including `renansilva2002-tech` and `soltomstorevendas-web`, plus GitHub Actions and other sparse automation identities. Sample commits for the two legacy human-looking accounts are predominantly merge/integration activity into the same repository. This is **not** enough to treat them as the same owner or as third-party contractors; an account-control/relationship declaration remains required.
 
 ## Contributor register
 
@@ -59,8 +60,10 @@ No other author identity appeared in this 300-commit sample. This materially nar
 | `renanescola40-afk` | Owner-linked primary repository account | Git history and repository control | No executed creator-to-seller transfer instrument identified | **IP_CHAIN_GAP** |
 | `sastestezoer-commits` | Automation/commit account | 77/300 observed commits | Must document account control and whether code was generated/committed on owner's behalf | OPEN_DOCUMENTATION |
 | `dependabot[bot]` | GitHub dependency automation | 3/300 observed commits | Governed by third-party package licenses; no human assignment expected | NOT_APPLICABLE_AS_HUMAN_CONTRIBUTOR |
-| Other employees | None identified in 300-commit sample | Sample only | Owner confirmation/full-history review required | OPEN / POSSIBLY_NA |
-| Other contractors | None identified in 300-commit sample | Sample only | Owner confirmation/full-history review required | OPEN / POSSIBLY_NA |
+| `renansilva2002-tech` | Legacy GitHub identity; relationship unproven | Repeated historical merge commits observed | Account-control/relationship declaration required | OPEN_DOCUMENTATION |
+| `soltomstorevendas-web` | Legacy GitHub identity; relationship unproven | Repeated historical merge/integration commits observed | Account-control/relationship declaration required | OPEN_DOCUMENTATION |
+| Other employees | No account may be classified as employee from Git history alone | Extended history review | Owner confirmation + employment/IP agreements if any | OPEN / POSSIBLY_NA |
+| Other contractors | No account may be classified as contractor from Git history alone | Extended history review | Owner confirmation + contractor/IP agreements if any | OPEN / POSSIBLY_NA |
 
 Do not convert Git commit authors into legal ownership conclusions without the underlying relationship/agreement.
 
@@ -117,9 +120,10 @@ Before making a title representation, the seller should have controlled copies o
 
 ```text
 SOURCE_REPOSITORY_EXISTENCE=VERIFIED
-RECENT_CONTRIBUTOR_SAMPLE=300_COMMITS_RECONCILED
-OBSERVED_IDENTITIES=3
-OTHER_HUMAN_CONTRIBUTORS_IN_SAMPLE=0
+CONTRIBUTOR_HISTORY_REVIEWED_GT=18000_COMMITS
+LEGACY_ACCOUNT_IDENTITIES_FOUND=YES
+FULL_HISTORY_EXPORT_FINAL_PAGE=OPEN
+HUMAN_RELATIONSHIP_CLASSIFICATION=NOT_INFERRED
 OSS_INVENTORY=VERIFIED
 CREATOR_TO_SELLER_TRANSFER=IP_CHAIN_GAP
 EMPLOYEE_CHAIN=OWNER_INPUT_REQUIRED
