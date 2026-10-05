@@ -8,9 +8,9 @@ This matrix consolidates repository and connected-account evidence for M&A hando
 
 | Provider | Current evidence | Account/billing owner | Transferability / change of control | DPA/data/region | Criticality | Handover requirement |
 |---|---|---|---|---|---|---|
-| Vercel | Live connected evidence on 2026-10-05: team `team_wu3LZI6ReFxO16xipv73GLwG` is Pro; project `prj_APpXAyQFy1Gie50xfbO45zjkyUSm` / `eurocomply-saas` is linked to GitHub `renanescola40-afk/eurocomply_saas`; `risckcomply.com` and `www.risckcomply.com` are verified project domains | TEAM/PROJECT CONTROL PROVEN / BILLING LEGAL OWNER OPEN | PROVIDER_REQUIRED | DPA framework documented; complete account/flow facts partial | Critical hosting/release | Export project/team ownership, billing, domains, env-var names (not values), agreement, invoices, support plan; determine account transfer vs buyer recreation. |
-| Supabase | Live connected evidence on 2026-10-05: organization `jdtqfjdqljeqgitvgnea` is Pro; production project `tganhbbhfxcpblmgqprg` / `eurocomply_saas` is ACTIVE_HEALTHY in `eu-west-1`; DPA framework evidence exists | ORGANIZATION/PROJECT CONTROL PROVEN / BILLING LEGAL OWNER OPEN | PROVIDER_REQUIRED | Strong DPA framework evidence; backup/support/transfer facts partial | Critical DB/Auth/Storage | Confirm organization owner, billing, project transfer/migration options, backups/PITR, DPA/account terms, service-role rotation plan. |
-| Stripe | LIVE RISCK COMPLY SAAS account discovered in prior evidence; Stripe account notification to corporate mailbox independently supports live account identity | PROVIDER_REQUIRED | PROVIDER_REQUIRED | Account entity/tax/privacy details not fully closed | Critical billing | Confirm legal account owner, representative, connected bank/tax profile, products/prices, subscriptions, customer portal, webhook, transfer/change-of-control rules, buyer migration path. |
+| Vercel | Connected Pro project, repo/domain binding documented historically/currently in trust evidence | PROVIDER_REQUIRED | PROVIDER_REQUIRED | DPA framework documented; complete account/flow facts partial | Critical hosting/release | Export project/team ownership, billing, domains, env-var names (not values), agreement, invoices, support plan; determine account transfer vs buyer recreation. |
+| Supabase | Production project `tganhbbhfxcpblmgqprg`, eu-west-1, DPA framework evidence | PROVIDER_REQUIRED | PROVIDER_REQUIRED | Strong DPA framework evidence; backup/support/transfer facts partial | Critical DB/Auth/Storage | Confirm organization owner, billing, project transfer/migration options, backups/PITR, DPA/account terms, service-role rotation plan. |
+| Stripe | Authenticated LIVE account directly read: RISCK COMPLY SAAS; company name recorded as Samuel Cerqueira, Unipessoal Lda.; EUR account; charges/payouts enabled; 0 customers/subscriptions/charges/invoices and €0 Stripe balance at cut-off | ACCOUNT_ENTITY_EVIDENCE_VERIFIED / FINAL_LEGAL_REGISTRY_MATCH_OPEN | PROVIDER_REQUIRED | Provider-account identity is strong; transfer/change-of-control and final registry/tax reconciliation remain open | Critical billing | Preserve account export, products/prices/webhooks and handover plan; confirm transfer/change-of-control route and reconcile provider entity against official registry. |
 | Google OAuth / Identity | Runtime integration via Supabase Auth | PROVIDER_REQUIRED | PROVIDER_REQUIRED | Account/legal facts open | Critical auth | Identify Cloud project/client owner, consent screen, domains, credentials rotation, transfer/project ownership route. |
 | Google Workspace | Corporate mail operational; provider invoices dated 2026-06-30, 2026-07-31, 2026-08-31 and 2026-09-30 identify `risckcomply.com`, billing ID `5869-2084-8146`, billed party text `Risck comply`, and recurring Workspace charges | PARTIAL_BILLING_ACCOUNT_EVIDENCE / LEGAL_OWNER_OPEN | PROVIDER_REQUIRED | CDPA/account/retention facts require revalidation | High operations | Admin ownership, billing, aliases/shared mailboxes, retention, domain/DNS dependencies, buyer handover or archive. |
 | GitHub / Actions | Primary repository, protected main, CI/CD | Repository account evidence required | PROVIDER_REQUIRED | Account/company DPA and runner-flow details partial | Critical source/CI | Transfer repo/org or controlled buyer migration; archive audit trail; rotate secrets; re-establish branch protections and environments. |
@@ -26,8 +26,8 @@ This matrix consolidates repository and connected-account evidence for M&A hando
 - Vercel: authenticated connected-account evidence proves Pro team control, exact GitHub project binding, and verified production domains; legal billing owner and transfer/change-of-control remain open.
 - Supabase: authenticated connected-account evidence proves a Pro organization and the exact Production project is ACTIVE_HEALTHY in eu-west-1; legal billing owner and transfer/change-of-control remain open.
 - PostHog: account-linked DPA completion evidence is no longer merely an internal repository statement; the corporate mailbox contains the PandaDoc completion notice.
-- Stripe: a Stripe notification to the corporate mailbox references the live `RISCK COMPLY SAAS` account, strengthening account-existence evidence, without proving the final contracting entity or tax profile.
-- Google: corporate mailbox evidence confirms operational use of `risckcomply.com`; four provider-originated invoices now add dated billing evidence and recurring Workspace/domain cost evidence. They still do not prove registrar legal title, the seller's VAT/VIES status, or final account transferability.
+- Stripe: authenticated LIVE API evidence now proves the active account identity, provider-recorded company name, EUR account status and zero customer/subscription/charge/invoice activity at cut-off. Transferability and official corporate/tax matching remain open.
+- Google: corporate mailbox evidence confirms operational use of `risckcomply.com` within Google-admin/domain services, without proving registrar title.
 
 ## Handover rule
 
@@ -50,7 +50,8 @@ No credential value belongs in the repository or data-room index.
 ```text
 ACTIVE_PROVIDER_INVENTORY=SUBSTANTIALLY_DOCUMENTED
 POSTHOG_ACCOUNT_LINKED_DPA_COMPLETION=VERIFIED_EMAIL_EVIDENCE
-STRIPE_LIVE_ACCOUNT_IDENTITY=STRENGTHENED_EMAIL_EVIDENCE
+STRIPE_LIVE_ACCOUNT_IDENTITY=VERIFIED_PROVIDER_API
+STRIPE_LIVE_FINANCIAL_ACTIVITY=ZERO_AT_CUTOFF_VERIFIED
 ACCOUNT_OWNER_PROOF=PARTIAL_OPEN
 BILLING_OWNER_PROOF=PARTIAL_OPEN
 TRANSFERABILITY=OPEN_PER_PROVIDER

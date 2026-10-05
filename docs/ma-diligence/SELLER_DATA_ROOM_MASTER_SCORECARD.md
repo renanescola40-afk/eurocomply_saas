@@ -19,14 +19,14 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 | Measure | Score | Meaning |
 |---|---:|---|
 | INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
-| AUDITABLE_MA_EVIDENCE_CLOSURE | **31.12%** | 30.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
-| AUDITABLE_MA_EVIDENCE_REMAINING | **68.88%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
+| AUDITABLE_MA_EVIDENCE_CLOSURE | **33.67%** | 33.0 evidence points closed out of the original 98 requirements using the published scoring rule. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **66.33%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
 
 ```text
-TOTAL_EVIDENCE_POINTS=30.5
+TOTAL_EVIDENCE_POINTS=33.0
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=31.12%
-AUDITABLE_MA_EVIDENCE_REMAINING=68.88%
+AUDITABLE_MA_EVIDENCE_CLOSURE=33.67%
+AUDITABLE_MA_EVIDENCE_REMAINING=66.33%
 INTERNAL_DOCUMENT_READINESS=100%
 MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
@@ -34,6 +34,17 @@ MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 The auditable evidence score is recalculable line by line. Commercial evidence added on 2026-10-05 moved pipeline, outreach metrics and current buyer signals to CLOSED while preserving strict non-claims for customers, LOIs, active pilots and acquisition offers.
 
 ## Newly closed in this continuation
+
+- Stripe LIVE account directly reconciled through the provider API.
+- Stripe LIVE customer objects: 0.
+- Stripe LIVE subscription objects: 0.
+- Stripe LIVE charges: 0.
+- Stripe LIVE invoices: 0.
+- Stripe LIVE EUR available/pending balance: €0 / €0.
+- Revenue history, MRR, ARR, customer count and cash position moved from OPEN to PARTIAL, strictly limited to what Stripe can prove.
+- Total company revenue/cash remains accounting and bank-evidence dependent.
+
+## Commercial evidence already closed
 
 - Commercial pipeline register created from connected mailbox evidence.
 - 352 unique sent outreach messages reconciled across the defined acquisition + pilot/procurement scope.
@@ -123,8 +134,8 @@ FINANCIAL_SOURCE_RECORDS_OPEN=YES
 TAX_SOURCE_RECORDS_OPEN=YES
 PROVIDER_TRANSFER_CLOSURE_OPEN=YES
 OVERALL_TRANSACTION_100=NO
-EXACT_PERCENT_COMPLETE=31.12
-EXACT_PERCENT_REMAINING=68.88
+EXACT_PERCENT_COMPLETE=33.67
+EXACT_PERCENT_REMAINING=66.33
 ```
 
 ## Priority closure order
