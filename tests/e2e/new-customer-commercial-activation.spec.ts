@@ -23,14 +23,22 @@ test.describe('new customer commercial activation', () => {
 
       await emailInput.fill(newCustomerEmail!);
       await form.getByLabel('Password', { exact: true }).fill(newCustomerPassword!);
-      await submit.click();
+      const passwordGrant = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return response.request().method() === 'POST'
+          && url.pathname.endsWith('/auth/v1/token')
+          && url.searchParams.get('grant_type') === 'password';
+      }, { timeout: 30_000 });
 
-      // The client-side router transition can lag behind Supabase persisting the
-      // authenticated session. Prove the durable auth state first, then navigate
-      // to the requested continuation explicitly instead of racing router.replace.
+      await submit.click();
+      const authResponse = await passwordGrant;
+      expect(authResponse.status(), 'Supabase password grant should succeed').toBe(200);
+
+      // createBrowserClient may split/rename its session cookie, so prove durable
+      // browser auth by the Supabase cookie namespace rather than a specific name.
       await expect.poll(async () => {
         const cookies = await page.context().cookies();
-        return cookies.some((cookie) => cookie.name.includes('auth-token') && Boolean(cookie.value));
+        return cookies.some((cookie) => cookie.name.startsWith('sb-') && Boolean(cookie.value));
       }, { timeout: 30_000 }).toBe(true);
 
       await page.goto(nextPath, { waitUntil: 'domcontentloaded' });
