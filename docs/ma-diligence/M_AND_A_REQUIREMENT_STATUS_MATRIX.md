@@ -131,7 +131,7 @@ Tax subtotal: **0.0 / 12 = 0.00%**
 | 80 | LOIs | OPEN | 0.0 | No executed LOI credited. |
 | 81 | Procurement processes | CLOSED | 1.0 | Internal procurement/buyer pack exists. |
 | 82 | Strategic buyer outreach | CLOSED | 1.0 | Corporate mailbox evidences strategic acquisition outreach. |
-| 83 | Current buyer signals | OPEN | 0.0 | Responses/interest must be separately attributed; no generic signal score claimed. |
+| 83 | Current buyer signals | PARTIAL | 0.5 | Human attributable signals exist: B3 Investor Relations confirmed forwarding the acquisition material to the responsible team on 2026-10-05; ServiceNow Investor Relations confirmed forwarding to Corporate Development on 2026-09-22; a Devo contact stated the timing is currently wrong but suggested revisiting in about three months. None is treated as LOI, offer, diligence request or buyer commitment. |
 | 84 | Customer references | OPEN | 0.0 | Not claimed. |
 | 85 | Customer logos | OPEN | 0.0 | Not claimed. |
 | 86 | Churn | OPEN | 0.0 | No customer baseline credited. |
@@ -140,7 +140,7 @@ Tax subtotal: **0.0 / 12 = 0.00%**
 | 89 | GTM model | CLOSED | 1.0 | Sales/GTM playbooks exist. |
 | 90 | Addressable market claims | PARTIAL | 0.5 | Market positioning exists; transaction-grade market substantiation remains buyer-specific. |
 
-Commercial subtotal: **5.0 / 15 = 33.33%**
+Commercial subtotal: **5.5 / 15 = 36.67%**
 
 ## Providers — requirements 91–98
 
@@ -166,14 +166,14 @@ CORPORATE=4.0/17
 IP=13.5/20
 FINANCIAL=2.5/26
 TAX=0.0/12
-COMMERCIAL=5.0/15
+COMMERCIAL=5.5/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=29.0
+TOTAL_SCORE=29.5
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=29.0/98=29.59%
-AUDITABLE_MA_EVIDENCE_REMAINING=70.41%
+AUDITABLE_MA_EVIDENCE_CLOSURE=29.5/98=30.10%
+AUDITABLE_MA_EVIDENCE_REMAINING=69.90%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
