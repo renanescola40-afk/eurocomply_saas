@@ -22,13 +22,14 @@ export type GapPersistenceResult =
   | { ok: true; assessmentId: string }
   | { ok: false; error: string; recoverable: boolean };
 
-type LatestGapAssessment = {
+export type LatestGapAssessment = {
   id: string;
   score: number;
   status: string;
   locale: string;
   summary: Record<string, unknown>;
   created_at: string;
+  answers: GapAnswerInput[];
 };
 
 function normalizePersistenceError(error: unknown) {

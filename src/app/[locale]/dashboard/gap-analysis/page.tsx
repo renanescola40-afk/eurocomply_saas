@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, FileText, ShieldCheck, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import GapActionCenter from '@/components/GapActionCenter';
 import { useAuth } from '@/hooks/useAuth';
-import { trySaveGapAssessment } from '@/lib/gap-analysis/storage';
+import { loadLatestGapAssessment, trySaveGapAssessment } from '@/lib/gap-analysis/storage';
 import { tryCreateFindingsAndTasks } from '@/lib/compliance/remediation';
 
 type Locale = 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de';
@@ -140,6 +140,37 @@ export default function GapAnalysisPage() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
+  const [loadingAssessment, setLoadingAssessment] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [restoredAssessment, setRestoredAssessment] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setAnswers({});
+    setLoadingAssessment(true);
+    setLoadFailed(false);
+    setRestoredAssessment(false);
+    setSaveMessage(null);
+    if (!user?.id) return () => { active = false; };
+    loadLatestGapAssessment({ userId: user.id }).then((assessment) => {
+      if (!active) return;
+      const restored: Record<string, Answer> = {};
+      for (const answer of assessment?.answers ?? []) {
+        if (questions.some((q) => q.id === answer.question_id)
+          && ['yes', 'partial', 'no'].includes(answer.answer)) {
+          restored[answer.question_id] = answer.answer;
+        }
+      }
+      setAnswers(restored);
+      setRestoredAssessment(Boolean(assessment));
+    }).catch(() => {
+      if (active) setLoadFailed(true);
+    }).finally(() => {
+      if (active) setLoadingAssessment(false);
+    });
+    return () => { active = false; };
+  }, [user?.id]);
+
   const result = useMemo(() => {
     const completed = questions.filter((q) => answers[q.id]).length;
     const total = questions.length;
@@ -214,6 +245,7 @@ export default function GapAnalysisPage() {
   };
 
   const generateReport = async () => {
+    if (loadingAssessment || loadFailed || saving) return;
     setSaveMessage(null);
 
     if (!user?.id) {
@@ -309,6 +341,7 @@ export default function GapAnalysisPage() {
                     <button
                       key={answer}
                       type="button"
+                      disabled={loadingAssessment || loadFailed || saving}
                       onClick={() => setAnswers((current) => ({ ...current, [q.id]: answer }))}
                       className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${answers[q.id] === answer ? 'border-emerald-300/35 bg-emerald-300 text-[#06100d]' : 'border-white/[0.08] bg-white/[0.025] text-white/58 hover:bg-white/[0.055] hover:text-white'}`}
                     >
@@ -359,7 +392,16 @@ export default function GapAnalysisPage() {
                   ))}
                 </div>
               )}
-              <Button onClick={generateReport} disabled={saving} className="mt-4 w-full bg-emerald-300 text-[#06100d] hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60">
+              <p role={loadFailed ? 'alert' : 'status'} className="mt-4 text-sm text-slate-300">
+                {loadingAssessment
+                  ? (locale === 'pt' ? 'Carregando a última avaliação salva…' : 'Loading the latest saved assessment…')
+                  : loadFailed
+                    ? (locale === 'pt' ? 'Não foi possível carregar a avaliação salva. Recarregue a página antes de editar.' : 'Could not load the saved assessment. Reload before editing.')
+                    : restoredAssessment
+                      ? (locale === 'pt' ? 'Última avaliação salva restaurada. Guardar cria uma nova versão; as versões anteriores são preservadas.' : 'Latest saved assessment restored. Saving creates a new version; previous versions are retained.')
+                      : (locale === 'pt' ? 'Nenhuma avaliação salva nesta organização para esta conta. Guardar cria a primeira versão.' : 'No saved assessment in this organization for this account. Saving creates the first version.')}
+              </p>
+              <Button onClick={generateReport} disabled={saving || loadingAssessment || loadFailed} className="mt-4 w-full bg-emerald-300 text-[#06100d] hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60">
                 <Download className="mr-2 h-4 w-4" /> {saving ? t.saving : t.export}
               </Button>
               {saveMessage && <p className="mt-3 text-xs text-white/55">{saveMessage}</p>}

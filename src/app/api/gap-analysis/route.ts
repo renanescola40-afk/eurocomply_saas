@@ -94,7 +94,7 @@ async function requireProfessionalRemediationPlan(organizationId: string) {
 async function loadLatestAssessment(organizationId: string, userId: string) {
   const { data, error } = await createAdminClient()
     .from('gap_assessments')
-    .select('id,score,status,locale,summary,created_at')
+    .select('id,score,status,locale,summary,created_at,answers:gap_answers(question_id,article,category,answer,score,recommendation)')
     .eq('organization_id', organizationId)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
