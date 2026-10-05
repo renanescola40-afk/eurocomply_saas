@@ -76,7 +76,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 41 | Customer count | PARTIAL | 0.5 | LIVE Stripe has 0 customer objects; non-Stripe/contract customers still require seller/accounting evidence. |
 | 42 | Pipeline | CLOSED | 1.0 | Buyer-grade mailbox pipeline register reconciles scoped outreach, failures and attributable stages without claiming revenue/LOIs. |
 | 43 | Sales outreach metrics | CLOSED | 1.0 | Gmail message-ID counts are paginated and deduplicated: 352 unique sent messages across acquisition + pilot/procurement scope; 22 failure messages separately tracked. |
-| 44 | Operating costs | OPEN | 0.0 | Accounting/provider amounts open. |
+| 44 | Operating costs | PARTIAL | 0.5 | Four provider-originated Google invoices totaling €57.46 are credited in FINANCIAL_FACT_BOOK.md; full ledger and complete provider reconciliation remain open. |
 | 45 | Infrastructure costs | PARTIAL | 0.5 | Provider cost categories mapped; amounts/invoices open. |
 | 46 | Software subscriptions | PARTIAL | 0.5 | Provider set mapped; invoice/amount reconciliation open. |
 | 47 | Contractors/payroll | OPEN | 0.0 | Source records open. |
@@ -97,7 +97,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 62 | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
 
-Financial subtotal: **5.5 / 26 = 21.15%**
+Financial subtotal: **6.0 / 26 = 23.08%**
 
 ## Tax — requirements 64–75
 
@@ -169,11 +169,11 @@ TAX=0.0/12
 COMMERCIAL=6.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=34.0
+TOTAL_SCORE=34.5
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=34.0/98=34.69%
-AUDITABLE_MA_EVIDENCE_REMAINING=65.31%
+AUDITABLE_MA_EVIDENCE_CLOSURE=34.5/98=35.20%
+AUDITABLE_MA_EVIDENCE_REMAINING=64.80%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
