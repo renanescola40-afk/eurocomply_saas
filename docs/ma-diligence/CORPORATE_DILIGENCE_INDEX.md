@@ -25,7 +25,7 @@ This is an internal diligence index, not an official registry extract, legal opi
 |---|---|---|---|
 | Legal entity selected as seller/operator | SAMUEL CERQUEIRA, UNIPESSOAL LDA | DOCUMENTED | Owner-designated in existing legal-assurance records. |
 | Current legal name | Same as above, pending registry proof | OFFICIAL_DOCUMENT_REQUIRED | Obtain current commercial registry certificate. |
-| Company number / NIPC | Not stored as authoritative diligence fact | OFFICIAL_DOCUMENT_REQUIRED | Obtain FCPC/commercial registry evidence. |
+| Company number / NIPC | Candidate `515099899` appears in prior seller communications, but no official registry artifact is credited | DOCUMENTED_CANDIDATE / OFFICIAL_DOCUMENT_REQUIRED | Verify against current FCPC/commercial registry evidence before any buyer representation. |
 | Registered address | Not stored as authoritative diligence fact | OFFICIAL_DOCUMENT_REQUIRED | Commercial registry certificate. |
 | Incorporation date | Not stored as authoritative diligence fact | OFFICIAL_DOCUMENT_REQUIRED | Commercial registry certificate / incorporation records. |
 | Directors / managers | Not promoted from non-authoritative memory | OFFICIAL_DOCUMENT_REQUIRED | Commercial registry certificate. |
@@ -36,6 +36,8 @@ This is an internal diligence index, not an official registry extract, legal opi
 | Corporate authority matrix | Prepared below | DOCUMENTED | Must be validated against articles and registry. |
 | Signatory authority | Unknown as official fact | OFFICIAL_DOCUMENT_REQUIRED | Registry/articles + board/shareholder decision where required. |
 | Sale authorization requirements | Transaction-structure dependent | LAWYER_REQUIRED | Determine asset sale vs share sale and required corporate approvals. |
+
+The candidate NIPC is preserved only to reduce lookup friction. It remains fail-closed until an official source proves it.
 
 ## Corporate authority matrix
 
@@ -66,7 +68,7 @@ For Portugal, the permanent commercial certificate can evidence current company 
 ```text
 SELLER_ENTITY_DECISION=DOCUMENTED_OWNER_DESIGNATION
 AUTHORITATIVE_REGISTRY_EVIDENCE=OPEN
-NIPC=OPEN_OFFICIAL_EVIDENCE
+NIPC_CANDIDATE=515099899_NOT_OFFICIALLY_CREDITED
 REGISTERED_OFFICE=OPEN_OFFICIAL_EVIDENCE
 MANAGER_SIGNATORY_EVIDENCE=OPEN
 RCBE_EVIDENCE=OPEN
