@@ -268,7 +268,7 @@ The 100% figure above is narrowly the internal **documentation/data-room respons
 
 | Requirement | Status | Canonical coverage | Reconciliation note |
 | --- | --- | --- | --- |
-| Technical Due Diligence Overview | `EXISTS_COMPLETE` | `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md`; universal buyer readiness | Canonical M&A routing. |
+| Technical Due Diligence Overview | `EXISTS_COMPLETE` | `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md`; `docs/ma-diligence/SELLER_DATA_ROOM_MASTER_SCORECARD.md`; universal buyer readiness | Canonical M&A routing including corporate, IP-chain, financial, tax and provider-transfer status. |
 | Codebase Architecture Summary | `EXISTS_COMPLETE` | architecture + M&A index | Canonical. |
 | Repository Governance | `EXISTS_COMPLETE` | protected-main/CI/repository evidence | Current branch protection is evidence. |
 | Dependency Inventory | `EXISTS_COMPLETE` | package manifests/SBOM/supply-chain evidence | Evidence source exists. |
