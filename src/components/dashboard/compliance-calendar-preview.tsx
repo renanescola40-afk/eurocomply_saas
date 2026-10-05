@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { formatCalendarDate } from '@/lib/calendar-date';
 
 type CalendarTask = {
   id: string;
@@ -46,7 +47,7 @@ function parseTime(value: string | null) {
 
 function formatDate(value: string | null) {
   if (!value) return 'No date';
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value));
+  return formatCalendarDate(value, 'en', { month: 'short', day: 'numeric', year: 'numeric' }) ?? 'Invalid date';
 }
 
 function getPriorityTone(priority: CalendarItem['priority']) {
