@@ -46,7 +46,8 @@ The 100% figure above is narrowly the internal **documentation/data-room respons
 | Buyer-specific SAML/IdP configuration | Buyer-specific | No internal document blocker |
 | Authoritative registry/tax evidence | Controlled/authoritative source when requested | Outside this prompt's company-registration-document scope |
 | Provider facts not returned by connected authority | FACT_REQUIRED / external-provider-account evidence | Disclose unknown; never guess |
-| Transaction-specific IP legal validation | External legal diligence where requested | Internal technical evidence remains indexable |
+| Transaction-specific IP legal validation | External legal diligence where requested | Internal technical evidence remains indexable; title gaps are tracked in `docs/ma-diligence/IP_OWNERSHIP_MASTER.md` |
+| Corporate/financial/tax M&A evidence | Official/accounting/tax/provider evidence remains partly open | Canonical status and request paths are under `docs/ma-diligence/` |
 
 ## Canonical package routing
 
@@ -54,7 +55,7 @@ The 100% figure above is narrowly the internal **documentation/data-room respons
 - Mid-market: same → `MID_MARKET_INITIAL_PACK`
 - Enterprise: same → `ENTERPRISE_INITIAL_PACK`
 - Regulated buyer: Enterprise pack + legal/privacy/control evidence under NDA/need-to-know
-- Big Tech/M&A: same → `BIG_TECH_MA_INITIAL_PACK` + `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md`
+- Big Tech/M&A: same → `BIG_TECH_MA_INITIAL_PACK` + `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md` + `docs/ma-diligence/SELLER_DATA_ROOM_MASTER_SCORECARD.md` + `docs/ma-diligence/M_AND_A_REQUIREMENT_STATUS_MATRIX.md`
 - Canonical starting index: `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-24.md`
 - Provider truth: `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md`
 - External assurance truth: `docs/evidence/EXTERNAL_ASSURANCE_LEGAL_FINAL_SCORECARD.md`
