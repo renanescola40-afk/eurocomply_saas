@@ -20,6 +20,6 @@ export async function uploadDocumentWithControlledValidation(
       return { ok: false, code: 'invalid_upload' };
     }
 
-    throw error;
+    throw new Error('Unable to upload document.');
   }
 }
