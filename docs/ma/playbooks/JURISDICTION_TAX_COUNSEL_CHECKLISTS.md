@@ -28,3 +28,11 @@ Treatment of escrow/holdback?
 Cross-border treaty benefits and substance requirements?
 Tax liabilities surviving closing?
 Required tax clearances/certificates?
+
+
+## Governing law / jurisdiction options
+Option 1 — Portuguese law + Portuguese courts: often operationally simpler for a Portuguese seller; confirm forum, language and enforceability strategy.
+Option 2 — English law + English courts/arbitration: common cross-border compromise but increases foreign-counsel cost and enforcement analysis.
+Option 3 — New York/Delaware law for US strategic buyers: use only after Portuguese conflicts/enforceability and tax/corporate review.
+Option 4 — International arbitration: consider confidentiality, neutral forum, seat, rules, language, interim relief and enforcement under the New York Convention.
+Selection must be deal-specific; mandatory Portuguese/EU rules may apply regardless of chosen law.
