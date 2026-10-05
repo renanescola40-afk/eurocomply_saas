@@ -300,13 +300,46 @@ jobs:
           function_ok=0
           secret_ok=0
 
-          for attempt in 1 2 3; do
-            if supabase functions delete "$FUNCTION_NAME" --project-ref "$RECOVERY_PROJECT_REF" --yes; then
-              function_ok=1
-              break
+          LEGACY_FUNCTION_NAME="dr-storage-recovery-proof-20261004"
+
+          for function_name in "$FUNCTION_NAME" "$LEGACY_FUNCTION_NAME"; do
+            deleted=0
+            for attempt in 1 2 3; do
+              if supabase functions delete "$function_name" --project-ref "$RECOVERY_PROJECT_REF" --yes; then
+                deleted=1
+                break
+              fi
+              sleep $((attempt * 2))
+            done
+
+            # Deletion is idempotent: if a legacy/current proof function is already
+            # absent, verify absence through the Management API before failing.
+            if [ "$deleted" -ne 1 ]; then
+              functions_json="$(curl --fail --silent --show-error \
+                -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                "https://api.supabase.com/v1/projects/$RECOVERY_PROJECT_REF/functions")"
+              if jq -e --arg name "$function_name" '.[] | select((.slug // .name) == $name)' <<<"$functions_json" >/dev/null; then
+                echo "Temporary recovery proof function still exists: $function_name" >&2
+                function_ok=0
+                break
+              fi
             fi
-            sleep $((attempt * 2))
           done
+
+          if [ "$function_ok" -ne 0 ]; then
+            function_ok=1
+          else
+            # function_ok starts at 0; set PASS only when neither current nor legacy
+            # function remains after the deletion/absence verification loop.
+            functions_json="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$RECOVERY_PROJECT_REF/functions")"
+            if ! jq -e --arg current "$FUNCTION_NAME" --arg legacy "$LEGACY_FUNCTION_NAME" \
+              '.[] | select((.slug // .name) == $current or (.slug // .name) == $legacy)' \
+              <<<"$functions_json" >/dev/null; then
+              function_ok=1
+            fi
+          fi
 
           for attempt in 1 2 3; do
             if supabase secrets unset --project-ref "$RECOVERY_PROJECT_REF" DR_STORAGE_PROOF_NONCE; then
