@@ -23,34 +23,42 @@ A partial item receives half credit only when substantive evidence exists. A tem
 
 | Domain | Score | Why |
 |---|---:|---|
-| INTERNAL_DOCUMENT_READINESS | **100%** | All seven requested M&A diligence control documents are created with status boundaries, checklists and remediation paths. |
-| OFFICIAL_EVIDENCE_READINESS | **0%** | No seller-specific official registry, RCBE, AT, VIES, bank or trademark artifact is credited by this pack. |
-| IP_CHAIN_READINESS | **25%** | Repository/source existence and OSS diligence are strong; creator-to-seller assignment, contributor chain, registrar title and brand title remain unproven. |
+| INTERNAL_DOCUMENT_READINESS | **100%** | All requested M&A diligence control documents exist with status boundaries, checklists and remediation paths. |
+| OFFICIAL_EVIDENCE_READINESS | **0%** | A candidate NIPC exists in prior seller communications, but no seller-specific official registry, RCBE, AT, VIES, bank or trademark artifact is credited. |
+| IP_CHAIN_READINESS | **30%** | Repository/source/OSS evidence is strong and a 300-commit contributor sample is reconciled; creator-to-seller assignment, full contributor relationship chain, registrar title and brand title remain unproven. |
 | FINANCIAL_READINESS | **20%** | Structure/question set is complete, but current P&L, balance sheet, cash flow, bank, GL, revenue/customer and working-capital evidence is not credited. |
 | TAX_READINESS | **20%** | Tax checklist is complete, but VAT/VIES/tax-clearance/returns and transaction tax analysis remain external/current-fact dependent. |
-| PROVIDER_TRANSFER_READINESS | **65%** | Provider/runtime/DPA inventory is advanced; account ownership, billing, transferability/change-of-control and buyer handover remain incomplete. |
+| PROVIDER_TRANSFER_READINESS | **70%** | Provider/runtime/DPA inventory is advanced; PostHog account-linked DPA completion and Stripe live-account identity are independently supported by mailbox evidence, while transfer/change-of-control and several account-owner/billing facts remain open. |
 
 ### Overall evidence-weighted readiness
 
 Simple equal-weight management average across the six required score domains:
 
 ```text
-(100 + 0 + 25 + 20 + 20 + 65) / 6 = 38.33%
-EXACT_PERCENT_COMPLETE=38.33%
-EXACT_PERCENT_REMAINING=61.67%
+(100 + 0 + 30 + 20 + 20 + 70) / 6 = 40.00%
+EXACT_PERCENT_COMPLETE=40.00%
+EXACT_PERCENT_REMAINING=60.00%
 ```
 
-This is **not** a statement that the transaction is 38.33% legally complete. It is a transparent diligence-control score.
+This is **not** a statement that the transaction is 40% legally complete. It is a transparent diligence-control score.
+
+## Newly closed in this continuation
+
+- 300-commit contributor sample reconciled: 220 primary account, 77 automation/commit account, 3 Dependabot.
+- No additional human contributor identity appeared in that sample.
+- PostHog DPA completion independently verified from corporate mailbox evidence.
+- Stripe live account identity strengthened by direct Stripe corporate-mail evidence.
+- Candidate company NIPC preserved as a lookup aid but kept unverified until official registry evidence.
 
 ## What is complete
 
 - Corporate diligence structure and authority checklist.
-- IP ownership/title-chain map.
+- IP ownership/title-chain map and contributor investigation path.
 - IP assignment remediation template (unexecuted).
 - OSS/license evidence linkage, including known LGPL review item.
 - Financial fact-book structure, pre-revenue disclosure template and buyer Q&A.
 - Tax diligence question set for asset sale, share sale, Brazil, US and EU buyer scenarios.
-- Provider transfer/handover matrix.
+- Provider transfer/handover matrix with evidence-bound account facts.
 - Official document acquisition list.
 - Master data-room scorecard and truth boundary.
 
@@ -124,5 +132,5 @@ OVERALL_TRANSACTION_100=NO
 4. Obtain AT tax-clearance + VAT/VIES evidence.
 5. Build accountant-backed financial pack through transaction cut-off.
 6. Export domain/provider account-control evidence and transfer plans.
-7. Refresh OSS/SBOM and contributor register on the final transaction SHA.
+7. Refresh OSS/SBOM and full contributor register on the final transaction SHA.
 8. Have counsel/accountant approve transaction-specific conclusions.
