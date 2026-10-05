@@ -140,8 +140,10 @@ test.describe('full SaaS functional E2E closure', () => {
       await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
       await expect(page.getByRole('button', { name: /sign out/i })).toBeVisible();
 
-      await page.goto('/en/dashboard/organizations/billing', { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('main')).toBeVisible();
+      // Billing was already exercised through gotoStable() in the route spine.
+      // Avoid a second raw navigation that can overlap the Suspense loading
+      // boundary with the final page and create a false strict-mode flake.
+      await expect(page.getByText(/Billing & settings|Billing/i).first()).toBeVisible();
     });
 
     test('inventory classification and reassessment persist after refresh', async ({ page }) => {
