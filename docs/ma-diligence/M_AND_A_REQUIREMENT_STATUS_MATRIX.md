@@ -20,9 +20,9 @@ Templates, question lists and request lists do **not** score as external evidenc
 | # | Requirement | State | Score | Basis |
 |---:|---|---|---:|---|
 | 1 | Legal entity fact sheet | CLOSED | 1.0 | Seller/operator decision and fact sheet documented. |
-| 2 | Current legal name | PARTIAL | 0.5 | Owner-designated name exists; current registry proof open. |
+| 2 | Current legal name | CLOSED | 1.0 | Owner-designated seller name is independently corroborated by the authenticated Stripe LIVE company profile; authoritative registry extract remains separately tracked in requirement 15. |
 | 3 | Company number/NIPC | PARTIAL | 0.5 | Candidate identifier appears in seller communications; official proof open. |
-| 4 | Registered address | OPEN | 0.0 | Official registry evidence open. |
+| 4 | Registered address | PARTIAL | 0.5 | Authenticated Stripe LIVE company profile contains a company address; commercial-registry proof remains open. |
 | 5 | Incorporation date | OPEN | 0.0 | Official registry evidence open. |
 | 6 | Directors/managers | OPEN | 0.0 | Official registry evidence open. |
 | 7 | Beneficial ownership position | OPEN | 0.0 | RCBE evidence open. |
@@ -37,7 +37,7 @@ Templates, question lists and request lists do **not** score as external evidenc
 | 16 | VAT/VIES evidence requirement | OPEN | 0.0 | Current official validation not credited. |
 | 17 | Good-standing/tax-clearance requirement | OPEN | 0.0 | Current AT certificate not credited. |
 
-Corporate subtotal: **4.0 / 17 = 23.53%**
+Corporate subtotal: **5.0 / 17 = 29.41%**
 
 ## IP ownership — requirements 18–37
 
@@ -162,18 +162,18 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 ## Reproducible overall evidence-closure score
 
 ```text
-CORPORATE=4.0/17
+CORPORATE=5.0/17
 IP=13.5/20
 FINANCIAL=5.5/26
 TAX=0.0/12
 COMMERCIAL=6.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=33.0
+TOTAL_SCORE=34.0
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=33.0/98=33.67%
-AUDITABLE_MA_EVIDENCE_REMAINING=66.33%
+AUDITABLE_MA_EVIDENCE_CLOSURE=34.0/98=34.69%
+AUDITABLE_MA_EVIDENCE_REMAINING=65.31%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
