@@ -19,14 +19,14 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 | Measure | Score | Meaning |
 |---|---:|---|
 | INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
-| AUDITABLE_MA_EVIDENCE_CLOSURE | **29.59%** | 29.0 evidence points closed out of the original 98 requirements using the published scoring rule. |
-| AUDITABLE_MA_EVIDENCE_REMAINING | **70.41%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
+| AUDITABLE_MA_EVIDENCE_CLOSURE | **30.10%** | 29.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **69.90%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
 
 ```text
-TOTAL_EVIDENCE_POINTS=29.0
+TOTAL_EVIDENCE_POINTS=29.5
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=29.59%
-AUDITABLE_MA_EVIDENCE_REMAINING=70.41%
+AUDITABLE_MA_EVIDENCE_CLOSURE=30.10%
+AUDITABLE_MA_EVIDENCE_REMAINING=69.90%
 INTERNAL_DOCUMENT_READINESS=100%
 MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
@@ -41,6 +41,7 @@ The lower auditable evidence score does not represent lost work. It replaces the
 - Stripe live account identity strengthened by direct Stripe corporate-mail evidence.
 - Candidate company NIPC preserved as a lookup aid but kept unverified until official registry evidence.
 - Four Google provider invoices credited as primary bounded cost evidence (€57.46 total), moving operating-cost evidence from OPEN to PARTIAL without claiming a complete OPEX or tax position.
+- Current buyer signals credited as PARTIAL from attributable human responses: B3 forwarded to its responsible team, ServiceNow forwarded to Corporate Development, and Devo indicated a possible later timing. No LOI/offer/commitment is inferred.
 
 ## What is complete
 
@@ -114,8 +115,8 @@ FINANCIAL_SOURCE_RECORDS_OPEN=YES
 TAX_SOURCE_RECORDS_OPEN=YES
 PROVIDER_TRANSFER_CLOSURE_OPEN=YES
 OVERALL_TRANSACTION_100=NO
-EXACT_PERCENT_COMPLETE=29.59
-EXACT_PERCENT_REMAINING=70.41
+EXACT_PERCENT_COMPLETE=30.10
+EXACT_PERCENT_REMAINING=69.90
 ```
 
 ## Priority closure order
