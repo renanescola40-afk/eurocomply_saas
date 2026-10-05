@@ -8,39 +8,30 @@ Status: `INTERNAL_DOCUMENT_READINESS=100 / OVERALL_TRANSACTION_READINESS=NOT_100
 
 ## Scoring method
 
-These are evidence-management scores, not legal/accounting opinions.
+The prior management percentages have been superseded by the reproducible 98-item scoring matrix at:
 
-- **Internal Document Readiness**: whether the required internal indexes, fact books, request lists and remediation templates exist and truthfully preserve gaps.
-- **Official Evidence Readiness**: seller-specific registry/tax/bank/official artifacts actually credited.
-- **IP Chain Readiness**: title chain from creator/contributors to seller plus domain/brand/software evidence.
-- **Financial Readiness**: buyer-grade financial source records and reconciliations available.
-- **Tax Readiness**: tax status evidence plus accountant/counsel transaction analysis.
-- **Provider Transfer Readiness**: active provider inventory, account ownership and transfer/change-of-control/handover evidence.
+- `docs/ma-diligence/M_AND_A_REQUIREMENT_STATUS_MATRIX.md`
 
-A partial item receives half credit only when substantive evidence exists. A template alone does not count as official evidence.
+Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. Templates alone do not earn external-evidence credit. Every numerator and denominator is listed in that matrix.
 
-## Score
+## Current scores
 
-| Domain | Score | Why |
+| Measure | Score | Meaning |
 |---|---:|---|
-| INTERNAL_DOCUMENT_READINESS | **100%** | All requested M&A diligence control documents exist with status boundaries, checklists and remediation paths. |
-| OFFICIAL_EVIDENCE_READINESS | **0%** | A candidate NIPC exists in prior seller communications, but no seller-specific official registry, RCBE, AT, VIES, bank or trademark artifact is credited. |
-| IP_CHAIN_READINESS | **30%** | Repository/source/OSS evidence is strong and a 300-commit contributor sample is reconciled; creator-to-seller assignment, full contributor relationship chain, registrar title and brand title remain unproven. |
-| FINANCIAL_READINESS | **20%** | Structure/question set is complete, but current P&L, balance sheet, cash flow, bank, GL, revenue/customer and working-capital evidence is not credited. |
-| TAX_READINESS | **20%** | Tax checklist is complete, but VAT/VIES/tax-clearance/returns and transaction tax analysis remain external/current-fact dependent. |
-| PROVIDER_TRANSFER_READINESS | **70%** | Provider/runtime/DPA inventory is advanced; PostHog account-linked DPA completion and Stripe live-account identity are independently supported by mailbox evidence, while transfer/change-of-control and several account-owner/billing facts remain open. |
-
-### Overall evidence-weighted readiness
-
-Simple equal-weight management average across the six required score domains:
+| INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
+| AUDITABLE_MA_EVIDENCE_CLOSURE | **29.08%** | 28.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **70.92%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
 
 ```text
-(100 + 0 + 30 + 20 + 20 + 70) / 6 = 40.00%
-EXACT_PERCENT_COMPLETE=40.00%
-EXACT_PERCENT_REMAINING=60.00%
+TOTAL_EVIDENCE_POINTS=28.5
+TOTAL_REQUIREMENTS=98
+AUDITABLE_MA_EVIDENCE_CLOSURE=29.08%
+AUDITABLE_MA_EVIDENCE_REMAINING=70.92%
+INTERNAL_DOCUMENT_READINESS=100%
+MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
 
-This is **not** a statement that the transaction is 40% legally complete. It is a transparent diligence-control score.
+The lower auditable evidence score does not represent lost work. It replaces the previous non-reproducible management estimate with a stricter metric that a buyer can recalculate line by line.
 
 ## Newly closed in this continuation
 
