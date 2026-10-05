@@ -1,4 +1,4 @@
-# V8 revalidation trigger: 2026-10-05 — no logic change
+# V8 exact-main revalidation trigger: c2acd4ab — no logic change
 name: Storage Recovery Synthetic Proof
 
 on:
