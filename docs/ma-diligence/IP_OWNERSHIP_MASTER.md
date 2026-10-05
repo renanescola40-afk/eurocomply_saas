@@ -2,6 +2,7 @@
 
 Date: 2026-10-05  
 Baseline main SHA: `6219f52c463c367848c1139158e5389d35298ca2`  
+Extended contributor review cutoff SHA: `ad5ae2b99875659c54b6139d35addbbc2a9cfad9`  
 Status: `IP_DILIGENCE_INTERNAL=PASS_DOCUMENTED / IP_CHAIN_GAPS_PRESENT`
 
 This document maps title evidence. It does not create title, substitute for signed assignments, or make a legal ownership opinion.
@@ -42,7 +43,7 @@ The repository proves technical history and asset existence, not automatically l
 
 ## Observed contributor evidence — extended history review
 
-A dated review began with the 300 most recent commits and was expanded to more than 18,000 commits. The first 300 returned:
+A dated review began with the 300 most recent commits and was expanded through review cutoff SHA `ad5ae2b99875659c54b6139d35addbbc2a9cfad9`. The earlier baseline `6219f52c463c367848c1139158e5389d35298ca2` contained 17,959 reachable commits; the cutoff is 76 commits ahead of that baseline, supporting at least 18,035 reachable commits at the reviewed snapshot. The first 300 returned:
 
 | Observed author identity | Commits in sample | Diligence classification |
 |---|---:|---|
