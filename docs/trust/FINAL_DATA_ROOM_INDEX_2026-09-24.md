@@ -26,6 +26,8 @@ The public repository stores safe indices and non-confidential diligence materia
 | First 48 hours handoff | `docs/trust/BUYER_FIRST_48_HOURS_HANDOFF.md` |
 | Universal SMB→M&A sharing policy | `docs/trust/UNIVERSAL_BUYER_READINESS_2026-09-24.md` |
 | M&A IP/software diligence | `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md` |
+| M&A corporate/IP/financial/tax master | `docs/ma-diligence/SELLER_DATA_ROOM_MASTER_SCORECARD.md` |
+| M&A auditable 98-item requirement matrix | `docs/ma-diligence/M_AND_A_REQUIREMENT_STATUS_MATRIX.md` |
 | OSS license diligence | `docs/trust/OPEN_SOURCE_LICENSE_DILIGENCE_2026-09-24.md` |
 
 ## 1. Company and contracting facts
@@ -161,6 +163,15 @@ Synthetic fixtures must never be represented as real customers or revenue.
 - `docs/trust/UNIVERSAL_BUYER_READINESS_2026-09-24.md`
 - `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md`
 - `docs/trust/OPEN_SOURCE_LICENSE_DILIGENCE_2026-09-24.md`
+- `docs/ma-diligence/CORPORATE_DILIGENCE_INDEX.md`
+- `docs/ma-diligence/IP_OWNERSHIP_MASTER.md`
+- `docs/ma-diligence/FINANCIAL_FACT_BOOK.md`
+- `docs/ma-diligence/TAX_DILIGENCE_CHECKLIST.md`
+- `docs/ma-diligence/PROVIDER_TRANSFER_MATRIX.md`
+- `docs/ma-diligence/OFFICIAL_DOCUMENT_REQUEST_LIST.md`
+- `docs/ma-diligence/CONTRIBUTOR_AND_ACCOUNT_EVIDENCE_REGISTER.md`
+- `docs/ma-diligence/SELLER_DATA_ROOM_MASTER_SCORECARD.md`
+- `docs/ma-diligence/M_AND_A_REQUIREMENT_STATUS_MATRIX.md`
 - current SBOM/supply-chain evidence
 - exact-SHA CI/release evidence
 
