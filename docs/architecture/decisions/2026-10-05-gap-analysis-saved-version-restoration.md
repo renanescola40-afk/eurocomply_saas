@@ -1,0 +1,11 @@
+# Restore the latest saved Gap Analysis version
+
+P1: persisted answers disappeared after reload even though seven answers existed in the saved assessment. The existing API has latest/history reads and append-only assessment/answer writes; report generation reads a saved assessment. These existing contracts establish versioned saved snapshots. This change resumes the latest snapshot for the current server-authorized organization and user; saving continues to create a new version. No historical rows are overwritten and no database migration is needed.
+
+Open PR overlap check: #2328 is M&A documentation; no Gap Analysis overlap. Database promotion is a separate protected #1631 lane and remains blocked on exact-release review/rehearsal evidence. Restoring saved answers has the highest internally controllable product value in the V6 closure scope. Success means latest reads include their child answers, the page restores them, and editing cannot race the initial load or silently replace data after a provider error.
+
+The latest query embeds gap_answers beneath the already organization/user-scoped parent in one query. Permission checks and no-store responses remain authoritative. The client resets on identity change, cancels obsolete results, rejects unknown question IDs/answer values and disables editing/saving until the initial read succeeds. Read failure displays an alert and blocks overwriting a saved version. Snapshot history endpoints remain unchanged. UI copy makes resume/new-version behavior explicit; a full history picker is out of scope.
+
+Validation: focused API tests cover seven-answer restoration, forged request identities, empty history, provider failure and denied permission. Existing PDF and active-membership contracts must remain green; TypeScript and targeted ESLint must pass. Local tests do not prove Production. Full required CI and qualified human review are prerequisites to human merge. Production must then verify reload, edits, a second version, action center and report download.
+
+Rollback: revert these application files; no schema or data rollback. Post-scan release evidence must be bound to the new SHA; no inherited pentest claim. No email, invite, credential change, RLS weakening or direct Production write.
