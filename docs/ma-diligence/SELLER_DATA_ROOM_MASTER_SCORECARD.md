@@ -19,14 +19,14 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 | Measure | Score | Meaning |
 |---|---:|---|
 | INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
-| AUDITABLE_MA_EVIDENCE_CLOSURE | **34.69%** | 34.0 evidence points closed out of the original 98 requirements using the published scoring rule. |
-| AUDITABLE_MA_EVIDENCE_REMAINING | **65.31%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
+| AUDITABLE_MA_EVIDENCE_CLOSURE | **35.20%** | 34.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **64.80%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
 
 ```text
-TOTAL_EVIDENCE_POINTS=34.0
+TOTAL_EVIDENCE_POINTS=34.5
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=34.69%
-AUDITABLE_MA_EVIDENCE_REMAINING=65.31%
+AUDITABLE_MA_EVIDENCE_CLOSURE=35.20%
+AUDITABLE_MA_EVIDENCE_REMAINING=64.80%
 INTERNAL_DOCUMENT_READINESS=100%
 MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
@@ -34,6 +34,13 @@ MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 The auditable evidence score is recalculable line by line. Commercial evidence added on 2026-10-05 moved pipeline, outreach metrics and current buyer signals to CLOSED while preserving strict non-claims for customers, LOIs, active pilots and acquisition offers.
 
 ## Newly closed in this continuation
+
+- Requirement 44 (Operating costs) reconciled from OPEN → PARTIAL because four provider-originated Google invoices totaling €57.46 were already credited in the Financial Fact Book.
+- Contributor-history review expanded from 300 commits to more than 18,000 commits.
+- Legacy identities `renansilva2002-tech` and `soltomstorevendas-web` are now explicitly tracked rather than silently omitted.
+- No employee/contractor/legal-owner relationship is inferred from Git identities alone.
+
+## Earlier corporate/provider closure
 
 - Corporate legal-name string independently corroborated by authenticated Stripe LIVE company evidence; requirement 2 moved PARTIAL → CLOSED while registry extract remains separately open.
 - Company-address evidence obtained from authenticated Stripe LIVE; requirement 4 moved OPEN → PARTIAL without exposing the address in this public-repo-safe scorecard.
@@ -142,8 +149,8 @@ FINANCIAL_SOURCE_RECORDS_OPEN=YES
 TAX_SOURCE_RECORDS_OPEN=YES
 PROVIDER_TRANSFER_CLOSURE_OPEN=YES
 OVERALL_TRANSACTION_100=NO
-EXACT_PERCENT_COMPLETE=34.69
-EXACT_PERCENT_REMAINING=65.31
+EXACT_PERCENT_COMPLETE=35.20
+EXACT_PERCENT_REMAINING=64.80
 ```
 
 ## Priority closure order
