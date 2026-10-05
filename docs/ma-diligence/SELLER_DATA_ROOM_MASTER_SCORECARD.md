@@ -35,6 +35,14 @@ The auditable evidence score is recalculable line by line. Commercial evidence a
 
 ## Newly closed in this continuation
 
+- Corporate legal-name string independently corroborated by authenticated Stripe LIVE company evidence; requirement 2 moved PARTIAL → CLOSED while registry extract remains separately open.
+- Company-address evidence obtained from authenticated Stripe LIVE; requirement 4 moved OPEN → PARTIAL without exposing the address in this public-repo-safe scorecard.
+- Vercel authenticated Pro-team/project/repo/domain control confirmed; official project transfer capability documented.
+- Supabase authenticated Pro organization and ACTIVE_HEALTHY production project in eu-west-1 confirmed; official project-transfer capability documented.
+- Human Upstash support evidence confirms DPA incorporation, contracting entity model and SCC/DPF transfer framework; account billing profile remains open.
+
+## Earlier Stripe financial closure
+
 - Stripe LIVE account directly reconciled through the provider API.
 - Stripe LIVE customer objects: 0.
 - Stripe LIVE subscription objects: 0.
