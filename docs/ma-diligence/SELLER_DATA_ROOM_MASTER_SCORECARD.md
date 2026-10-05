@@ -59,6 +59,8 @@ The auditable evidence score is recalculable line by line. Commercial evidence a
 - PostHog DPA completion independently verified from corporate mailbox evidence.
 - Stripe live account identity strengthened by direct Stripe corporate-mail evidence.
 - Candidate company NIPC preserved as a lookup aid but kept unverified until official registry evidence.
+- Four Google provider invoices credited as primary bounded cost evidence (€57.46 total), moving operating-cost evidence from OPEN to PARTIAL without claiming a complete OPEX or tax position.
+- Current buyer signals credited as PARTIAL from attributable human responses: B3 forwarded to its responsible team, ServiceNow forwarded to Corporate Development, and Devo indicated a possible later timing. No LOI/offer/commitment is inferred.
 
 ## What is complete
 
