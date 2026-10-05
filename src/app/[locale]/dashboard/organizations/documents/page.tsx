@@ -121,7 +121,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
       await uploadDocument({ organizationId: organization.id, name: input.name, category: input.category, expiresAt: input.expiresAt }, input.file);
     } catch (error) {
       if (error instanceof DocumentUploadValidationError) {
-        return { ok: false as const, error: error.message };
+        return { ok: false as const, code: 'invalid_upload' as const };
       }
       throw error;
     }
