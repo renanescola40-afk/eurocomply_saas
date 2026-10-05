@@ -88,7 +88,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 53 | Receivables | OPEN | 0.0 | A/R evidence open. |
 | 54 | Contingent liabilities | OPEN | 0.0 | Legal/accounting confirmation open. |
 | 55 | CAPEX | OPEN | 0.0 | Accounting evidence open. |
-| 56 | OPEX | OPEN | 0.0 | Accounting evidence open. |
+| 56 | OPEX | PARTIAL | 0.5 | Provider-originated Google domain/Workspace invoices totaling €57.46 prove a bounded portion of operating expenditure; complete OPEX and ledger reconciliation remain open. |
 | 57 | Forecast | OPEN | 0.0 | Template exists; approved assumptions not credited. |
 | 58 | Unit economics | OPEN | 0.0 | Current revenue/customer evidence insufficient. |
 | 59 | Historical P&L requirement | OPEN | 0.0 | Statements not credited. |
@@ -97,7 +97,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 62 | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
 
-Financial subtotal: **6.0 / 26 = 23.08%**
+Financial subtotal: **6.5 / 26 = 25.00%**
 
 ## Tax — requirements 64–75
 
@@ -164,16 +164,16 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 ```text
 CORPORATE=4.0/17
 IP=13.5/20
-FINANCIAL=6.0/26
+FINANCIAL=6.5/26
 TAX=0.0/12
 COMMERCIAL=6.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=33.5
+TOTAL_SCORE=34.0
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=33.5/98=34.18%
-AUDITABLE_MA_EVIDENCE_REMAINING=65.82%
+AUDITABLE_MA_EVIDENCE_CLOSURE=34.0/98=34.69%
+AUDITABLE_MA_EVIDENCE_REMAINING=65.31%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
