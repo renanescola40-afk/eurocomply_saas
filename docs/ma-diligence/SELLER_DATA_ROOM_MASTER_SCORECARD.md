@@ -19,14 +19,14 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 | Measure | Score | Meaning |
 |---|---:|---|
 | INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
-| AUDITABLE_MA_EVIDENCE_CLOSURE | **35.20%** | 34.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
-| AUDITABLE_MA_EVIDENCE_REMAINING | **64.80%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
+| AUDITABLE_MA_EVIDENCE_CLOSURE | **35.71%** | 35.0 evidence points closed out of the original 98 requirements using the published scoring rule. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **64.29%** | Official, IP-title, accounting, tax, commercial-fact and provider account/closing evidence still open or partial. |
 
 ```text
-TOTAL_EVIDENCE_POINTS=34.5
+TOTAL_EVIDENCE_POINTS=35.0
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=35.20%
-AUDITABLE_MA_EVIDENCE_REMAINING=64.80%
+AUDITABLE_MA_EVIDENCE_CLOSURE=35.71%
+AUDITABLE_MA_EVIDENCE_REMAINING=64.29%
 INTERNAL_DOCUMENT_READINESS=100%
 MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
@@ -147,10 +147,11 @@ OFFICIAL_EVIDENCE_READINESS=0
 IP_CHAIN_GAP_PRESENT=YES
 FINANCIAL_SOURCE_RECORDS_OPEN=YES
 TAX_SOURCE_RECORDS_OPEN=YES
-PROVIDER_TRANSFER_CLOSURE_OPEN=YES
+PROVIDER_TRANSFER_TERMS_REVIEW=CLOSED
+PROVIDER_ACCOUNT_EXECUTION_OPEN=YES
 OVERALL_TRANSACTION_100=NO
-EXACT_PERCENT_COMPLETE=35.20
-EXACT_PERCENT_REMAINING=64.80
+EXACT_PERCENT_COMPLETE=35.71
+EXACT_PERCENT_REMAINING=64.29
 ```
 
 ## Priority closure order

@@ -59,12 +59,12 @@ Corporate subtotal: **5.0 / 17 = 29.41%**
 | 31 | OSS license obligations | CLOSED | 1.0 | License diligence records obligations/review items. |
 | 32 | Copyleft risk review | CLOSED | 1.0 | LGPL review item explicitly identified; no false clean opinion claimed. |
 | 33 | Commercial license dependencies | CLOSED | 1.0 | Material provider/dependency set documented. |
-| 34 | Provider terms impacting transfer | PARTIAL | 0.5 | Provider/legal framework advanced; change-of-control/transferability incomplete. |
+| 34 | Provider terms impacting transfer | CLOSED | 1.0 | Official provider transfer/ownership/handover mechanisms and material limitations are mapped in PROVIDER_TRANSFER_CHANGE_OF_CONTROL_REVIEW_2026-10-05.md; execution remains a closing-step task, not an evidence gap for this requirement. |
 | 35 | IP encumbrances | OPEN | 0.0 | Seller confirmation/legal review open. |
 | 36 | Security/source access history | CLOSED | 1.0 | Protected-main/CI/source governance evidence exists. |
 | 37 | IP ownership representation evidence pack | CLOSED | 1.0 | Buyer evidence checklist and truth boundary exist. |
 
-IP subtotal: **13.5 / 20 = 67.50%**
+IP subtotal: **14.0 / 20 = 70.00%**
 
 ## Financial — requirements 38–63
 
@@ -163,17 +163,17 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 
 ```text
 CORPORATE=5.0/17
-IP=13.5/20
+IP=14.0/20
 FINANCIAL=6.0/26
 TAX=0.0/12
 COMMERCIAL=6.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=34.5
+TOTAL_SCORE=35.0
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=34.5/98=35.20%
-AUDITABLE_MA_EVIDENCE_REMAINING=64.80%
+AUDITABLE_MA_EVIDENCE_CLOSURE=35.0/98=35.71%
+AUDITABLE_MA_EVIDENCE_REMAINING=64.29%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
