@@ -70,6 +70,24 @@ Total of the four credited invoices: **€57.46**. This is not a complete OPEX f
 PRIMARY_PROVIDER_COST_EVIDENCE=PASS_BOUNDED_GOOGLE
 CREDITED_GOOGLE_INVOICES=4
 CREDITED_GOOGLE_TOTAL_EUR=57.46
+
+### Authenticated Vercel billing evidence — 2026-10-05
+
+Authenticated Vercel API evidence for team `team_wu3LZI6ReFxO16xipv73GLwG` (Pro) was reviewed on 2026-10-05. The team has one confirmed member, `renanescola40-afk`, with role `OWNER`, and project `eurocomply-saas` is linked to GitHub `renanescola40-afk/eurocomply_saas`.
+
+Bounded billing windows successfully returned provider-generated FOCUS billing data:
+- 2026-08-23 through 2026-08-31: **USD 5.666039543434 billed cost**; **USD 49.867071903739 effective cost**.
+- 2026-09-30 through 2026-10-05: **USD 41.392330372013 billed cost**; **USD 41.392330372013 effective cost**.
+
+The August and October windows are primary provider evidence of real infrastructure/subscription spend. June and July returned `costs_not_found`; the September full-month query exceeded the connector response limit and is therefore **not** treated as a complete or zero-cost month.
+
+Do not add the bounded Vercel amounts to the Google EUR total, do not FX-convert them without an approved accounting policy, and do not treat them as complete OPEX.
+
+VERCEL_TEAM_PLAN=PRO
+VERCEL_AUTHENTICATED_TEAM_OWNER=renanescola40-afk
+VERCEL_BOUNDED_BILLED_COST_USD_AUG23_AUG31=5.666039543434
+VERCEL_BOUNDED_BILLED_COST_USD_SEP30_OCT05=41.392330372013
+VERCEL_COMPLETE_OPEX=NOT_PROVEN
 FULL_OPERATING_COST_BASE=OPEN
 VAT_VIES_SELLER_STATUS=NOT_PROVEN_BY_PROVIDER_INVOICES
 DOMAIN_LEGAL_TITLE=NOT_PROVEN_BY_BILLING_INVOICE
