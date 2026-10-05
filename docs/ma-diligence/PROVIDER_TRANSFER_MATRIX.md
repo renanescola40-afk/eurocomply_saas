@@ -10,7 +10,7 @@ This matrix consolidates repository and connected-account evidence for M&A hando
 |---|---|---|---|---|---|---|
 | Vercel | Connected Pro project, repo/domain binding documented historically/currently in trust evidence | PROVIDER_REQUIRED | PROVIDER_REQUIRED | DPA framework documented; complete account/flow facts partial | Critical hosting/release | Export project/team ownership, billing, domains, env-var names (not values), agreement, invoices, support plan; determine account transfer vs buyer recreation. |
 | Supabase | Production project `tganhbbhfxcpblmgqprg`, eu-west-1, DPA framework evidence | PROVIDER_REQUIRED | PROVIDER_REQUIRED | Strong DPA framework evidence; backup/support/transfer facts partial | Critical DB/Auth/Storage | Confirm organization owner, billing, project transfer/migration options, backups/PITR, DPA/account terms, service-role rotation plan. |
-| Stripe | LIVE RISCK COMPLY SAAS account discovered in prior evidence; Stripe account notification to corporate mailbox independently supports live account identity | PROVIDER_REQUIRED | PROVIDER_REQUIRED | Account entity/tax/privacy details not fully closed | Critical billing | Confirm legal account owner, representative, connected bank/tax profile, products/prices, subscriptions, customer portal, webhook, transfer/change-of-control rules, buyer migration path. |
+| Stripe | Authenticated LIVE account directly read: RISCK COMPLY SAAS; company name recorded as Samuel Cerqueira, Unipessoal Lda.; EUR account; charges/payouts enabled; 0 customers/subscriptions/charges/invoices and €0 Stripe balance at cut-off | ACCOUNT_ENTITY_EVIDENCE_VERIFIED / FINAL_LEGAL_REGISTRY_MATCH_OPEN | PROVIDER_REQUIRED | Provider-account identity is strong; transfer/change-of-control and final registry/tax reconciliation remain open | Critical billing | Preserve account export, products/prices/webhooks and handover plan; confirm transfer/change-of-control route and reconcile provider entity against official registry. |
 | Google OAuth / Identity | Runtime integration via Supabase Auth | PROVIDER_REQUIRED | PROVIDER_REQUIRED | Account/legal facts open | Critical auth | Identify Cloud project/client owner, consent screen, domains, credentials rotation, transfer/project ownership route. |
 | Google Workspace | Corporate mail operational; Google domain-service communications reference `risckcomply.com` | PROVIDER_REQUIRED | PROVIDER_REQUIRED | CDPA/account/retention facts require revalidation | High operations | Admin ownership, billing, aliases/shared mailboxes, retention, domain/DNS dependencies, buyer handover or archive. |
 | GitHub / Actions | Primary repository, protected main, CI/CD | Repository account evidence required | PROVIDER_REQUIRED | Account/company DPA and runner-flow details partial | Critical source/CI | Transfer repo/org or controlled buyer migration; archive audit trail; rotate secrets; re-establish branch protections and environments. |
@@ -24,7 +24,7 @@ This matrix consolidates repository and connected-account evidence for M&A hando
 ## Attributable evidence improvements on 2026-10-05
 
 - PostHog: account-linked DPA completion evidence is no longer merely an internal repository statement; the corporate mailbox contains the PandaDoc completion notice.
-- Stripe: a Stripe notification to the corporate mailbox references the live `RISCK COMPLY SAAS` account, strengthening account-existence evidence, without proving the final contracting entity or tax profile.
+- Stripe: authenticated LIVE API evidence now proves the active account identity, provider-recorded company name, EUR account status and zero customer/subscription/charge/invoice activity at cut-off. Transferability and official corporate/tax matching remain open.
 - Google: corporate mailbox evidence confirms operational use of `risckcomply.com` within Google-admin/domain services, without proving registrar title.
 
 ## Handover rule
@@ -48,7 +48,8 @@ No credential value belongs in the repository or data-room index.
 ```text
 ACTIVE_PROVIDER_INVENTORY=SUBSTANTIALLY_DOCUMENTED
 POSTHOG_ACCOUNT_LINKED_DPA_COMPLETION=VERIFIED_EMAIL_EVIDENCE
-STRIPE_LIVE_ACCOUNT_IDENTITY=STRENGTHENED_EMAIL_EVIDENCE
+STRIPE_LIVE_ACCOUNT_IDENTITY=VERIFIED_PROVIDER_API
+STRIPE_LIVE_FINANCIAL_ACTIVITY=ZERO_AT_CUTOFF_VERIFIED
 ACCOUNT_OWNER_PROOF=PARTIAL_OPEN
 BILLING_OWNER_PROOF=PARTIAL_OPEN
 TRANSFERABILITY=OPEN_PER_PROVIDER
