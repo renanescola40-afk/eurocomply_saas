@@ -51,23 +51,51 @@ const copy: Record<Locale, {
   saved: string;
   localOnly: string;
   loginRequired: string;
+  loadingLatest: string;
+  loadFailed: string;
+  savedVersionPresent: string;
+  noSavedVersion: string;
 }> = {
   en: {
+    loadingLatest: 'Loading the latest saved assessment…',
+    loadFailed: 'Could not load the saved assessment. Reload before editing.',
+    savedVersionPresent: 'A saved assessment is present. Saving creates a new version; previous versions are retained.',
+    noSavedVersion: 'No saved assessment in this organization for this account. Saving creates the first version.',
     back: 'Back to dashboard', badge: 'EU AI Act Gap Analysis', title: 'Measure your compliance readiness', subtitle: 'Answer a focused questionnaire mapped to the main EU AI Act obligations for high-risk AI systems.', yes: 'Yes', partial: 'Partial', no: 'No', unanswered: 'Unanswered', score: 'Compliance Score', readiness: 'Readiness', critical: 'Critical gaps', attention: 'Needs attention', ready: 'Ready', questions: 'Questions', completed: 'completed', actionPlan: 'Action plan', actionSubtitle: 'Recommended actions generated from your answers.', noActions: 'No critical gaps found yet. Keep your evidence updated.', articleBreakdown: 'Article breakdown', export: 'Save & generate PDF report', saveNote: 'Saves the assessment, creates remediation work and generates a corporate PDF report.', saving: 'Saving assessment...', saved: 'Assessment saved. Findings and tasks were generated.', localOnly: 'Report generated. Database persistence is not available yet.', loginRequired: 'Sign in to save this assessment.',
   },
   pt: {
+    loadingLatest: 'Carregando a última avaliação salva…',
+    loadFailed: 'Não foi possível carregar a avaliação salva. Recarregue a página antes de editar.',
+    savedVersionPresent: 'Existe uma avaliação salva. Guardar cria uma nova versão; as versões anteriores são preservadas.',
+    noSavedVersion: 'Nenhuma avaliação salva nesta organização para esta conta. Guardar cria a primeira versão.',
     back: 'Voltar ao dashboard', badge: 'Gap Analysis EU AI Act', title: 'Meça sua prontidão de compliance', subtitle: 'Responda um questionário focado nas principais obrigações do EU AI Act para sistemas de IA de alto risco.', yes: 'Sim', partial: 'Parcial', no: 'Não', unanswered: 'Sem resposta', score: 'Score de Compliance', readiness: 'Prontidão', critical: 'Lacunas críticas', attention: 'Precisa atenção', ready: 'Pronto', questions: 'Perguntas', completed: 'respondidas', actionPlan: 'Plano de ação', actionSubtitle: 'Ações recomendadas geradas a partir das suas respostas.', noActions: 'Nenhuma lacuna crítica encontrada ainda. Mantenha as evidências atualizadas.', articleBreakdown: 'Resumo por artigo', export: 'Salvar e gerar relatório PDF', saveNote: 'Salva a avaliação, cria as ações de correção e gera um PDF corporativo pronto para partilha.', saving: 'Salvando avaliação...', saved: 'Avaliação salva. Findings e tarefas foram gerados.', localOnly: 'Relatório gerado. Persistência no banco ainda não disponível.', loginRequired: 'Entre na conta para salvar esta avaliação.',
   },
   es: {
+    loadingLatest: 'Cargando la última evaluación guardada…',
+    loadFailed: 'No se pudo cargar la evaluación guardada. Recarga la página antes de editar.',
+    savedVersionPresent: 'Existe una evaluación guardada. Guardar crea una nueva versión; se conservan las versiones anteriores.',
+    noSavedVersion: 'No hay una evaluación guardada en esta organización para esta cuenta. Guardar crea la primera versión.',
     back: 'Volver al panel', badge: 'Gap Analysis EU AI Act', title: 'Mide tu preparación de cumplimiento', subtitle: 'Responde un cuestionario enfocado en las principales obligaciones del EU AI Act para sistemas de IA de alto riesgo.', yes: 'Sí', partial: 'Parcial', no: 'No', unanswered: 'Sin respuesta', score: 'Puntuación de cumplimiento', readiness: 'Preparación', critical: 'Brechas críticas', attention: 'Requiere atención', ready: 'Listo', questions: 'Preguntas', completed: 'respondidas', actionPlan: 'Plan de acción', actionSubtitle: 'Acciones recomendadas generadas a partir de tus respuestas.', noActions: 'No se encontraron brechas críticas aún. Mantén tus evidencias actualizadas.', articleBreakdown: 'Resumen por artículo', export: 'Guardar y generar informe', saveNote: 'Guarda tu evaluación y crea trabajo de remediación cuando la persistencia esté disponible.', saving: 'Guardando evaluación...', saved: 'Evaluación guardada. Se generaron hallazgos y tareas.', localOnly: 'Informe generado. La persistencia en base de datos aún no está disponible.', loginRequired: 'Inicia sesión para guardar esta evaluación.',
   },
   fr: {
+    loadingLatest: 'Chargement de la dernière évaluation enregistrée…',
+    loadFailed: 'Impossible de charger l’évaluation enregistrée. Rechargez la page avant de modifier.',
+    savedVersionPresent: 'Une évaluation enregistrée existe. Enregistrer crée une nouvelle version ; les versions précédentes sont conservées.',
+    noSavedVersion: 'Aucune évaluation enregistrée dans cette organisation pour ce compte. Enregistrer crée la première version.',
     back: 'Retour au tableau de bord', badge: 'Gap Analysis EU AI Act', title: 'Mesurez votre préparation conformité', subtitle: 'Répondez à un questionnaire ciblé sur les principales obligations de l’EU AI Act pour les systèmes IA à haut risque.', yes: 'Oui', partial: 'Partiel', no: 'Non', unanswered: 'Sans réponse', score: 'Score de conformité', readiness: 'Préparation', critical: 'Écarts critiques', attention: 'À surveiller', ready: 'Prêt', questions: 'Questions', completed: 'répondues', actionPlan: 'Plan d’action', actionSubtitle: 'Actions recommandées générées à partir de vos réponses.', noActions: 'Aucun écart critique trouvé pour le moment. Gardez vos preuves à jour.', articleBreakdown: 'Résumé par article', export: 'Enregistrer et générer le rapport', saveNote: 'Enregistre votre évaluation et crée le travail de remédiation lorsque la persistance est disponible.', saving: 'Enregistrement de l’évaluation...', saved: 'Évaluation enregistrée. Les écarts et tâches ont été générés.', localOnly: 'Rapport généré. La persistance en base de données n’est pas encore disponible.', loginRequired: 'Connectez-vous pour enregistrer cette évaluation.',
   },
   it: {
+    loadingLatest: 'Caricamento dell’ultima valutazione salvata…',
+    loadFailed: 'Impossibile caricare la valutazione salvata. Ricarica la pagina prima di modificare.',
+    savedVersionPresent: 'È presente una valutazione salvata. Il salvataggio crea una nuova versione; le versioni precedenti vengono conservate.',
+    noSavedVersion: 'Nessuna valutazione salvata in questa organizzazione per questo account. Il salvataggio crea la prima versione.',
     back: 'Torna alla dashboard', badge: 'Gap Analysis EU AI Act', title: 'Misura la tua prontezza compliance', subtitle: 'Rispondi a un questionario focalizzato sui principali obblighi dell’EU AI Act per sistemi IA ad alto rischio.', yes: 'Sì', partial: 'Parziale', no: 'No', unanswered: 'Senza risposta', score: 'Punteggio compliance', readiness: 'Prontezza', critical: 'Gap critici', attention: 'Richiede attenzione', ready: 'Pronto', questions: 'Domande', completed: 'risposte', actionPlan: 'Piano d’azione', actionSubtitle: 'Azioni consigliate generate dalle tue risposte.', noActions: 'Nessun gap critico trovato. Mantieni aggiornate le evidenze.', articleBreakdown: 'Sintesi per articolo', export: 'Salva e genera report', saveNote: 'Salva la valutazione e crea attività di remediation quando la persistenza è disponibile.', saving: 'Salvataggio valutazione...', saved: 'Valutazione salvata. Findings e attività sono stati generati.', localOnly: 'Report generato. La persistenza nel database non è ancora disponibile.', loginRequired: 'Accedi per salvare questa valutazione.',
   },
   de: {
+    loadingLatest: 'Die zuletzt gespeicherte Bewertung wird geladen…',
+    loadFailed: 'Die gespeicherte Bewertung konnte nicht geladen werden. Laden Sie die Seite vor dem Bearbeiten neu.',
+    savedVersionPresent: 'Eine gespeicherte Bewertung ist vorhanden. Speichern erstellt eine neue Version; vorherige Versionen bleiben erhalten.',
+    noSavedVersion: 'Keine gespeicherte Bewertung in dieser Organisation für dieses Konto. Speichern erstellt die erste Version.',
     back: 'Zurück zum Dashboard', badge: 'EU AI Act Gap Analysis', title: 'Messen Sie Ihre Compliance-Bereitschaft', subtitle: 'Beantworten Sie einen fokussierten Fragebogen zu den wichtigsten EU-AI-Act-Pflichten für Hochrisiko-KI-Systeme.', yes: 'Ja', partial: 'Teilweise', no: 'Nein', unanswered: 'Unbeantwortet', score: 'Compliance-Score', readiness: 'Bereitschaft', critical: 'Kritische Lücken', attention: 'Benötigt Aufmerksamkeit', ready: 'Bereit', questions: 'Fragen', completed: 'beantwortet', actionPlan: 'Aktionsplan', actionSubtitle: 'Empfohlene Maßnahmen basierend auf Ihren Antworten.', noActions: 'Noch keine kritischen Lücken gefunden. Halten Sie Ihre Nachweise aktuell.', articleBreakdown: 'Übersicht nach Artikel', export: 'Speichern und Bericht erstellen', saveNote: 'Speichert die Bewertung und erstellt Remediation-Arbeit, sobald Persistenz verfügbar ist.', saving: 'Bewertung wird gespeichert...', saved: 'Bewertung gespeichert. Findings und Aufgaben wurden erstellt.', localOnly: 'Bericht erstellt. Datenbankpersistenz ist noch nicht verfügbar.', loginRequired: 'Melden Sie sich an, um diese Bewertung zu speichern.',
   },
 };
@@ -277,6 +305,8 @@ export default function GapAnalysisPage() {
         return;
       }
 
+      setRestoredAssessment(true);
+
       await tryCreateFindingsAndTasks({
         workspaceId: null,
         userId: user.id,
@@ -394,12 +424,12 @@ export default function GapAnalysisPage() {
               )}
               <p role={loadFailed ? 'alert' : 'status'} className="mt-4 text-sm text-slate-300">
                 {loadingAssessment
-                  ? (locale === 'pt' ? 'Carregando a última avaliação salva…' : 'Loading the latest saved assessment…')
+                  ? t.loadingLatest
                   : loadFailed
-                    ? (locale === 'pt' ? 'Não foi possível carregar a avaliação salva. Recarregue a página antes de editar.' : 'Could not load the saved assessment. Reload before editing.')
+                    ? t.loadFailed
                     : restoredAssessment
-                      ? (locale === 'pt' ? 'Última avaliação salva restaurada. Guardar cria uma nova versão; as versões anteriores são preservadas.' : 'Latest saved assessment restored. Saving creates a new version; previous versions are retained.')
-                      : (locale === 'pt' ? 'Nenhuma avaliação salva nesta organização para esta conta. Guardar cria a primeira versão.' : 'No saved assessment in this organization for this account. Saving creates the first version.')}
+                      ? t.savedVersionPresent
+                      : t.noSavedVersion}
               </p>
               <Button onClick={generateReport} disabled={saving || loadingAssessment || loadFailed} className="mt-4 w-full bg-emerald-300 text-[#06100d] hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60">
                 <Download className="mr-2 h-4 w-4" /> {saving ? t.saving : t.export}
