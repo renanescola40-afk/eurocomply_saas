@@ -60,7 +60,24 @@ jobs:
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
 
           main_sha="$(curl --fail --silent --show-error             -H "Authorization: Bearer $GH_TOKEN"             -H 'Accept: application/vnd.github+json'             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
-          test "$main_sha" = "$TARGET_SHA"
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            # Manual attestations remain exact-current-main only.
+            test "$main_sha" = "$TARGET_SHA"
+          else
+            # A push-triggered recovery proof may sit in the Actions queue while a
+            # newer main commit lands. Accept only if TARGET_SHA is still contained
+            # in current main history; reject divergent/non-main commits.
+            compare_json="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/compare/${TARGET_SHA}...main")"
+            compare_status="$(jq -r '.status // empty' <<<"$compare_json")"
+            case "$compare_status" in
+              identical|ahead) ;;
+              *) echo "Assessed SHA is not contained in current main history" >&2; exit 1 ;;
+            esac
+          fi
 
           test -f "$RECOVERY_EVIDENCE_FILE"
           test "$(git hash-object "$RECOVERY_EVIDENCE_FILE")" = "$RECOVERY_EVIDENCE_BLOB_SHA"
