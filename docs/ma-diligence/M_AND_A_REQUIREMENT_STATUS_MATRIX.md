@@ -76,9 +76,9 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 41 | Customer count | OPEN | 0.0 | Not claimed. |
 | 42 | Pipeline | PARTIAL | 0.5 | Strategic outreach exists; buyer-grade CRM pipeline not yet reconciled. |
 | 43 | Sales outreach metrics | PARTIAL | 0.5 | Large outbound activity is evidenced; deduplicated metric pack not credited. |
-| 44 | Operating costs | OPEN | 0.0 | Accounting/provider amounts open. |
-| 45 | Infrastructure costs | PARTIAL | 0.5 | Provider cost categories mapped; amounts/invoices open. |
-| 46 | Software subscriptions | PARTIAL | 0.5 | Provider set mapped; invoice/amount reconciliation open. |
+| 44 | Operating costs | PARTIAL | 0.5 | Primary Google billing evidence now proves a bounded portion of operating cost: domain registration €12.00 (2026-06-23 period), Workspace €13.06 (July), €16.20 (August), €16.20 (September); complete operating-cost reconciliation remains open. |
+| 45 | Infrastructure costs | PARTIAL | 0.5 | Provider cost categories are mapped and Google domain/Workspace primary invoices are credited; Vercel/Supabase/other infrastructure invoice reconciliation remains open. |
+| 46 | Software subscriptions | PARTIAL | 0.5 | Google Workspace primary invoices establish one recurring subscription cost; remaining software/provider invoice reconciliation is open. |
 | 47 | Contractors/payroll | OPEN | 0.0 | Source records open. |
 | 48 | Marketing costs | OPEN | 0.0 | Source records open. |
 | 49 | Legal/compliance costs | OPEN | 0.0 | Source records open. |
@@ -97,7 +97,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 62 | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
 
-Financial subtotal: **2.0 / 26 = 7.69%**
+Financial subtotal: **2.5 / 26 = 9.62%**
 
 ## Tax — requirements 64–75
 
@@ -164,16 +164,16 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 ```text
 CORPORATE=4.0/17
 IP=13.5/20
-FINANCIAL=2.0/26
+FINANCIAL=2.5/26
 TAX=0.0/12
 COMMERCIAL=5.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=28.5
+TOTAL_SCORE=29.0
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=28.5/98=29.08%
-AUDITABLE_MA_EVIDENCE_REMAINING=70.92%
+AUDITABLE_MA_EVIDENCE_CLOSURE=29.0/98=29.59%
+AUDITABLE_MA_EVIDENCE_REMAINING=70.41%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
