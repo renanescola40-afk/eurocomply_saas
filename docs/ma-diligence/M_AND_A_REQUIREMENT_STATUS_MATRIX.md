@@ -44,9 +44,9 @@ Corporate subtotal: **5.0 / 17 = 29.41%**
 | # | Requirement | State | Score | Basis |
 |---:|---|---|---:|---|
 | 18 | Source code ownership map | CLOSED | 1.0 | Asset/title map exists. |
-| 19 | Creator/contributor register | CLOSED | 1.0 | 300-commit sample reconciled and register created. |
-| 20 | Employee contribution register | PARTIAL | 0.5 | No employee identity found in sample; owner/full-history confirmation open. |
-| 21 | Contractor contribution register | PARTIAL | 0.5 | No contractor identity found in sample; owner/full-history confirmation open. |
+| 19 | Creator/contributor register | CLOSED | 1.0 | Contributor register expanded from the initial 300-commit sample to more than 18,000 repository commits reviewed; observed human/account identities are explicitly tracked. |
+| 20 | Employee contribution register | PARTIAL | 0.5 | No identity is classified as employee from Git evidence alone; relationship confirmation remains owner/legal-document dependent. |
+| 21 | Contractor contribution register | PARTIAL | 0.5 | No identity is classified as contractor from Git evidence alone; relationship confirmation remains owner/legal-document dependent. |
 | 22 | IP assignment status | OPEN | 0.0 | Creator-to-seller executed transfer not identified. |
 | 23 | Domain ownership | PARTIAL | 0.5 | Operational control/use evidenced; registrar title proof open. |
 | 24 | Trademark/brand ownership | PARTIAL | 0.5 | Public brand use evidenced; title/registration not proven. |
@@ -76,7 +76,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 41 | Customer count | PARTIAL | 0.5 | LIVE Stripe has 0 customer objects; non-Stripe/contract customers still require seller/accounting evidence. |
 | 42 | Pipeline | CLOSED | 1.0 | Buyer-grade mailbox pipeline register reconciles scoped outreach, failures and attributable stages without claiming revenue/LOIs. |
 | 43 | Sales outreach metrics | CLOSED | 1.0 | Gmail message-ID counts are paginated and deduplicated: 352 unique sent messages across acquisition + pilot/procurement scope; 22 failure messages separately tracked. |
-| 44 | Operating costs | OPEN | 0.0 | Accounting/provider amounts open. |
+| 44 | Operating costs | PARTIAL | 0.5 | Four provider-originated Google invoices totaling €57.46 are credited as bounded operating-cost evidence; complete ledger/provider reconciliation remains open. |
 | 45 | Infrastructure costs | PARTIAL | 0.5 | Provider cost categories mapped; amounts/invoices open. |
 | 46 | Software subscriptions | PARTIAL | 0.5 | Provider set mapped; invoice/amount reconciliation open. |
 | 47 | Contractors/payroll | OPEN | 0.0 | Source records open. |
@@ -97,7 +97,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 62 | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
 
-Financial subtotal: **5.5 / 26 = 21.15%**
+Financial subtotal: **6.0 / 26 = 23.08%**
 
 ## Tax — requirements 64–75
 
@@ -164,16 +164,16 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 ```text
 CORPORATE=5.0/17
 IP=13.5/20
-FINANCIAL=5.5/26
+FINANCIAL=6.0/26
 TAX=0.0/12
 COMMERCIAL=6.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=34.0
+TOTAL_SCORE=34.5
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=34.0/98=34.69%
-AUDITABLE_MA_EVIDENCE_REMAINING=65.31%
+AUDITABLE_MA_EVIDENCE_CLOSURE=34.5/98=35.20%
+AUDITABLE_MA_EVIDENCE_REMAINING=64.80%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
