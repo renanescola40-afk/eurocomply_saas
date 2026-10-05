@@ -24,9 +24,9 @@ This is an internal diligence index, not an official registry extract, legal opi
 | Requirement | Current state | Classification | Evidence / next step |
 |---|---|---|---|
 | Legal entity selected as seller/operator | SAMUEL CERQUEIRA, UNIPESSOAL LDA | DOCUMENTED | Owner-designated in existing legal-assurance records. |
-| Current legal name | Same as above, pending registry proof | OFFICIAL_DOCUMENT_REQUIRED | Obtain current commercial registry certificate. |
+| Current legal name | Samuel Cerqueira, Unipessoal Lda. appears both in owner-designated diligence records and the authenticated Stripe LIVE company profile | VERIFIED_PROVIDER_CORROBORATED / REGISTRY_STILL_REQUIRED | Provider evidence now independently corroborates the legal-name string; obtain current commercial registry certificate for authoritative proof. |
 | Company number / NIPC | Candidate `515099899` appears in prior seller communications, but no official registry artifact is credited | DOCUMENTED_CANDIDATE / OFFICIAL_DOCUMENT_REQUIRED | Verify against current FCPC/commercial registry evidence before any buyer representation. |
-| Registered address | Not stored as authoritative diligence fact | OFFICIAL_DOCUMENT_REQUIRED | Commercial registry certificate. |
+| Registered address | A Lisbon company address is present in the authenticated Stripe LIVE company profile, but registry status is not proven | PARTIAL_PROVIDER_EVIDENCE / OFFICIAL_DOCUMENT_REQUIRED | Do not publish the address from this public-repo-safe index; reconcile it against the commercial registry certificate. |
 | Incorporation date | Not stored as authoritative diligence fact | OFFICIAL_DOCUMENT_REQUIRED | Commercial registry certificate / incorporation records. |
 | Directors / managers | Not promoted from non-authoritative memory | OFFICIAL_DOCUMENT_REQUIRED | Commercial registry certificate. |
 | Beneficial ownership | Not promoted without RCBE evidence | OFFICIAL_DOCUMENT_REQUIRED | Current RCBE consultation/submission proof. |
@@ -69,7 +69,7 @@ For Portugal, the permanent commercial certificate can evidence current company 
 SELLER_ENTITY_DECISION=DOCUMENTED_OWNER_DESIGNATION
 AUTHORITATIVE_REGISTRY_EVIDENCE=OPEN
 NIPC_CANDIDATE=515099899_NOT_OFFICIALLY_CREDITED
-REGISTERED_OFFICE=OPEN_OFFICIAL_EVIDENCE
+REGISTERED_OFFICE=PARTIAL_PROVIDER_EVIDENCE_OFFICIAL_PROOF_OPEN
 MANAGER_SIGNATORY_EVIDENCE=OPEN
 RCBE_EVIDENCE=OPEN
 SOFTWARE_CAE_CURRENT_STATUS=OWNER_RECONFIRMATION_REQUIRED
