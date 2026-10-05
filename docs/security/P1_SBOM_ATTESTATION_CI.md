@@ -48,3 +48,8 @@ Only after those items are reviewed should `docs/security/evidence/p1/sbom-artif
 ## Safety note
 
 This workflow does not use application or provider credentials. It should not require production credentials.
+
+
+## M&A diligence cutoff refresh — 2026-10-05
+
+This documentation-only change intentionally triggers the repository's existing SBOM + provenance workflow so a fresh, exact-commit CycloneDX artifact can be credited to the M&A diligence package. It does not change runtime behavior, dependencies, or the supply-chain control design.
