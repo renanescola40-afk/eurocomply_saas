@@ -49,6 +49,13 @@ type DocumentMutationAction = 'create' | 'template' | 'upload';
 const DOCUMENT_MUTATION_COLUMNS =
   'id,organization_id,uploaded_by,name,category,status,storage_path,mime_type,size_bytes,expires_at,created_at,updated_at,scan_status,scan_provider,scan_required,scan_checked_at,file_hash,file_size,mime_detected' as const;
 
+export class DocumentUploadValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DocumentUploadValidationError';
+  }
+}
+
 function actionError(message: string) {
   return new Error(message);
 }
@@ -441,7 +448,7 @@ export async function uploadDocument(input: UploadDocumentInput, file: File) {
       detectedMimeType: uploadValidation.mimeDetected,
       declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
     });
-    const error = actionError(uploadValidation.message);
+    const error = new DocumentUploadValidationError(uploadValidation.message);
     reportError(error, { ...context, fileType: file.type, fileSize: file.size });
     throw error;
   }
