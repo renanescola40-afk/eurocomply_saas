@@ -4,19 +4,28 @@ Date: 2026-10-05
 Purpose: supplemental M&A factual evidence register  
 Status: `SUPPLEMENTAL_EVIDENCE=PASS / LEGAL_TITLE_NOT_INFERRED`
 
-## Git contributor sample
+## Full Git contributor history
 
-The 300 most recent commits on the primary repository were reviewed as a bounded sample.
+The complete reachable commit history on the primary repository was reconciled on 2026-10-05: **18,030 commits** across **181 API pages** (180 full pages of 100 commits plus 30 commits on the final page).
 
 | Identity | Count | Classification |
 |---|---:|---|
-| `renanescola40-afk` | 220 | Primary owner-linked GitHub account |
-| `sastestezoer-commits` | 77 | Automation/commit account; control/relationship documentation required |
-| `dependabot[bot]` | 3 | GitHub automation bot |
+| `renanescola40-afk` | 15,856 | Primary repository-owner-linked GitHub account |
+| `renansilva2002-tech` | 932 | Human GitHub account with repository review/write history; ownership/employment/contractor relationship not established here |
+| `sastestezoer-commits` | 765 | Commit/review account; control and legal relationship not established here |
+| `soltomstorevendas-web` | 378 | GitHub author identity; ownership/employment/contractor relationship not established here |
+| `dependabot[bot]` | 60 | GitHub automation bot |
+| `github-actions[bot]` | 32 | GitHub Actions automation bot |
+| `actions` | 2 | Automation-labelled commit author; exact account/legal relationship not inferred |
+| `security-bot` | 1 | Automation-labelled commit author; exact account/legal relationship not inferred |
+| `pr1293-enterprise-api-fix[bot]` | 1 | Bot-labelled author identity |
+| `pr1293-contract-fix[bot]` | 1 | Bot-labelled author identity |
+| `pr1299-dependency-fix[bot]` | 1 | Bot-labelled author identity |
+| `pr1299-lockfile-fix[bot]` | 1 | Bot-labelled author identity |
 
-No fourth author identity appeared in this 300-commit sample.
+Total: **18,030 commits**.
 
-Boundary: this is factual attribution only. It does not establish employment status, authorship law, assignment, work-for-hire status or seller ownership.
+Boundary: the full-history reconciliation proves repository attribution, not employment status, contractor status, authorship law, work-for-hire status, assignment, beneficial ownership or seller legal title. Requirements for employee/contractor classification therefore remain PARTIAL until attributable relationship evidence exists.
 
 ## Corporate/account mailbox evidence
 
@@ -39,10 +48,11 @@ Buyer-facing representations must prefer:
 A lower-ranked source must never be upgraded into a higher-ranked fact.
 
 ```text
-CONTRIBUTOR_SAMPLE_RECONCILED=300
+CONTRIBUTOR_FULL_HISTORY_RECONCILED=18030
 POSTHOG_DPA_COMPLETION_EMAIL=PASS
 STRIPE_LIVE_ACCOUNT_MAIL_EVIDENCE=PASS_LIMITED
 GOOGLE_DOMAIN_OPERATIONAL_EVIDENCE=PASS_LIMITED
 NIPC_CANDIDATE=NOT_OFFICIALLY_VERIFIED
+OBSERVED_AUTHOR_IDENTITIES=12
 LEGAL_TITLE_CONCLUSION=NOT_CLAIMED
 ```
