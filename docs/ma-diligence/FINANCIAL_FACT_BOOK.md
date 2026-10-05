@@ -7,7 +7,7 @@ This fact book intentionally does not invent revenue, customers, cash, liabiliti
 
 ## Current evidence boundary
 
-Repository search did not establish authoritative MRR, ARR, customer count, contracted revenue, active pilots, LOIs, bank balances, debt, receivables or payables. Those fields remain `OWNER_INPUT_REQUIRED` or `ACCOUNTANT_REQUIRED` until backed by current records.
+Repository evidence alone did not establish authoritative MRR, ARR, customer count, contracted revenue, bank balances, debt, receivables or payables. The authenticated Stripe LIVE account has now been reconciled and shows zero customer, subscription, charge and invoice objects plus zero EUR available/pending Stripe balance. This proves zero activity **on Stripe**, not zero activity across the seller entity.
 
 A historical or informal statement must not be promoted to transaction fact without a dated closing-period source.
 
@@ -15,10 +15,10 @@ A historical or informal statement must not be promoted to transaction fact with
 
 | Item | Current M&A position | Classification | Required source |
 |---|---|---|---|
-| Revenue history | NOT_CLAIMED | ACCOUNTANT_REQUIRED | General ledger / management accounts / invoices. |
-| MRR | NOT_CLAIMED | OWNER_INPUT_REQUIRED | Subscription/customer ledger + Stripe/accounting reconciliation. |
-| ARR | NOT_CLAIMED | OWNER_INPUT_REQUIRED | Same as above. |
-| Customer count | NOT_CLAIMED | OWNER_INPUT_REQUIRED | Signed contracts + billing/customer system. |
+| Revenue history | STRIPE_LIVE_ZERO_ACTIVITY_VERIFIED / TOTAL_COMPANY_OPEN | PARTIAL | Stripe LIVE has 0 charges/invoices; GL/bank records required for total company revenue. |
+| MRR | STRIPE_LIVE_0 / TOTAL_COMPANY_OPEN | PARTIAL | Stripe LIVE has 0 subscriptions; executed off-Stripe recurring contracts/accounting remain open. |
+| ARR | STRIPE_LIVE_0 / TOTAL_COMPANY_OPEN | PARTIAL | Stripe LIVE has 0 subscriptions; off-Stripe annual contracts remain open. |
+| Customer count | STRIPE_LIVE_0 / TOTAL_COMPANY_OPEN | PARTIAL | Stripe LIVE has 0 customer objects; signed contracts/customer records remain required. |
 | Contracted revenue | NOT_CLAIMED | OWNER_INPUT_REQUIRED | Executed contracts/order forms. |
 | Pipeline | NOT_CLAIMED | OWNER_INPUT_REQUIRED | CRM/outreach register with stages and dates. |
 | Sales outreach metrics | NOT_CLAIMED | OWNER_INPUT_REQUIRED | Mail/CRM export, deduplicated. |
@@ -28,7 +28,7 @@ A historical or informal statement must not be promoted to transaction fact with
 | Contractors/payroll | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Payroll/contractor ledger. |
 | Marketing costs | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Ledger/invoices. |
 | Legal/compliance costs | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Ledger/invoices. |
-| Cash position | NOT_CLAIMED | OFFICIAL_DOCUMENT_REQUIRED | Current bank statement(s). |
+| Cash position | STRIPE_BALANCE_€0 / TOTAL_COMPANY_OPEN | PARTIAL | Stripe LIVE available and pending EUR balance are both €0; bank statements still required. |
 | Debt | NOT_CLAIMED | ACCOUNTANT_REQUIRED | GL, financing agreements, bank records. |
 | Payables | NOT_CLAIMED | ACCOUNTANT_REQUIRED | A/P aging. |
 | Receivables | NOT_CLAIMED | ACCOUNTANT_REQUIRED | A/R aging. |
@@ -45,9 +45,10 @@ Use only if the owner and accountant confirm that the company/product is current
 > As of [CUT-OFF DATE], RISCK COMPLY is pre-revenue. No MRR or ARR is claimed. Commercial outreach, pipeline, pilots or LOIs are disclosed separately and are not recorded as revenue unless an executed contract and recognized revenue support the amount.
 
 ```text
-PRE_REVENUE_STATUS=CANNOT_BE_PROMOTED_WITHOUT_CURRENT_CONFIRMATION
-MRR=NOT_CLAIMED
-ARR=NOT_CLAIMED
+PRE_REVENUE_STATUS=SUPPORTED_BY_ZERO_STRIPE_ACTIVITY_BUT_NOT_YET_ACCOUNTING_CONFIRMED
+STRIPE_LIVE_MRR=0
+STRIPE_LIVE_ARR=0
+TOTAL_COMPANY_MRR_ARR=ACCOUNTING_AND_CONTRACT_CONFIRMATION_REQUIRED
 ```
 
 ## Cost-base summary template
@@ -109,9 +110,11 @@ Do not populate without owner assumptions. Minimum fields: month, opening custom
 
 ```text
 FINANCIAL_FACT_BOOK_STRUCTURE=PASS
-REVENUE_HISTORY=OPEN_SOURCE_RECORDS
-MRR_ARR=NOT_CLAIMED
-CUSTOMER_COUNT=NOT_CLAIMED
+STRIPE_LIVE_REVENUE_ACTIVITY=ZERO_VERIFIED
+STRIPE_LIVE_MRR_ARR=ZERO_VERIFIED
+STRIPE_LIVE_CUSTOMER_COUNT=ZERO_VERIFIED
+STRIPE_LIVE_BALANCE_EUR=ZERO_VERIFIED
+TOTAL_COMPANY_REVENUE_MRR_ARR_CUSTOMERS=ACCOUNTING_AND_CONTRACT_CONFIRMATION_REQUIRED
 BANK_CASH=OPEN_OFFICIAL_EVIDENCE
 P_AND_L=ACCOUNTANT_REQUIRED
 BALANCE_SHEET=ACCOUNTANT_REQUIRED
