@@ -9,7 +9,8 @@ import { DocumentDownloadButton } from '@/components/documents/document-download
 import { getCoreWorkflowCopy } from '@/lib/i18n/core-workflow-copy';
 import { roleHasPermission } from '@/lib/security/permissions';
 import { createDocumentSignedDownloadUrl } from '@/server/actions/document-downloads';
-import { uploadDocumentWithControlledValidation } from '@/server/actions/document-upload-form';\nimport { deleteDocument } from '@/server/actions/documents';
+import { uploadDocumentWithControlledValidation } from '@/server/actions/document-upload-form';
+import { deleteDocument } from '@/server/actions/documents';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
