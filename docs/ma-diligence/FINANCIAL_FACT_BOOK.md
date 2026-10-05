@@ -22,9 +22,9 @@ A historical or informal statement must not be promoted to transaction fact with
 | Contracted revenue | NOT_CLAIMED | OWNER_INPUT_REQUIRED | Executed contracts/order forms. |
 | Pipeline | NOT_CLAIMED | OWNER_INPUT_REQUIRED | CRM/outreach register with stages and dates. |
 | Sales outreach metrics | NOT_CLAIMED | OWNER_INPUT_REQUIRED | Mail/CRM export, deduplicated. |
-| Operating costs | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Bank/accounting/provider invoices. |
-| Infrastructure costs | PARTIALLY_MAPPABLE | DOCUMENTED | Vercel/Supabase/Stripe/Sentry/Redis/email invoices required for amounts. |
-| Software subscriptions | PARTIALLY_MAPPABLE | DOCUMENTED | Provider invoices/account statements required. |
+| Operating costs | PARTIAL_EVIDENCE | DOCUMENTED / ACCOUNTANT_REQUIRED | Four Google provider invoices totaling €57.46 are credited; full ledger/provider reconciliation remains open. |
+| Infrastructure costs | PARTIAL_EVIDENCE | DOCUMENTED | Google domain/Workspace amounts are evidenced; Vercel/Supabase/other infrastructure invoices remain open. |
+| Software subscriptions | PARTIAL_EVIDENCE | DOCUMENTED | Google Workspace invoices are credited; remaining provider subscriptions require invoices/account statements. |
 | Contractors/payroll | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Payroll/contractor ledger. |
 | Marketing costs | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Ledger/invoices. |
 | Legal/compliance costs | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Ledger/invoices. |
@@ -48,6 +48,30 @@ Use only if the owner and accountant confirm that the company/product is current
 PRE_REVENUE_STATUS=CANNOT_BE_PROMOTED_WITHOUT_CURRENT_CONFIRMATION
 MRR=NOT_CLAIMED
 ARR=NOT_CLAIMED
+```
+
+## Primary cost evidence credited — Google
+
+Corporate mailbox attachments were reviewed on 2026-10-05. The following provider-originated invoices are credited as primary evidence for a bounded portion of operating/software costs:
+
+| Invoice | Invoice date / period | Service | Amount | VAT shown | Diligence use |
+|---|---|---|---:|---:|---|
+| 5616114003 | 2026-06-30 / domain registration on 2026-06-23 | Domain registration | €12.00 | €0.00 | proves a real domain-related provider cost, not registrar legal title |
+| 5644227151 | 2026-07-31 / 2026-07-07–07-31 | Google Workspace Business Starter, qty 2 | €13.06 | €0.00 | primary subscription-cost evidence |
+| 5674882399 | 2026-08-31 / 2026-08-01–08-31 | Google Workspace Business Starter, qty 2 | €16.20 | €0.00 | primary subscription-cost evidence |
+| 5695530738 | 2026-09-30 / 2026-09-01–09-30 | Google Workspace Business Starter, qty 2 | €16.20 | €0.00 | primary subscription-cost evidence |
+
+The invoices identify Google Cloud EMEA Limited and show reverse-charge wording under Article 196 of Directive 2006/112/EC. That invoice treatment is **not** promoted into proof of the seller's VAT registration, VIES status or final tax position.
+
+Total of the four credited invoices: **€57.46**. This is not a complete OPEX figure and must not be annualized as the full company cost base.
+
+```text
+PRIMARY_PROVIDER_COST_EVIDENCE=PASS_BOUNDED_GOOGLE
+CREDITED_GOOGLE_INVOICES=4
+CREDITED_GOOGLE_TOTAL_EUR=57.46
+FULL_OPERATING_COST_BASE=OPEN
+VAT_VIES_SELLER_STATUS=NOT_PROVEN_BY_PROVIDER_INVOICES
+DOMAIN_LEGAL_TITLE=NOT_PROVEN_BY_BILLING_INVOICE
 ```
 
 ## Cost-base summary template
