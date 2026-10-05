@@ -54,7 +54,7 @@ The 100% figure above is narrowly the internal **documentation/data-room respons
 - Mid-market: same → `MID_MARKET_INITIAL_PACK`
 - Enterprise: same → `ENTERPRISE_INITIAL_PACK`
 - Regulated buyer: Enterprise pack + legal/privacy/control evidence under NDA/need-to-know
-- Big Tech/M&A: same → `BIG_TECH_MA_INITIAL_PACK` + `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md`
+- Big Tech/M&A: same → `BIG_TECH_MA_INITIAL_PACK` + `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md` + `docs/ma-diligence/SELLER_DATA_ROOM_MASTER_SCORECARD.md` (corporate/IP/financial/tax/provider M&A closure pack)
 - Canonical starting index: `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-24.md`
 - Provider truth: `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md`
 - External assurance truth: `docs/evidence/EXTERNAL_ASSURANCE_LEGAL_FINAL_SCORECARD.md`
@@ -267,7 +267,7 @@ The 100% figure above is narrowly the internal **documentation/data-room respons
 
 | Requirement | Status | Canonical coverage | Reconciliation note |
 | --- | --- | --- | --- |
-| Technical Due Diligence Overview | `EXISTS_COMPLETE` | `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md`; universal buyer readiness | Canonical M&A routing. |
+| Technical Due Diligence Overview | `EXISTS_COMPLETE` | `docs/trust/M_AND_A_IP_SOFTWARE_DILIGENCE_INDEX.md`; `docs/ma-diligence/SELLER_DATA_ROOM_MASTER_SCORECARD.md`; universal buyer readiness | Canonical M&A routing including corporate, IP-chain, financial, tax and provider-transfer status. |
 | Codebase Architecture Summary | `EXISTS_COMPLETE` | architecture + M&A index | Canonical. |
 | Repository Governance | `EXISTS_COMPLETE` | protected-main/CI/repository evidence | Current branch protection is evidence. |
 | Dependency Inventory | `EXISTS_COMPLETE` | package manifests/SBOM/supply-chain evidence | Evidence source exists. |
