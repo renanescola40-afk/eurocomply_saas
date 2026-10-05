@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
-const EVIDENCE_PAGE = new URL('../../src/app/[locale]/dashboard/evidence/page.tsx', import.meta.url);
+const EVIDENCE_PAGE = new URL('../../src/app/[locale]/dashboard/evidence/evidence-vault-client.tsx', import.meta.url);
 
 describe('enterprise evidence register V2', () => {
   it('preserves tenant resolution, evidence storage and live summary logic', async () => {
