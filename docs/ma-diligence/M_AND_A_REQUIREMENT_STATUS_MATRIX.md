@@ -70,10 +70,10 @@ IP subtotal: **13.5 / 20 = 67.50%**
 
 | # | Requirement | State | Score | Basis |
 |---:|---|---|---:|---|
-| 38 | Revenue history | OPEN | 0.0 | Accounting source records not credited. |
-| 39 | MRR | OPEN | 0.0 | Not claimed. |
-| 40 | ARR | OPEN | 0.0 | Not claimed. |
-| 41 | Customer count | OPEN | 0.0 | Not claimed. |
+| 38 | Revenue history | PARTIAL | 0.5 | LIVE Stripe proves 0 charges/invoices at cut-off; bank/accounting evidence is still required for total company revenue. |
+| 39 | MRR | PARTIAL | 0.5 | LIVE Stripe has 0 subscription objects; off-Stripe recurring contracts remain unproven without accounting/contracts. |
+| 40 | ARR | PARTIAL | 0.5 | LIVE Stripe has 0 subscription objects; off-Stripe annual recurring contracts remain unproven. |
+| 41 | Customer count | PARTIAL | 0.5 | LIVE Stripe has 0 customer objects; non-Stripe/contract customers still require seller/accounting evidence. |
 | 42 | Pipeline | CLOSED | 1.0 | Buyer-grade mailbox pipeline register reconciles scoped outreach, failures and attributable stages without claiming revenue/LOIs. |
 | 43 | Sales outreach metrics | CLOSED | 1.0 | Gmail message-ID counts are paginated and deduplicated: 352 unique sent messages across acquisition + pilot/procurement scope; 22 failure messages separately tracked. |
 | 44 | Operating costs | OPEN | 0.0 | Accounting/provider amounts open. |
@@ -82,7 +82,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 47 | Contractors/payroll | OPEN | 0.0 | Source records open. |
 | 48 | Marketing costs | OPEN | 0.0 | Source records open. |
 | 49 | Legal/compliance costs | OPEN | 0.0 | Source records open. |
-| 50 | Cash position | OPEN | 0.0 | Bank evidence open. |
+| 50 | Cash position | PARTIAL | 0.5 | LIVE Stripe balance is €0 available / €0 pending; total company cash still requires bank statements. |
 | 51 | Debt | OPEN | 0.0 | Accounting/bank evidence open. |
 | 52 | Payables | OPEN | 0.0 | A/P evidence open. |
 | 53 | Receivables | OPEN | 0.0 | A/R evidence open. |
@@ -97,7 +97,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 62 | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
 
-Financial subtotal: **3.0 / 26 = 11.54%**
+Financial subtotal: **5.5 / 26 = 21.15%**
 
 ## Tax — requirements 64–75
 
@@ -164,16 +164,16 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 ```text
 CORPORATE=4.0/17
 IP=13.5/20
-FINANCIAL=3.0/26
+FINANCIAL=5.5/26
 TAX=0.0/12
 COMMERCIAL=6.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=30.5
+TOTAL_SCORE=33.0
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=30.5/98=31.12%
-AUDITABLE_MA_EVIDENCE_REMAINING=68.88%
+AUDITABLE_MA_EVIDENCE_CLOSURE=33.0/98=33.67%
+AUDITABLE_MA_EVIDENCE_REMAINING=66.33%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
