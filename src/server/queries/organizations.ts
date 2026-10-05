@@ -1,4 +1,5 @@
 import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
+import { getCurrentOrganizationForUser as resolveCurrentOrganization } from '@/server/queries/current-organization';
 
 export async function listUserOrganizations(userId: string) {
   const memberships = await getUserOrganizationMemberships(userId);
@@ -15,13 +16,10 @@ export async function listUserOrganizations(userId: string) {
 }
 
 export async function getCurrentOrganizationForUser(userId: string) {
-  const memberships = await listUserOrganizations(userId);
-  const firstMembership = memberships[0];
-  const organization = firstMembership?.organizations;
-
-  if (Array.isArray(organization)) {
-    return organization[0] ?? null;
-  }
-
-  return organization ?? null;
+  // Preserve this helper's organization-only return shape, while using the
+  // same active-membership/SSO and onboarding selection as the dashboard.
+  // Picking memberships[0] here selected a different tenant for API/detail
+  // routes when an older, unfinished organization preceded the active one.
+  const membership = await resolveCurrentOrganization(userId);
+  return membership?.organization ?? null;
 }
