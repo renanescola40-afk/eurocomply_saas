@@ -16,7 +16,9 @@ export type UploadDocumentFormInput = {
 
 const inputClass = 'h-10 rounded-lg border-slate-800 bg-[#0d1624] text-slate-200 placeholder:text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-500/30';
 
-export function CreateDocumentForm({ locale, onSubmit }: { locale: string; onSubmit: (input: UploadDocumentFormInput) => Promise<void> }) {
+export type UploadDocumentFormResult = { ok: true } | { ok: false; code: 'invalid_upload' };
+
+export function CreateDocumentForm({ locale, onSubmit }: { locale: string; onSubmit: (input: UploadDocumentFormInput) => Promise<UploadDocumentFormResult> }) {
   const copy = getCoreWorkflowCopy(locale).documents;
   const [name, setName] = useState('');
   const [category, setCategory] = useState('general');
@@ -37,7 +39,11 @@ export function CreateDocumentForm({ locale, onSubmit }: { locale: string; onSub
 
     setLoading(true);
     try {
-      await onSubmit({ name, category, expiresAt: expiresAt || null, file });
+      const result = await onSubmit({ name, category, expiresAt: expiresAt || null, file });
+      if (!result.ok) {
+        setError(copy.uploadError);
+        return;
+      }
       captureAnalyticsEvent(analyticsEvents.documentUploaded, { source: 'documents_form', count: 1 });
       setName('');
       setCategory('general');

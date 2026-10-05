@@ -1,6 +1,6 @@
 name: Product FRIA Ephemeral Runtime QA
 
-# Runtime evidence refresh marker: enterprise product closure V3, 2026-10-04.
+# Runtime evidence refresh marker: V7 final Product + Runtime closure, 2026-10-05.
 # This producer is intentionally push-capable so an exact-main merge can refresh
 # product-commercial QA evidence for the new release SHA without synthetic reuse.
 on:
@@ -16,6 +16,7 @@ on:
       - 'scripts/recovery/**'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'tests/e2e/full-saas-functional-journey.spec.ts'
+      - 'tests/e2e/gap-analysis-runtime-proof.spec.ts'
       - 'tests/e2e/new-customer-commercial-activation.spec.ts'
       - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
@@ -60,6 +61,7 @@ on:
       - 'scripts/recovery/**'
       - 'tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts'
       - 'tests/e2e/full-saas-functional-journey.spec.ts'
+      - 'tests/e2e/gap-analysis-runtime-proof.spec.ts'
       - 'tests/e2e/new-customer-commercial-activation.spec.ts'
       - 'tests/e2e/payment-first-runtime-global-setup.ts'
       - 'src/middleware.ts'
@@ -312,7 +314,7 @@ jobs:
           rm -f "$E2E_FRIA_RUNTIME_EVIDENCE_PATH"
           # These suites share disposable identities and exercise sign-out/session lifecycle.
           # Serial execution prevents one journey from revoking or racing another journey's session.
-          if ! npx playwright test tests/e2e/new-customer-commercial-activation.spec.ts tests/e2e/full-saas-functional-journey.spec.ts tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --workers=1 --reporter=line,github,json --retries=1; then
+          if ! npx playwright test tests/e2e/new-customer-commercial-activation.spec.ts tests/e2e/full-saas-functional-journey.spec.ts tests/e2e/gap-analysis-runtime-proof.spec.ts tests/e2e/fria-lifecycle-runtime-acceptance.spec.ts --project=chromium --workers=1 --reporter=line,github,json --retries=1; then
             app_healthy=false
             auth_healthy=false
             if curl --fail --silent --show-error "$E2E_BASE_URL/en/login" >/dev/null; then

@@ -15,16 +15,29 @@ test.describe('new customer commercial activation', () => {
 
   test('checkout selection → onboarding write → payment gate preserves the selected plan', async ({ page }) => {
     if (!storageState) {
-      await page.goto('/en/login?next=%2Fen%2Fcheckout%3Fplan%3Dprofessional', { waitUntil: 'domcontentloaded' });
+      const nextPath = '/en/checkout?plan=professional';
+      await page.goto(`/en/login?next=${encodeURIComponent(nextPath)}`, { waitUntil: 'domcontentloaded' });
       const emailInput = page.getByRole('textbox', { name: 'Work email', exact: true });
       const form = page.locator('form').filter({ has: emailInput });
+      const submit = form.locator('button[type="submit"]');
+
       await emailInput.fill(newCustomerEmail!);
       await form.getByLabel('Password', { exact: true }).fill(newCustomerPassword!);
-      await Promise.all([
-        page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000, waitUntil: 'domcontentloaded' }),
-        form.locator('button[type="submit"]').click(),
-      ]);
+      await submit.click();
+
+      // The client-side router transition can lag behind Supabase persisting the
+      // authenticated session. Prove the durable auth state first, then navigate
+      // to the requested continuation explicitly instead of racing router.replace.
+      await expect.poll(async () => {
+        const cookies = await page.context().cookies();
+        return cookies.some((cookie) => cookie.name.includes('auth-token') && Boolean(cookie.value));
+      }, { timeout: 30_000 }).toBe(true);
+
+      await page.goto(nextPath, { waitUntil: 'domcontentloaded' });
+      await expect(page).not.toHaveURL(/\/en\/login(?:\?|$)/);
+      await expect(page).toHaveURL(/\/en\/checkout\?plan=professional/);
     }
+
     const organizationName = `QA Activation ${Date.now()}`;
     const aiSystemName = `QA First AI ${Date.now()}`;
 

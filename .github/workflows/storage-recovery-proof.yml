@@ -60,7 +60,24 @@ jobs:
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
 
           main_sha="$(curl --fail --silent --show-error             -H "Authorization: Bearer $GH_TOKEN"             -H 'Accept: application/vnd.github+json'             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
-          test "$main_sha" = "$TARGET_SHA"
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            # Manual attestations remain exact-current-main only.
+            test "$main_sha" = "$TARGET_SHA"
+          else
+            # A push-triggered recovery proof may sit in the Actions queue while a
+            # newer main commit lands. Accept only if TARGET_SHA is still contained
+            # in current main history; reject divergent/non-main commits.
+            compare_json="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/compare/${TARGET_SHA}...main")"
+            compare_status="$(jq -r '.status // empty' <<<"$compare_json")"
+            case "$compare_status" in
+              identical|ahead) ;;
+              *) echo "Assessed SHA is not contained in current main history" >&2; exit 1 ;;
+            esac
+          fi
 
           test -f "$RECOVERY_EVIDENCE_FILE"
           test "$(git hash-object "$RECOVERY_EVIDENCE_FILE")" = "$RECOVERY_EVIDENCE_BLOB_SHA"
@@ -300,13 +317,46 @@ jobs:
           function_ok=0
           secret_ok=0
 
-          for attempt in 1 2 3; do
-            if supabase functions delete "$FUNCTION_NAME" --project-ref "$RECOVERY_PROJECT_REF" --yes; then
-              function_ok=1
-              break
+          LEGACY_FUNCTION_NAME="dr-storage-recovery-proof-20261004"
+
+          for function_name in "$FUNCTION_NAME" "$LEGACY_FUNCTION_NAME"; do
+            deleted=0
+            for attempt in 1 2 3; do
+              if supabase functions delete "$function_name" --project-ref "$RECOVERY_PROJECT_REF" --yes; then
+                deleted=1
+                break
+              fi
+              sleep $((attempt * 2))
+            done
+
+            # Deletion is idempotent: if a legacy/current proof function is already
+            # absent, verify absence through the Management API before failing.
+            if [ "$deleted" -ne 1 ]; then
+              functions_json="$(curl --fail --silent --show-error \
+                -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                "https://api.supabase.com/v1/projects/$RECOVERY_PROJECT_REF/functions")"
+              if jq -e --arg name "$function_name" '.[] | select((.slug // .name) == $name)' <<<"$functions_json" >/dev/null; then
+                echo "Temporary recovery proof function still exists: $function_name" >&2
+                function_ok=0
+                break
+              fi
             fi
-            sleep $((attempt * 2))
           done
+
+          if [ "$function_ok" -ne 0 ]; then
+            function_ok=1
+          else
+            # function_ok starts at 0; set PASS only when neither current nor legacy
+            # function remains after the deletion/absence verification loop.
+            functions_json="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$RECOVERY_PROJECT_REF/functions")"
+            if ! jq -e --arg current "$FUNCTION_NAME" --arg legacy "$LEGACY_FUNCTION_NAME" \
+              '.[] | select((.slug // .name) == $current or (.slug // .name) == $legacy)' \
+              <<<"$functions_json" >/dev/null; then
+              function_ok=1
+            fi
+          fi
 
           for attempt in 1 2 3; do
             if supabase secrets unset --project-ref "$RECOVERY_PROJECT_REF" DR_STORAGE_PROOF_NONCE; then
