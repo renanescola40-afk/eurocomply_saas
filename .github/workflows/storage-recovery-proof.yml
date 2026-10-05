@@ -1,4 +1,4 @@
-# V8 current-main push revalidation trigger — runtime binds the exact github.sha; no recovery logic change
+# V8 final exact-main recovery trigger: e706338c — no recovery logic change
 name: Storage Recovery Synthetic Proof
 
 on:
