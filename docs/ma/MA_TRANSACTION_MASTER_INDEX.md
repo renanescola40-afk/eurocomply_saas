@@ -5,6 +5,12 @@ Status: INTERNAL TRANSACTION DOCUMENTATION PACK
 Scope: 100% sale of RISCK COMPLY or associated software/IP assets.
 Truth rule: DRAFT_READY does not mean counsel-approved, buyer-accepted, signed or legally effective.
 
+## Closure controls
+- 65-item coverage proof: `MA_65_ITEM_COVERAGE_MATRIX.md`
+- Readiness scorecard: `MA_DOCUMENT_STATUS_SCORECARD.md`
+- Buyer negotiation entry point: `BUYER_NEGOTIATION_PLAYBOOK.md`
+- Signing/closing entry point: `SIGNING_CLOSING_MASTER_CHECKLIST.md`
+
 ## Sharing stages
 STAGE_0_PUBLIC → STAGE_1_INITIAL_INTEREST → STAGE_2_NDA → STAGE_3_DILIGENCE → STAGE_4_NEGOTIATION → STAGE_5_SIGNING → STAGE_6_CLOSING → STAGE_7_POST_CLOSE.
 
@@ -42,7 +48,7 @@ Do not duplicate stronger evidence. Reference:
 | Buyer counsel Q&A playbook | DRAFT_READY | consistent answers | Seller | 3-5 | Internal | Yes | Yes | No | buyer questions | 2026-10-05 |
 
 ## Structure support
-Supported: SHARE_SALE, ASSET_SALE, SOFTWARE_IP_SALE, BUSINESS_TRANSFER, HYBRID. See playbooks/TRANSACTION_STRUCTURE_DECISION_MATRIX.md.
+Supported: SHARE_SALE, ASSET_SALE, SOFTWARE_IP_SALE, BUSINESS_TRANSFER, HYBRID. See `playbooks/TRANSACTION_STRUCTURE_DECISION_MATRIX.md`.
 
 ## Status semantics
 DRAFT_READY = internally usable first draft.
