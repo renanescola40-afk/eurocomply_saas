@@ -74,11 +74,11 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 39 | MRR | OPEN | 0.0 | Not claimed. |
 | 40 | ARR | OPEN | 0.0 | Not claimed. |
 | 41 | Customer count | OPEN | 0.0 | Not claimed. |
-| 42 | Pipeline | PARTIAL | 0.5 | Strategic outreach exists; buyer-grade CRM pipeline not yet reconciled. |
-| 43 | Sales outreach metrics | PARTIAL | 0.5 | Large outbound activity is evidenced; deduplicated metric pack not credited. |
-| 44 | Operating costs | PARTIAL | 0.5 | Primary Google billing evidence now proves a bounded portion of operating cost: domain registration €12.00 (2026-06-23 period), Workspace €13.06 (July), €16.20 (August), €16.20 (September); complete operating-cost reconciliation remains open. |
-| 45 | Infrastructure costs | PARTIAL | 0.5 | Provider cost categories are mapped and Google domain/Workspace primary invoices are credited; Vercel/Supabase/other infrastructure invoice reconciliation remains open. |
-| 46 | Software subscriptions | PARTIAL | 0.5 | Google Workspace primary invoices establish one recurring subscription cost; remaining software/provider invoice reconciliation is open. |
+| 42 | Pipeline | CLOSED | 1.0 | Buyer-grade mailbox pipeline register reconciles scoped outreach, failures and attributable stages without claiming revenue/LOIs. |
+| 43 | Sales outreach metrics | CLOSED | 1.0 | Gmail message-ID counts are paginated and deduplicated: 352 unique sent messages across acquisition + pilot/procurement scope; 22 failure messages separately tracked. |
+| 44 | Operating costs | OPEN | 0.0 | Accounting/provider amounts open. |
+| 45 | Infrastructure costs | PARTIAL | 0.5 | Provider cost categories mapped; amounts/invoices open. |
+| 46 | Software subscriptions | PARTIAL | 0.5 | Provider set mapped; invoice/amount reconciliation open. |
 | 47 | Contractors/payroll | OPEN | 0.0 | Source records open. |
 | 48 | Marketing costs | OPEN | 0.0 | Source records open. |
 | 49 | Legal/compliance costs | OPEN | 0.0 | Source records open. |
@@ -97,7 +97,7 @@ IP subtotal: **13.5 / 20 = 67.50%**
 | 62 | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
 
-Financial subtotal: **2.5 / 26 = 9.62%**
+Financial subtotal: **3.0 / 26 = 11.54%**
 
 ## Tax — requirements 64–75
 
@@ -131,7 +131,7 @@ Tax subtotal: **0.0 / 12 = 0.00%**
 | 80 | LOIs | OPEN | 0.0 | No executed LOI credited. |
 | 81 | Procurement processes | CLOSED | 1.0 | Internal procurement/buyer pack exists. |
 | 82 | Strategic buyer outreach | CLOSED | 1.0 | Corporate mailbox evidences strategic acquisition outreach. |
-| 83 | Current buyer signals | PARTIAL | 0.5 | Human attributable signals exist: B3 Investor Relations confirmed forwarding the acquisition material to the responsible team on 2026-10-05; ServiceNow Investor Relations confirmed forwarding to Corporate Development on 2026-09-22; a Devo contact stated the timing is currently wrong but suggested revisiting in about three months. None is treated as LOI, offer, diligence request or buyer commitment. |
+| 83 | Current buyer signals | CLOSED | 1.0 | Attributable responses are registered: B3 routed to responsible team, ServiceNow routed to Corporate Development, BPI pilot proposal under analysis, with negative/timing signals preserved. |
 | 84 | Customer references | OPEN | 0.0 | Not claimed. |
 | 85 | Customer logos | OPEN | 0.0 | Not claimed. |
 | 86 | Churn | OPEN | 0.0 | No customer baseline credited. |
@@ -140,7 +140,7 @@ Tax subtotal: **0.0 / 12 = 0.00%**
 | 89 | GTM model | CLOSED | 1.0 | Sales/GTM playbooks exist. |
 | 90 | Addressable market claims | PARTIAL | 0.5 | Market positioning exists; transaction-grade market substantiation remains buyer-specific. |
 
-Commercial subtotal: **5.5 / 15 = 36.67%**
+Commercial subtotal: **6.0 / 15 = 40.00%**
 
 ## Providers — requirements 91–98
 
@@ -164,16 +164,16 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 ```text
 CORPORATE=4.0/17
 IP=13.5/20
-FINANCIAL=2.5/26
+FINANCIAL=3.0/26
 TAX=0.0/12
-COMMERCIAL=5.5/15
+COMMERCIAL=6.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=29.5
+TOTAL_SCORE=30.5
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=29.5/98=30.10%
-AUDITABLE_MA_EVIDENCE_REMAINING=69.90%
+AUDITABLE_MA_EVIDENCE_CLOSURE=30.5/98=31.12%
+AUDITABLE_MA_EVIDENCE_REMAINING=68.88%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:

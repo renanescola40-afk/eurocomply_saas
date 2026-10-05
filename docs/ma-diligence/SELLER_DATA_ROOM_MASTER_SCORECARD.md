@@ -19,21 +19,29 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 | Measure | Score | Meaning |
 |---|---:|---|
 | INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
-| AUDITABLE_MA_EVIDENCE_CLOSURE | **30.10%** | 29.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
-| AUDITABLE_MA_EVIDENCE_REMAINING | **69.90%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
+| AUDITABLE_MA_EVIDENCE_CLOSURE | **31.12%** | 30.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **68.88%** | Official, IP-title, accounting, tax, commercial-fact and provider-transfer evidence still open or partial. |
 
 ```text
-TOTAL_EVIDENCE_POINTS=29.5
+TOTAL_EVIDENCE_POINTS=30.5
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=30.10%
-AUDITABLE_MA_EVIDENCE_REMAINING=69.90%
+AUDITABLE_MA_EVIDENCE_CLOSURE=31.12%
+AUDITABLE_MA_EVIDENCE_REMAINING=68.88%
 INTERNAL_DOCUMENT_READINESS=100%
 MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
 
-The lower auditable evidence score does not represent lost work. It replaces the previous non-reproducible management estimate with a stricter metric that a buyer can recalculate line by line.
+The auditable evidence score is recalculable line by line. Commercial evidence added on 2026-10-05 moved pipeline, outreach metrics and current buyer signals to CLOSED while preserving strict non-claims for customers, LOIs, active pilots and acquisition offers.
 
 ## Newly closed in this continuation
+
+- Commercial pipeline register created from connected mailbox evidence.
+- 352 unique sent outreach messages reconciled across the defined acquisition + pilot/procurement scope.
+- 22 delivery-failure messages separately tracked.
+- B3 routing to responsible team, ServiceNow routing to Corporate Development and BPI pilot-proposal analysis are now attributable buyer signals.
+- No LOI, active pilot, customer, revenue or acquisition offer was inferred.
+
+## Earlier evidence improvements
 
 - 300-commit contributor sample reconciled: 220 primary account, 77 automation/commit account, 3 Dependabot.
 - No additional human contributor identity appeared in that sample.
@@ -115,8 +123,8 @@ FINANCIAL_SOURCE_RECORDS_OPEN=YES
 TAX_SOURCE_RECORDS_OPEN=YES
 PROVIDER_TRANSFER_CLOSURE_OPEN=YES
 OVERALL_TRANSACTION_100=NO
-EXACT_PERCENT_COMPLETE=30.10
-EXACT_PERCENT_REMAINING=69.90
+EXACT_PERCENT_COMPLETE=31.12
+EXACT_PERCENT_REMAINING=68.88
 ```
 
 ## Priority closure order
