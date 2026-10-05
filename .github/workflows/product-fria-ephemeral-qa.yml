@@ -1,6 +1,6 @@
 name: Product FRIA Ephemeral Runtime QA
 
-# Runtime evidence refresh marker: enterprise product closure V3, 2026-10-04.
+# Runtime evidence refresh marker: V7 final Product + Runtime closure, 2026-10-05.
 # This producer is intentionally push-capable so an exact-main merge can refresh
 # product-commercial QA evidence for the new release SHA without synthetic reuse.
 on:
