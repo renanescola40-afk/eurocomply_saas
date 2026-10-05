@@ -6,6 +6,7 @@ import { DeleteRecordButton } from '@/components/shared/delete-record-button';
 import { Button } from '@/components/ui/button';
 import { getCoreWorkflowCopy } from '@/lib/i18n/core-workflow-copy';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { formatCalendarDate } from '@/lib/calendar-date';
 
 type ComplianceTask = {
   id: string;
@@ -44,9 +45,9 @@ const editCopy: Record<Locale, { edit: string; save: string; saving: string; can
 
 function formatDueDate(value: string | null | undefined, locale: string, noDueDate: string, invalidDueDate: string) {
   if (!value) return noDueDate;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return invalidDueDate;
-  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+  return formatCalendarDate(value, locale === 'pt' ? 'pt-PT' : locale, {
+    month: 'short', day: 'numeric', year: 'numeric',
+  }) ?? invalidDueDate;
 }
 
 function priorityTone(priority?: string | null) {
