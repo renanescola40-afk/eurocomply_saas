@@ -45,7 +45,7 @@ describe('document upload controlled validation result', () => {
     ).resolves.toEqual({ ok: false, code: 'invalid_upload' });
   });
 
-  it('preserves unexpected failures as thrown errors', async () => {
+  it('preserves unexpected failures as sanitized thrown errors', async () => {
     mocks.uploadDocument.mockRejectedValueOnce(new Error('storage unavailable'));
     const file = new File(['%PDF-1.7'], 'policy.pdf', { type: 'application/pdf' });
 
@@ -59,7 +59,7 @@ describe('document upload controlled validation result', () => {
         },
         file,
       ),
-    ).rejects.toThrow('storage unavailable');
+    ).rejects.toThrow('Unable to upload document.');
   });
 
   it('returns ok for a successful upload', async () => {
