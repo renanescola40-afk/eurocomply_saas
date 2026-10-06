@@ -55,7 +55,7 @@ Corporate subtotal: **5.0 / 17 = 29.41%**
 | 27 | Database rights position | PARTIAL | 0.5 | Database/schema evidence exists; legal title conclusion open. |
 | 28 | Third-party code inventory | CLOSED | 1.0 | Dependency inventory exists. |
 | 29 | OSS inventory | CLOSED | 1.0 | Lockfile-derived inventory exists. |
-| 30 | SBOM | PARTIAL | 0.5 | Generation/attestation path exists; transaction-cutoff SBOM not yet credited. |
+| 30 | SBOM | CLOSED | 1.0 | Fresh CycloneDX SBOM + SHA-256 + GitHub provenance attestation completed successfully in workflow run 37381291759 for PR #2342 and merged to main. |
 | 31 | OSS license obligations | CLOSED | 1.0 | License diligence records obligations/review items. |
 | 32 | Copyleft risk review | CLOSED | 1.0 | LGPL review item explicitly identified; no false clean opinion claimed. |
 | 33 | Commercial license dependencies | CLOSED | 1.0 | Material provider/dependency set documented. |
