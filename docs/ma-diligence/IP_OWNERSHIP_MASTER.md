@@ -25,7 +25,7 @@ The repository proves technical history and asset existence, not automatically l
 | Asset | Current evidence | Classification | Gap / action |
 |---|---|---|---|
 | Primary source repository | Repository exists and is controlled through linked GitHub account | VERIFIED | Repository control is not by itself an IP assignment. |
-| Source code authorship history | More than 18,000 commits were reviewed on 2026-10-05; multiple human/account and automation identities were observed | VERIFIED_EXTENDED_REVIEW | Complete the final API walk/export and document the relationship of legacy account identities before title representation. |
+| Source code authorship history | Full GitHub API walk completed on 2026-10-06 across 182 pages / 18,111 reachable commits; human/account and automation identities were enumerated | VERIFIED_FULL_HISTORY | Document the relationship of legacy account identities before title representation. |
 | Creator ownership to seller | No executed transfer instrument identified in reviewed repo | **IP_CHAIN_GAP** | Execute counsel-approved assignment/license as required before sale. |
 | Employee contributions | No complete employee contribution register found | OWNER_INPUT_REQUIRED | Confirm whether any employees contributed and provide employment/IP clauses. |
 | Contractor contributions | No complete contractor register found | OWNER_INPUT_REQUIRED | Identify contractors and locate signed IP assignment/work-for-hire clauses. |
@@ -43,7 +43,19 @@ The repository proves technical history and asset existence, not automatically l
 
 ## Observed contributor evidence — extended history review
 
-A dated review began with the 300 most recent commits and was expanded through review cutoff SHA `ad5ae2b99875659c54b6139d35addbbc2a9cfad9`. The earlier baseline `6219f52c463c367848c1139158e5389d35298ca2` contained 17,959 reachable commits; the cutoff is 76 commits ahead of that baseline, supporting at least 18,035 reachable commits at the reviewed snapshot. The first 300 returned:
+A dated review began with the 300 most recent commits and was expanded to a complete GitHub API pagination walk on 2026-10-06. Pages 1–181 returned 100 commits each and page 182 returned 11, for **18,111 reachable commits** from current main history through oldest observed commit `582764aee73376ce463142773df685c677de6e11`. The full walk produced the following aggregate identity counts:
+
+| Observed linked/account identity | Full-history commits |
+|---|---:|
+| `renanescola40-afk` | 15,903 |
+| `renansilva2002-tech` | 935 |
+| `sastestezoer-commits` | 796 |
+| `soltomstorevendas-web` | 378 |
+| `dependabot[bot]` | 60 |
+| `github-actions[bot]` | 32 |
+| Other named release/security/evidence/PR bots | 7 |
+
+The earlier first-300 sample returned:
 
 | Observed author identity | Commits in sample | Diligence classification |
 |---|---:|---|
@@ -120,9 +132,9 @@ Before making a title representation, the seller should have controlled copies o
 
 ```text
 SOURCE_REPOSITORY_EXISTENCE=VERIFIED
-CONTRIBUTOR_HISTORY_REVIEWED_GT=18000_COMMITS
+CONTRIBUTOR_HISTORY_REVIEWED=18111_COMMITS_FULL_API_WALK
 LEGACY_ACCOUNT_IDENTITIES_FOUND=YES
-FULL_HISTORY_EXPORT_FINAL_PAGE=OPEN
+FULL_HISTORY_EXPORT_FINAL_PAGE=CLOSED
 HUMAN_RELATIONSHIP_CLASSIFICATION=NOT_INFERRED
 OSS_INVENTORY=VERIFIED
 CREATOR_TO_SELLER_TRANSFER=IP_CHAIN_GAP
