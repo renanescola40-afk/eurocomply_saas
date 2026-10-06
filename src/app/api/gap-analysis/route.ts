@@ -139,7 +139,8 @@ async function loadOpenWork(organizationId: string, userId: string) {
   const { data: tasks, error: tasksError } = await supabase
     .from('compliance_tasks')
     .select('id,finding_id,title,priority,status,due_date,created_at')
-    .eq('organization_id', organizationId)
+    .is('organization_id', null)
+    .eq('user_id', userId)
     .in('finding_id', findingIds)
     .in('status', ['open', 'in_progress'])
     .order('created_at', { ascending: false });
@@ -249,10 +250,10 @@ async function createRemediation(organizationId: string, userId: string, body: z
     const taskRows = insertedFindings.map((finding, index) => {
       const action = actions[index];
       return {
-        organization_id: organizationId,
+        organization_id: null,
         workspace_id: null,
         finding_id: finding.id,
-        user_id: null,
+        user_id: userId,
         title: buildTaskTitle(action),
         description: finding.recommendation || action.recommendation,
         category: 'gap_analysis',
@@ -291,7 +292,8 @@ async function createRemediation(organizationId: string, userId: string, body: z
       const { error: taskRollbackError } = await supabase
         .from('compliance_tasks')
         .delete()
-        .eq('organization_id', organizationId)
+        .is('organization_id', null)
+        .eq('user_id', userId)
         .in('finding_id', findingIds);
       if (taskRollbackError) {
         console.warn('[gap-analysis] task_compensation_failed', { code: taskRollbackError.code ?? 'unknown' });
