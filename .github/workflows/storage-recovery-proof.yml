@@ -1,4 +1,4 @@
-# V8 final exact-main recovery trigger: e706338c — no recovery logic change
+# V8 exact-main recovery trigger: def7bad0 — no recovery logic change
 name: Storage Recovery Synthetic Proof
 
 on:
