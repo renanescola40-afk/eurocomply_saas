@@ -164,3 +164,24 @@ EXACT_PERCENT_REMAINING=63.78
 6. Export domain/provider account-control evidence and transfer plans.
 7. Refresh OSS/SBOM and full contributor register on the final transaction SHA.
 8. Have counsel/accountant approve transaction-specific conclusions.
+
+## Corporate + IP + title closure continuation — 2026-10-06
+
+The dedicated 100% sale-title closure scope is now controlled by:
+- `docs/ma-diligence/CORPORATE_IP_TITLE_FINAL_CLOSURE_MATRIX.md`
+- `docs/ma-diligence/CREATOR_CONTRIBUTOR_REGISTER.md`
+- `docs/ma-diligence/IP_CHAIN_OF_TITLE_EVIDENCE_PACK.md`
+- `docs/ma-diligence/IP_ENCUMBRANCE_REGISTER.md`
+- `docs/ma-diligence/OWNER_DOCUMENT_REQUEST_PACK.md`
+- `docs/ma-diligence/ASSET_TITLE_REGISTER.md`
+- `docs/ma-diligence/TRANSACTION_DECISION_MATRIX.md`
+
+This does not replace the 98-item total M&A score. It provides a narrower reproducible corporate/IP/title sale-closure score and separates internal readiness from authoritative/executed title evidence.
+
+```text
+CORPORATE_IP_TITLE_SCOPE_EVIDENCE_CLOSURE=40.91_PERCENT
+CORPORATE_IP_TITLE_SCOPE_REMAINING=59.09_PERCENT
+ASSET_TRANSFER_READINESS_SCOPE=90.00_PERCENT
+FINAL_CORPORATE_IP_GO=PASS_WITH_EXTERNAL_BLOCKERS_DISCLOSED
+UNQUALIFIED_SELLER_IP_TITLE=NO
+```
