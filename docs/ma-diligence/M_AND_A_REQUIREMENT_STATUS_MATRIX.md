@@ -1,6 +1,6 @@
 # RISCK COMPLY — M&A Requirement Status Matrix
 
-Date: 2026-10-05  
+Date: 2026-10-06  
 Scoring scope: requirements 1–98 from the Corporate + IP + Financial + Tax M&A Diligence Closure Master  
 Status: `AUDITABLE_SCORING_ACTIVE`
 
@@ -184,3 +184,25 @@ MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
 
 The difference is intentional: the documents needed to answer diligence are internally complete, while many underlying official, legal, accounting, tax and provider facts remain externally unclosed.
+
+
+## Financial + tax closure reconciliation — 2026-10-06
+
+A dedicated financial/tax closure run revalidated Stripe LIVE and completed all safe internally controllable templates, matrices and request packs.
+
+- Financial evidence score remains **6.0 / 26 = 23.08%**. No score is increased merely because a template was created.
+- Tax evidence score remains **0.0 / 12 = 0.00%** because current seller-specific authoritative tax evidence and transaction-specific professional conclusions are still external dependencies.
+- Combined Financial + Tax evidence score: **6.0 / 38 = 15.79%**.
+- Internal controllable financial/tax closure work: **100% complete** for the present evidence set.
+- Remaining gaps are genuine owner/accountant/tax-authority/tax-counsel facts, not undocumented internal tasks.
+
+Canonical supporting files:
+- FINANCIAL_TAX_FINAL_CLOSURE_MATRIX.md
+- MANAGEMENT_ACCOUNTS_TRANSACTION_TEMPLATE.md
+- FORECAST_AND_UNIT_ECONOMICS_FRAMEWORK.md
+- TAX_DILIGENCE_FINAL_MATRIX.md
+- TRANSACTION_TAX_QUESTIONS_BY_BUYER_JURISDICTION.md
+- TAX_DOCUMENT_REQUEST_PACK.md
+- SELLER_FINANCIAL_SUMMARY.md
+
+FINANCIAL_TAX_GO=PASS_INTERNAL_CLOSURE_ONLY
