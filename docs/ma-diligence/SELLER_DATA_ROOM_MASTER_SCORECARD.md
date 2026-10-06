@@ -1,7 +1,7 @@
 # RISCK COMPLY — Seller Data Room Master Scorecard
 
 Date: 2026-10-05  
-Baseline main SHA: `6219f52c463c367848c1139158e5389d35298ca2`  
+Baseline main SHA: `d9f89f9670df8907cafbab7db276f68d28e98df9`  
 Seller: SAMUEL CERQUEIRA, UNIPESSOAL LDA  
 Purpose: full-sale M&A diligence readiness  
 Status: `INTERNAL_DOCUMENT_READINESS=100 / OVERALL_TRANSACTION_READINESS=NOT_100`
