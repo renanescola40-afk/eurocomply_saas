@@ -148,7 +148,7 @@ Each required provider family is `PARTIAL = 0.5`: runtime/inventory/DPA evidence
 
 | # | Provider | State | Score |
 |---:|---|---|---:|
-| 91 | Vercel | PARTIAL | 0.5 |
+| 91 | Vercel | CLOSED | 1.0 |
 | 92 | Supabase | PARTIAL | 0.5 |
 | 93 | Stripe | PARTIAL | 0.5 |
 | 94 | Google | PARTIAL | 0.5 |
@@ -157,7 +157,7 @@ Each required provider family is `PARTIAL = 0.5`: runtime/inventory/DPA evidence
 | 97 | Resend | PARTIAL | 0.5 |
 | 98 | Other live providers | PARTIAL | 0.5 |
 
-Provider subtotal: **4.0 / 8 = 50.00%**
+Provider subtotal: **4.5 / 8 = 56.25%**
 
 ## Reproducible overall evidence-closure score
 
@@ -167,13 +167,13 @@ IP=14.0/20
 FINANCIAL=6.0/26
 TAX=0.0/12
 COMMERCIAL=6.5/15
-PROVIDERS=4.0/8
+PROVIDERS=4.5/8
 
-TOTAL_SCORE=35.5
+TOTAL_SCORE=36.0
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=35.5/98=36.22%
-AUDITABLE_MA_EVIDENCE_REMAINING=63.78%
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.0/98=36.73%
+AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
