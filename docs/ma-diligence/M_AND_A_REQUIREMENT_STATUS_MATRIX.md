@@ -150,7 +150,7 @@ Each required provider family is `PARTIAL = 0.5`: runtime/inventory/DPA evidence
 |---:|---|---|---:|
 | 91 | Vercel | PARTIAL | 0.5 |
 | 92 | Supabase | PARTIAL | 0.5 |
-| 93 | Stripe | PARTIAL | 0.5 |
+| 93 | Stripe | PARTIAL | 0.5 | Authenticated LIVE account control, company-name field, charges/payouts and payout-account presence are verified; legal/business identity reconciliation and buyer-specific transfer remain open. |
 | 94 | Google | PARTIAL | 0.5 |
 | 95 | Sentry | PARTIAL | 0.5 |
 | 96 | Redis/Upstash | PARTIAL | 0.5 |
