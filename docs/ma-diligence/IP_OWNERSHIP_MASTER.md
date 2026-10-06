@@ -133,3 +133,17 @@ TRADEMARK_TITLE_PROOF=OFFICIAL_DOCUMENT_REQUIRED_OR_NOT_CLAIMED
 IP_ENCUMBRANCE_CONFIRMATION=OWNER_INPUT_REQUIRED
 IP_CHAIN_READY_FOR_UNQUALIFIED_BUYER_REPRESENTATION=NO
 ```
+
+## Canonical closure artifacts — 2026-10-06
+
+The title-chain remediation and sale handoff are now separated into canonical evidence-bound artifacts:
+
+- `CREATOR_CONTRIBUTOR_REGISTER.md`
+- `IP_CHAIN_OF_TITLE_EVIDENCE_PACK.md`
+- `IP_ENCUMBRANCE_REGISTER.md`
+- `ASSET_TITLE_REGISTER.md`
+- `OWNER_DOCUMENT_REQUEST_PACK.md`
+- `TRANSACTION_DECISION_MATRIX.md`
+- `CORPORATE_IP_TITLE_FINAL_CLOSURE_MATRIX.md`
+
+These files improve internal diligence completeness but do not convert the open creator-to-seller assignment into an executed transfer.
