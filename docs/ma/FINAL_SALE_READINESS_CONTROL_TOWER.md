@@ -248,6 +248,7 @@ Canonical mailbox evidence currently supports:
 - B3: routed to responsible team
 - ServiceNow: routed to Corporate Development
 - BPI: pilot proposal under analysis
+- Devo: human response confirms the request belongs to another department and indicates timing may be better in approximately three months; this is a timing/routing signal, not current acquisition interest
 
 Strict stage interpretation:
 - delivery/autoreply/routing does not equal acquisition interest
