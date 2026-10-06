@@ -1,6 +1,6 @@
 # RISCK COMPLY — Financial Fact Book
 
-Date: 2026-10-05  
+Date: 2026-10-06  
 Status: `FINANCIAL_DILIGENCE_INTERNAL=PASS_STRUCTURE / FINANCIAL_SOURCE_RECORDS=OPEN`
 
 This fact book intentionally does not invent revenue, customers, cash, liabilities, taxes or bank balances.
@@ -165,3 +165,17 @@ BALANCE_SHEET=ACCOUNTANT_REQUIRED
 CASH_FLOW=ACCOUNTANT_REQUIRED
 MANAGEMENT_ACCOUNTS=ACCOUNTANT_REQUIRED
 ```
+
+
+## Stripe LIVE revalidation — 2026-10-06
+
+Authenticated LIVE API revalidation returned:
+- charges: 0 objects;
+- invoices: 0 objects;
+- customers: 0 objects;
+- subscriptions (all statuses): 0 objects;
+- balance transactions: 0 objects;
+- available balance: EUR 0;
+- pending balance: EUR 0.
+
+This reconfirms zero Stripe-side commercial activity and balance only. It does not convert missing company-wide accounting or bank evidence into zero.
