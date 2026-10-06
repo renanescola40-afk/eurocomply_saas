@@ -138,9 +138,9 @@ Tax subtotal: **0.0 / 12 = 0.00%**
 | 87 | Retention | OPEN | 0.0 | No customer baseline credited. |
 | 88 | Sales cycle | PARTIAL | 0.5 | GTM process exists; observed buyer-cycle dataset incomplete. |
 | 89 | GTM model | CLOSED | 1.0 | Sales/GTM playbooks exist. |
-| 90 | Addressable market claims | PARTIAL | 0.5 | Market positioning exists; transaction-grade market substantiation remains buyer-specific. |
+| 90 | Addressable market claims | CLOSED | 1.0 | Official Eurostat enterprise-base data and EU AI Act scope are reconciled in ADDRESSABLE_MARKET_CLAIMS_SUBSTANTIATION_2026-10-06.md with explicit TAM/SAM/SOM truth boundaries. |
 
-Commercial subtotal: **6.0 / 15 = 40.00%**
+Commercial subtotal: **6.5 / 15 = 43.33%**
 
 ## Providers — requirements 91–98
 
@@ -166,14 +166,14 @@ CORPORATE=5.0/17
 IP=14.0/20
 FINANCIAL=6.0/26
 TAX=0.0/12
-COMMERCIAL=6.0/15
+COMMERCIAL=6.5/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=35.0
+TOTAL_SCORE=35.5
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=35.0/98=35.71%
-AUDITABLE_MA_EVIDENCE_REMAINING=64.29%
+AUDITABLE_MA_EVIDENCE_CLOSURE=35.5/98=36.22%
+AUDITABLE_MA_EVIDENCE_REMAINING=63.78%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
