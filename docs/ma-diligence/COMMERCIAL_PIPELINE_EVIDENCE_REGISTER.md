@@ -31,6 +31,18 @@ These are mailbox-message counts, not unique-company counts and not successful-d
 | Devo / Strike48 | 2026-10-05 | Human response said acquisition discussion would belong to another department and timing was poor because of a new platform release, suggesting roughly three months | `TIMING_SIGNAL_NOT_CURRENT_INTEREST` | No current acquisition interest is claimed |
 | E.ON | 2026-10-02 | Human response stated sufficient external support exists for current/scheduled projects | `DECLINED_CURRENT_NEED` | No active opportunity is claimed |
 
+## Observed first-response latency
+
+Mailbox timestamps permit a bounded measurement of first-response latency for three attributable counterparties:
+
+| Counterparty | Initial outbound | First verified inbound response | Approx. elapsed time | Diligence interpretation |
+|---|---|---|---:|---|
+| B3 | 2026-10-03 04:40:15 -07:00 | 2026-10-05 12:40:14 +00:00 | ~48h 59m 59s | Routed to responsible team; not a completed sales cycle |
+| ServiceNow | 2026-09-22 01:18:22 -07:00 | 2026-09-22 15:49:41 +00:00 | ~7h 31m 19s | Routed to Corporate Development; not a completed sales cycle |
+| Banco BPI | 2026-09-29 15:45:13 -05:00 | 2026-09-29 22:23:10 +01:00 | ~37m 57s | Pilot proposal under analysis; not a completed sales cycle |
+
+Boundary: these values measure time from the identified outbound message to the first attributable response in the mailbox. They do **not** measure time-to-demo, time-to-LOI, time-to-contract, time-to-close, or procurement duration. Requirement 88 therefore remains PARTIAL until a fuller buyer-cycle dataset exists.
+
 ## Pipeline state model
 
 - `SENT`: outbound message exists.
