@@ -20,7 +20,7 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 |---|---:|---|
 | INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
 | AUDITABLE_MA_EVIDENCE_CLOSURE | **36.22%** | 35.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
-| AUDITABLE_MA_EVIDENCE_REMAINING | **64.29%** | Official, IP-title, accounting, tax, commercial-fact and provider account/closing evidence still open or partial. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **63.78%** | Official, IP-title, accounting, tax, commercial-fact and provider account/closing evidence still open or partial. |
 
 ```text
 TOTAL_EVIDENCE_POINTS=35.5
