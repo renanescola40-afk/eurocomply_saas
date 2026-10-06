@@ -63,3 +63,24 @@ UPSTASH_DPA_INCORPORATION=HUMAN_PROVIDER_CONFIRMATION
 HANDOVER_RUNBOOK_STRUCTURE=PASS
 PROVIDER_TRANSFER_READY_FOR_CLOSING=NO
 ```
+
+
+## Production release/account-status reconciliation — 2026-10-06
+
+Authenticated production-deployment creation against current main `a062294cd8a8a2a275d0c147028fff5634f935b4` was attempted through Vercel and rejected with `402 Payment Required` / `resource_creation_blocked`. The provider states that the team has an overdue balance and requires a valid payment method before resource creation can resume.
+
+Truth boundary:
+
+```text
+VERCEL_CURRENT_ACCOUNT_CONTROL=VERIFIED
+VERCEL_PROJECT_CONTROL=VERIFIED
+VERCEL_PRODUCTION_LAST_READY_SHA=def7bad00e082ce336734ff7658846fe87595c79
+VERCEL_CURRENT_MAIN_SHA=a062294cd8a8a2a275d0c147028fff5634f935b4
+MAIN_PRODUCTION_SHA_EQUALITY=FAIL
+VERCEL_RESOURCE_CREATION=BLOCKED_OVERDUE_BALANCE
+VERCEL_PAYMENT_ACTION=OWNER_REAL_MONEY_ACTION_REQUIRED
+PAYMENT_PERFORMED_BY_THIS_RECONCILIATION=NO
+PROVIDER_SCORE_CHANGE=0
+```
+
+This is stronger account-specific operational evidence but does not close provider requirement 91 because billing/legal owner reconciliation, buyer-specific transfer and closing execution remain incomplete.
