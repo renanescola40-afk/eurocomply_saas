@@ -1,4 +1,4 @@
-# V8 exact-main recovery trigger: def7bad0 — no recovery logic change
+# V9 SHA-neutral exact-main recovery revalidation trigger — no recovery logic change
 name: Storage Recovery Synthetic Proof
 
 on:
