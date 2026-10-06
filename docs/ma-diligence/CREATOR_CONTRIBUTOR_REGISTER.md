@@ -3,6 +3,10 @@
 Date: 2026-10-06  
 Purpose: attributable contributor register for M&A title diligence.
 
+## Full-history reconciliation — 2026-10-06
+
+A complete GitHub commits API walk covered 182 pages / 18,111 reachable commits. Aggregate linked/account identities: `renanescola40-afk` 15,903; `renansilva2002-tech` 935; `sastestezoer-commits` 796; `soltomstorevendas-web` 378; Dependabot 60; GitHub Actions 32; seven additional named automation/bot commits. No relationship classification is inferred from these counts.
+
 This register classifies observed repository identities only. Git history is evidence of technical contribution/activity, not proof of employment, contractor status, beneficial ownership or legal assignment.
 
 | Identity | Observed role | Evidence basis | Relationship status | Title implication | Action |
@@ -27,7 +31,7 @@ This register classifies observed repository identities only. Git history is evi
 7. If no, retain a dated owner declaration; do not silently convert absence of evidence into an employment/contractor legal conclusion.
 
 ```text
-CONTRIBUTOR_IDENTIFICATION=PASS_DOCUMENTED
+CONTRIBUTOR_IDENTIFICATION=PASS_FULL_HISTORY_18111
 EMPLOYEE_RELATIONSHIP_PROOF=OPEN_IF_APPLICABLE
 CONTRACTOR_RELATIONSHIP_PROOF=OPEN_IF_APPLICABLE
 LEGACY_IDENTITY_RELATIONSHIP=OWNER_ACTION_REQUIRED

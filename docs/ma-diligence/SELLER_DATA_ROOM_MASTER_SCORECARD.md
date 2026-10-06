@@ -1,7 +1,7 @@
 # RISCK COMPLY — Seller Data Room Master Scorecard
 
 Date: 2026-10-05  
-Baseline main SHA: `6219f52c463c367848c1139158e5389d35298ca2`  
+Baseline main SHA: `d9f89f9670df8907cafbab7db276f68d28e98df9`  
 Seller: SAMUEL CERQUEIRA, UNIPESSOAL LDA  
 Purpose: full-sale M&A diligence readiness  
 Status: `INTERNAL_DOCUMENT_READINESS=100 / OVERALL_TRANSACTION_READINESS=NOT_100`
@@ -36,7 +36,7 @@ The auditable evidence score is recalculable line by line. Commercial evidence a
 ## Newly closed in this continuation
 
 - Requirement 44 (Operating costs) reconciled from OPEN → PARTIAL because four provider-originated Google invoices totaling €57.46 were already credited in the Financial Fact Book.
-- Contributor-history review expanded from 300 commits to more than 18,000 commits.
+- Contributor-history review completed through the full 182-page GitHub API walk: 18,111 reachable commits reconciled.
 - Legacy identities `renansilva2002-tech` and `soltomstorevendas-web` are now explicitly tracked rather than silently omitted.
 - No employee/contractor/legal-owner relationship is inferred from Git identities alone.
 
@@ -184,4 +184,16 @@ CORPORATE_IP_TITLE_SCOPE_REMAINING=59.09_PERCENT
 ASSET_TRANSFER_READINESS_SCOPE=90.00_PERCENT
 FINAL_CORPORATE_IP_GO=NO_PASS
 UNQUALIFIED_SELLER_IP_TITLE=NO
+```
+
+## Full contributor-history closure — 2026-10-06
+
+The previously open final-page contributor-history export has been completed across the entire reachable GitHub commits API history.
+
+```text
+FULL_CONTRIBUTOR_HISTORY_API_WALK=18111_COMMITS
+FULL_HISTORY_EXPORT_FINAL_PAGE=CLOSED
+NEW_UNCLASSIFIED_MATERIAL_HUMAN_IDENTITY=NO
+RELATIONSHIP_DECLARATIONS_FOR_LEGACY_IDENTITIES=STILL_OWNER_REQUIRED
+EVIDENCE_SCORE_CHANGE=0
 ```
