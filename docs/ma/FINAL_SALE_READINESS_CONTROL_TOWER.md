@@ -20,8 +20,8 @@ Canonical status: `FINAL_MA_GO=NO_PASS`
 
 ## 2. Current technical baseline
 
-Base main after Corporate/IP closure:
-`5a17d24a899c6b57d6ee68354696c30a3dd6c93f`
+Current main after P0 security + contributor-history closure:
+`a062294cd8a8a2a275d0c147028fff5634f935b4`
 
 This final consolidation branch also contains the validated Financial/Tax closure pack carried from PR #2357/#2358.
 
@@ -33,6 +33,19 @@ Latest observed Vercel Production deployment:
 
 Result:
 `MAIN_PRODUCTION_SHA_EQUALITY=FAIL`
+
+Release reconciliation attempt on 2026-10-06:
+- exact current main deployment was attempted through the authenticated Vercel API;
+- Vercel returned `402 Payment Required / resource_creation_blocked`;
+- provider message: the team has an overdue balance and requires a valid payment method to reactivate account resource creation;
+- no payment or billing mutation was performed;
+- classification: `OWNER_REAL_MONEY_ACTION / BLOCKED_EXTERNAL`.
+
+P0 dependency closure:
+- PR #2361 merged;
+- `sharp` override updated from 0.35.4 to 0.35.5;
+- regenerated package lock committed;
+- all 28 exact-head GitHub workflow checks passed, including Dependency Vulnerability Proof, CI, Full Security Suite, Enterprise DAST, P1 SBOM and Artifact Attestation and Enterprise Production Gate.
 
 Vercel project/account evidence:
 - project: `prj_APpXAyQFy1Gie50xfbO45zjkyUSm`
@@ -284,7 +297,7 @@ Positive evidence:
 - DR/recovery evidence exists and current database FK findings are classified with `UNCLASSIFIED_FKS=0`
 
 Open/partial evidence:
-- current main and Production SHA are not equal
+- current main and Production SHA are not equal; the attempted exact-main deployment is provider-blocked by an overdue Vercel balance requiring owner payment action
 - independent pentest/retest is not credited as PASS
 - final provider account-owner/billing-owner/closing-transfer evidence is incomplete
 - closing-time credential rotation and buyer acceptance are not executed
@@ -303,6 +316,8 @@ Conservative 10-gate M&A security mini-score:
 - independent pentest/retest: 0
 
 `SECURITY_DILIGENCE_PERCENT=70.00%`
+
+The score is intentionally unchanged: the dependency vulnerability blocker was internally remediated and proven, but the existing 10-gate model still has exact main=Production at 0 and independent pentest/retest at 0.
 
 This is an M&A diligence control score, not a product-security certification.
 
