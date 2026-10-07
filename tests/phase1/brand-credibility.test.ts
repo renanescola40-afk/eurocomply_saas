@@ -17,7 +17,7 @@ describe('Phase 1 brand credibility guard', () => {
   it('keeps active public metadata aligned to AI compliance instead of generic compliance copy', () => {
     const localeLayout = read('src/app/[locale]/layout.tsx');
 
-    expect(localeLayout).toContain('Risck Comply - AI Compliance Operating System');
+    expect(localeLayout).toContain('RISCK COMPLY - AI Compliance Operating System');
     expect(localeLayout).toContain('EU AI Act readiness, AI system inventory, risk evidence, governance documents and audit workflows');
     expect(localeLayout).not.toContain('fiscal identifiers');
     expect(localeLayout).not.toContain('Sistema Operacional de Compliance Europeu');
