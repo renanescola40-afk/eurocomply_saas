@@ -120,3 +120,55 @@ TWILIO_REPLY_DRAFTABLE=YES
 SERVICENOW_FOLLOWUP_READY_IF_REQUESTED=YES
 B3_FOLLOWUP_READY_IF_REQUESTED=YES
 EMAIL_SEND_AUTHORIZATION=NOT_GRANTED
+
+
+## Prepared unsent reply — Banyan Software
+
+Subject: Re: Risck Comply & Banyan Software
+
+Hi Mathew,
+
+Thank you for the thoughtful note and for explaining Banyan’s typical acquisition profile.
+
+The key point is that RISCK COMPLY is not being presented as an established revenue SaaS business. It is a completed, pre-commercial AI governance and EU AI Act platform that we are exploring as a strategic technology/IP sale.
+
+At a high level:
+- current product revenue / recurring revenue: pre-revenue, with no ARR/MRR base currently claimed;
+- customers: no established customer base; the product was completed before full go-to-market scaling;
+- team: lean founder-led structure rather than a scaled operating team;
+- business location: Portugal;
+- customer location: not applicable as there is no established customer base to characterize geographically.
+
+The ownership strategy changed after the product was built, which is why we are approaching strategic acquirers rather than continuing to build out the standalone commercial organization.
+
+I appreciate that this is different from Banyan’s usual established-customer profile. If Banyan would still consider a completed technology / build-vs-buy opportunity, I can share a concise product overview, use-case summary and the current diligence-ready materials.
+
+Best regards,
+Renan Silva
+RISCK COMPLY
+
+STATUS: PREPARED_NOT_SENT
+
+## Prepared unsent reply — Twilio
+
+Subject: Re: Strategic enterprise AI governance asset — RISCK COMPLY × Twilio
+
+Hi Joel,
+
+Thank you for the reply. Below is the concise picture.
+
+RISCK COMPLY is a completed, pre-commercial enterprise AI governance and compliance platform built around AI-system inventory, regulatory risk classification, governance evidence, documentation, auditability and EU AI Act readiness.
+
+Financially, the product is pre-revenue and no ARR/MRR or established customer base is currently claimed. We are therefore approaching this as a strategic technology/IP acquisition rather than a revenue-multiple SaaS transaction.
+
+For use cases, the platform is designed for areas such as AI inventory, EU AI Act risk classification, high-risk AI governance, procurement/vendor diligence, governance evidence, documentation generation, transparency obligations and regulatory monitoring. These are product use cases, not customer case studies.
+
+The product was built under a lean founder-led structure. Renan Silva is the primary creator and product lead, with direct involvement across product direction, technical build, governance/compliance design and commercial execution. Formal IP/title transfer status is kept separate in diligence and is not overstated.
+
+I can provide the concise corporate overview, financial/commercial factsheet, use-case brief and creator/team brief for your review.
+
+Best,
+Renan Silva
+RISCK COMPLY
+
+STATUS: PREPARED_NOT_SENT
