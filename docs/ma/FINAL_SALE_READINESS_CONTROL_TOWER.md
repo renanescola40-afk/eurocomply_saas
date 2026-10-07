@@ -20,8 +20,10 @@ Canonical status: `FINAL_MA_GO=NO_PASS`
 
 ## 2. Current technical baseline
 
-Current main after latest M&A evidence reconciliation:
-`63e0f5aa653e2796799e521338bb7fb2d18d7931`
+Observed `main` SHA at the start of the post-PR #2372 reconciliation:
+`b9b55790cc26b8761d437a0b37dc6d88eb48f274`
+
+This is a point-in-time evidence anchor, not a self-updating declaration of the repository's future `main` head. Any later merge necessarily creates a new head and must be compared at observation time.
 
 This final consolidation branch also contains the validated Financial/Tax closure pack carried from PR #2357/#2358.
 
@@ -289,7 +291,7 @@ CLOSED_TRANSACTION=0
 ## 10. Security and technical buyer-diligence summary
 
 Positive evidence:
-- current main commit identified
+- point-in-time main commit identified and attributable
 - Vercel Production is READY
 - current production deployment SHA is attributable
 - fresh SBOM is closed with provenance evidence
@@ -299,14 +301,14 @@ Positive evidence:
 - DR/recovery evidence exists and current database FK findings are classified with `UNCLASSIFIED_FKS=0`
 
 Open/partial evidence:
-- current main and Production SHA are not equal; the attempted exact-main deployment is provider-blocked by an overdue Vercel balance requiring owner payment action
+- the observed main SHA and latest READY Production SHA are not equal; the attempted deployment reconciliation remains provider-blocked by an overdue Vercel balance requiring owner payment action
 - independent pentest/retest is not credited as PASS
 - final provider account-owner/billing-owner/closing-transfer evidence is incomplete
 - closing-time credential rotation and buyer acceptance are not executed
 - current storage/recovery evidence should remain tied to the latest accepted artifact/release rather than generalized beyond its proof
 
 Conservative 10-gate M&A security mini-score:
-- current main identified: 1
+- point-in-time main identified: 1
 - Production deployment READY: 1
 - exact main=Production: 0
 - SBOM: 1
@@ -445,7 +447,7 @@ This reconciliation does not change the 98-item score because requirement 36 was
 - Latest READY Vercel Production remains `def7bad00e082ce336734ff7658846fe87595c79`; main/Production equality remains FAIL until billing is regularized and a fresh deployment succeeds.
 
 ```text
-CURRENT_MAIN_SHA=63e0f5aa653e2796799e521338bb7fb2d18d7931
+OBSERVED_MAIN_SHA_AT_RECONCILIATION=b9b55790cc26b8761d437a0b37dc6d88eb48f274
 PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
 MAIN_PRODUCTION_SHA_EQUALITY=FAIL
 CANONICAL_TOTAL_SCORE=36.5/98
@@ -488,14 +490,14 @@ FINAL_MA_GO=NO_PASS
 
 ## 18. Post-PR #2371 review reconciliation — 2026-10-07
 
-Observed canonical main:
-`63e0f5aa653e2796799e521338bb7fb2d18d7931`
+Observed main at the start of the post-PR #2372 reconciliation:
+`b9b55790cc26b8761d437a0b37dc6d88eb48f274`
 
 Latest READY production SHA remains:
 `def7bad00e082ce336734ff7658846fe87595c79`
 
 Therefore:
-- CURRENT_MAIN_SHA=63e0f5aa653e2796799e521338bb7fb2d18d7931
+- OBSERVED_MAIN_SHA_AT_RECONCILIATION=b9b55790cc26b8761d437a0b37dc6d88eb48f274
 - PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
 - MAIN_PRODUCTION_SHA_EQUALITY=FAIL
 - the previously cited `3e60383...` value is retained only as a historical checkpoint where explicitly labelled
@@ -504,3 +506,29 @@ Therefore:
 - prior public Git history exposure remains OPEN
 - no email was sent
 - no force push/history rewrite or repository-visibility change was performed
+
+
+## 19. Safe history-risk closure boundary — 2026-10-07
+
+Verification performed against the current default branch:
+- search for the previously exposed buyer-contact names returned no matches in the current tree;
+- current-tree correspondence sanitization is therefore verified;
+- historical exposure remains reachable through prior public Git history and is not represented as purged.
+
+The canonical source-revision rule is now:
+- never hard-code a SHA as permanently "current main";
+- record it as an `OBSERVED_MAIN_SHA_AT_RECONCILIATION`;
+- compare production against that observed SHA at the time evidence is collected;
+- any later merge creates a new head and does not invalidate the historical evidence anchor.
+
+Current safe-closure state:
+```text
+CURRENT_TREE_CONTACT_NAME_SEARCH=NO_MATCH
+CURRENT_TREE_PRIVATE_CORRESPONDENCE_REMOVED=YES
+HISTORICAL_PUBLIC_GIT_EXPOSURE=OPEN
+HISTORY_REWRITE_EXECUTED=NO
+REPOSITORY_VISIBILITY_CHANGE_EXECUTED=NO
+BUYER_MATERIALS_INTERNAL_CLOSURE_PERCENT=95.83%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
+FINAL_MA_GO=NO_PASS
+```
