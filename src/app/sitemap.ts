@@ -4,6 +4,8 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { getFeatureLanguageAlternates, getFeaturePages, getFeaturePath } from '@/lib/seo/feature-pages';
 import { getLocaleAlternates, getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
 
+const publicLocales: Locale[] = ['en'];
+
 const acquisitionPaths = ['', '/pricing'] as const;
 const englishAssurancePaths = ['/trust', '/security', '/compliance', '/data-processing', '/sla', '/privacy', '/terms', '/dpa', '/subprocessors'] as const;
 const englishGrowthPaths = [
@@ -46,7 +48,7 @@ function coreAlternates(appUrl: string, locale: Locale, path: string) {
 export default function sitemap(): MetadataRoute.Sitemap {
   const appUrl = getSiteUrl();
 
-  const coreEntries: MetadataRoute.Sitemap = locales.flatMap((locale) => {
+  const coreEntries: MetadataRoute.Sitemap = publicLocales.flatMap((locale) => {
     const paths = locale === 'en' ? [...acquisitionPaths, ...englishAssurancePaths] : [...acquisitionPaths];
 
     return paths.map((path) => ({
@@ -71,16 +73,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
-  const featureEntries: MetadataRoute.Sitemap = locales.flatMap((locale) =>
-    getFeaturePages(locale).map((page) => ({
-      url: `${appUrl}${getFeaturePath(locale, page.key)}`,
-      lastModified: stableLastModified,
-      changeFrequency: 'weekly',
-      priority: 0.85,
-      alternates: {
-        languages: getFeatureLanguageAlternates(page.key),
-      },
-    })),
+  const featureEntries: MetadataRoute.Sitemap = publicLocales.flatMap((locale) =>
+    getFeaturePages(locale).map((page) => {
+      const url = `${appUrl}${getFeaturePath(locale, page.key)}`;
+      return {
+        url,
+        lastModified: stableLastModified,
+        changeFrequency: 'weekly',
+        priority: 0.85,
+        alternates: {
+          languages: { en: url, 'x-default': url },
+        },
+      };
+    }),
   );
 
   return [...coreEntries, ...growthEntries, ...featureEntries];
