@@ -84,7 +84,8 @@ describe('international SEO acquisition architecture', () => {
     expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/tools\/'/);
     expect(nextConfig).toContain('/features/:path*');
     expect(sitemap).toContain('getFeaturePages');
-    expect(sitemap).toContain('getFeatureLanguageAlternates');
+    expect(sitemap).not.toContain('getFeatureLanguageAlternates');
+    expect(sitemap).toContain("languages: { en: url, 'x-default': url }");
     expect(sitemap).toContain('getFeaturePath');
   });
 
