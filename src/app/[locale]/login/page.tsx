@@ -55,8 +55,8 @@ function LoginContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const localeParam = (params.locale as string) || 'pt';
-  const locale = (locales.includes(localeParam as Locale) ? localeParam : 'pt') as Locale;
+  const localeParam = (params.locale as string) || 'en';
+  const locale = (locales.includes(localeParam as Locale) ? localeParam : 'en') as Locale;
   const planId = searchParams.get('plan');
   const afterSignInUrl = safeNext(searchParams.get('next'), locale, planId);
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
@@ -133,7 +133,7 @@ function LoginContent() {
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <label className="block text-sm font-medium text-slate-300">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className={inputClass} /></label>
                 <label className="block text-sm font-medium text-slate-300">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className={inputClass} /></label>
-                <div className="flex justify-end"><Link href={`/${locale}/recuperar-senha`} className="rounded-md text-sm font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{forgotLabel}</Link></div>
+                <div className="flex justify-end"><Link href={`/${locale}/recover-password`} className="rounded-md text-sm font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{forgotLabel}</Link></div>
                 <button type="submit" disabled={busy || loading} className="h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.submit}</button>
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">{text.createPrompt}{' '}<Link href={createAccountUrl} className="rounded-md font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{text.create}</Link></p>
