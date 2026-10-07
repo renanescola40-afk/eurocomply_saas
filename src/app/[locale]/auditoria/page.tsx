@@ -60,7 +60,7 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-100">{t.title}</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{t.description}</p>
         <Link
-          href={`/${locale}/notificacoes`}
+          href={`/${locale}/notifications`}
           className="mt-5 inline-flex min-h-10 items-center rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-medium text-slate-200 transition hover:border-blue-500/50 hover:text-white"
         >
           {t.notifications}
