@@ -1,5 +1,5 @@
 import type { Locale } from '@/lib/i18n/routing';
-import { getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
+import { getSiteUrl } from '@/lib/seo/public-metadata';
 
 import { deFeaturePages } from './de';
 import { enFeaturePages } from './en';
