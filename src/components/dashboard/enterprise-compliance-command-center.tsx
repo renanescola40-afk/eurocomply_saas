@@ -596,7 +596,7 @@ export function EnterpriseComplianceCommandCenter({
           </div>
 
           <div className="border-t border-white/[0.065] px-5 py-3">
-            <Link href={localizedRoute(locale, '/auditoria')} className="inline-flex items-center gap-2 text-xs font-medium text-white/48 transition hover:text-white/80">
+            <Link href={localizedRoute(locale, '/audit-log')} className="inline-flex items-center gap-2 text-xs font-medium text-white/48 transition hover:text-white/80">
               {copy.viewAuditLog} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>
