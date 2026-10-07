@@ -15,7 +15,7 @@ export function GoogleLoginButton() {
     const result = await signInWithGoogle();
 
     if (result.error) {
-      setError('Não foi possível iniciar sessão com Google. Tente novamente.');
+      setError('Could not sign in with Google. Please try again.');
       setLoading(false);
     }
   };
@@ -23,7 +23,7 @@ export function GoogleLoginButton() {
   return (
     <div>
       <button type="button" onClick={handleGoogleLogin} disabled={loading}>
-        {loading ? 'Redirecionando...' : 'Entrar com Google'}
+        {loading ? 'Redirecting...' : 'Sign in with Google'}
       </button>
       {error && <p>{error}</p>}
     </div>
