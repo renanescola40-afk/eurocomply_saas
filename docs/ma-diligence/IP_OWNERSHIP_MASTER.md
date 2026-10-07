@@ -1,7 +1,7 @@
 # RISCK COMPLY — IP Ownership Master
 
 Date: 2026-10-05  
-Baseline main SHA: `d9f89f9670df8907cafbab7db276f68d28e98df9`  
+Baseline main SHA: `3e60383a2c5e0762990f2b5fd83fde635e16f792`  
 Extended contributor review cutoff SHA: `ad5ae2b99875659c54b6139d35addbbc2a9cfad9`  
 Status: `IP_DILIGENCE_INTERNAL=PASS_DOCUMENTED / IP_CHAIN_GAPS_PRESENT`
 
