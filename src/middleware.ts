@@ -38,9 +38,9 @@ const PUBLIC_ROUTES = [
   '/about',
   '/contact',
   '/book-demo',
-  '/recuperar-senha',
+  '/recover-password',
   '/reset-password',
-  '/atualizar-senha',
+  '/update-password',
   '/trust',
   '/trust/procurement-pack',
   '/trust/security-questionnaire',
@@ -343,7 +343,7 @@ export default async function middleware(req: NextRequest) {
     const requestedLocale = pathname.split('/')[1];
     const localizedPath = stripLocale(pathname, requestedLocale);
     const legacyDestination = LEGACY_NON_ENGLISH_ROUTE_REDIRECTS[localizedPath];
-    if (requestedLocale === defaultLocale && legacyDestination) {
+    if (legacyDestination) {
       const redirectUrl = new URL(`/${defaultLocale}${legacyDestination}`, req.url);
       redirectUrl.search = req.nextUrl.search;
       return withRequestId(NextResponse.redirect(redirectUrl, 308), requestId);
