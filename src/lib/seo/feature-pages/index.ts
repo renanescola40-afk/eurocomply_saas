@@ -1,4 +1,4 @@
-import { locales, type Locale } from '@/lib/i18n/routing';
+import type { Locale } from '@/lib/i18n/routing';
 import { getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
 
 import { deFeaturePages } from './de';
@@ -38,12 +38,12 @@ export function getFeaturePath(locale: Locale, key: FeatureKey) {
 }
 
 export function getFeatureStaticParams(): FeatureStaticParam[] {
-  return locales.flatMap((locale) => getFeaturePages(locale).map((page) => ({ locale, feature: page.slug })));
+  return getFeaturePages('en').map((page) => ({ locale: 'en', feature: page.slug }));
 }
 
 export function getFeatureLanguageAlternates(key: FeatureKey): Record<string, string> {
   const siteUrl = getSiteUrl();
-  const entries = locales.map((locale) => [localeLanguageTags[locale], `${siteUrl}${getFeaturePath(locale, key)}`]);
+  const entries = [['en', `${siteUrl}${getFeaturePath('en', key)}`]];
 
   return {
     ...Object.fromEntries(entries),
