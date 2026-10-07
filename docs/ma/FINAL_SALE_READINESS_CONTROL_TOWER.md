@@ -1,6 +1,6 @@
 # RISCK COMPLY — Final Sale Readiness Control Tower
 
-Date: 2026-10-06  
+Date: 2026-10-07  
 Product: RISCK COMPLY  
 Seller: SAMUEL CERQUEIRA, UNIPESSOAL LDA  
 Repository: renanescola40-afk/eurocomply_saas  
@@ -241,19 +241,19 @@ The canonical reproducible scoring remains:
 ```text
 CORPORATE=5.0/17=29.41%
 IP=14.0/20=70.00%
-FINANCIAL=6.0/26=23.08%
+FINANCIAL=6.5/26=25.00%
 TAX=0.0/12=0.00%
 COMMERCIAL=6.5/15=43.33%
 PROVIDERS=4.0/8=50.00%
 
-TOTAL_SCORE=35.5
+TOTAL_SCORE=36.0
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_PERCENT=36.22%
-REMAINING_AUDITABLE_MA_EVIDENCE_PERCENT=63.78%
+AUDITABLE_MA_EVIDENCE_PERCENT=36.73%
+REMAINING_AUDITABLE_MA_EVIDENCE_PERCENT=63.27%
 INTERNAL_DOCUMENT_READINESS_PERCENT=100%
 ```
 
-This score is unchanged by this control-tower consolidation because no template, live Vercel/Supabase operational observation, or provider mechanism is being misused as proof of official corporate, tax, IP-title, financial, buyer, signature, or transfer execution facts.
+This score now includes one bounded financial evidence change: OPEX (#56) is PARTIAL because authenticated Vercel billing plus existing Google invoices prove a real subset of operating expenditure. No provider billing observation is treated as a complete ledger or as proof of tax, cash, payables or total-company OPEX.
 
 ## 9. Buyer pipeline classification
 
@@ -387,14 +387,14 @@ INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
 AUDITABLE_MA_EVIDENCE_PERCENT=36.22%
 CORPORATE_PERCENT=29.41%
 IP_PERCENT=70.00%
-FINANCIAL_PERCENT=23.08%
+FINANCIAL_PERCENT=25.00%
 TAX_PERCENT=0.00%
 COMMERCIAL_PERCENT=43.33%
 PROVIDER_PERCENT=50.00%
 SECURITY_DILIGENCE_PERCENT=70.00%
 
-SALE_READINESS_PERCENT=36.22%
-REMAINING_PERCENT=63.78%
+SALE_READINESS_PERCENT=36.73%
+REMAINING_PERCENT=63.27%
 
 FINAL_MA_GO=NO_PASS
 ```
