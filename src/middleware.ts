@@ -67,9 +67,18 @@ const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
   '/dashboard/organizations/vendors': '/vendor-assurance',
   '/dashboard/organizations/risks': '/dashboard/organizations/risks',
   '/dashboard/organizations/documents': '/dashboard/organizations/documents',
-  '/dashboard/organizations/tasks': '/aprovacoes',
+  '/dashboard/organizations/tasks': '/approvals',
   '/dashboard/organizations/reports': '/dashboard/organizations/reports-governance',
   '/pricing': '/pricing',
+};
+
+const LEGACY_NON_ENGLISH_ROUTE_REDIRECTS: Record<string, string> = {
+  '/aprovacoes': '/approvals',
+  '/notificacoes': '/notifications',
+  '/recuperar-senha': '/recover-password',
+  '/atualizar-senha': '/update-password',
+  '/dashboard/inventario': '/ai-systems',
+  '/dashboard/transparencia': '/dashboard/transparency',
 };
 
 function normalizeLegacyUndefinedPath(pathname: string): string | null {
@@ -332,6 +341,13 @@ export default async function middleware(req: NextRequest) {
 
   if (pathnameHasLocale) {
     const requestedLocale = pathname.split('/')[1];
+    const localizedPath = stripLocale(pathname, requestedLocale);
+    const legacyDestination = LEGACY_NON_ENGLISH_ROUTE_REDIRECTS[localizedPath];
+    if (requestedLocale === defaultLocale && legacyDestination) {
+      const redirectUrl = new URL(`/${defaultLocale}${legacyDestination}`, req.url);
+      redirectUrl.search = req.nextUrl.search;
+      return withRequestId(NextResponse.redirect(redirectUrl, 308), requestId);
+    }
     if (requestedLocale !== defaultLocale) {
       const englishPath = pathname.replace(`/${requestedLocale}`, `/${defaultLocale}`) || `/${defaultLocale}`;
       const redirectUrl = new URL(englishPath, req.url);
