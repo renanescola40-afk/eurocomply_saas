@@ -67,7 +67,7 @@ PROVIDER_TRANSFER_READY_FOR_CLOSING=NO
 
 ## Production release/account-status reconciliation — 2026-10-06
 
-Authenticated production-deployment creation against current main `a062294cd8a8a2a275d0c147028fff5634f935b4` was attempted through Vercel and rejected with `402 Payment Required` / `resource_creation_blocked`. The provider states that the team has an overdue balance and requires a valid payment method before resource creation can resume.
+Authenticated production-deployment creation against current main `e0c591620837877991451eb3a0ef6f4d08c4d2ee` was attempted through Vercel and rejected with `402 Payment Required` / `resource_creation_blocked`. The provider states that the team has an overdue balance and requires a valid payment method before resource creation can resume.
 
 Truth boundary:
 
@@ -75,7 +75,7 @@ Truth boundary:
 VERCEL_CURRENT_ACCOUNT_CONTROL=VERIFIED
 VERCEL_PROJECT_CONTROL=VERIFIED
 VERCEL_PRODUCTION_LAST_READY_SHA=def7bad00e082ce336734ff7658846fe87595c79
-VERCEL_CURRENT_MAIN_SHA=a062294cd8a8a2a275d0c147028fff5634f935b4
+VERCEL_CURRENT_MAIN_SHA=e0c591620837877991451eb3a0ef6f4d08c4d2ee
 MAIN_PRODUCTION_SHA_EQUALITY=FAIL
 VERCEL_RESOURCE_CREATION=BLOCKED_OVERDUE_BALANCE
 VERCEL_PAYMENT_ACTION=OWNER_REAL_MONEY_ACTION_REQUIRED
@@ -84,3 +84,18 @@ PROVIDER_SCORE_CHANGE=0
 ```
 
 This is stronger account-specific operational evidence but does not close provider requirement 91 because billing/legal owner reconciliation, buyer-specific transfer and closing execution remain incomplete.
+
+
+## GitHub source-control confidentiality reconciliation — 2026-10-07
+
+Authenticated GitHub repository metadata currently reports the primary repository as public (`visibility=public`, `private=false`). Operational repository control remains verified, but public visibility means confidentiality must not be assumed for historic source code already exposed through the repository.
+
+No visibility mutation was performed. Any public-to-private transition is an owner-controlled change that should be impact-checked against GitHub Actions, Vercel linkage, external integrations and buyer handover sequencing before execution.
+
+```text
+GITHUB_REPOSITORY_CONTROL=VERIFIED
+GITHUB_REPOSITORY_VISIBILITY=PUBLIC
+SOURCE_CONFIDENTIALITY_ASSUMPTION=FAIL
+VISIBILITY_CHANGE=OWNER_DECISION_REQUIRED
+PROVIDER_SCORE_CHANGE=0
+```
