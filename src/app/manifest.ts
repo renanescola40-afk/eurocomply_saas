@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Risck Comply',
-    short_name: 'Risck Comply',
+    name: 'RISCK COMPLY',
+    short_name: 'RISCK COMPLY',
     description:
       'AI compliance operating system for EU AI Act readiness, AI system inventory, risk evidence and governance workflows.',
     start_url: '/en',
