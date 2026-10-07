@@ -171,6 +171,7 @@ export function buildAccountRecoveryEvidence({
     evidenceLocations: [
       'src/app/api/auth/recovery/route.ts',
       'src/app/[locale]/recover-password/page.tsx',
+      'src/app/[locale]/recuperar-senha/page.tsx',
       'src/app/[locale]/reset-password/page.tsx',
       'src/app/[locale]/login/page.tsx',
       'tests/e2e/account-recovery.spec.ts',
@@ -202,7 +203,7 @@ function run() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
   const paths = {
     route: 'src/app/api/auth/recovery/route.ts',
-    requestPage: 'src/app/[locale]/recover-password/page.tsx',
+    requestPage: 'src/app/[locale]/recuperar-senha/page.tsx',
     resetPage: 'src/app/[locale]/reset-password/page.tsx',
     login: 'src/app/[locale]/login/page.tsx',
     middleware: 'src/middleware.ts',
