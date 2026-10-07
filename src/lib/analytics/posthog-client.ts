@@ -34,7 +34,7 @@ export const ANALYTICS_CONSENT_GRANTED_EVENT = 'risckcomply:analytics-consent-gr
 const SENSITIVE_PATH_PATTERNS = [
   /\/documents?(\/|$)/i,
   /\/risks?(\/|$)/i,
-  /\/riscos?(\/|$)/i,
+  /\/risks?(\/|$)/i,
   /\/vendor-assurance(\/|$)/i,
   /\/uploads?(\/|$)/i,
   /\/settings(\/|$)/i,
