@@ -7,7 +7,7 @@ describe('audit evidence pack export audit persistence', () => {
   it('does not disclose the evidence pack before durable audit persistence', () => {
     const auditIndex = source.indexOf('const auditResult = await createAuditEvent');
     const guardIndex = source.indexOf('if (!auditResult.persisted)');
-    const filenameIndex = source.indexOf('const filename = `eurocomply-audit-evidence-pack-');
+    const filenameIndex = source.indexOf('const filename = `risck-comply-audit-evidence-pack-');
     const downloadIndex = source.indexOf('return jsonDownloadResponse(exportPayload, filename);');
 
     expect(auditIndex).toBeGreaterThan(-1);
