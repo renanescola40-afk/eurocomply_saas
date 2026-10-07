@@ -21,7 +21,7 @@ Canonical status: `FINAL_MA_GO=NO_PASS`
 ## 2. Current technical baseline
 
 Current main after latest M&A evidence reconciliation:
-`3e60383a2c5e0762990f2b5fd83fde635e16f792`
+`63e0f5aa653e2796799e521338bb7fb2d18d7931`
 
 This final consolidation branch also contains the validated Financial/Tax closure pack carried from PR #2357/#2358.
 
@@ -260,8 +260,10 @@ This score now includes one bounded financial evidence change: OPEX (#56) is PAR
 Canonical mailbox evidence currently supports:
 - `TOTAL_OUTREACH=352` unique sent messages across the defined acquisition + pilot/procurement scope
 - `DELIVERY_FAILURE_MESSAGES=22`
-- B3: routed to responsible team
-- ServiceNow: routed to Corporate Development
+- Banyan Software: TIER_2_HUMAN_INTEREST — substantive human response requesting additional business information; not an offer, NDA, LOI or diligence acceptance
+- Twilio: TIER_2_HUMAN_INTEREST — substantive human response requesting additional business/product information; not an offer, NDA, LOI or diligence acceptance
+- B3: TIER_1_ROUTED — routed to responsible team
+- ServiceNow: TIER_1_ROUTED — routed to Corporate Development
 - BPI: pilot proposal under analysis
 - Devo: human response confirms the request belongs to another department and indicates timing may be better in approximately three months; this is a timing/routing signal, not current acquisition interest
 
@@ -275,7 +277,7 @@ Strict stage interpretation:
 
 Therefore:
 ```text
-REAL_BUYER_INTEREST=NOT_YET_CREDITED_AS_TIER_2_UNLESS_A_HUMAN_RESPONSE_EXPRESSES_SUBSTANTIVE_ACQUISITION_INTEREST
+REAL_BUYER_INTEREST=TIER_2_HUMAN_INTEREST_CREDITED_FOR_BANYAN_AND_TWILIO
 NDAS=0_CREDITED
 DILIGENCE_PROCESSES=0_CREDITED
 OFFERS=0_CREDITED
@@ -384,7 +386,7 @@ This is an M&A diligence control score, not a product-security certification.
 
 ```text
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
-AUDITABLE_MA_EVIDENCE_PERCENT=36.73%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
 CORPORATE_PERCENT=29.41%
 IP_PERCENT=70.00%
 FINANCIAL_PERCENT=26.92%
@@ -407,21 +409,21 @@ The internal M&A documentation architecture is closed at 100%. The transaction i
 
 It is not ready for signing or closing because corporate authority evidence, IP title execution, accounting/tax evidence, independent pentest evidence, buyer-specific transaction facts, provider closing execution, signatures, funds flow and buyer acceptance remain incomplete.
 
-No internal documentation blocker is being concealed. The remaining gap is primarily authoritative/external evidence and actual transaction execution.
+No internal documentation blocker is being concealed. One repository-confidentiality risk also remains open: private buyer correspondence removed from the current tree is still reachable in prior public Git history until a separately authorized history/visibility remediation is completed. The remaining transaction gap is otherwise primarily authoritative/external evidence and actual transaction execution.
 
 
 ## 15. Post-merge source confidentiality reconciliation — 2026-10-07
 
 - PR #2362 merged successfully after independent approval and exact-head CI closure.
-- Current canonical main SHA: `3e60383a2c5e0762990f2b5fd83fde635e16f792`.
+- Historical main SHA at the PR #2362 reconciliation checkpoint: `3e60383a2c5e0762990f2b5fd83fde635e16f792`.
 - Latest READY Vercel Production SHA remains `def7bad00e082ce336734ff7658846fe87595c79` because provider resource creation is blocked by the previously evidenced overdue-balance condition.
 - GitHub repository `renanescola40-afk/eurocomply_saas` is currently reported by the authenticated GitHub API as `visibility=public` / `private=false`.
 - No repository-visibility change was performed in this reconciliation. Changing visibility is an owner-controlled action that may affect integrations and should be executed only with an explicit migration/impact decision.
 - Public repository visibility is therefore a current source-confidentiality / transaction-diligence risk and must be disclosed to a buyer rather than represented as confidential source history.
 
 ```text
-CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
-PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
+HISTORICAL_MAIN_SHA_AT_PR_2362_CHECKPOINT=3e60383a2c5e0762990f2b5fd83fde635e16f792
+PRODUCTION_SHA_AT_CHECKPOINT=def7bad00e082ce336734ff7658846fe87595c79
 MAIN_PRODUCTION_SHA_EQUALITY=FAIL
 PR_2362=MERGED
 PR_2362_EXACT_HEAD_WORKFLOWS=26/26_SUCCESS
@@ -437,13 +439,15 @@ This reconciliation does not change the 98-item score because requirement 36 was
 
 - PR #2363 is merged and its exact-head CI/review gate is closed.
 - A later authenticated Vercel billing reconciliation moved OPEX requirement #56 from OPEN to PARTIAL.
-- Canonical main is now `3e60383a2c5e0762990f2b5fd83fde635e16f792`.
+- Canonical main observed on 2026-10-07 after PR #2371 is `63e0f5aa653e2796799e521338bb7fb2d18d7931`.
 - Canonical auditable M&A score is `36.5 / 98 = 37.24%`; remaining auditable evidence is `62.76%`.
 - Any earlier 35.5/98 or 36.22% block in historical sections is a superseded checkpoint, not the current score.
 - Latest READY Vercel Production remains `def7bad00e082ce336734ff7658846fe87595c79`; main/Production equality remains FAIL until billing is regularized and a fresh deployment succeeds.
 
 ```text
-CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
+CURRENT_MAIN_SHA=63e0f5aa653e2796799e521338bb7fb2d18d7931
+PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
+MAIN_PRODUCTION_SHA_EQUALITY=FAIL
 CANONICAL_TOTAL_SCORE=36.5/98
 CANONICAL_SALE_READINESS_PERCENT=37.24%
 CANONICAL_REMAINING_PERCENT=62.76%
@@ -455,3 +459,48 @@ FINAL_MA_GO=NO_PASS
 ### Financial evidence delta — Vercel payable
 
 Authenticated Vercel billing enforcement proves an overdue provider balance exists. Requirement #52 Payables is therefore PARTIAL rather than OPEN. The amount and complete seller A/P aging remain external/accountant evidence, so no CLOSED status is claimed.
+
+
+## 17. Buyer-material and confidentiality reconciliation — 2026-10-07
+
+- PR #2369 merged the buyer-material pack.
+- PR #2370 merged the first P1 remediation for revenue-boundary and current-tree correspondence sanitization.
+- PR #2371 merged the canonical buyer-interest/confidentiality reconciliation; all 24 exact-head workflows completed successfully.
+- All 24 exact-head GitHub workflow runs for PR #2370 completed successfully.
+- The revenue boundary is canonical: Stripe-only zero invoices/charges do not prove total product revenue, MRR or ARR.
+- Banyan Software and Twilio are canonically classified as `TIER_2_HUMAN_INTEREST`; neither is an offer, LOI, NDA, diligence acceptance or valuation acceptance.
+- ServiceNow and B3 remain `TIER_1_ROUTED`.
+- Private buyer correspondence is removed from the current tree, but prior public Git history remains reachable. This is an OPEN confidentiality risk, not a closed item.
+- No email was sent by this reconciliation.
+
+```text
+BUYER_MATERIALS_CURRENT_TREE=COMPLETE
+BUYER_MATERIALS_INTERNAL_CLOSURE_PERCENT=95.83%
+BUYER_HISTORY_CONFIDENTIALITY=OPEN
+BANYAN_STAGE=TIER_2_HUMAN_INTEREST
+TWILIO_STAGE=TIER_2_HUMAN_INTEREST
+SERVICENOW_STAGE=TIER_1_ROUTED
+B3_STAGE=TIER_1_ROUTED
+AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
+FINAL_MA_GO=NO_PASS
+```
+
+
+## 18. Post-PR #2371 review reconciliation — 2026-10-07
+
+Observed canonical main:
+`63e0f5aa653e2796799e521338bb7fb2d18d7931`
+
+Latest READY production SHA remains:
+`def7bad00e082ce336734ff7658846fe87595c79`
+
+Therefore:
+- CURRENT_MAIN_SHA=63e0f5aa653e2796799e521338bb7fb2d18d7931
+- PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
+- MAIN_PRODUCTION_SHA_EQUALITY=FAIL
+- the previously cited `3e60383...` value is retained only as a historical checkpoint where explicitly labelled
+- buyer-material closure is now calculated, not guessed: 11 full rows + 1 half-credit PARTIAL row = 11.5 / 12 = 95.83%
+- current-tree buyer correspondence is sanitized
+- prior public Git history exposure remains OPEN
+- no email was sent
+- no force push/history rewrite or repository-visibility change was performed
