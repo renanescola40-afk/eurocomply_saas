@@ -62,12 +62,12 @@ The repository baseline protects `main` from force pushes. Do not disable this c
 
 Before any force update:
 1. capture the exact current branch-protection and ruleset configuration;
-2. record the exact protected-branch head and approved rewrite target;
+2. record the exact old object ID (OID/SHA) for every affected ref and the approved rewrite target for each ref;
 3. restrict the maintenance window to the designated operator;
 4. freeze merges/direct pushes and prevent unrelated writes;
 5. create the rewritten mirror and verify it offline;
 6. if GitHub protection blocks the required force-with-lease update, create a narrowly scoped, time-bounded exception only for the required ref/operator;
-7. force-update only the explicitly approved affected refs using lease protection;
+7. force-update only the explicitly approved affected refs using an explicit expected-value lease bound to the captured old OID for each ref (for example, the equivalent of `--force-with-lease=<ref>:<expected-old-oid>`); never use an unqualified/bare lease for this remediation;
 8. immediately restore the exact captured protection/ruleset configuration;
 9. verify force-push protection, required reviews, status checks and other branch rules are restored;
 10. run CI/security/release checks again before unfreezing development.
@@ -79,7 +79,7 @@ If a safe exception cannot be created and restored predictably, do not weaken pr
 1. create a mirror clone;
 2. rewrite every affected ref so the sensitive historical content is removed;
 3. preserve unrelated repository content and authorship where practicable;
-4. force-update only approved affected refs with lease protection under the procedure above;
+4. force-update only approved affected refs with explicit per-ref expected-value leases bound to the captured old OIDs under the procedure above;
 5. re-create or reconcile tags only after verification;
 6. inspect PR refs and other server-side references;
 7. coordinate with owners of every affected public fork for cleanup/deletion;
@@ -135,6 +135,7 @@ Do not mark confidentiality CLOSED until all applicable checks pass:
 - direct historical commit URLs are no longer publicly usable where purge is expected;
 - GitHub Support actions, if required, are complete;
 - branch protections/rulesets are restored and re-verified;
+- every rewritten ref update was bound to its captured pre-rewrite OID with an explicit expected-value lease, and any mismatch caused an abort/re-investigation rather than an overwrite;
 - required reviews/status checks/force-push restrictions are restored;
 - collaborator clone cleanup acknowledgments are complete;
 - bots/automation use rewritten canonical refs;
@@ -150,6 +151,7 @@ CURRENT_TREE_SANITIZED=PASS
 PUBLIC_HISTORY_PURGED=NO
 REPOSITORY_PRIVATE=NO
 BRANCH_PROTECTION_EXCEPTION_EXECUTED=NO
+PER_REF_EXPECTED_VALUE_LEASES=NOT_EXECUTED
 COLLABORATOR_CLONE_CLEANUP=NOT_EXECUTED
 FORK_CLEANUP=NOT_EXECUTED
 GITHUB_SUPPORT_PURGE=NOT_REQUESTED
@@ -163,6 +165,7 @@ CURRENT_TREE_SANITIZED=PASS
 PUBLIC_HISTORY_PURGED=PASS_OR_NOT_PUBLICLY_REACHABLE
 REPOSITORY_VISIBILITY=APPROVED_TARGET_STATE
 BRANCH_PROTECTION=RESTORED_AND_VERIFIED
+PER_REF_EXPECTED_VALUE_LEASES=PASS
 COLLABORATOR_CLONE_CLEANUP=PASS
 FORK_CLEANUP=PASS_OR_NOT_APPLICABLE
 GITHUB_SUPPORT_PURGE=COMPLETE_IF_REQUIRED
