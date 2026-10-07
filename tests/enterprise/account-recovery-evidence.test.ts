@@ -12,7 +12,7 @@ const SHA = 'a'.repeat(40);
 function repositorySources() {
   return {
     route: readFileSync('src/app/api/auth/recovery/route.ts', 'utf8'),
-    requestPage: readFileSync('src/app/[locale]/recuperar-senha/page.tsx', 'utf8'),
+    requestPage: readFileSync('src/app/[locale]/recover-password/page.tsx', 'utf8'),
     resetPage: readFileSync('src/app/[locale]/reset-password/page.tsx', 'utf8'),
     login: readFileSync('src/app/[locale]/login/page.tsx', 'utf8'),
     middleware: readFileSync('src/middleware.ts', 'utf8'),
