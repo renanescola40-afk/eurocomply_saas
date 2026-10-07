@@ -79,6 +79,7 @@ const LEGACY_NON_ENGLISH_ROUTE_REDIRECTS: Record<string, string> = {
   '/atualizar-senha': '/update-password',
   '/dashboard/inventario': '/ai-systems',
   '/dashboard/transparencia': '/dashboard/transparency',
+  '/auditoria': '/audit-log',
 };
 
 function normalizeLegacyUndefinedPath(pathname: string): string | null {
