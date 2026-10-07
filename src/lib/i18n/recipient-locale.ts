@@ -1,4 +1,4 @@
-import { locales, type Locale } from '@/lib/i18n/routing';
+import { type Locale } from '@/lib/i18n/routing';
 
 export const RECIPIENT_LOCALE_METADATA_KEY = 'preferred_language' as const;
 export const RECIPIENT_LOCALE_FALLBACK: Locale = 'en';
