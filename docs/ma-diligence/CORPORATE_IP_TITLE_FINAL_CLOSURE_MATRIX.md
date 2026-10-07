@@ -1,7 +1,7 @@
 # RISCK COMPLY — Corporate + IP + Title Final Closure Matrix
 
 Date: 2026-10-06  
-Baseline main SHA: `d9f89f9670df8907cafbab7db276f68d28e98df9`  
+Baseline main SHA: `3e60383a2c5e0762990f2b5fd83fde635e16f792`  
 Seller entity: SAMUEL CERQUEIRA, UNIPESSOAL LDA  
 Scope: corporate authority, IP chain of title, asset title and transfer readiness for a 100% RISCK COMPLY sale.
 
