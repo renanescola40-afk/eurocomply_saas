@@ -260,8 +260,10 @@ This score now includes one bounded financial evidence change: OPEX (#56) is PAR
 Canonical mailbox evidence currently supports:
 - `TOTAL_OUTREACH=352` unique sent messages across the defined acquisition + pilot/procurement scope
 - `DELIVERY_FAILURE_MESSAGES=22`
-- B3: routed to responsible team
-- ServiceNow: routed to Corporate Development
+- Banyan Software: TIER_2_HUMAN_INTEREST — substantive human response requesting additional business information; not an offer, NDA, LOI or diligence acceptance
+- Twilio: TIER_2_HUMAN_INTEREST — substantive human response requesting additional business/product information; not an offer, NDA, LOI or diligence acceptance
+- B3: TIER_1_ROUTED — routed to responsible team
+- ServiceNow: TIER_1_ROUTED — routed to Corporate Development
 - BPI: pilot proposal under analysis
 - Devo: human response confirms the request belongs to another department and indicates timing may be better in approximately three months; this is a timing/routing signal, not current acquisition interest
 
@@ -275,7 +277,7 @@ Strict stage interpretation:
 
 Therefore:
 ```text
-REAL_BUYER_INTEREST=NOT_YET_CREDITED_AS_TIER_2_UNLESS_A_HUMAN_RESPONSE_EXPRESSES_SUBSTANTIVE_ACQUISITION_INTEREST
+REAL_BUYER_INTEREST=TIER_2_HUMAN_INTEREST_CREDITED_FOR_BANYAN_AND_TWILIO
 NDAS=0_CREDITED
 DILIGENCE_PROCESSES=0_CREDITED
 OFFERS=0_CREDITED
@@ -384,7 +386,7 @@ This is an M&A diligence control score, not a product-security certification.
 
 ```text
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
-AUDITABLE_MA_EVIDENCE_PERCENT=36.73%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
 CORPORATE_PERCENT=29.41%
 IP_PERCENT=70.00%
 FINANCIAL_PERCENT=26.92%
@@ -407,7 +409,7 @@ The internal M&A documentation architecture is closed at 100%. The transaction i
 
 It is not ready for signing or closing because corporate authority evidence, IP title execution, accounting/tax evidence, independent pentest evidence, buyer-specific transaction facts, provider closing execution, signatures, funds flow and buyer acceptance remain incomplete.
 
-No internal documentation blocker is being concealed. The remaining gap is primarily authoritative/external evidence and actual transaction execution.
+No internal documentation blocker is being concealed. One repository-confidentiality risk also remains open: private buyer correspondence removed from the current tree is still reachable in prior public Git history until a separately authorized history/visibility remediation is completed. The remaining transaction gap is otherwise primarily authoritative/external evidence and actual transaction execution.
 
 
 ## 15. Post-merge source confidentiality reconciliation — 2026-10-07
@@ -455,3 +457,27 @@ FINAL_MA_GO=NO_PASS
 ### Financial evidence delta — Vercel payable
 
 Authenticated Vercel billing enforcement proves an overdue provider balance exists. Requirement #52 Payables is therefore PARTIAL rather than OPEN. The amount and complete seller A/P aging remain external/accountant evidence, so no CLOSED status is claimed.
+
+
+## 17. Buyer-material and confidentiality reconciliation — 2026-10-07
+
+- PR #2369 merged the buyer-material pack.
+- PR #2370 merged the first P1 remediation for revenue-boundary and current-tree correspondence sanitization.
+- All 24 exact-head GitHub workflow runs for PR #2370 completed successfully.
+- The revenue boundary is canonical: Stripe-only zero invoices/charges do not prove total product revenue, MRR or ARR.
+- Banyan Software and Twilio are canonically classified as `TIER_2_HUMAN_INTEREST`; neither is an offer, LOI, NDA, diligence acceptance or valuation acceptance.
+- ServiceNow and B3 remain `TIER_1_ROUTED`.
+- Private buyer correspondence is removed from the current tree, but prior public Git history remains reachable. This is an OPEN confidentiality risk, not a closed item.
+- No email was sent by this reconciliation.
+
+```text
+BUYER_MATERIALS_CURRENT_TREE=COMPLETE
+BUYER_MATERIALS_INTERNAL_CLOSURE_PERCENT=99.00%
+BUYER_HISTORY_CONFIDENTIALITY=OPEN
+BANYAN_STAGE=TIER_2_HUMAN_INTEREST
+TWILIO_STAGE=TIER_2_HUMAN_INTEREST
+SERVICENOW_STAGE=TIER_1_ROUTED
+B3_STAGE=TIER_1_ROUTED
+AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
+FINAL_MA_GO=NO_PASS
+```
