@@ -31,7 +31,7 @@ const TEST_EMAIL_ROUTE = '/api/internal/email/test';
 const TEST_EMAIL_ACTION = 'send_test_email';
 const TEST_EMAIL_AUTH_ACTION = 'authenticate_internal_email_test';
 const TEST_EMAIL_RATE_LIMIT_KEY = 'internal-email-test:route';
-const TEST_EMAIL_DEFAULT_ORG_NAME = 'Risck Comply Demo Org';
+const TEST_EMAIL_DEFAULT_ORG_NAME = 'RISCK COMPLY Demo Org';
 
 const TEST_EMAIL_TEMPLATES = [
   'welcome_onboarding',
@@ -113,40 +113,40 @@ function buildTemplate(template: TestEmailTemplate, organizationName: string) {
 
   switch (template) {
     case 'welcome_onboarding':
-      return welcomeOnboardingEmail({ organizationName, dashboardUrl: `${appUrl}/pt/dashboard` });
+      return welcomeOnboardingEmail({ organizationName, dashboardUrl: `${appUrl}/en/dashboard` });
     case 'organization_created':
-      return organizationCreatedEmail({ organizationName, organizationUrl: `${appUrl}/pt/dashboard/organizations`, createdByName: 'Risck Comply Admin' });
+      return organizationCreatedEmail({ organizationName, organizationUrl: `${appUrl}/en/dashboard/organizations`, createdByName: 'RISCK COMPLY Admin' });
     case 'member_invited':
-      return memberInvitedEmail({ organizationName, role: 'member', inviteUrl: `${appUrl}/pt/dashboard/organizations/invitations`, invitedByName: 'Risck Comply Admin' });
+      return memberInvitedEmail({ organizationName, role: 'member', inviteUrl: `${appUrl}/en/dashboard/organizations/invitations`, invitedByName: 'RISCK COMPLY Admin' });
     case 'billing_started':
-      return billingStartedEmail({ organizationName, planName: 'Professional', billingUrl: `${appUrl}/pt/dashboard/organizations/billing` });
+      return billingStartedEmail({ organizationName, planName: 'Professional', billingUrl: `${appUrl}/en/dashboard/organizations/billing` });
     case 'invoice_failed':
-      return invoiceFailedEmail({ organizationName, billingUrl: `${appUrl}/pt/dashboard/organizations/billing`, amountDue: '€99.00' });
+      return invoiceFailedEmail({ organizationName, billingUrl: `${appUrl}/en/dashboard/organizations/billing`, amountDue: '€99.00' });
     case 'compliance_deadline_reminder':
       return complianceDeadlineReminderEmail({
         organizationName,
         deadlineName: 'EU AI Act readiness review',
         dueDate: '2026-08-02',
-        dashboardUrl: `${appUrl}/pt/dashboard`,
-        unsubscribeUrl: `${appUrl}/pt/dashboard/settings/notifications`,
+        dashboardUrl: `${appUrl}/en/dashboard`,
+        unsubscribeUrl: `${appUrl}/en/dashboard/settings/notifications`,
       });
     case 'export_ready':
-      return exportReadyEmail({ organizationName, exportName: 'Compliance evidence pack', exportsUrl: `${appUrl}/pt/dashboard/exports` });
+      return exportReadyEmail({ organizationName, exportName: 'Compliance evidence pack', exportsUrl: `${appUrl}/en/dashboard/exports` });
     case 'security_alert':
       return securityAlertEmail({
         organizationName,
         alertTitle: 'New administrator sign-in detected',
         occurredAt: new Date().toISOString(),
-        securityUrl: `${appUrl}/pt/dashboard/security`,
+        securityUrl: `${appUrl}/en/dashboard/security`,
         ipAddress: '203.0.113.10',
         location: 'Lisbon, Portugal',
       });
     case 'trial_upgrade':
-      return trialUpgradeEmail({ organizationName, billingUrl: `${appUrl}/pt/dashboard/organizations/billing`, daysRemaining: 3 });
+      return trialUpgradeEmail({ organizationName, billingUrl: `${appUrl}/en/dashboard/organizations/billing`, daysRemaining: 3 });
     case 'document_expiring':
-      return documentExpiringEmail({ organizationName, documentName: 'Document review test', expiresAt: '2026-08-02', documentsUrl: `${appUrl}/pt/dashboard/documents` });
+      return documentExpiringEmail({ organizationName, documentName: 'Document review test', expiresAt: '2026-08-02', documentsUrl: `${appUrl}/en/dashboard/documents` });
     case 'vendor_review':
-      return vendorReviewEmail({ organizationName, vendorName: 'Vendor review test', vendorsUrl: `${appUrl}/pt/dashboard/vendors`, reviewDueAt: '2026-08-02' });
+      return vendorReviewEmail({ organizationName, vendorName: 'Vendor review test', vendorsUrl: `${appUrl}/en/dashboard/vendors`, reviewDueAt: '2026-08-02' });
   }
 }
 
