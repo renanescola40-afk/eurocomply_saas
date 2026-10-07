@@ -80,6 +80,9 @@ const LEGACY_NON_ENGLISH_ROUTE_REDIRECTS: Record<string, string> = {
   '/dashboard/inventario': '/ai-systems',
   '/dashboard/transparencia': '/dashboard/transparency',
   '/auditoria': '/audit-log',
+  '/documentos': '/documents',
+  '/riscos': '/risks',
+  '/calendario-compliance': '/compliance-calendar',
 };
 
 function normalizeLegacyUndefinedPath(pathname: string): string | null {
