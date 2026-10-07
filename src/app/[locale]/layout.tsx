@@ -44,27 +44,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const labels: Record<Locale, { title: string; description: string }> = {
     en: {
-      title: 'Risck Comply - AI Compliance Operating System',
+      title: 'RISCK COMPLY - AI Compliance Operating System',
       description: 'EU AI Act readiness, AI system inventory, risk evidence, governance documents and audit workflows for European B2B teams.',
     },
     pt: {
-      title: 'Risck Comply - AI Compliance Operating System',
+      title: 'RISCK COMPLY - AI Compliance Operating System',
       description: 'Apoio à preparação para o AI Act, inventário de IA, visibilidade de riscos, preparação de evidências de governança e fluxos operacionais de compliance para equipas B2B europeias.',
     },
     es: {
-      title: 'Risck Comply - AI Compliance Operating System',
+      title: 'RISCK COMPLY - AI Compliance Operating System',
       description: 'Apoyo para la preparación ante el AI Act, inventario de IA, visibilidad de riesgos, preparación de evidencias de gobernanza y flujos operativos de compliance para equipos B2B europeos.',
     },
     fr: {
-      title: 'Risck Comply - AI Compliance Operating System',
+      title: 'RISCK COMPLY - AI Compliance Operating System',
       description: 'Accompagnement à la préparation au AI Act, inventaire des systèmes d’IA, visibilité des risques, préparation des preuves de gouvernance et flux opérationnels de conformité pour les équipes B2B européennes.',
     },
     it: {
-      title: 'Risck Comply - AI Compliance Operating System',
+      title: 'RISCK COMPLY - AI Compliance Operating System',
       description: 'Supporto alla preparazione per l’AI Act, inventario dei sistemi di IA, visibilità dei rischi, preparazione delle evidenze di governance e flussi operativi di compliance per team B2B europei.',
     },
     de: {
-      title: 'Risck Comply - AI Compliance Operating System',
+      title: 'RISCK COMPLY - AI Compliance Operating System',
       description: 'Unterstützung bei der Vorbereitung auf den AI Act, KI-Inventar, Risikotransparenz, Vorbereitung von Governance-Nachweisen und Compliance-Workflows für europäische B2B-Teams.',
     },
   };
