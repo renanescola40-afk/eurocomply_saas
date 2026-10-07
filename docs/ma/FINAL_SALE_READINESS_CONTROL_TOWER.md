@@ -20,8 +20,8 @@ Canonical status: `FINAL_MA_GO=NO_PASS`
 
 ## 2. Current technical baseline
 
-Current main after P0 security + contributor-history closure:
-`e0c591620837877991451eb3a0ef6f4d08c4d2ee`
+Current canonical main after the 2026-10-07 Vercel OPEX reconciliation:
+`3e60383a2c5e0762990f2b5fd83fde635e16f792`
 
 This final consolidation branch also contains the validated Financial/Tax closure pack carried from PR #2357/#2358.
 
@@ -384,7 +384,7 @@ This is an M&A diligence control score, not a product-security certification.
 
 ```text
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
-AUDITABLE_MA_EVIDENCE_PERCENT=36.22%
+AUDITABLE_MA_EVIDENCE_PERCENT=36.73%
 CORPORATE_PERCENT=29.41%
 IP_PERCENT=70.00%
 FINANCIAL_PERCENT=25.00%
@@ -413,14 +413,14 @@ No internal documentation blocker is being concealed. The remaining gap is prima
 ## 15. Post-merge source confidentiality reconciliation — 2026-10-07
 
 - PR #2362 merged successfully after independent approval and exact-head CI closure.
-- Current canonical main SHA: `e0c591620837877991451eb3a0ef6f4d08c4d2ee`.
+- Current canonical main SHA: `3e60383a2c5e0762990f2b5fd83fde635e16f792`.
 - Latest READY Vercel Production SHA remains `def7bad00e082ce336734ff7658846fe87595c79` because provider resource creation is blocked by the previously evidenced overdue-balance condition.
 - GitHub repository `renanescola40-afk/eurocomply_saas` is currently reported by the authenticated GitHub API as `visibility=public` / `private=false`.
 - No repository-visibility change was performed in this reconciliation. Changing visibility is an owner-controlled action that may affect integrations and should be executed only with an explicit migration/impact decision.
 - Public repository visibility is therefore a current source-confidentiality / transaction-diligence risk and must be disclosed to a buyer rather than represented as confidential source history.
 
 ```text
-CURRENT_MAIN_SHA=e0c591620837877991451eb3a0ef6f4d08c4d2ee
+CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
 PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
 MAIN_PRODUCTION_SHA_EQUALITY=FAIL
 PR_2362=MERGED
@@ -431,3 +431,22 @@ SCORE_CHANGE=0
 ```
 
 This reconciliation does not change the 98-item score because requirement 36 was already CLOSED for source-access/security-history diligence and no external title, corporate, tax, financial, provider-transfer or buyer-execution fact moved state.
+
+
+## 16. Canonical score/main reconciliation — 2026-10-07
+
+- PR #2363 is merged and its exact-head CI/review gate is closed.
+- A later authenticated Vercel billing reconciliation moved OPEX requirement #56 from OPEN to PARTIAL.
+- Canonical main is now `3e60383a2c5e0762990f2b5fd83fde635e16f792`.
+- Canonical auditable M&A score is `36.0 / 98 = 36.73%`; remaining auditable evidence is `63.27%`.
+- Any earlier 35.5/98 or 36.22% block in historical sections is a superseded checkpoint, not the current score.
+- Latest READY Vercel Production remains `def7bad00e082ce336734ff7658846fe87595c79`; main/Production equality remains FAIL until billing is regularized and a fresh deployment succeeds.
+
+```text
+CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
+CANONICAL_TOTAL_SCORE=36.0/98
+CANONICAL_SALE_READINESS_PERCENT=36.73%
+CANONICAL_REMAINING_PERCENT=63.27%
+INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
+FINAL_MA_GO=NO_PASS
+```
