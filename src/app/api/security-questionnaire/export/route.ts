@@ -141,7 +141,7 @@ export async function GET(request: Request) {
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = sanitizeDocumentDownloadFileName(
-      `eurocomply-security-questionnaire-${organization.slug ?? organization.name ?? organization.id}-${date}.json`,
+      `risck-comply-security-questionnaire-${organization.slug ?? organization.name ?? organization.id}-${date}.json`,
     );
 
     return jsonDownloadResponse(exportPayload, filename);
