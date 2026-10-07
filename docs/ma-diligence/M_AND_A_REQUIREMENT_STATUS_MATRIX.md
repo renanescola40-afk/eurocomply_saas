@@ -213,7 +213,7 @@ FINANCIAL_TAX_GO=PASS_INTERNAL_CLOSURE_ONLY
 - PR #2361 merged the `sharp 0.35.4 -> 0.35.5` remediation, regenerated lockfile and truthful Corporate/IP final-GO normalization.
 - All 28 exact-head workflow checks passed before merge, including dependency proof, CI, Full Security Suite, Enterprise DAST, SBOM/attestation and Enterprise Production Gate.
 - Full contributor-history pagination closed at 18,111 reachable commits; requirements 20/21 remain PARTIAL because relationship classification is still owner/legal-document dependent.
-- Current main is `e0c591620837877991451eb3a0ef6f4d08c4d2ee`.
+- Current main is `3e60383a2c5e0762990f2b5fd83fde635e16f792`.
 - Latest READY production remains `def7bad00e082ce336734ff7658846fe87595c79`.
 - Exact-current-main Vercel deployment was attempted and rejected with `402 Payment Required / resource_creation_blocked` due to an overdue team balance.
 - No payment was performed.
@@ -236,10 +236,32 @@ POST_P0_SCORE_CHANGE=+0.5_REQUIREMENT_FROM_FINANCIAL_RECONCILIATION
 - This is a current confidentiality / transaction-diligence risk, but it does not change requirement 36's score because that requirement measures source access/security history and is already CLOSED. It must not be recharacterized as confidential repository history while public visibility remains true.
 - No repository visibility change or Vercel payment was performed.
 
+This was the historical score at the source-confidentiality checkpoint before the later Vercel OPEX reconciliation. The current canonical score is superseding evidence, not a second simultaneous score.
+
 ```text
-TOTAL_SCORE=35.5
-TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=36.22%
-AUDITABLE_MA_EVIDENCE_REMAINING=63.78%
-POST_MERGE_SCORE_CHANGE=0
+HISTORICAL_CHECKPOINT_SCORE=35.5/98
+CURRENT_CANONICAL_SCORE=36.0/98
+CURRENT_AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
+CURRENT_AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
+POST_MERGE_FINANCIAL_SCORE_CHANGE=+0.5_REQUIREMENT
 ```
+
+
+## Canonical current state — 2026-10-07
+
+```text
+CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
+CORPORATE=5.0/17
+IP=14.0/20
+FINANCIAL=6.5/26
+TAX=0.0/12
+COMMERCIAL=6.5/15
+PROVIDERS=4.0/8
+TOTAL_SCORE=36.0/98
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
+AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
+INTERNAL_DOCUMENT_READINESS=100%
+FINAL_MA_GO=NO_PASS
+```
+
+This block is authoritative if an older historical checkpoint elsewhere in the file shows a lower score.
