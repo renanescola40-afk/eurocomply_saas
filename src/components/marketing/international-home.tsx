@@ -241,11 +241,9 @@ export function InternationalHome({ locale }: { locale: InternationalLocale }) {
       </section>
 
       <nav aria-label={copy.languageLabel} className="mx-auto flex max-w-7xl flex-wrap gap-2 px-5 pb-14 lg:px-8">
-        {(['en'] as const).map((language) => (
-          <Link key={language} href={`/${language}`} hrefLang={language} className={`rounded-lg border px-4 py-2 text-xs transition ${language === locale ? 'border-blue-400/35 bg-blue-500/10 text-white' : 'border-white/10 text-white/48 hover:border-white/25 hover:text-white'}`}>
-            {LOCALE_META[language].nativeName}
-          </Link>
-        ))}
+        <Link href="/en" hrefLang="en" className="rounded-lg border border-blue-400/35 bg-blue-500/10 px-4 py-2 text-xs text-white transition">
+          {LOCALE_META.en.nativeName}
+        </Link>
       </nav>
 
       <PublicFooter locale={locale} />
