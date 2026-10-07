@@ -129,7 +129,7 @@ export async function GET(request: Request) {
     return noStoreJson({ error: 'continuity_center_export_audit_unavailable' }, { status: 503 });
   }
 
-  const fileName = sanitizeDocumentDownloadFileName(`eurocomply-continuity-center-${organization.slug ?? organization.id}.json`);
+  const fileName = sanitizeDocumentDownloadFileName(`risck-comply-continuity-center-${organization.slug ?? organization.id}.json`);
 
   return noStoreDownload(JSON.stringify(envelope, null, 2), {
     status: 200,
