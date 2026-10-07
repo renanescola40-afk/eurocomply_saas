@@ -29,20 +29,20 @@ function escapeHtml(value: string | number | null | undefined) {
     .replaceAll("'", '&#39;');
 }
 
-function formatJoinedAt(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : 'en-GB', {
+function formatJoinedAt(value: string, _locale: string) {
+  return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'full',
     timeStyle: 'short',
     timeZone: 'Europe/Lisbon',
   }).format(new Date(value));
 }
 
-function formatRemaining(joinedAt: string, launchAt: string, locale: string) {
+function formatRemaining(joinedAt: string, launchAt: string, _locale: string) {
   const seconds = Math.max(0, Math.floor((Date.parse(launchAt) - Date.parse(joinedAt)) / 1000));
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
-  return locale === 'pt' ? `${days} dias, ${hours} horas e ${minutes} minutos` : `${days} days, ${hours} hours and ${minutes} minutes`;
+  return `${days} days, ${hours} hours and ${minutes} minutes`;
 }
 
 function premiumEmailShell(title: string, preview: string, body: string) {
@@ -126,32 +126,32 @@ export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
     text,
     template: 'welcome_onboarding',
     idempotencyKey: `prelaunch-waitlist:${input.to.toLowerCase()}`,
-    metadata: { source: 'prelaunch_waitlist', locale: input.locale },
+    metadata: { source: 'prelaunch_waitlist', locale: 'en' },
   });
 }
 
 export async function sendInternalWaitlistNotification(input: InternalWaitlistNotificationInput) {
   const recipient = input.notifyTo || INTERNAL_WAITLIST_NOTIFY_EMAIL;
-  const joinedAt = formatJoinedAt(input.joinedAt, 'pt');
-  const totalText = input.totalLeads === null ? 'Total ainda indisponível' : `${input.totalLeads} pessoas já se inscreveram`;
-  const subject = `Novo lead waitlist: ${input.companyName}`;
+  const joinedAt = formatJoinedAt(input.joinedAt, 'en');
+  const totalText = input.totalLeads === null ? 'Total currently unavailable' : `${input.totalLeads} people have already joined`;
+  const subject = `New waitlist lead: ${input.companyName}`;
   const text = [
-    'Novo lead na lista de espera da RISCK COMPLY',
-    `Empresa/Nome: ${input.companyName}`,
+    'New lead on the RISCK COMPLY waitlist',
+    `Company/Name: ${input.companyName}`,
     `Email: ${input.to}`,
-    `Cargo: ${input.role}`,
-    `Inscrição: ${joinedAt}`,
+    `Role: ${input.role}`,
+    `Joined: ${joinedAt}`,
     `Total: ${totalText}`,
-    `Página: ${input.waitlistUrl}`,
+    `Page: ${input.waitlistUrl}`,
   ].join('\n\n');
   const body = `
     <div style="padding:28px 30px;">
-      <p style="margin:0;color:#e2e8f0;font-size:16px;line-height:1.75;">Novo contacto entrou na lista de espera.</p>
+      <p style="margin:0;color:#e2e8f0;font-size:16px;line-height:1.75;">A new contact joined the waitlist.</p>
       <div style="margin-top:18px;border:1px solid rgba(125,211,252,.22);border-radius:18px;background:rgba(8,47,73,.28);padding:18px;color:#f8fafc;font-size:14px;line-height:1.8;">
-        <strong>Empresa/Nome:</strong> ${escapeHtml(input.companyName)}<br />
+        <strong>Company/Name:</strong> ${escapeHtml(input.companyName)}<br />
         <strong>Email:</strong> ${escapeHtml(input.to)}<br />
-        <strong>Cargo:</strong> ${escapeHtml(input.role)}<br />
-        <strong>Inscrição:</strong> ${escapeHtml(joinedAt)}<br />
+        <strong>Role:</strong> ${escapeHtml(input.role)}<br />
+        <strong>Joined:</strong> ${escapeHtml(joinedAt)}<br />
         <strong>Total:</strong> ${escapeHtml(totalText)}
       </div>
     </div>`;
@@ -159,10 +159,10 @@ export async function sendInternalWaitlistNotification(input: InternalWaitlistNo
   return sendEmail({
     to: recipient,
     subject,
-    html: premiumEmailShell('Novo lead na lista de espera', 'Novo contacto entrou na waitlist.', body),
+    html: premiumEmailShell('New waitlist lead', 'A new contact joined the waitlist.', body),
     text,
     template: 'welcome_onboarding',
     idempotencyKey: `internal-prelaunch-waitlist:${input.to.toLowerCase()}:${input.joinedAt}`,
-    metadata: { source: 'prelaunch_waitlist_internal', locale: input.locale },
+    metadata: { source: 'prelaunch_waitlist_internal', locale: 'en' },
   });
 }
