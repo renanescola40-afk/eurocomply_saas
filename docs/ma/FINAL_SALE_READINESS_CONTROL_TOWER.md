@@ -21,7 +21,7 @@ Canonical status: `FINAL_MA_GO=NO_PASS`
 ## 2. Current technical baseline
 
 Current main after P0 security + contributor-history closure:
-`a062294cd8a8a2a275d0c147028fff5634f935b4`
+`e0c591620837877991451eb3a0ef6f4d08c4d2ee`
 
 This final consolidation branch also contains the validated Financial/Tax closure pack carried from PR #2357/#2358.
 
@@ -408,3 +408,26 @@ The internal M&A documentation architecture is closed at 100%. The transaction i
 It is not ready for signing or closing because corporate authority evidence, IP title execution, accounting/tax evidence, independent pentest evidence, buyer-specific transaction facts, provider closing execution, signatures, funds flow and buyer acceptance remain incomplete.
 
 No internal documentation blocker is being concealed. The remaining gap is primarily authoritative/external evidence and actual transaction execution.
+
+
+## 15. Post-merge source confidentiality reconciliation — 2026-10-07
+
+- PR #2362 merged successfully after independent approval and exact-head CI closure.
+- Current canonical main SHA: `e0c591620837877991451eb3a0ef6f4d08c4d2ee`.
+- Latest READY Vercel Production SHA remains `def7bad00e082ce336734ff7658846fe87595c79` because provider resource creation is blocked by the previously evidenced overdue-balance condition.
+- GitHub repository `renanescola40-afk/eurocomply_saas` is currently reported by the authenticated GitHub API as `visibility=public` / `private=false`.
+- No repository-visibility change was performed in this reconciliation. Changing visibility is an owner-controlled action that may affect integrations and should be executed only with an explicit migration/impact decision.
+- Public repository visibility is therefore a current source-confidentiality / transaction-diligence risk and must be disclosed to a buyer rather than represented as confidential source history.
+
+```text
+CURRENT_MAIN_SHA=e0c591620837877991451eb3a0ef6f4d08c4d2ee
+PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
+MAIN_PRODUCTION_SHA_EQUALITY=FAIL
+PR_2362=MERGED
+PR_2362_EXACT_HEAD_WORKFLOWS=26/26_SUCCESS
+GITHUB_REPOSITORY_VISIBILITY=PUBLIC
+SOURCE_CONFIDENTIALITY_RISK=OPEN_OWNER_DECISION
+SCORE_CHANGE=0
+```
+
+This reconciliation does not change the 98-item score because requirement 36 was already CLOSED for source-access/security-history diligence and no external title, corporate, tax, financial, provider-transfer or buyer-execution fact moved state.
