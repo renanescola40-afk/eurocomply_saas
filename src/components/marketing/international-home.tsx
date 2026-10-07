@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Globe2, Layers3, Workflow } from 'lucide-react';
 
 import { PublicFooter } from '@/components/marketing/public-footer';
-import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
+import { LOCALE_META, type Locale } from '@/lib/i18n/routing';
 import { getFeaturePages } from '@/lib/seo/feature-pages';
 
 type InternationalLocale = Exclude<Locale, 'en' | 'pt'>;
@@ -241,7 +241,7 @@ export function InternationalHome({ locale }: { locale: InternationalLocale }) {
       </section>
 
       <nav aria-label={copy.languageLabel} className="mx-auto flex max-w-7xl flex-wrap gap-2 px-5 pb-14 lg:px-8">
-        {locales.map((language) => (
+        {(['en'] as const).map((language) => (
           <Link key={language} href={`/${language}`} hrefLang={language} className={`rounded-lg border px-4 py-2 text-xs transition ${language === locale ? 'border-blue-400/35 bg-blue-500/10 text-white' : 'border-white/10 text-white/48 hover:border-white/25 hover:text-white'}`}>
             {LOCALE_META[language].nativeName}
           </Link>
