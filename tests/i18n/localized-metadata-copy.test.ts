@@ -3,14 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 const layoutSource = readFileSync('src/app/[locale]/layout.tsx', 'utf8');
 
-describe('localized metadata copy', () => {
-  it('keeps complete metadata descriptions for every supported locale', () => {
-    for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
-      expect(layoutSource).toMatch(new RegExp(`\\b${locale}: \\{[\\s\\S]*?description:`));
-    }
+describe('English-only metadata copy', () => {
+  it('keeps complete English metadata', () => {
+    expect(layoutSource).toMatch(/\ben: \{[\s\S]*?description:/);
   });
 
-  it('preserves native-language diacritics in non-English SEO descriptions', () => {
+  it('does not publish non-English localized SEO descriptions', () => {
     for (const phrase of [
       'preparação para o AI Act',
       'preparación ante el AI Act',
@@ -18,11 +16,11 @@ describe('localized metadata copy', () => {
       'visibilità dei rischi',
       'für europäische B2B-Teams',
     ]) {
-      expect(layoutSource).toContain(phrase);
+      expect(layoutSource).not.toContain(phrase);
     }
   });
 
-  it('does not regress to ASCII transliterations used by the previous metadata copy', () => {
+  it('does not regress to obsolete ASCII transliterations', () => {
     for (const obsoletePhrase of [
       'inventario de IA, visibilidade de risco',
       'preparacion de evidencias',
