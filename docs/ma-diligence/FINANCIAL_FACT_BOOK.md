@@ -1,6 +1,6 @@
 # RISCK COMPLY — Financial Fact Book
 
-Date: 2026-10-06  
+Date: 2026-10-07  
 Status: `FINANCIAL_DILIGENCE_INTERNAL=PASS_STRUCTURE / FINANCIAL_SOURCE_RECORDS=OPEN`
 
 This fact book intentionally does not invent revenue, customers, cash, liabilities, taxes or bank balances.
@@ -23,7 +23,7 @@ A historical or informal statement must not be promoted to transaction fact with
 | Pipeline | NOT_CLAIMED | OWNER_INPUT_REQUIRED | CRM/outreach register with stages and dates. |
 | Sales outreach metrics | NOT_CLAIMED | OWNER_INPUT_REQUIRED | Mail/CRM export, deduplicated. |
 | Operating costs | PARTIAL_EVIDENCE | DOCUMENTED / ACCOUNTANT_REQUIRED | Four Google provider invoices totaling €57.46 are credited; full ledger/provider reconciliation remains open. |
-| Infrastructure costs | PARTIAL_EVIDENCE | DOCUMENTED | Google domain/Workspace amounts are evidenced; Vercel/Supabase/other infrastructure invoices remain open. |
+| Infrastructure costs | PARTIAL_EVIDENCE | DOCUMENTED | Google invoices plus authenticated Vercel billing are evidenced; Supabase/other infrastructure invoices and the complete ledger remain open. |
 | Software subscriptions | PARTIAL_EVIDENCE | DOCUMENTED | Google Workspace invoices are credited; remaining provider subscriptions require invoices/account statements. |
 | Contractors/payroll | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Payroll/contractor ledger. |
 | Marketing costs | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Ledger/invoices. |
@@ -34,9 +34,23 @@ A historical or informal statement must not be promoted to transaction fact with
 | Receivables | NOT_CLAIMED | ACCOUNTANT_REQUIRED | A/R aging. |
 | Contingent liabilities | NOT_CLAIMED | LAWYER_REQUIRED | Litigation/claims/contract review + accountant. |
 | CAPEX | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Fixed asset register / GL. |
-| OPEX | NOT_CLAIMED | ACCOUNTANT_REQUIRED | GL/management accounts. |
+| OPEX | PARTIAL_EVIDENCE | DOCUMENTED / ACCOUNTANT_REQUIRED | Four Google invoices (€57.46) plus authenticated Vercel billed usage are directly evidenced; complete GL/management accounts and all-provider reconciliation remain open. |
 | Forecast | Template prepared; no number asserted | OWNER_INPUT_REQUIRED | Board/management-approved assumptions. |
 | Unit economics | Not meaningful until current revenue/customer data is verified | NOT_APPLICABLE / OWNER_INPUT_REQUIRED | Reopen when data exists. |
+
+## Primary cost evidence credited — Vercel
+
+Authenticated Vercel billing was reconciled on 2026-10-07 in adjacent UTC windows to avoid response-size truncation. These figures are bounded provider-side billing evidence and are not a substitute for the seller general ledger or bank statements.
+
+| Period | Billed cost | Effective cost | Currency | Evidence boundary |
+|---|---:|---:|---|---|
+| 2026-08-23 to 2026-08-31 | 5.666039543434 | 49.867071903739 | USD | authenticated Vercel billing summary |
+| 2026-09-01 to 2026-09-30 | 199.868731833411 | 212.350626994635 | USD | sum of complete adjacent authenticated Vercel windows |
+| 2026-10-01 to 2026-10-07 | 57.819140336339 | 57.819140336339 | USD | authenticated Vercel billing summary |
+
+June and July billing queries returned `costs_not_found`; they are **not** treated as zero. EUR and USD amounts are not combined without an accounting FX policy.
+
+This new provider-side evidence moves requirement #56 OPEX from `OPEN` to `PARTIAL`. It does not close total OPEX, infrastructure costs, software subscriptions, cash, payables or the management accounts.
 
 ## Pre-revenue disclosure template
 
