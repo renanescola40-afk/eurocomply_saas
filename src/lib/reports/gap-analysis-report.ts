@@ -141,7 +141,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
 <html lang="${escapeHtml(input.locale)}">
 <head>
   <meta charset="utf-8" />
-  <title>EuroComply - EU AI Act Gap Analysis - ${slugDate(input.generatedAt)}</title>
+  <title>RISCK COMPLY - EU AI Act Gap Analysis - ${slugDate(input.generatedAt)}</title>
   <style>
     @page { size: A4; margin: 18mm 16mm; }
     * { box-sizing: border-box; }
@@ -304,7 +304,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
   </style>
 </head>
 <body>
-  <div class="print-note">Use o destino “Guardar como PDF / Save as PDF” para baixar o relatório empresarial.</div>
+  <div class="print-note">Choose “Save as PDF” to download the enterprise report.</div>
   <main class="page">
     <header class="topbar">
       <div>
@@ -379,14 +379,14 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
     <section>
       <h2>${escapeHtml(input.labels.questionnaire)}</h2>
       <table>
-        <thead><tr><th>Artigo</th><th>Área</th><th>Pergunta</th><th>${escapeHtml(input.labels.answer)}</th><th>${escapeHtml(input.labels.score)}</th></tr></thead>
+        <thead><tr><th>Article</th><th>Area</th><th>Question</th><th>${escapeHtml(input.labels.answer)}</th><th>${escapeHtml(input.labels.score)}</th></tr></thead>
         <tbody>${answerRows}</tbody>
       </table>
     </section>
 
     <footer class="footer">
       ${escapeHtml(input.labels.scope)}<br />
-      EuroComply SaaS · ${escapeHtml(input.labels.generatedAt)} ${escapeHtml(generatedAt)}
+      RISCK COMPLY · ${escapeHtml(input.labels.generatedAt)} ${escapeHtml(generatedAt)}
     </footer>
   </main>
   <script>
@@ -407,7 +407,7 @@ export function openGapAnalysisPdfReport(input: GapAnalysisPdfReportInput) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `eurocomply-eu-ai-act-gap-analysis-${slugDate(input.generatedAt)}.html`;
+    link.download = `risck-comply-eu-ai-act-gap-analysis-${slugDate(input.generatedAt)}.html`;
     link.click();
     URL.revokeObjectURL(url);
     return;
