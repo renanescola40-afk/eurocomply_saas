@@ -178,7 +178,7 @@ export async function GET(request: Request) {
       },
     };
     const date = new Date().toISOString().slice(0, 10);
-    const filename = `eurocomply-enterprise-readiness-${safeFilenamePart(organization.slug ?? organization.name)}-${date}.json`;
+    const filename = `risck-comply-enterprise-readiness-${safeFilenamePart(organization.slug ?? organization.name)}-${date}.json`;
 
     return jsonDownloadResponse(exportPayload, filename);
   } catch (error) {
