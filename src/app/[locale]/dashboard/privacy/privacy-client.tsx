@@ -27,7 +27,7 @@ export function PrivacyAdminClient({ locale: _locale }: { locale: string }) {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      setStatus(payload.error === 'step_up_required' ? 'Step-up obrigatório ou expirado para exportação.' : 'Não foi possível preparar a exportação GDPR.');
+      setStatus(payload.error === 'step_up_required' ? 'Step-up authentication is required or has expired for this export.' : 'Could not prepare the GDPR export.');
       return;
     }
 
@@ -58,7 +58,7 @@ export function PrivacyAdminClient({ locale: _locale }: { locale: string }) {
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      setStatus(payload.error === 'step_up_required' ? 'Step-up obrigatório ou expirado para apagamento.' : payload.message ?? 'Não foi possível criar o pedido GDPR.');
+      setStatus(payload.error === 'step_up_required' ? 'Step-up authentication is required or has expired for deletion.' : payload.message ?? 'Could not create the GDPR request.');
       return;
     }
 
