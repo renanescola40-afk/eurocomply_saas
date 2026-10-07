@@ -15,8 +15,8 @@ describe('Article 14 invitation privacy disclosure', () => {
       });
 
       expect(email.text).toContain('Acme Europe');
-      expect(email.text).toContain(`https://www.risckcomply.com/${locale}/privacy`);
-      expect(email.html).toContain(`href="https://www.risckcomply.com/${locale}/privacy"`);
+      expect(email.text).toContain('https://www.risckcomply.com/en/privacy');
+      expect(email.html).toContain('href="https://www.risckcomply.com/en/privacy"');
       expect(email.html).not.toContain('token-123</a></div><div');
     }
   });
@@ -29,7 +29,7 @@ describe('Article 14 invitation privacy disclosure', () => {
       locale: 'pt',
     });
 
-    expect(email.text).toContain('/pt/privacy');
+    expect(email.text).toContain('/en/privacy');
     expect(email.html).not.toContain('javascript:');
   });
 
@@ -41,9 +41,9 @@ describe('Article 14 invitation privacy disclosure', () => {
       locale: 'pt',
     });
 
-    expect(email.text).toContain('Informação de privacidade: /pt/privacy');
-    expect(email.html).toContain('href="/pt/privacy"');
-    expect(email.html).not.toContain('attacker.example/pt/privacy');
+    expect(email.text).toContain('Privacy information: /en/privacy');
+    expect(email.html).toContain('href="/en/privacy"');
+    expect(email.html).not.toContain('attacker.example/en/privacy');
   });
 
   it('accepts trusted Risck Comply subdomains for the privacy origin', () => {
