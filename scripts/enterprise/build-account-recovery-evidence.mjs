@@ -57,11 +57,10 @@ export function evaluateAccountRecoveryCoverage(sources) {
     'await supabase.auth.signOut()',
   ]);
   const routeExposure = sources.middleware.includes("'/reset-password'")
-    && sources.middleware.includes("'/recuperar-senha'")
+    && sources.middleware.includes("'/recover-password'")
     && sources.authGate.includes("'reset-password'");
-  const loginEntrypoint = sources.login.includes('href={`/${locale}/recuperar-senha`}')
-    && sources.login.includes('Forgot your password?')
-    && sources.login.includes('Esqueceu a senha?');
+  const loginEntrypoint = sources.login.includes('href={`/${locale}/recover-password`}')
+    && sources.login.includes('Forgot your password?');
   const safeUnconfiguredClient = sources.browserClient.includes('updateUser: async () =>')
     && sources.browserClient.includes("error: new Error('Supabase client not configured')");
   const routeTests = containsEvery(sources.routeTest, [
@@ -171,6 +170,7 @@ export function buildAccountRecoveryEvidence({
     failures,
     evidenceLocations: [
       'src/app/api/auth/recovery/route.ts',
+      'src/app/[locale]/recover-password/page.tsx',
       'src/app/[locale]/recuperar-senha/page.tsx',
       'src/app/[locale]/reset-password/page.tsx',
       'src/app/[locale]/login/page.tsx',
