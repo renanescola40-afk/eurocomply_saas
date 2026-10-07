@@ -212,12 +212,12 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     const evidenceVaultTitle = `QA Evidence Vault ${Date.now()}`;
     await startWithAnalyticsDenied(page);
 
-    // Public acquisition, i18n and Trust surfaces must remain reachable outside
-    // the paid-product boundary on the exact assessed SHA.
+    // Legacy non-English public routes must converge to the canonical English
+    // acquisition surface on the exact assessed SHA.
     await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
-    await expectHealthyPublicPage(page, 'localized public pricing');
-    await expect(page).toHaveURL(/\/pt\/pricing(?:\?|$)/);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Comece pela preparação de IA/i);
+    await expectHealthyPublicPage(page, 'English-only public pricing redirect');
+    await expect(page).toHaveURL(/\/en\/pricing(?:\?|$)/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
     await page.goto('/en/security', { waitUntil: 'domcontentloaded' });
     await expectHealthyPublicPage(page, 'public Trust Center');
