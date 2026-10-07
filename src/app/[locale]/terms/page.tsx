@@ -257,7 +257,7 @@ const pt: TermsCopy = {
       paragraphs: [
         'A posição selecionada prevê 30 dias de cura após aviso para incumprimento material sanável. Cessação imediata pode ser reservada para abuso grave de segurança, atividade ilícita, fraude, comprometimento deliberado cross-tenant, abuso material não sanável ou proibição legal/provider. A redação final permanece sujeita à lei aplicável e à reconciliação contratual; a revisão qualificada só é escalada quando necessária.',
         'O cancelamento self-service preserva o acesso pago até ao fim do período ativo. O owner selecionou uma janela de exportação de 30 dias após cessação, ainda dependente de capacidade do produto, conservação, provider lifecycle e redação final.',
-        'A eliminação continua sujeita ao DPA, retenção por categoria, legal holds, registos contabilísticos/auditoria e limites verificados de providers.',
+        'A eliminação continua sujeita ao DPA, retenção por categoria, legal holds, registos contabilísticos/audit-log e limites verificados de providers.',
       ],
     },
     {
