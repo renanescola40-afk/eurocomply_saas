@@ -53,10 +53,10 @@ describe('public account recovery contract', () => {
     expect(resetPage).not.toContain('document.cookie');
   });
 
-  it('exposes localized, actionable request and completion routes', () => {
+  it('exposes canonical English recovery routes while preserving legacy redirects', () => {
     expect(recoveryPage).toContain("fetch('/api/auth/recovery'");
-    expect(login).toContain('href={`/${locale}/recuperar-senha`}');
-    expect(middleware).toContain("'/recuperar-senha'");
+    expect(login).toContain('href={`/${locale}/recover-password`}');
+    expect(middleware).toContain("'/recuperar-senha': '/recover-password'");
     expect(middleware).toContain("'/reset-password'");
 
     for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
