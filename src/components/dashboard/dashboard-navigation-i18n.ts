@@ -227,7 +227,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
         { label: continuity.label, href: '/continuity-center', description: continuity.description },
         { label: vendorAssurance.label, href: '/vendor-assurance', description: vendorAssurance.description },
         { label: nav.europeanNews, href: `${dashboardRoot}/reports-governance/news`, description: nav.europeanNewsDescription },
-        { label: nav.approvals, href: '/aprovacoes', description: nav.approvalsDescription },
+        { label: nav.approvals, href: '/approvals', description: nav.approvalsDescription },
         { label: nav.minutesGovernance, href: `${dashboardRoot}/reports-governance`, description: nav.minutesGovernanceDescription },
       ],
     },
@@ -243,7 +243,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
         { label: nav.enterpriseAvatar, href: '/profile#enterprise-status', description: nav.enterpriseAvatarDescription },
       ],
     },
-    { label: nav.notifications, href: '/notificacoes', description: nav.notificationsDescription },
+    { label: nav.notifications, href: '/notifications', description: nav.notificationsDescription },
     { label: nav.news, href: `${dashboardRoot}/reports-governance/news`, description: nav.newsDescription },
   ];
 }
