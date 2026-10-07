@@ -84,7 +84,7 @@ IP subtotal: **14.0 / 20 = 70.00%**
 | 49 | Legal/compliance costs | OPEN | 0.0 | Source records open. |
 | 50 | Cash position | PARTIAL | 0.5 | LIVE Stripe balance is €0 available / €0 pending; total company cash still requires bank statements. |
 | 51 | Debt | OPEN | 0.0 | Accounting/bank evidence open. |
-| 52 | Payables | OPEN | 0.0 | A/P evidence open. |
+| 52 | Payables | PARTIAL | 0.5 | Authenticated Vercel API evidence proves at least one overdue provider balance because resource creation is blocked pending billing regularization; amount and complete A/P aging remain open. |
 | 53 | Receivables | OPEN | 0.0 | A/R evidence open. |
 | 54 | Contingent liabilities | OPEN | 0.0 | Legal/accounting confirmation open. |
 | 55 | CAPEX | OPEN | 0.0 | Accounting evidence open. |
@@ -97,7 +97,7 @@ IP subtotal: **14.0 / 20 = 70.00%**
 | 62 | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
 
-Financial subtotal: **6.5 / 26 = 25.00%**
+Financial subtotal: **7.0 / 26 = 26.92%**
 
 ## Tax — requirements 64–75
 
@@ -164,16 +164,16 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 ```text
 CORPORATE=5.0/17
 IP=14.0/20
-FINANCIAL=6.5/26
+FINANCIAL=7.0/26
 TAX=0.0/12
 COMMERCIAL=6.5/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=36.0
+TOTAL_SCORE=36.5
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=36.0/98=36.73%
-AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.5/98=37.24%
+AUDITABLE_MA_EVIDENCE_REMAINING=62.76%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
@@ -190,9 +190,9 @@ The difference is intentional: the documents needed to answer diligence are inte
 
 A dedicated financial/tax closure run revalidated Stripe LIVE and completed all safe internally controllable templates, matrices and request packs.
 
-- Financial evidence score is now **6.5 / 26 = 25.00%** after authenticated Vercel billing plus existing Google invoices moved OPEX (#56) from OPEN to PARTIAL. No score is increased merely because a template was created.
+- Financial evidence score is now **7.0 / 26 = 26.92%** after authenticated Vercel billing plus existing Google invoices moved OPEX (#56) from OPEN to PARTIAL. No score is increased merely because a template was created.
 - Tax evidence score remains **0.0 / 12 = 0.00%** because current seller-specific authoritative tax evidence and transaction-specific professional conclusions are still external dependencies.
-- Combined Financial + Tax evidence score: **6.5 / 38 = 17.11%**.
+- Combined Financial + Tax evidence score: **7.0 / 38 = 18.42%**.
 - Internal controllable financial/tax closure work: **100% complete** for the present evidence set.
 - Remaining gaps are genuine owner/accountant/tax-authority/tax-counsel facts, not undocumented internal tasks.
 
@@ -220,11 +220,11 @@ FINANCIAL_TAX_GO=PASS_INTERNAL_CLOSURE_ONLY
 - The later 2026-10-07 financial reconciliation changes OPEX (#56) from OPEN to PARTIAL based on new authenticated provider billing evidence.
 
 ```text
-TOTAL_SCORE=36.0
+TOTAL_SCORE=36.5
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
-AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
-POST_P0_SCORE_CHANGE=+0.5_REQUIREMENT_FROM_FINANCIAL_RECONCILIATION
+AUDITABLE_MA_EVIDENCE_CLOSURE=37.24%
+AUDITABLE_MA_EVIDENCE_REMAINING=62.76%
+POST_P0_SCORE_CHANGE=+1.0_REQUIREMENT_FROM_FINANCIAL_RECONCILIATION
 ```
 
 
@@ -240,10 +240,10 @@ This was the historical score at the source-confidentiality checkpoint before th
 
 ```text
 HISTORICAL_CHECKPOINT_SCORE=35.5/98
-CURRENT_CANONICAL_SCORE=36.0/98
-CURRENT_AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
-CURRENT_AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
-POST_MERGE_FINANCIAL_SCORE_CHANGE=+0.5_REQUIREMENT
+CURRENT_CANONICAL_SCORE=36.5/98
+CURRENT_AUDITABLE_MA_EVIDENCE_CLOSURE=37.24%
+CURRENT_AUDITABLE_MA_EVIDENCE_REMAINING=62.76%
+POST_MERGE_FINANCIAL_SCORE_CHANGE=+1.0_REQUIREMENT
 ```
 
 
@@ -253,15 +253,20 @@ POST_MERGE_FINANCIAL_SCORE_CHANGE=+0.5_REQUIREMENT
 CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
 CORPORATE=5.0/17
 IP=14.0/20
-FINANCIAL=6.5/26
+FINANCIAL=7.0/26
 TAX=0.0/12
 COMMERCIAL=6.5/15
 PROVIDERS=4.0/8
-TOTAL_SCORE=36.0/98
-AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
-AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
+TOTAL_SCORE=36.5/98
+AUDITABLE_MA_EVIDENCE_CLOSURE=37.24%
+AUDITABLE_MA_EVIDENCE_REMAINING=62.76%
 INTERNAL_DOCUMENT_READINESS=100%
 FINAL_MA_GO=NO_PASS
 ```
 
 This block is authoritative if an older historical checkpoint elsewhere in the file shows a lower score.
+
+
+### Payables evidence promotion — 2026-10-07
+
+Requirement #52 moves from OPEN to PARTIAL because the authenticated Vercel provider response proves an overdue balance exists and blocks resource creation until billing is regularized. No payable amount is inferred, and no claim is made about the seller's complete accounts-payable ledger.
