@@ -61,7 +61,7 @@ function formatDate(date: string, locale: string) {
 
 function buildCalendarSuggestionHref(locale: string, item: { title: string; jurisdiction: string; executiveSummary: string }) {
   const params = new URLSearchParams({ source: 'intelligence', title: item.title, country: item.jurisdiction, description: item.executiveSummary });
-  return `/${locale}/calendario-compliance?${params.toString()}`;
+  return `/${locale}/compliance-calendar?${params.toString()}`;
 }
 
 const secondaryLink = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-white/[0.085] bg-white/[0.025] px-3 text-xs font-semibold text-white/62 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60';
