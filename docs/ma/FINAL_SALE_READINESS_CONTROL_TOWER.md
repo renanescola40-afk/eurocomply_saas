@@ -241,14 +241,14 @@ The canonical reproducible scoring remains:
 ```text
 CORPORATE=5.0/17=29.41%
 IP=14.0/20=70.00%
-FINANCIAL=6.5/26=25.00%
+FINANCIAL=7.0/26=26.92%
 TAX=0.0/12=0.00%
 COMMERCIAL=6.5/15=43.33%
 PROVIDERS=4.0/8=50.00%
 
-TOTAL_SCORE=36.0
+TOTAL_SCORE=36.5
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_PERCENT=36.73%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
 REMAINING_AUDITABLE_MA_EVIDENCE_PERCENT=63.27%
 INTERNAL_DOCUMENT_READINESS_PERCENT=100%
 ```
@@ -384,7 +384,7 @@ This is an M&A diligence control score, not a product-security certification.
 
 ```text
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
-AUDITABLE_MA_EVIDENCE_PERCENT=36.73%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
 CORPORATE_PERCENT=29.41%
 IP_PERCENT=70.00%
 FINANCIAL_PERCENT=25.00%
@@ -393,8 +393,8 @@ COMMERCIAL_PERCENT=43.33%
 PROVIDER_PERCENT=50.00%
 SECURITY_DILIGENCE_PERCENT=70.00%
 
-SALE_READINESS_PERCENT=36.73%
-REMAINING_PERCENT=63.27%
+SALE_READINESS_PERCENT=37.24%
+REMAINING_PERCENT=62.76%
 
 FINAL_MA_GO=NO_PASS
 ```
@@ -438,15 +438,20 @@ This reconciliation does not change the 98-item score because requirement 36 was
 - PR #2363 is merged and its exact-head CI/review gate is closed.
 - A later authenticated Vercel billing reconciliation moved OPEX requirement #56 from OPEN to PARTIAL.
 - Canonical main is now `3e60383a2c5e0762990f2b5fd83fde635e16f792`.
-- Canonical auditable M&A score is `36.0 / 98 = 36.73%`; remaining auditable evidence is `63.27%`.
+- Canonical auditable M&A score is `36.5 / 98 = 37.24%`; remaining auditable evidence is `62.76%`.
 - Any earlier 35.5/98 or 36.22% block in historical sections is a superseded checkpoint, not the current score.
 - Latest READY Vercel Production remains `def7bad00e082ce336734ff7658846fe87595c79`; main/Production equality remains FAIL until billing is regularized and a fresh deployment succeeds.
 
 ```text
 CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
-CANONICAL_TOTAL_SCORE=36.0/98
-CANONICAL_SALE_READINESS_PERCENT=36.73%
-CANONICAL_REMAINING_PERCENT=63.27%
+CANONICAL_TOTAL_SCORE=36.5/98
+CANONICAL_SALE_READINESS_PERCENT=37.24%
+CANONICAL_REMAINING_PERCENT=62.76%
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
 FINAL_MA_GO=NO_PASS
 ```
+
+
+### Financial evidence delta — Vercel payable
+
+Authenticated Vercel billing enforcement proves an overdue provider balance exists. Requirement #52 Payables is therefore PARTIAL rather than OPEN. The amount and complete seller A/P aging remain external/accountant evidence, so no CLOSED status is claimed.
