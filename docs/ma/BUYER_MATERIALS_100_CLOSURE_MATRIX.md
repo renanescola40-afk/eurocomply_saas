@@ -49,12 +49,24 @@ Repository-safe company-level classification:
 - ServiceNow: TIER_1_ROUTED
 - B3: TIER_1_ROUTED
 
-Private contact identities, exact correspondence and unsent drafts remain controlled outside this public repository.
+Private contact identities, exact correspondence and unsent drafts are absent from the current tree. Historical commits containing prior correspondence remain reachable in public Git history and are tracked as an open confidentiality risk.
 
 No NDA, diligence process, offer, LOI, signing or closing is credited solely from these responses.
 
 ## Internal closure result
 
-BUYER_MATERIALS_INTERNAL_CLOSURE=99_PERCENT
+### Reproducible closure score
 
-This means the buyer-facing document set itself is materially complete, but one repository-confidentiality issue remains: prior merged commits containing private buyer correspondence remain reachable in public Git history. Current-tree sanitization is complete; history/visibility remediation is not. It does not mean TRANSACTION_100_PERCENT.
+Scoring rule for the 12 material rows above:
+- PASS or PASS_INTERNAL = 1.0
+- PARTIAL = 0.5
+- NO_PASS = 0
+
+Current score:
+- 11 PASS/PASS_INTERNAL rows = 11.0
+- 1 PARTIAL row = 0.5
+- total = 11.5 / 12 = 95.83%
+
+BUYER_MATERIALS_INTERNAL_CLOSURE_PERCENT=95.83%
+
+This means the buyer-facing document set is materially complete, but the buyer-response-readiness row is only PARTIAL because prior merged commits containing private buyer correspondence remain reachable in public Git history. Current-tree sanitization is complete; history/visibility remediation is not. It does not mean TRANSACTION_100_PERCENT.
