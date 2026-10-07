@@ -213,7 +213,7 @@ FINANCIAL_TAX_GO=PASS_INTERNAL_CLOSURE_ONLY
 - PR #2361 merged the `sharp 0.35.4 -> 0.35.5` remediation, regenerated lockfile and truthful Corporate/IP final-GO normalization.
 - All 28 exact-head workflow checks passed before merge, including dependency proof, CI, Full Security Suite, Enterprise DAST, SBOM/attestation and Enterprise Production Gate.
 - Full contributor-history pagination closed at 18,111 reachable commits; requirements 20/21 remain PARTIAL because relationship classification is still owner/legal-document dependent.
-- Current main is `a062294cd8a8a2a275d0c147028fff5634f935b4`.
+- Current main is `e0c591620837877991451eb3a0ef6f4d08c4d2ee`.
 - Latest READY production remains `def7bad00e082ce336734ff7658846fe87595c79`.
 - Exact-current-main Vercel deployment was attempted and rejected with `402 Payment Required / resource_creation_blocked` due to an overdue team balance.
 - No payment was performed.
@@ -225,4 +225,21 @@ TOTAL_REQUIREMENTS=98
 AUDITABLE_MA_EVIDENCE_CLOSURE=36.22%
 AUDITABLE_MA_EVIDENCE_REMAINING=63.78%
 POST_P0_SCORE_CHANGE=0
+```
+
+
+## Post-merge source confidentiality reconciliation — 2026-10-07
+
+- PR #2362 is merged at `e0c591620837877991451eb3a0ef6f4d08c4d2ee` after independent approval and 26 successful exact-head workflows.
+- Latest READY Vercel Production remains `def7bad00e082ce336734ff7658846fe87595c79`; exact main=Production remains false because Vercel resource creation is blocked by the overdue-balance condition already recorded.
+- Authenticated GitHub repository metadata reports `visibility=public` and `private=false` for `renanescola40-afk/eurocomply_saas`.
+- This is a current confidentiality / transaction-diligence risk, but it does not change requirement 36's score because that requirement measures source access/security history and is already CLOSED. It must not be recharacterized as confidential repository history while public visibility remains true.
+- No repository visibility change or Vercel payment was performed.
+
+```text
+TOTAL_SCORE=35.5
+TOTAL_REQUIREMENTS=98
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.22%
+AUDITABLE_MA_EVIDENCE_REMAINING=63.78%
+POST_MERGE_SCORE_CHANGE=0
 ```
