@@ -71,7 +71,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   const localized = (path: string) => `/${safeLocale}${path}`;
 
   const accountLinks = [
-    { href: localized('/notificacoes'), label: copy.notifications, Icon: Bell },
+    { href: localized('/notifications'), label: copy.notifications, Icon: Bell },
     { href: localized('/dashboard/privacy'), label: copy.privacy, Icon: ShieldCheck },
     canManageSettings ? { href: localized('/settings/organization'), label: copy.orgSettings, Icon: Building2 } : null,
     canManageTeam ? { href: localized('/dashboard/organizations/team'), label: copy.team, Icon: UsersRound } : null,
