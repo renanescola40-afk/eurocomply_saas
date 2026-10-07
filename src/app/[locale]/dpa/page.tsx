@@ -152,7 +152,7 @@ const pt: DpaCopy = {
         'Duração: subscrição e ciclo aplicável de devolução/eliminação; a posição de exportação pós-cessação de 30 dias continua sujeita a capacidades verificadas de produto/provider e acordo assinado.',
         'Natureza: recolha, armazenamento, organização, consulta, utilização, comunicação autorizada a prestadores, exportação e suporte à eliminação necessários ao serviço.',
         'Finalidade: prestar, proteger, suportar e manter os workflows de compliance solicitados pelo cliente.',
-        'Categorias-base: identificadores de conta/workspace, organização/membros, registos de sistemas de IA/fornecedores/riscos/documentos/tarefas/avaliações/evidências quando contenham dados pessoais, suporte e metadados operacionais necessários.',
+        'Categorias-base: identificadores de conta/workspace, organização/membros, registos de sistemas de IA/fornecedores/risks/documents/tarefas/avaliações/evidências quando contenham dados pessoais, suporte e metadados operacionais necessários.',
         'Titulares-base: utilizadores autorizados, trabalhadores/contratados do cliente, contactos de fornecedores/empresas e outras pessoas representadas nos registos do cliente.',
         'Categorias especiais ou dados de infrações não são um caso de uso normal por defeito e exigem âmbito expressamente aprovado e salvaguardas adicionais antes de tratamento intencional.',
       ],
