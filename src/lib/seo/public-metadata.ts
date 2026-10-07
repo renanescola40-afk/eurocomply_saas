@@ -21,6 +21,8 @@ export const localeLanguageTags: Record<Locale, string> = {
   de: 'de-DE',
 };
 
+const PUBLIC_LOCALES: Locale[] = ['en'];
+
 export function getSafeLocale(value: string): Locale {
   return (locales.includes(value as Locale) ? value : defaultLocale) as Locale;
 }
@@ -56,7 +58,7 @@ export function getCanonicalUrl(locale: Locale, path = '') {
 export function getLocaleAlternates(path = ''): Record<string, string> {
   const appUrl = getSiteUrl();
   const normalizedPath = path === '/' ? '' : path.startsWith('/') ? path : `/${path}`;
-  const entries = locales.map((locale) => [localeLanguageTags[locale], `${appUrl}/${locale}${normalizedPath}`]);
+  const entries = PUBLIC_LOCALES.map((locale) => [localeLanguageTags[locale], `${appUrl}/${locale}${normalizedPath}`]);
 
   return {
     ...Object.fromEntries(entries),
@@ -96,7 +98,7 @@ export function makePublicMetadata({ locale, path = '', title, description, noIn
       description,
       url: canonicalUrl,
       locale: getOpenGraphLocale(locale),
-      alternateLocale: locales.filter((alternateLocale) => alternateLocale !== locale).map(getOpenGraphLocale),
+      alternateLocale: PUBLIC_LOCALES.filter((alternateLocale) => alternateLocale !== locale).map(getOpenGraphLocale),
     },
     twitter: {
       card: 'summary',
