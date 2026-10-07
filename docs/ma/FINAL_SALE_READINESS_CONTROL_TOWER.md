@@ -20,8 +20,8 @@ Canonical status: `FINAL_MA_GO=NO_PASS`
 
 ## 2. Current technical baseline
 
-Current main after P0 security + contributor-history closure:
-`e0c591620837877991451eb3a0ef6f4d08c4d2ee`
+Current main after latest M&A evidence reconciliation:
+`3e60383a2c5e0762990f2b5fd83fde635e16f792`
 
 This final consolidation branch also contains the validated Financial/Tax closure pack carried from PR #2357/#2358.
 
@@ -384,7 +384,7 @@ This is an M&A diligence control score, not a product-security certification.
 
 ```text
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
-AUDITABLE_MA_EVIDENCE_PERCENT=36.22%
+AUDITABLE_MA_EVIDENCE_PERCENT=36.73%
 CORPORATE_PERCENT=29.41%
 IP_PERCENT=70.00%
 FINANCIAL_PERCENT=25.00%
@@ -413,14 +413,14 @@ No internal documentation blocker is being concealed. The remaining gap is prima
 ## 15. Post-merge source confidentiality reconciliation — 2026-10-07
 
 - PR #2362 merged successfully after independent approval and exact-head CI closure.
-- Current canonical main SHA: `e0c591620837877991451eb3a0ef6f4d08c4d2ee`.
+- Current canonical main SHA: `3e60383a2c5e0762990f2b5fd83fde635e16f792`.
 - Latest READY Vercel Production SHA remains `def7bad00e082ce336734ff7658846fe87595c79` because provider resource creation is blocked by the previously evidenced overdue-balance condition.
 - GitHub repository `renanescola40-afk/eurocomply_saas` is currently reported by the authenticated GitHub API as `visibility=public` / `private=false`.
 - No repository-visibility change was performed in this reconciliation. Changing visibility is an owner-controlled action that may affect integrations and should be executed only with an explicit migration/impact decision.
 - Public repository visibility is therefore a current source-confidentiality / transaction-diligence risk and must be disclosed to a buyer rather than represented as confidential source history.
 
 ```text
-CURRENT_MAIN_SHA=e0c591620837877991451eb3a0ef6f4d08c4d2ee
+CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
 PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
 MAIN_PRODUCTION_SHA_EQUALITY=FAIL
 PR_2362=MERGED
