@@ -190,8 +190,8 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
       href: `${dashboardRoot}/command-center`,
       sections: [
         { label: nav.executiveDashboard, href: `${dashboardRoot}/command-center`, description: nav.executiveDashboardDescription },
-        { label: nav.auditLog, href: '/auditoria', description: nav.auditLogDescription },
-        { label: nav.legalCalendar, href: '/calendario-compliance', description: nav.legalCalendarDescription },
+        { label: nav.auditLog, href: '/audit-log', description: nav.auditLogDescription },
+        { label: nav.legalCalendar, href: '/compliance-calendar', description: nav.legalCalendarDescription },
       ],
     },
     {
