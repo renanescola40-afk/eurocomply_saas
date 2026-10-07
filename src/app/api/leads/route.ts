@@ -152,7 +152,7 @@ function extractPlan(source: string) {
 }
 
 function localizedAcknowledgement(record: LeadRecord) {
-  const pt = record.locale === 'pt';
+  const pt = false;
   const submittedAt = formatSubmittedAt(record.locale);
   const plan = extractPlan(record.source);
   const safeName = escapeHtml(record.full_name);
