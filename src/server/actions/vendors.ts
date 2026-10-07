@@ -38,15 +38,15 @@ function providerActionError(message: string) {
   return new Error(message);
 }
 
-function toVendorErrorMessage(error: unknown, action: 'criar' | 'atualizar' | 'remover') {
+function toVendorErrorMessage(error: unknown, action: 'create' | 'update' | 'remove') {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
-  if (message.includes('review_version') || message.includes('0 rows') || message.includes('not_found_or_conflict')) return 'O fornecedor foi alterado por outra pessoa. Atualize a página e tente novamente.';
-  if (message.includes('check constraint') || message.includes('23514')) return 'Os dados do fornecedor não cumprem as regras de revisão e aprovação.';
-  if (message.includes('permission') || message.includes('not authorized')) return `Sem permissão para ${action} fornecedores nesta organização.`;
-  return `Não foi possível ${action} o fornecedor agora.`;
+  if (message.includes('review_version') || message.includes('0 rows') || message.includes('not_found_or_conflict')) return 'This vendor was changed by another user. Refresh the page and try again.';
+  if (message.includes('check constraint') || message.includes('23514')) return 'The vendor data does not meet the review and approval rules.';
+  if (message.includes('permission') || message.includes('not authorized')) return `You do not have permission to ${action} vendors in this organization.`;
+  return `Could not ${action} the vendor right now.`;
 }
 
-function failVendorAction(error: unknown, context: Record<string, unknown>, action: 'criar' | 'atualizar' | 'remover'): never {
+function failVendorAction(error: unknown, context: Record<string, unknown>, action: 'create' | 'update' | 'remove'): never {
   reportError(error, context);
   throw providerActionError(toVendorErrorMessage(error, action));
 }
@@ -130,7 +130,7 @@ export async function createVendor(input: unknown) {
     if (error instanceof Error && error.message === quotaExceededMessage) {
       throw providerActionError(quotaExceededMessage);
     }
-    failVendorAction(error, { ...context, vendorId }, 'criar');
+    failVendorAction(error, { ...context, vendorId }, 'create');
   }
 }
 
@@ -148,12 +148,12 @@ export async function updateVendor(input: unknown) {
     .eq('id', payload.vendorId)
     .eq('organization_id', payload.organizationId)
     .single();
-  if (previousError) failVendorAction(previousError, context, 'atualizar');
+  if (previousError) failVendorAction(previousError, context, 'update');
 
   let query = supabase.from('vendors').update(vendorRecord(payload, user.id, false)).eq('id', payload.vendorId).eq('organization_id', payload.organizationId);
   if (payload.expectedReviewVersion) query = query.eq('review_version', payload.expectedReviewVersion);
   const { data, error } = await query.select(vendorColumns).single();
-  if (error) failVendorAction(error, context, 'atualizar');
+  if (error) failVendorAction(error, context, 'update');
 
   const audit = await logAuditEvent({
     organizationId: payload.organizationId,
@@ -184,7 +184,7 @@ export async function updateVendor(input: unknown) {
         providerCode: rollbackError.code ?? 'unknown',
       });
     }
-    throw providerActionError('Não foi possível atualizar o fornecedor agora.');
+    throw providerActionError('Could not update the vendor right now.');
   }
   return data;
 }
@@ -214,6 +214,6 @@ export async function deleteVendor(vendorId: string, organizationId: string, exp
 
     return result.resource_record;
   } catch (error) {
-    failVendorAction(error, context, 'remover');
+    failVendorAction(error, context, 'remove');
   }
 }
