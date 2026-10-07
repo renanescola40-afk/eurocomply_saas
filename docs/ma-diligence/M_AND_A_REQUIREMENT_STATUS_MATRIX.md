@@ -1,6 +1,6 @@
 # RISCK COMPLY — M&A Requirement Status Matrix
 
-Date: 2026-10-06  
+Date: 2026-10-07  
 Scoring scope: requirements 1–98 from the Corporate + IP + Financial + Tax M&A Diligence Closure Master  
 Status: `AUDITABLE_SCORING_ACTIVE`
 
@@ -77,7 +77,7 @@ IP subtotal: **14.0 / 20 = 70.00%**
 | 42 | Pipeline | CLOSED | 1.0 | Buyer-grade mailbox pipeline register reconciles scoped outreach, failures and attributable stages without claiming revenue/LOIs. |
 | 43 | Sales outreach metrics | CLOSED | 1.0 | Gmail message-ID counts are paginated and deduplicated: 352 unique sent messages across acquisition + pilot/procurement scope; 22 failure messages separately tracked. |
 | 44 | Operating costs | PARTIAL | 0.5 | Four provider-originated Google invoices totaling €57.46 are credited as bounded operating-cost evidence; complete ledger/provider reconciliation remains open. |
-| 45 | Infrastructure costs | PARTIAL | 0.5 | Provider cost categories mapped; amounts/invoices open. |
+| 45 | Infrastructure costs | PARTIAL | 0.5 | Authenticated Vercel billing now provides bounded infrastructure-cost amounts (Aug 23–31 billed $5.6660; Sep billed $199.8687; Oct 1–7 billed $57.8191). Supabase/other provider amounts and the complete ledger remain open. |
 | 46 | Software subscriptions | PARTIAL | 0.5 | Provider set mapped; invoice/amount reconciliation open. |
 | 47 | Contractors/payroll | OPEN | 0.0 | Source records open. |
 | 48 | Marketing costs | OPEN | 0.0 | Source records open. |
@@ -88,7 +88,7 @@ IP subtotal: **14.0 / 20 = 70.00%**
 | 53 | Receivables | OPEN | 0.0 | A/R evidence open. |
 | 54 | Contingent liabilities | OPEN | 0.0 | Legal/accounting confirmation open. |
 | 55 | CAPEX | OPEN | 0.0 | Accounting evidence open. |
-| 56 | OPEX | OPEN | 0.0 | Accounting evidence open. |
+| 56 | OPEX | PARTIAL | 0.5 | Bounded primary OPEX evidence now includes four Google provider invoices totaling €57.46 plus authenticated Vercel billing through 2026-10-07. Complete GL/management accounts and all-provider reconciliation remain open. |
 | 57 | Forecast | OPEN | 0.0 | Template exists; approved assumptions not credited. |
 | 58 | Unit economics | OPEN | 0.0 | Current revenue/customer evidence insufficient. |
 | 59 | Historical P&L requirement | OPEN | 0.0 | Statements not credited. |
@@ -97,7 +97,7 @@ IP subtotal: **14.0 / 20 = 70.00%**
 | 62 | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
 
-Financial subtotal: **6.0 / 26 = 23.08%**
+Financial subtotal: **6.5 / 26 = 25.00%**
 
 ## Tax — requirements 64–75
 
@@ -164,16 +164,16 @@ Provider subtotal: **4.0 / 8 = 50.00%**
 ```text
 CORPORATE=5.0/17
 IP=14.0/20
-FINANCIAL=6.0/26
+FINANCIAL=6.5/26
 TAX=0.0/12
 COMMERCIAL=6.5/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=35.5
+TOTAL_SCORE=36.0
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=35.5/98=36.22%
-AUDITABLE_MA_EVIDENCE_REMAINING=63.78%
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.0/98=36.73%
+AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
@@ -190,9 +190,9 @@ The difference is intentional: the documents needed to answer diligence are inte
 
 A dedicated financial/tax closure run revalidated Stripe LIVE and completed all safe internally controllable templates, matrices and request packs.
 
-- Financial evidence score remains **6.0 / 26 = 23.08%**. No score is increased merely because a template was created.
+- Financial evidence score is now **6.5 / 26 = 25.00%** after authenticated Vercel billing plus existing Google invoices moved OPEX (#56) from OPEN to PARTIAL. No score is increased merely because a template was created.
 - Tax evidence score remains **0.0 / 12 = 0.00%** because current seller-specific authoritative tax evidence and transaction-specific professional conclusions are still external dependencies.
-- Combined Financial + Tax evidence score: **6.0 / 38 = 15.79%**.
+- Combined Financial + Tax evidence score: **6.5 / 38 = 17.11%**.
 - Internal controllable financial/tax closure work: **100% complete** for the present evidence set.
 - Remaining gaps are genuine owner/accountant/tax-authority/tax-counsel facts, not undocumented internal tasks.
 
@@ -217,12 +217,12 @@ FINANCIAL_TAX_GO=PASS_INTERNAL_CLOSURE_ONLY
 - Latest READY production remains `def7bad00e082ce336734ff7658846fe87595c79`.
 - Exact-current-main Vercel deployment was attempted and rejected with `402 Payment Required / resource_creation_blocked` due to an overdue team balance.
 - No payment was performed.
-- No 98-item state changes were justified by this reconciliation.
+- The later 2026-10-07 financial reconciliation changes OPEX (#56) from OPEN to PARTIAL based on new authenticated provider billing evidence.
 
 ```text
-TOTAL_SCORE=35.5
+TOTAL_SCORE=36.0
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=36.22%
-AUDITABLE_MA_EVIDENCE_REMAINING=63.78%
-POST_P0_SCORE_CHANGE=0
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
+AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
+POST_P0_SCORE_CHANGE=+0.5_REQUIREMENT_FROM_FINANCIAL_RECONCILIATION
 ```
