@@ -66,11 +66,13 @@ Before any force update:
 3. restrict the maintenance window to the designated operator;
 4. freeze merges/direct pushes and prevent unrelated writes;
 5. create the rewritten mirror and verify it offline;
-6. if GitHub protection blocks the required force-with-lease update, create a narrowly scoped, time-bounded exception only for the required ref/operator;
-7. force-update only the explicitly approved affected refs using lease protection;
-8. immediately restore the exact captured protection/ruleset configuration;
-9. verify force-push protection, required reviews, status checks and other branch rules are restored;
-10. run CI/security/release checks again before unfreezing development.
+6. record the exact pre-rewrite OID for every affected ref and bind each update to that captured value;
+7. if GitHub protection blocks the required force-with-lease update, create a narrowly scoped, time-bounded exception only for the required ref/operator;
+8. force-update only the explicitly approved affected refs using an explicit expected-value lease such as `--force-with-lease=<ref>:<captured-old-oid>`; do not use a bare `--force-with-lease` in the mirror-rewrite procedure;
+9. abort the update if any ref no longer matches its captured old OID, investigate the concurrent change, refresh the maintenance-window evidence, and obtain a new approved expected value before retrying;
+10. immediately restore the exact captured protection/ruleset configuration;
+11. verify force-push protection, required reviews, status checks and other branch rules are restored;
+12. run CI/security/release checks again before unfreezing development.
 
 If a safe exception cannot be created and restored predictably, do not weaken protection; use the private-first containment path or another GitHub-supported remediation path.
 
@@ -79,7 +81,7 @@ If a safe exception cannot be created and restored predictably, do not weaken pr
 1. create a mirror clone;
 2. rewrite every affected ref so the sensitive historical content is removed;
 3. preserve unrelated repository content and authorship where practicable;
-4. force-update only approved affected refs with lease protection under the procedure above;
+4. force-update only approved affected refs with explicit expected-value leases bound to the captured pre-rewrite OIDs under the procedure above;
 5. re-create or reconcile tags only after verification;
 6. inspect PR refs and other server-side references;
 7. coordinate with owners of every affected public fork for cleanup/deletion;
