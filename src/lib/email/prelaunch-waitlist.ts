@@ -58,7 +58,7 @@ function premiumEmailShell(title: string, preview: string, body: string) {
         </div>
         ${body}
         <div style="padding:22px 30px;border-top:1px solid rgba(148,163,184,.18);color:#94a3b8;font-size:12px;line-height:1.7;">
-          You are receiving this message because this email was used on the Risck Comply early access waitlist.<br />
+          You are receiving this message because this email was used on the RISCK COMPLY early access waitlist.<br />
           Commercial contact: <a href="mailto:comercial@risckcomply.com" style="color:#e0f2fe;">comercial@risckcomply.com</a>
         </div>
       </div>
@@ -67,11 +67,11 @@ function premiumEmailShell(title: string, preview: string, body: string) {
 }
 
 export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
-  const isPt = input.locale === 'pt';
+  const isPt = false;
   const joinedAt = formatJoinedAt(input.joinedAt, input.locale);
   const launchLabel = isPt ? '1 de agosto de 2026, 07:00 Europe/Lisbon' : '1 August 2026, 07:00 Europe/Lisbon';
   const remaining = formatRemaining(input.joinedAt, input.launchAt, input.locale);
-  const title = isPt ? 'Você está na lista enterprise da Risck Comply' : 'You are on the Risck Comply enterprise waitlist';
+  const title = isPt ? 'Você está na lista enterprise da RISCK COMPLY' : 'You are on the RISCK COMPLY enterprise waitlist';
   const preview = isPt ? 'O seu lugar prioritário foi confirmado.' : 'Your priority place has been confirmed.';
   const cta = isPt ? 'Ver página de lançamento' : 'View launch page';
   const intro = isPt
@@ -95,7 +95,7 @@ export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
         </p>
       </div>
       <div style="margin-top:22px;">
-        <div style="color:#ffffff;font-size:16px;font-weight:800;">${isPt ? 'O que a Risck Comply vai oferecer' : 'What Risck Comply will offer'}</div>
+        <div style="color:#ffffff;font-size:16px;font-weight:800;">${isPt ? 'O que a RISCK COMPLY vai oferecer' : 'What RISCK COMPLY will offer'}</div>
         <ul style="margin:12px 0 0;padding-left:20px;color:#cbd5e1;font-size:14px;line-height:1.8;">
           ${valueItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
         </ul>
@@ -121,7 +121,7 @@ export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
   return sendEmail({
     to: input.to,
     from: WAITLIST_COMMERCIAL_FROM,
-    subject: isPt ? 'O seu acesso prioritário à Risck Comply foi confirmado' : 'Your Risck Comply priority access is confirmed',
+    subject: isPt ? 'O seu acesso prioritário à RISCK COMPLY foi confirmado' : 'Your RISCK COMPLY priority access is confirmed',
     html: premiumEmailShell(title, preview, body),
     text,
     template: 'welcome_onboarding',
@@ -136,7 +136,7 @@ export async function sendInternalWaitlistNotification(input: InternalWaitlistNo
   const totalText = input.totalLeads === null ? 'Total ainda indisponível' : `${input.totalLeads} pessoas já se inscreveram`;
   const subject = `Novo lead waitlist: ${input.companyName}`;
   const text = [
-    'Novo lead na lista de espera da Risck Comply',
+    'Novo lead na lista de espera da RISCK COMPLY',
     `Empresa/Nome: ${input.companyName}`,
     `Email: ${input.to}`,
     `Cargo: ${input.role}`,
