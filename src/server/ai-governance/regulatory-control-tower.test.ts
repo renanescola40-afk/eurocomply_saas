@@ -56,7 +56,7 @@ describe('buildRegulatoryControlTower', () => {
       status: 'ready',
       stateSource: 'persisted_tenant_state',
       humanReviewRequired: true,
-      route: '/dashboard/transparencia',
+      route: '/dashboard/transparency',
     });
   });
 
