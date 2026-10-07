@@ -83,7 +83,7 @@ function formatDate(date: string, locale: string) {
 
 function buildCalendarSuggestionHref(locale: string, item: { title: string; jurisdiction: string; executiveSummary: string }) {
   const params = new URLSearchParams({ source: 'intelligence', title: item.title, country: item.jurisdiction, description: item.executiveSummary });
-  return `/${locale}/calendario-compliance?${params.toString()}`;
+  return `/${locale}/compliance-calendar?${params.toString()}`;
 }
 
 const controlClass = 'min-h-10 w-full rounded-lg border border-white/[0.085] bg-black/20 px-3 py-2.5 text-sm text-white/75 outline-none transition placeholder:text-white/28 focus:border-emerald-300/30 focus-visible:ring-2 focus-visible:ring-emerald-300/55';
@@ -143,7 +143,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={`/${locale}/dashboard/organizations/add-ons?addon=regulatory-monitoring-pro`} className="inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-300 px-3 text-xs font-semibold text-[#06100d] transition hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60">{copy.monitoringAddon}</Link>
-            <Link href={`/${locale}/calendario-compliance`} className={secondaryLink}><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />{copy.calendar}</Link>
+            <Link href={`/${locale}/compliance-calendar`} className={secondaryLink}><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />{copy.calendar}</Link>
             <Link href={`/${locale}/dashboard/organizations/reports-governance/news/editorial`} className={secondaryLink}><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{copy.editorial}</Link>
           </div>
         </header>
