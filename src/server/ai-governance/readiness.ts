@@ -117,7 +117,7 @@ export const AI_COMPLIANCE_PRODUCT_MAP: AiComplianceCapability[] = [
   {
     id: 'action_plan',
     title: 'Action plan',
-    route: '/aprovacoes',
+    route: '/approvals',
     outcome: 'Operational queue for owners, admins and members to close readiness gaps.',
     dataSource: 'computed',
   },
