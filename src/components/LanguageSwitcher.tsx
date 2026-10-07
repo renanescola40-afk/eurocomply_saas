@@ -72,7 +72,7 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
   if (variant === 'inline') {
     return (
       <div className={`flex items-center gap-1 ${className}`}>
-        {locales.map((loc) => {
+        {(['en'] as const).map((loc) => {
           const meta = LOCALE_META[loc];
           const isActive = loc === locale;
           return (
@@ -113,7 +113,7 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
 
       {open && (
         <div className="absolute right-0 z-50 mt-1 w-48 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] shadow-xl">
-          {locales.map((loc) => {
+          {(['en'] as const).map((loc) => {
             const meta = LOCALE_META[loc];
             const isActive = loc === locale;
             return (
