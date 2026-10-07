@@ -4,15 +4,17 @@ test.describe('enterprise production gate smoke', () => {
   test('serves the public access surface without framework error leakage', async ({ page }) => {
     const response = await page.goto('/pt', { waitUntil: 'domcontentloaded' });
 
+    await expect(page).toHaveURL(/\/en\/?$/);
+
     expect(response?.status() ?? 0).toBeLessThan(500);
 
     const body = page.locator('body');
-    await expect(body).toContainText(/RISCK COMPLY|governança|governance|compliance/i);
-    await expect(body).toContainText(/Marcar Demo|Book a Demo|Entrar|Sign in/i);
+    await expect(body).toContainText(/RISCK COMPLY|governance|compliance/i);
+    await expect(body).toContainText(/Book a Demo|Sign in/i);
 
-    await expect(page.locator('a[href="/pt/book-demo"]').first()).toBeVisible();
-    await expect(page.locator('a[href="/pt/login"]').first()).toBeVisible();
-    await expect(page.locator('a[href="/pt/pricing"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/en/book-demo"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/en/login"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/en/pricing"]').first()).toBeVisible();
 
     const bodyText = await body.innerText();
     expect(bodyText).not.toMatch(/Unhandled Runtime Error|Application error|stack trace|SUPABASE_SERVICE_ROLE_KEY|HEALTHCHECK_TOKEN/i);
