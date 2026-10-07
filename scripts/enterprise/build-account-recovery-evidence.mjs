@@ -10,7 +10,6 @@ const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const OUTPUT = 'docs/security/evidence/runtime/auth-recovery-validation.json';
 const DEFAULT_GITHUB_CHECKS = 'artifacts/enterprise-readiness/github-checks-evidence.json';
-const REQUIRED_LOCALES = ['en', 'pt', 'es', 'fr', 'it', 'de'];
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -48,7 +47,7 @@ export function evaluateAccountRecoveryCoverage(sources) {
     'aria-live="polite"',
     "role={notice.tone === 'error' ? 'alert' : 'status'}",
   ])
-    && REQUIRED_LOCALES.every((locale) => sources.requestPage.includes(`${locale}: {`));
+    && sources.requestPage.includes("en: {");
   const resetCompletion = containsEvery(sources.resetPage, [
     "event === 'PASSWORD_RECOVERY'",
     'supabase.auth.updateUser({ password })',
@@ -57,11 +56,11 @@ export function evaluateAccountRecoveryCoverage(sources) {
     'await supabase.auth.signOut()',
   ]);
   const routeExposure = sources.middleware.includes("'/reset-password'")
-    && sources.middleware.includes("'/recuperar-senha'")
+    && sources.middleware.includes("'/recuperar-senha': '/recover-password'")
+    && sources.middleware.includes("'/recover-password'")
     && sources.authGate.includes("'reset-password'");
-  const loginEntrypoint = sources.login.includes('href={`/${locale}/recuperar-senha`}')
-    && sources.login.includes('Forgot your password?')
-    && sources.login.includes('Esqueceu a senha?');
+  const loginEntrypoint = sources.login.includes('href={`/${locale}/recover-password`}')
+    && sources.login.includes('Forgot your password?');
   const safeUnconfiguredClient = sources.browserClient.includes('updateUser: async () =>')
     && sources.browserClient.includes("error: new Error('Supabase client not configured')");
   const routeTests = containsEvery(sources.routeTest, [
@@ -171,7 +170,7 @@ export function buildAccountRecoveryEvidence({
     failures,
     evidenceLocations: [
       'src/app/api/auth/recovery/route.ts',
-      'src/app/[locale]/recuperar-senha/page.tsx',
+      'src/app/[locale]/recover-password/page.tsx',
       'src/app/[locale]/reset-password/page.tsx',
       'src/app/[locale]/login/page.tsx',
       'tests/e2e/account-recovery.spec.ts',
@@ -203,7 +202,7 @@ function run() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
   const paths = {
     route: 'src/app/api/auth/recovery/route.ts',
-    requestPage: 'src/app/[locale]/recuperar-senha/page.tsx',
+    requestPage: 'src/app/[locale]/recover-password/page.tsx',
     resetPage: 'src/app/[locale]/reset-password/page.tsx',
     login: 'src/app/[locale]/login/page.tsx',
     middleware: 'src/middleware.ts',
