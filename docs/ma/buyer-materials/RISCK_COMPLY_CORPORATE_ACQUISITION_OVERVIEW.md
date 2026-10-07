@@ -1,13 +1,13 @@
 # RISCK COMPLY — Corporate Acquisition Overview
 
 Date: 2026-10-07
-Positioning: completed pre-commercial technology asset / strategic build-vs-buy opportunity
+Positioning: completed technology asset / strategic build-vs-buy opportunity
 
 ## Product summary
 
 RISCK COMPLY is an enterprise-oriented AI governance and compliance platform built around AI-system inventory, regulatory risk classification, governance evidence, documentation, auditability, monitoring and EU AI Act readiness.
 
-The transaction thesis is technology/IP acquisition and strategic integration, not acquisition of an established ARR base.
+The transaction thesis emphasizes technology/IP acquisition and strategic integration. Historical revenue is not used as a buyer-facing valuation claim until complete accounting evidence is reconciled.
 
 ## Problem solved
 
@@ -56,9 +56,11 @@ Current material references Vercel, Supabase, Stripe, GitHub, Google, Sentry, Up
 
 ## Current commercial status
 
-RISCK COMPLY is pre-commercial / pre-revenue. Stripe LIVE evidence reviewed in the repository showed zero invoices and zero charges for the product at that evidence point. The product was completed before full go-to-market scaling, and the ownership strategy then shifted toward a strategic sale.
+The seller describes RISCK COMPLY as completed before full go-to-market scaling and currently being pursued as a strategic sale.
 
-No established customer base is claimed.
+Verified Stripe evidence shows zero invoices and zero charges at the reviewed Stripe evidence point. That Stripe-only evidence must not be generalized into an independently verified claim that total product revenue, MRR or ARR is zero until complete accounting/bank/contract records are reconciled.
+
+No established customer base is claimed in the current buyer materials.
 
 ## Current assurance status
 
@@ -69,7 +71,8 @@ Current disclosed limits include:
 - Vercel resource creation is blocked by an overdue-balance/payment action owned by the account owner;
 - independent terminal pentest/retest is not credited as PASS;
 - provider closing transfers, buyer acceptance and credential rotation are not executed;
-- creator-to-seller IP title execution remains open.
+- creator-to-seller IP title execution remains open;
+- complete accounting/bank/contract verification of total product revenue remains open.
 
 ## Transaction perimeter
 
@@ -79,7 +82,7 @@ Detailed scope is controlled by the transaction-perimeter document and definitiv
 
 ## Build-vs-buy rationale
 
-An acquirer is evaluating completed product capability, regulatory-domain work, enterprise-oriented architecture, security/governance implementation, documentation and integration optionality rather than buying historical revenue.
+An acquirer can evaluate completed product capability, regulatory-domain work, enterprise-oriented architecture, security/governance implementation, documentation and integration optionality.
 
 The potential value is avoided build time and integration acceleration. No unsupported build-cost number, market valuation or buyer-accepted price is claimed here.
 
