@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
-import { locales, type Locale } from '@/lib/i18n/routing';
-import { getFeatureLanguageAlternates, getFeaturePages, getFeaturePath } from '@/lib/seo/feature-pages';
+import type { Locale } from '@/lib/i18n/routing';
+import { getFeaturePages, getFeaturePath } from '@/lib/seo/feature-pages';
 import { getLocaleAlternates, getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
 
 const publicLocales: Locale[] = ['en'];
