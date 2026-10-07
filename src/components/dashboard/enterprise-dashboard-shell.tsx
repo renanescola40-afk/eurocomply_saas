@@ -276,7 +276,7 @@ export function EnterpriseDashboardShell({ children, locale, organizationName, u
 
             <div className="ml-auto flex items-center gap-2">
               <div className="hidden items-center gap-2 rounded-lg border border-emerald-400/15 bg-emerald-400/[0.055] px-3 py-2 text-[11px] font-medium text-emerald-300 md:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{text.protected}</div>
-              <Link href={localized(locale, '/notificacoes')} aria-label={text.notifications} className={`flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 bg-slate-950/40 text-slate-500 hover:border-slate-700 hover:text-white ${focus}`}><Bell className="h-4 w-4" /></Link>
+              <Link href={localized(locale, '/notifications')} aria-label={text.notifications} className={`flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 bg-slate-950/40 text-slate-500 hover:border-slate-700 hover:text-white ${focus}`}><Bell className="h-4 w-4" /></Link>
               <Link href={localized(locale, '/profile')} aria-label={text.profile} className={`hidden h-10 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-2.5 text-slate-300 hover:border-slate-700 sm:flex ${focus}`}><span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600 text-[9px] font-bold text-white">{initials(userDisplayName)}</span><span className="hidden max-w-28 truncate text-xs font-semibold 2xl:block">{userDisplayName}</span><UserCircle className="h-4 w-4 text-slate-600" /></Link>
             </div>
           </div>
