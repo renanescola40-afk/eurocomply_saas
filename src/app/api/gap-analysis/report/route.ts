@@ -376,6 +376,9 @@ export async function POST(request: Request) {
     }
 
     const body = await parseJsonBodyWithZod(request, { schema: bodySchema, maxBytes: 8 * 1024 });
+    // The product is English-only. Continue accepting historical locale values
+    // for backward-compatible clients, but never let them select report output.
+    const reportLocale = 'en';
     const supabase = createAdminClient();
 
     const { data: assessment, error: assessmentError } = await supabase
@@ -404,8 +407,8 @@ export async function POST(request: Request) {
 
     const generatedAt = new Date();
     const pdf = buildCorporatePdf({
-      locale: body.locale,
-      organizationName: organization.name || (body.locale === 'pt' ? 'Organização' : 'Organization'),
+      locale: reportLocale,
+      organizationName: organization.name || 'Organization',
       score: assessment.score,
       answers: (answers ?? []) as AssessmentAnswer[],
       actions: (findings ?? []).map((item) => ({
