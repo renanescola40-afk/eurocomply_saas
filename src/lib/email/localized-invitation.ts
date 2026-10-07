@@ -1,7 +1,6 @@
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
 
 const PRODUCT_NAME = 'Risck Comply';
-const SUPPORTED_LOCALES = new Set(['en', 'pt', 'es', 'fr', 'it', 'de']);
 
 function escapeHtml(value: string | number | null | undefined) {
   return String(value ?? '')
@@ -18,9 +17,8 @@ function safeUrl(value: string) {
   return '/';
 }
 
-function normalizeLocale(locale: string) {
-  const normalized = locale.trim().toLowerCase().split('-')[0];
-  return SUPPORTED_LOCALES.has(normalized) ? normalized : 'en';
+function normalizeLocale(_locale: string) {
+  return 'en';
 }
 
 function isTrustedPrivacyOrigin(url: URL) {
@@ -89,12 +87,12 @@ export function localizedInvitationEmail(input: {
   inviteUrl: string;
   locale: string;
 }) {
-  const copy = getTeamWorkflowCopy(input.locale).email;
-  const privacyCopy = invitationPrivacyCopy(input.locale, input.organizationName);
+  const copy = getTeamWorkflowCopy('en').email;
+  const privacyCopy = invitationPrivacyCopy('en', input.organizationName);
   const organization = escapeHtml(input.organizationName);
   const role = escapeHtml(input.role);
   const url = escapeHtml(safeUrl(input.inviteUrl));
-  const privacyUrl = privacyUrlForInvite(input.inviteUrl, input.locale);
+  const privacyUrl = privacyUrlForInvite(input.inviteUrl, 'en');
   const escapedPrivacyUrl = escapeHtml(privacyUrl);
   const subject = copy.subject(input.organizationName);
   const title = copy.title(input.organizationName);
