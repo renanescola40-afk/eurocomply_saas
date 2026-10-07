@@ -1,6 +1,6 @@
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
 
-const PRODUCT_NAME = 'Risck Comply';
+const PRODUCT_NAME = 'RISCK COMPLY';
 
 function escapeHtml(value: string | number | null | undefined) {
   return String(value ?? '')
