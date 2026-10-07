@@ -170,7 +170,7 @@ export async function collectOrganizationDataExport(context: OrganizationExportC
     scope: 'organization',
     subject: context.subject,
     organization: context.organization,
-    retentionNotice: 'Export contains customer data available to EuroComply. Billing, tax, security and chained audit records may be retained after deletion requests according to DATA_RETENTION_POLICY.md.',
+    retentionNotice: 'Export contains customer data available to RISCK COMPLY. Billing, tax, security and chained audit records may be retained after deletion requests according to DATA_RETENTION_POLICY.md.',
     tables,
     unavailableTables,
   };
