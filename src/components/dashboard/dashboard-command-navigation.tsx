@@ -90,7 +90,7 @@ function buildNavigation(copy: NavigationCopy): MenuItem[] {
         { label: copy.tasks, href: `${dashboardRoot}/tasks`, description: 'Execution backlog and ownership' },
         { label: copy.risks, href: `${dashboardRoot}/risks`, description: 'Risk register and mitigations' },
         { label: copy.evidence, href: `${dashboardRoot}/documents`, description: 'Controlled evidence and documents' },
-        { label: copy.approvals, href: '/aprovacoes', description: 'Approval workflows' },
+        { label: copy.approvals, href: '/approvals', description: 'Approval workflows' },
         { label: copy.vendors, href: `${dashboardRoot}/vendors`, description: 'Third-party governance' },
       ],
     },
@@ -160,7 +160,7 @@ function MobileNavigation({ locale, copy, navigation }: { locale: Locale; copy: 
         <div className="mb-4 flex items-center justify-between gap-3">
           <LanguageSwitcher currentLocale={locale} compact />
           <div className="flex items-center gap-1">
-            <Link href={localizeHref(locale, '/notificacoes')} className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border text-muted-foreground transition hover:bg-muted hover:text-foreground ${focusRing}`} aria-label={copy.notifications}><Bell className="h-4 w-4" aria-hidden="true" /></Link>
+            <Link href={localizeHref(locale, '/notifications')} className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border text-muted-foreground transition hover:bg-muted hover:text-foreground ${focusRing}`} aria-label={copy.notifications}><Bell className="h-4 w-4" aria-hidden="true" /></Link>
             <Link href={localizeHref(locale, '/profile')} className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border text-muted-foreground transition hover:bg-muted hover:text-foreground ${focusRing}`} aria-label={copy.profile}><UserCircle className="h-4 w-4" aria-hidden="true" /></Link>
           </div>
         </div>
@@ -251,7 +251,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'RISCK COMPLY'
         </nav>
 
         <div className="ml-auto hidden items-center gap-1 lg:flex">
-          <Link href={localizeHref(activeLocale, '/notificacoes')} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label={copy.notifications}>
+          <Link href={localizeHref(activeLocale, '/notifications')} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70" aria-label={copy.notifications}>
             <Bell className="h-4 w-4" aria-hidden="true" />
           </Link>
           <Link href={localizeHref(activeLocale, '/profile')} className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${activePage === 'Perfil' || activePage === 'Profile' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
