@@ -308,7 +308,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
   <main class="page">
     <header class="topbar">
       <div>
-        <div class="brand">Euro<span>Comply</span></div>
+        <div class="brand">RISCK <span>COMPLY</span></div>
         <div class="doc-type">${escapeHtml(input.labels.title)}</div>
       </div>
       <div style="text-align:right">
@@ -363,7 +363,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
     <section>
       <h2>${escapeHtml(input.labels.articleBreakdown)}</h2>
       <table>
-        <thead><tr><th>Artigo</th><th>${escapeHtml(input.labels.score)}</th></tr></thead>
+        <thead><tr><th>Article</th><th>${escapeHtml(input.labels.score)}</th></tr></thead>
         <tbody>${articleRows}</tbody>
       </table>
     </section>
@@ -371,7 +371,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
     <section>
       <h2>${escapeHtml(input.labels.actionPlan)}</h2>
       <table>
-        <thead><tr><th>#</th><th>Artigo</th><th>${escapeHtml(input.labels.severity)}</th><th>${escapeHtml(input.labels.recommendation)}</th></tr></thead>
+        <thead><tr><th>#</th><th>Article</th><th>${escapeHtml(input.labels.severity)}</th><th>${escapeHtml(input.labels.recommendation)}</th></tr></thead>
         <tbody>${actionRows}</tbody>
       </table>
     </section>
