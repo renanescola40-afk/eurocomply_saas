@@ -16,7 +16,7 @@ Purpose: buyer-safe status map. Green status is never inferred from intent or do
 | AI inventory | IMPLEMENTED | Core product module. |
 | Assessments / reassessment | IMPLEMENTED | Core governance workflows exist. |
 | Document generation | IMPLEMENTED | Product/document evidence exists. |
-| Billing / Stripe | IMPLEMENTED / LIVE_ACCOUNT_EVIDENCE | Stripe LIVE account/billing evidence exists; current product remains pre-revenue. |
+| Billing / Stripe | IMPLEMENTED / LIVE_ACCOUNT_EVIDENCE | Stripe LIVE evidence shows zero invoices and zero charges at the reviewed evidence point. Total product revenue/MRR/ARR remain OPEN_ACCOUNTING_CONFIRMATION until complete accounting, bank and contract records are reconciled. |
 | SBOM / OSS | EVIDENCED | SBOM, attestation and OSS/license diligence exist. |
 | Vulnerability management | EVIDENCED_INTERNAL | CI/security/dependency controls exist; this is not a certification. |
 | Backups / recovery | EVIDENCED_WITH_BOUNDARY | DR/recovery materials exist; claims must remain tied to current accepted evidence. |
@@ -27,7 +27,7 @@ Purpose: buyer-safe status map. Green status is never inferred from intent or do
 | Provider transfer | PARTIAL | Provider-specific handoff/transfer paths exist; no provider is represented as fully transferred. |
 | Main = production SHA | FAIL | Current main and latest READY production SHA are not equal. |
 | Vercel production recreation | EXTERNALLY_BLOCKED | Latest exact-main deployment attempt was blocked by overdue-balance/payment action; no billing mutation was performed. |
-| Repository confidentiality | RISK_DISCLOSED | Authenticated GitHub evidence on 2026-10-07 reported repository visibility as public. |
+| Repository confidentiality | OPEN_RISK | Authenticated GitHub evidence on 2026-10-07 reported repository visibility as public. Buyer-contact correspondence was removed from the current tree, but prior merged commits remain reachable in public Git history; do not call the repository/history confidential or repository-safe until history is appropriately remediated or access/visibility strategy is formally resolved. |
 
 ## Current production / release boundary
 
@@ -52,3 +52,19 @@ Buyer materials may describe implemented security architecture and evidence. The
 ## Diligence conclusion
 
 The product is suitable to enter technical diligence with disclosed gaps. This is not equivalent to signing/closing readiness.
+
+
+## Public Git history confidentiality incident
+
+A buyer-material commit previously introduced named buyer contacts, private request details and unsent reply drafts into a repository that is currently public.
+
+The current tree no longer contains those details. However, ordinary follow-up commits do not erase reachable Git history. Historical commits containing the material remain recoverable while that history remains publicly reachable.
+
+Current classification:
+- CURRENT_TREE_PRIVATE_CORRESPONDENCE_REMOVED=YES
+- REACHABLE_GIT_HISTORY_EXPOSURE=OPEN
+- HISTORY_PURGE_EXECUTED=NO
+- REPOSITORY_PRIVATE_MIGRATION_EXECUTED=NO
+- CONFIDENTIALITY_CLOSED=NO
+
+No force-push/history rewrite or repository-visibility mutation is performed by this documentation change.
