@@ -19,14 +19,14 @@ export default function Error({
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#080e18] p-4 text-center text-white">
       <div className="w-full max-w-md rounded-xl border border-slate-800 bg-[#0b121e] p-6 sm:p-8">
-        <div className="text-xl font-semibold tracking-[-0.02em] text-slate-100">Algo correu mal</div>
+        <div className="text-xl font-semibold tracking-[-0.02em] text-slate-100">Something went wrong</div>
         <p className="mt-2 text-sm leading-6 text-slate-400">
-          Não foi possível carregar esta área com segurança. Tente novamente ou volte ao painel.
+          We could not load this area safely. Try again or return to the dashboard.
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           {reset && (
             <Button onClick={reset} className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500/40">
-              Tentar novamente
+              Try again
             </Button>
           )}
           <Button
@@ -36,7 +36,7 @@ export default function Error({
               window.location.href = `${getLocalePrefix()}/dashboard`;
             }}
           >
-            Voltar ao painel
+            Back to dashboard
           </Button>
         </div>
       </div>
