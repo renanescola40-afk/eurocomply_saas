@@ -7,12 +7,12 @@ Purpose: buyer-facing factual summary. Not a substitute for accountant-prepared 
 
 | Item | Current fact | Evidence status |
 |---|---|---|
-| Product revenue | €0 / pre-revenue at current verified product evidence boundary | VERIFIED_PRODUCT_BILLING_EVIDENCE |
-| Recurring revenue / MRR / ARR | €0 at current verified product evidence boundary | VERIFIED_PRODUCT_BILLING_EVIDENCE |
-| Stripe LIVE invoices | 0 at reviewed evidence point | VERIFIED |
-| Stripe LIVE charges | 0 at reviewed evidence point | VERIFIED |
-| Established customer base | None claimed | OWNER/COMMERCIAL_POSITION + NO_CUSTOMER_CLAIM |
-| Active customer deployments | None claimed | NOT_CREDITED |
+| Total product revenue | Not independently verified from complete accounting/bank/contract records | OPEN_ACCOUNTING_CONFIRMATION |
+| Recurring revenue / MRR / ARR | Not independently verified from complete accounting/bank/contract records | OPEN_ACCOUNTING_CONFIRMATION |
+| Stripe LIVE invoices | 0 at reviewed Stripe evidence point | VERIFIED_STRIPE_ONLY |
+| Stripe LIVE charges | 0 at reviewed Stripe evidence point | VERIFIED_STRIPE_ONLY |
+| Established customer base | None currently claimed in buyer materials | OWNER_POSITION / NOT_INDEPENDENTLY_ACCOUNTING_VERIFIED |
+| Active customer deployments | None credited in current M&A evidence | NOT_CREDITED |
 | Pilots | No signed pilot credited in the current M&A control tower | NOT_CREDITED |
 | LOIs | 0 credited | VERIFIED_CONTROL_TOWER |
 | Acquisition offers | 0 credited | VERIFIED_CONTROL_TOWER |
@@ -20,20 +20,24 @@ Purpose: buyer-facing factual summary. Not a substitute for accountant-prepared 
 | Current GTM state | Product completed before full GTM scaling; strategy shifted toward strategic sale | OWNER_PROVIDED_TRANSACTION_POSITION |
 | Pricing architecture | Existing commercial catalog and enterprise pricing references exist in repository | IMPLEMENTED_COMMERCIAL_MATERIAL |
 | Buyer outreach | 352 unique sent messages were credited in the current M&A control tower before latest buyer-response reconciliation | VERIFIED_CONTROL_TOWER |
-| Human substantive buyer responses | Banyan and Twilio currently qualify as TIER_2_HUMAN_INTEREST | VERIFIED_MAILBOX_2026-10-07 |
-| Routed strategic responses | ServiceNow and B3 are routed internally | VERIFIED_MAILBOX_2026-10-07 |
+| Human substantive buyer responses | Two strategic-buyer conversations currently qualify as TIER_2_HUMAN_INTEREST | CONTROLLED_MAILBOX_EVIDENCE |
+| Routed strategic responses | Two additional strategic-buyer conversations are currently classified as TIER_1_ROUTED | CONTROLLED_MAILBOX_EVIDENCE |
 
-## Buyer-specific current demand signals
+## Revenue truth boundary
 
-Banyan Software requested a rough picture of revenue, recurring revenue, customer count/type, team size, business location and customer location.
+The currently verified Stripe evidence proves only that the reviewed Stripe account showed zero invoices and zero charges at that evidence point.
 
-Twilio requested a summary overview, financial metrics, customer use cases and team bios.
+It does **not** independently prove:
+- total product revenue across all channels;
+- absence of off-Stripe contracts, invoices or bank transfers;
+- company-level revenue;
+- MRR/ARR calculated from complete accounting records.
 
-These requests are substantive human engagement, but they are not offers, NDAs, LOIs, diligence acceptance or valuation acceptance.
+Until authoritative accounting, bank and contract records are reconciled, buyer materials must not present total revenue, MRR or ARR as independently verified zero.
 
 ## Business model
 
-The product supports subscription/SaaS commercial architecture with multiple plan tiers and enterprise sales-led contracting. For M&A purposes, the present opportunity is positioned as a pre-commercial technology/IP asset sale rather than a revenue-multiple transaction.
+The product supports subscription/SaaS commercial architecture with multiple plan tiers and enterprise sales-led contracting. The seller currently positions the opportunity as a strategic technology/IP transaction rather than relying on a revenue-multiple thesis.
 
 ## Operating costs
 
@@ -48,20 +52,24 @@ Still required from authoritative financial/accounting sources as applicable:
 - balance sheet
 - cash flow
 - trial balance / management accounts
-- cash and debt confirmation
+- bank statements / cash confirmation
+- debt confirmation
 - A/R and A/P reconciliation
+- complete contract/invoice register
 - full operating-cost reconciliation
 - VAT/CIT/payroll/withholding status
 - transaction tax modelling
 
 ## Seller-entity boundary
 
-RISCK COMPLY product revenue must not be mixed with unrelated activity of SAMUEL CERQUEIRA, UNIPESSOAL LDA. Buyer diligence should distinguish product economics from any other seller-entity business activity.
+RISCK COMPLY product economics must not be mixed with unrelated activity of SAMUEL CERQUEIRA, UNIPESSOAL LDA. Buyer diligence should distinguish product economics from any other seller-entity business activity.
 
-## Transaction-safe explanation of no revenue
+## Transaction-safe commercial explanation
 
-RISCK COMPLY is pre-commercial. The product was completed before full go-to-market scaling, and the ownership strategy subsequently shifted toward a strategic sale. The acquisition case is therefore based on completed product capability, regulatory-domain work, architecture and build-vs-buy value rather than historical ARR.
+The seller's current position is that RISCK COMPLY was completed before full go-to-market scaling and the ownership strategy then shifted toward a strategic sale. Buyer materials therefore emphasize completed product capability, regulatory-domain work, architecture and build-vs-buy value.
+
+This positioning is not a substitute for accounting verification.
 
 ## Accounting boundary
 
-This factsheet is suitable for initial buyer discussion. It is not accountant-certified and does not replace source financial statements, tax records or buyer-specific quality-of-earnings work.
+This factsheet is suitable for initial buyer discussion only when the revenue caveat above is preserved. It is not accountant-certified and does not replace source financial statements, bank records, tax records, contracts or buyer-specific financial diligence.

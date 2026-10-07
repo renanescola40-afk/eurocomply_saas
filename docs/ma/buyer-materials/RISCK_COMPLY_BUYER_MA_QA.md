@@ -8,11 +8,11 @@ The product was completed before full commercial scaling, and the ownership stra
 **Why not launch and scale it independently?**  
 The current strategy prioritizes a strategic sale rather than building the commercial organization required for long-term standalone scaling.
 
-**Why is there no revenue?**  
-RISCK COMPLY is pre-commercial. Current verified product billing evidence shows no established revenue base. The acquisition case is therefore technology/IP and build-vs-buy value, not ARR.
+**What is the current revenue position?**  
+Verified Stripe evidence shows zero invoices and zero charges at the reviewed evidence point. Complete accounting, bank and contract records have not yet been reconciled, so total product revenue, MRR and ARR must not be represented as independently verified zero until that source-record review is complete.
 
 **How many customers are there?**  
-No established customer base is claimed. Product use cases are presented as use cases, not customer case studies.
+No established customer base is claimed in the current buyer materials. Product use cases are presented as use cases, not customer case studies.
 
 **Why buy instead of build?**  
 A buyer can evaluate an already-built AI-governance product, regulatory-domain work, multi-tenant enterprise architecture, security/control design, evidence/documentation flows and integration optionality instead of starting from zero.
@@ -36,7 +36,7 @@ Internal/external security evidence exists, but a clean independent terminal pen
 No SOC 2 or ISO 27001 certification is claimed unless independently obtained and evidenced.
 
 **Is it enterprise-ready?**  
-The architecture and control set are enterprise-oriented and buyer diligence materials are internally ready. Current external/transaction gaps — including production SHA parity, terminal independent assurance, title execution and provider closing steps — remain disclosed.
+The architecture and control set are enterprise-oriented and buyer diligence materials are internally ready. Current external/transaction gaps — including production SHA parity, terminal independent assurance, title execution, accounting verification and provider closing steps — remain disclosed.
 
 **What remains external?**  
 Buyer decisions, NDA/LOI economics, formal diligence acceptance, legal/tax/accounting evidence, executed title instruments, provider transfer actions, signatures, funds flow and closing acceptance.
