@@ -59,7 +59,7 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
       translate="no"
     >
       {!compact ? <Globe2 className={`ml-2 h-4 w-4 ${isDark ? 'text-white/60' : 'text-muted-foreground'}`} /> : null}
-      {locales.map((locale) => {
+      {(['en'] as const).map((locale) => {
         const active = locale === currentLocale;
         const baseTargetPath = switchLocalePath(pathname, locale);
         const mobileVisibility = compact && !active ? 'hidden sm:inline-flex' : 'inline-flex';
