@@ -20,7 +20,7 @@ Canonical status: `FINAL_MA_GO=NO_PASS`
 
 ## 2. Current technical baseline
 
-Current canonical main after the 2026-10-07 Vercel OPEX reconciliation:
+Current main after latest M&A evidence reconciliation:
 `3e60383a2c5e0762990f2b5fd83fde635e16f792`
 
 This final consolidation branch also contains the validated Financial/Tax closure pack carried from PR #2357/#2358.
@@ -384,7 +384,7 @@ This is an M&A diligence control score, not a product-security certification.
 
 ```text
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
-AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
+AUDITABLE_MA_EVIDENCE_PERCENT=36.73%
 CORPORATE_PERCENT=29.41%
 IP_PERCENT=70.00%
 FINANCIAL_PERCENT=26.92%
