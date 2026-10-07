@@ -38,7 +38,7 @@ type TrialUpgradeEmailInput = BaseTemplateInput & { billingUrl: string; daysRema
 type DocumentExpiringEmailInput = BaseTemplateInput & { documentName: string; expiresAt: string; documentsUrl: string };
 type VendorReviewEmailInput = BaseTemplateInput & { vendorName: string; vendorsUrl: string; reviewDueAt?: string | null };
 
-const PRODUCT_NAME = 'Risck Comply';
+const PRODUCT_NAME = 'RISCK COMPLY';
 
 type LocalizedText = Record<Locale, string>;
 
