@@ -1,7 +1,7 @@
 # RISCK COMPLY — Seller Data Room Master Scorecard
 
 Date: 2026-10-05  
-Baseline main SHA: `d9f89f9670df8907cafbab7db276f68d28e98df9`  
+Baseline main SHA: `3e60383a2c5e0762990f2b5fd83fde635e16f792`  
 Seller: SAMUEL CERQUEIRA, UNIPESSOAL LDA  
 Purpose: full-sale M&A diligence readiness  
 Status: `INTERNAL_DOCUMENT_READINESS=100 / OVERALL_TRANSACTION_READINESS=NOT_100`
@@ -19,14 +19,14 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 | Measure | Score | Meaning |
 |---|---:|---|
 | INTERNAL_DOCUMENT_READINESS | **100%** | The reusable diligence documentation/control package is internally complete. |
-| AUDITABLE_MA_EVIDENCE_CLOSURE | **36.22%** | 35.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
-| AUDITABLE_MA_EVIDENCE_REMAINING | **63.78%** | Official, IP-title, accounting, tax, commercial-fact and provider account/closing evidence still open or partial. |
+| AUDITABLE_MA_EVIDENCE_CLOSURE | **36.73%** | 35.5 evidence points closed out of the original 98 requirements using the published scoring rule. |
+| AUDITABLE_MA_EVIDENCE_REMAINING | **63.27%** | Official, IP-title, accounting, tax, commercial-fact and provider account/closing evidence still open or partial. |
 
 ```text
-TOTAL_EVIDENCE_POINTS=35.5
+TOTAL_EVIDENCE_POINTS=36.0
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=36.22%
-AUDITABLE_MA_EVIDENCE_REMAINING=63.78%
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
+AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
 INTERNAL_DOCUMENT_READINESS=100%
 MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 ```
@@ -150,8 +150,8 @@ TAX_SOURCE_RECORDS_OPEN=YES
 PROVIDER_TRANSFER_TERMS_REVIEW=CLOSED
 PROVIDER_ACCOUNT_EXECUTION_OPEN=YES
 OVERALL_TRANSACTION_100=NO
-EXACT_PERCENT_COMPLETE=36.22
-EXACT_PERCENT_REMAINING=63.78
+EXACT_PERCENT_COMPLETE=36.73
+EXACT_PERCENT_REMAINING=63.27
 ```
 
 ## Priority closure order
