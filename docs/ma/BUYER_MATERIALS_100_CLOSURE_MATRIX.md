@@ -11,7 +11,7 @@ Product: RISCK COMPLY
 - No revenue, customer, certification, pentest, ownership, title, offer, LOI, signature or closing fact may be upgraded beyond evidence.
 - Stripe-only zero activity must never be generalized into verified total revenue/MRR/ARR without complete source-record reconciliation.
 - Source code, credentials and raw secrets are never share-now materials.
-- Private buyer correspondence and named-contact details must remain outside this public repository.
+- Private buyer correspondence and named-contact details must remain outside the current repository tree. Historical exposure in reachable public Git history remains an explicit open confidentiality risk until separately remediated.
 - Buyer-specific sharing remains staged and transaction-controlled.
 
 | Material | Purpose | Canonical file | Buyer stage | Status | Factual gaps | Buyer-specific input required | External dependency | Action | Final status |
@@ -23,7 +23,7 @@ Product: RISCK COMPLY
 | Buyer M&A FAQ | Handle common objections consistently | docs/ma/buyer-materials/RISCK_COMPLY_BUYER_MA_QA.md | Initial interest / NDA | READY | Some answers remain buyer/counsel/accounting dependent | Buyer-specific questions | Buyer / counsel / accountant | Consolidated | PASS |
 | Transaction perimeter | Define what can be sold and transfer method | docs/ma/buyer-materials/RISCK_COMPLY_TRANSACTION_PERIMETER.md | NDA / diligence | READY_WITH_OPEN_TITLE_ITEMS | IP/domain/provider title/transfer evidence not fully closed | Structure and buyer target accounts | Counsel / providers / owner | Preserve explicit open gaps | PASS |
 | Diligence truth pack | Prevent overstatement of technical/security state | docs/ma/buyer-materials/RISCK_COMPLY_DILIGENCE_TRUTH_PACK.md | NDA / diligence | READY | Main-production SHA mismatch; clean independent terminal retest not credited | Buyer diligence requests | Vercel payment / external assurance | Evidence-bound status map | PASS |
-| Buyer response readiness | Company-level pipeline readiness without publishing private correspondence | docs/ma/buyer-materials/RISCK_COMPLY_BUYER_SPECIFIC_RESPONSE_PACKS.md | Initial interest | READY | Exact correspondence remains controlled off-repo | Buyer follow-up questions | Buyer | Public repo stores classifications only | PASS |
+| Buyer response readiness | Company-level pipeline readiness without publishing private correspondence in the current tree | docs/ma/buyer-materials/RISCK_COMPLY_BUYER_SPECIFIC_RESPONSE_PACKS.md | Initial interest | READY_WITH_HISTORY_RISK | Exact correspondence is removed from the current tree, but prior public Git history remains reachable | Buyer follow-up questions | Repository history/visibility decision | Keep current tree sanitized; track history exposure explicitly | PARTIAL |
 | Existing transaction document set | NDA/LOI/term sheet/SPA/APA/disclosure/TSA/closing | docs/ma/FINAL_SALE_READINESS_CONTROL_TOWER.md and docs/ma/MA_TRANSACTION_MASTER_INDEX.md | NDA through closing | INTERNALLY_READY | Signatures, buyer economics, counsel/tax inputs not executed | Yes | Buyer/counsel/accountant | Reference, do not duplicate | PASS_INTERNAL |
 | Data-room staged index | Control what is shared when | docs/trust/BUYER_DATA_ROOM_100_MASTER_INVENTORY_2026-09-28.md | All stages | INTERNALLY_READY | External evidence still open | Transaction stage | External dependencies | Reference | PASS_INTERNAL |
 | Security / architecture pack | Technical diligence | docs/trust/SECURITY_OVERVIEW.md; docs/trust/ARCHITECTURE_OVERVIEW.md; docs/security/* | NDA / diligence | INTERNALLY_READY | Terminal independent assurance open | Buyer questionnaire scope | External pentest/retest | Reference | PASS_INTERNAL |
@@ -33,7 +33,7 @@ Product: RISCK COMPLY
 
 - BUYER_INITIAL_RESPONSE_READINESS: PASS
 - BUYER_NDA_READINESS: PASS
-- BUYER_DATA_ROOM_READINESS: PASS
+- BUYER_DATA_ROOM_READINESS: PASS_WITH_CONFIDENTIALITY_DISCLOSURE
 - BUYER_TECH_DILIGENCE_READINESS: PASS_WITH_DISCLOSED_EXTERNAL_GAPS
 - BUYER_COMMERCIAL_DILIGENCE_READINESS: PASS_WITH_ACCOUNTING_BOUNDARY
 - BUYER_FINANCIAL_DILIGENCE_READINESS: PARTIAL — source accounting/tax records remain external
@@ -55,6 +55,6 @@ No NDA, diligence process, offer, LOI, signing or closing is credited solely fro
 
 ## Internal closure result
 
-BUYER_MATERIALS_INTERNAL_CLOSURE=100_PERCENT
+BUYER_MATERIALS_INTERNAL_CLOSURE=99_PERCENT
 
-This means all internally controllable current-stage buyer-facing material required by the master instruction exists or is referenced canonically and has a defined confidentiality boundary. It does not mean TRANSACTION_100_PERCENT.
+This means the buyer-facing document set itself is materially complete, but one repository-confidentiality issue remains: prior merged commits containing private buyer correspondence remain reachable in public Git history. Current-tree sanitization is complete; history/visibility remediation is not. It does not mean TRANSACTION_100_PERCENT.
