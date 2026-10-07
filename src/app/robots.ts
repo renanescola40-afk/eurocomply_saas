@@ -1,6 +1,5 @@
 import type { MetadataRoute } from 'next';
 
-import { locales } from '@/lib/i18n/routing';
 import { getSiteUrl } from '@/lib/seo/public-metadata';
 
 const localizedPrivateRoots = [
@@ -9,13 +8,13 @@ const localizedPrivateRoots = [
   '/billing/',
   '/team/',
   '/profile/',
-  '/notificacoes/',
-  '/auditoria/',
-  '/documentos/',
-  '/riscos/',
+  '/notifications/',
+  '/audit-log/',
+  '/documents/',
+  '/risks/',
   '/raci/',
-  '/aprovacoes/',
-  '/calendario-compliance/',
+  '/approvals/',
+  '/compliance-calendar/',
   '/onboarding',
   '/login',
   '/signup',
@@ -24,7 +23,7 @@ const localizedPrivateRoots = [
 
 export default function robots(): MetadataRoute.Robots {
   const appUrl = getSiteUrl();
-  const localizedDisallow = locales.flatMap((locale) => localizedPrivateRoots.map((path) => `/${locale}${path}`));
+  const localizedDisallow = localizedPrivateRoots.map((path) => `/en${path}`);
 
   return {
     rules: [
