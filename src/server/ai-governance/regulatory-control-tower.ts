@@ -138,7 +138,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, WorkstreamDefiniti
     articleReference: 'Article 50',
     legalRoles: ['provider', 'deployer'],
     weight: 8,
-    route: '/dashboard/transparencia',
+    route: '/dashboard/transparency',
     stateSource: 'persisted_tenant_state',
     humanReviewRequired: true,
   },
