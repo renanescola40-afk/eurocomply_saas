@@ -186,7 +186,7 @@ MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 The difference is intentional: the documents needed to answer diligence are internally complete, while many underlying official, legal, accounting, tax and provider facts remain externally unclosed.
 
 
-## Financial + tax closure reconciliation — 2026-10-06
+## Financial + tax closure reconciliation — 2026-10-07
 
 A dedicated financial/tax closure run revalidated Stripe LIVE and completed all safe internally controllable templates, matrices and request packs.
 
@@ -239,34 +239,11 @@ POST_P0_SCORE_CHANGE=+1.0_REQUIREMENT_FROM_FINANCIAL_RECONCILIATION
 This was the historical score at the source-confidentiality checkpoint before the later Vercel OPEX reconciliation. The current canonical score is superseding evidence, not a second simultaneous score.
 
 ```text
-HISTORICAL_CHECKPOINT_SCORE=35.5/98
-CURRENT_CANONICAL_SCORE=36.5/98
-CURRENT_AUDITABLE_MA_EVIDENCE_CLOSURE=37.24%
-CURRENT_AUDITABLE_MA_EVIDENCE_REMAINING=62.76%
-POST_MERGE_FINANCIAL_SCORE_CHANGE=+1.0_REQUIREMENT
+TOTAL_SCORE=36.0
+TOTAL_REQUIREMENTS=98
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
+AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
+POST_MERGE_SCORE_CHANGE=0
 ```
 
-
-## Canonical current state — 2026-10-07
-
-```text
-CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
-CORPORATE=5.0/17
-IP=14.0/20
-FINANCIAL=7.0/26
-TAX=0.0/12
-COMMERCIAL=6.5/15
-PROVIDERS=4.0/8
-TOTAL_SCORE=36.5/98
-AUDITABLE_MA_EVIDENCE_CLOSURE=37.24%
-AUDITABLE_MA_EVIDENCE_REMAINING=62.76%
-INTERNAL_DOCUMENT_READINESS=100%
-FINAL_MA_GO=NO_PASS
-```
-
-This block is authoritative if an older historical checkpoint elsewhere in the file shows a lower score.
-
-
-### Payables evidence promotion — 2026-10-07
-
-Requirement #52 moves from OPEN to PARTIAL because the authenticated Vercel provider response proves an overdue balance exists and blocks resource creation until billing is regularized. No payable amount is inferred, and no claim is made about the seller's complete accounts-payable ledger.
+These values are the current canonical score after the 2026-10-07 OPEX reconciliation. The source-confidentiality reconciliation itself changed no requirement score.
