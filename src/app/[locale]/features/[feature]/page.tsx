@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { ArrowRight, CheckCircle2, ChevronRight } from 'lucide-react';
 
 import { PublicFooter } from '@/components/marketing/public-footer';
-import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
+import { LOCALE_META, type Locale } from '@/lib/i18n/routing';
 import {
   getFeatureLanguageAlternates,
   getFeaturePageBySlug,
@@ -221,7 +221,7 @@ export default async function FeaturePage({ params }: PageProps) {
       </section>
 
       <nav aria-label={ui.languageLabel} className="mx-auto flex max-w-6xl flex-wrap gap-2 px-5 pb-14 lg:px-8">
-        {locales.map((language) => (
+        {(['en'] as const).map((language) => (
           <Link
             key={language}
             href={getFeaturePath(language, page.key)}
