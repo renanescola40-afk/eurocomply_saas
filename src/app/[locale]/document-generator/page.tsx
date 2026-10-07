@@ -53,7 +53,7 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
     { title: 'Board / review summary', description: readiness.boardSummary, href: '/dashboard/organizations/reports-governance', status: hasInventory ? 'ready' : 'needs inventory' },
     { title: 'Evidence pack cover', description: 'Structured review snapshot linked to inventory, incidents, gaps and evidence routes.', href: '/audit-pack', status: hasInventory ? 'ready' : 'needs inventory' },
     { title: 'Gap analysis', description: `${readiness.gaps.length} governance gap${readiness.gaps.length === 1 ? '' : 's'} available from current workspace data.`, href: '/dashboard/gap-analysis', status: hasInventory ? 'ready' : 'needs inventory' },
-    { title: 'Action plan', description: `${readiness.actionPlan.length} role-based action${readiness.actionPlan.length === 1 ? '' : 's'} prepared for owner/admin/member/viewer workflow.`, href: '/aprovacoes', status: 'ready' },
+    { title: 'Action plan', description: `${readiness.actionPlan.length} role-based action${readiness.actionPlan.length === 1 ? '' : 's'} prepared for owner/admin/member/viewer workflow.`, href: '/approvals', status: 'ready' },
     { title: 'Policy pack', description: 'Employee AI usage policy, transparency guidance and escalation rules.', href: '/policy-pack', status: hasInventory ? 'ready' : 'needs inventory' },
     { title: 'Vendor assessment memo', description: `${readiness.totals.vendorLinkedSystems} AI system${readiness.totals.vendorLinkedSystems === 1 ? '' : 's'} currently include vendor/model context.`, href: '/vendor-assurance', status: hasInventory ? 'ready' : 'needs inventory' },
   ];
