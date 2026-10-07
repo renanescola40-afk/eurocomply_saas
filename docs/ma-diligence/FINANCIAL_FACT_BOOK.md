@@ -30,7 +30,7 @@ A historical or informal statement must not be promoted to transaction fact with
 | Legal/compliance costs | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Ledger/invoices. |
 | Cash position | STRIPE_BALANCE_€0 / TOTAL_COMPANY_OPEN | PARTIAL | Stripe LIVE available and pending EUR balance are both €0; bank statements still required. |
 | Debt | NOT_CLAIMED | ACCOUNTANT_REQUIRED | GL, financing agreements, bank records. |
-| Payables | NOT_CLAIMED | ACCOUNTANT_REQUIRED | A/P aging. |
+| Payables | PARTIAL_EVIDENCE | DOCUMENTED / ACCOUNTANT_REQUIRED | Authenticated Vercel API proves an overdue provider balance; amount and complete A/P aging remain open. |
 | Receivables | NOT_CLAIMED | ACCOUNTANT_REQUIRED | A/R aging. |
 | Contingent liabilities | NOT_CLAIMED | LAWYER_REQUIRED | Litigation/claims/contract review + accountant. |
 | CAPEX | NOT_CLAIMED | ACCOUNTANT_REQUIRED | Fixed asset register / GL. |
@@ -193,3 +193,16 @@ Authenticated LIVE API revalidation returned:
 - pending balance: EUR 0.
 
 This reconfirms zero Stripe-side commercial activity and balance only. It does not convert missing company-wide accounting or bank evidence into zero.
+
+
+## Accounts payable evidence — Vercel
+
+Authenticated Vercel deployment creation returned `402 Payment Required / resource_creation_blocked` and stated that the team has an overdue balance and requires billing regularization before resource creation can resume. This is direct evidence that at least one provider payable exists.
+
+Truth boundary:
+- payable existence: VERIFIED for Vercel;
+- payable amount: NOT VERIFIED in the available API response;
+- total seller accounts payable: OPEN;
+- accountant A/P aging / general ledger: OPEN.
+
+This supports requirement #52 as PARTIAL, not CLOSED.

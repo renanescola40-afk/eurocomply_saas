@@ -67,7 +67,7 @@ PROVIDER_TRANSFER_READY_FOR_CLOSING=NO
 
 ## Production release/account-status reconciliation — 2026-10-06
 
-Authenticated production-deployment creation against current main `e0c591620837877991451eb3a0ef6f4d08c4d2ee` was attempted through Vercel and rejected with `402 Payment Required` / `resource_creation_blocked`. The provider states that the team has an overdue balance and requires a valid payment method before resource creation can resume.
+Authenticated production-deployment creation against the then-current main `e0c591620837877991451eb3a0ef6f4d08c4d2ee` was attempted through Vercel and rejected with `402 Payment Required` / `resource_creation_blocked`. The provider states that the team has an overdue balance and requires a valid payment method before resource creation can resume.
 
 Truth boundary:
 
@@ -75,7 +75,7 @@ Truth boundary:
 VERCEL_CURRENT_ACCOUNT_CONTROL=VERIFIED
 VERCEL_PROJECT_CONTROL=VERIFIED
 VERCEL_PRODUCTION_LAST_READY_SHA=def7bad00e082ce336734ff7658846fe87595c79
-VERCEL_CURRENT_MAIN_SHA=e0c591620837877991451eb3a0ef6f4d08c4d2ee
+VERCEL_CURRENT_MAIN_SHA=3e60383a2c5e0762990f2b5fd83fde635e16f792
 MAIN_PRODUCTION_SHA_EQUALITY=FAIL
 VERCEL_RESOURCE_CREATION=BLOCKED_OVERDUE_BALANCE
 VERCEL_PAYMENT_ACTION=OWNER_REAL_MONEY_ACTION_REQUIRED
@@ -97,5 +97,21 @@ GITHUB_REPOSITORY_CONTROL=VERIFIED
 GITHUB_REPOSITORY_VISIBILITY=PUBLIC
 SOURCE_CONFIDENTIALITY_ASSUMPTION=FAIL
 VISIBILITY_CHANGE=OWNER_DECISION_REQUIRED
+PROVIDER_SCORE_CHANGE=0
+```
+
+
+## Vercel account-owner evidence update — 2026-10-07
+
+Authenticated Vercel team membership shows one confirmed team member: `renanescola40-afk`, role `OWNER`. This strengthens operational account-owner evidence but does not prove seller legal/billing ownership or buyer-specific transfer completion.
+
+```text
+VERCEL_TEAM_OWNER_ACCOUNT=renanescola40-afk
+VERCEL_TEAM_OWNER_ROLE=OWNER
+VERCEL_TEAM_MEMBER_COUNT=1
+VERCEL_OPERATIONAL_ACCOUNT_OWNER=VERIFIED
+VERCEL_LEGAL_BILLING_OWNER=OPEN
+VERCEL_BUYER_TRANSFER_EXECUTION=OPEN
+PROVIDER_REQUIREMENT_91=PARTIAL
 PROVIDER_SCORE_CHANGE=0
 ```
