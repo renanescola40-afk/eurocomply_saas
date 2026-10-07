@@ -39,6 +39,7 @@ const PUBLIC_ROUTES = [
   '/contact',
   '/book-demo',
   '/recuperar-senha',
+  '/recover-password',
   '/reset-password',
   '/atualizar-senha',
   '/trust',
@@ -199,15 +200,7 @@ function appendSafeAuthQuery(url: URL, req: NextRequest) {
   }
 }
 
-function detectLocale(req: NextRequest): string {
-  // English is the product default. Only an explicit user locale preference
-  // may override it; geography and browser headers must not silently switch
-  // the SaaS into another language.
-  const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
-  if (cookieLocale && locales.includes(cookieLocale as 'en')) {
-    return cookieLocale;
-  }
-
+function detectLocale(_req: NextRequest): string {
   return defaultLocale;
 }
 
@@ -305,6 +298,21 @@ export default async function middleware(req: NextRequest) {
   }
 
   const requestId = createTrustedRequestId();
+
+  const localeSegment = pathname.split('/').filter(Boolean)[0];
+  if (localeSegment && locales.includes(localeSegment as 'en') && localeSegment !== 'en') {
+    const rest = pathname.split('/').filter(Boolean).slice(1).join('/');
+    const redirectUrl = new URL(`/en${rest ? `/${rest}` : ''}`, req.url);
+    redirectUrl.search = req.nextUrl.search;
+    const response = NextResponse.redirect(redirectUrl, 308);
+    response.cookies.set(LOCALE_COOKIE, 'en', {
+      maxAge: 60 * 60 * 24 * 365,
+      path: '/',
+      sameSite: 'lax',
+      secure: true,
+    });
+    return withRequestId(response, requestId);
+  }
 
   if (pathname.startsWith('/next_api')) {
     return nextWithRequestId(req, requestId);
