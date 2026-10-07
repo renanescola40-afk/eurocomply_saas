@@ -186,7 +186,7 @@ MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
 The difference is intentional: the documents needed to answer diligence are internally complete, while many underlying official, legal, accounting, tax and provider facts remain externally unclosed.
 
 
-## Financial + tax closure reconciliation — 2026-10-06
+## Financial + tax closure reconciliation — 2026-10-07
 
 A dedicated financial/tax closure run revalidated Stripe LIVE and completed all safe internally controllable templates, matrices and request packs.
 
@@ -243,3 +243,5 @@ AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
 AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
 POST_MERGE_SCORE_CHANGE=0
 ```
+
+These values are the current canonical score after the 2026-10-07 OPEX reconciliation. The source-confidentiality reconciliation itself changed no requirement score.
