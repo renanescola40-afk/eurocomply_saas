@@ -12,7 +12,7 @@ import {
   getRecipientLocaleFromMetadata,
   withRecipientLocaleMetadata,
 } from '@/lib/i18n/recipient-locale';
-import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
+import { LOCALE_META, type Locale } from '@/lib/i18n/routing';
 
 type MessageState = {
   tone: 'success' | 'error' | 'info';
@@ -249,7 +249,7 @@ export function ProfilePersonalControls({ locale }: ProfilePersonalControlsProps
           <div className="p-5">
             <label htmlFor="preferred-language" className="mb-1.5 block text-xs font-medium text-white/48">{copy.languageLabel}</label>
             <select id="preferred-language" value={selectedLanguage} onChange={(event) => setSelectedLanguage(event.target.value as Locale)} className={inputClass}>
-              {locales.map((language) => (
+              {(['en'] as const).map((language) => (
                 <option key={language} value={language}>{LOCALE_META[language].nativeName}</option>
               ))}
             </select>
