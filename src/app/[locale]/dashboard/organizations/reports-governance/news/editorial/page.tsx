@@ -23,7 +23,7 @@ function buildCalendarSuggestionHref(locale: string, item: { title: string; juri
     description: item.executiveSummary,
   });
 
-  return `/${locale}/calendario-compliance?${params.toString()}`;
+  return `/${locale}/compliance-calendar?${params.toString()}`;
 }
 
 type PageProps = {
