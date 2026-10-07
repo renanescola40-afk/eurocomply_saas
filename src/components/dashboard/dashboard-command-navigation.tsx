@@ -101,7 +101,7 @@ function buildNavigation(copy: NavigationCopy): MenuItem[] {
         { label: copy.reports, href: `${dashboardRoot}/reports-governance`, description: 'Executive and governance outputs' },
         { label: copy.auditPack, href: '/audit-pack', description: 'Structured audit evidence package' },
         { label: copy.raci, href: '/raci', description: 'Ownership and accountability matrix' },
-        { label: copy.auditLog, href: '/auditoria', description: 'Recorded governance activity' },
+        { label: copy.auditLog, href: '/audit-log', description: 'Recorded governance activity' },
       ],
     },
     {
@@ -110,7 +110,7 @@ function buildNavigation(copy: NavigationCopy): MenuItem[] {
       sections: [
         { label: copy.controlTower, href: `${dashboardRoot}/regulatory-control-tower`, description: 'Regulatory readiness and deadlines' },
         { label: copy.news, href: `${dashboardRoot}/reports-governance/news`, description: 'Sourced European AI regulation updates' },
-        { label: copy.legalCalendar, href: '/calendario-compliance', description: 'Upcoming obligations and dates' },
+        { label: copy.legalCalendar, href: '/compliance-calendar', description: 'Upcoming obligations and dates' },
         { label: copy.aiLiteracy, href: `${dashboardRoot}/ai-literacy`, description: 'Article 4 training evidence' },
       ],
     },
