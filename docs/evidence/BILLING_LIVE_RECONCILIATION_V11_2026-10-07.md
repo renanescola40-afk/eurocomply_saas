@@ -124,9 +124,11 @@ Existing historical production evidence showed fail-closed LIVE authority requir
 | EXACT_SHA_BILLING_EVIDENCE | PARTIAL |
 | BILLING_TECHNICAL_E2E | NO_PASS |
 
-Using the V11 working matrix in which PASS=1 and PARTIAL=0.5 across the 12 primary billing gates:
+Using the V11 working matrix in which PASS=1 and PARTIAL=0.5 across the 12 primary billing gates, the displayed matrix contains 4 PASS gates and 8 PARTIAL gates:
 
-`BILLING_SCOPE=8.5/12=70.83%`
+`BILLING_SCOPE=8.0/12=66.67%`
+
+The Portal provider configuration is closed, but the Portal row remains PARTIAL because a legitimate tenant-bound LIVE Portal Session is still part of runtime acceptance. No extra credit is assigned for provider-only Portal readiness.
 
 This percentage is an operational closure indicator only. The canonical enterprise external producer remains the workflow artifact from `.github/workflows/final-billing-product-live-closeout.yml`.
 
@@ -139,7 +141,9 @@ Required:
 - verify production runtime SHA equals that exact commit.
 
 Current blocker:
-- the latest READY production deployment is older than current main.
+- the latest READY production deployment is older than current main;
+- authenticated Vercel deployment creation previously returned `402 Payment Required / resource_creation_blocked` because the team has an overdue balance and requires billing regularization / a valid payment method before resource creation can resume;
+- this is an owner real-money action and is not performed automatically.
 
 ### 2. Legitimate LIVE lifecycle
 
@@ -170,7 +174,7 @@ Expected canonical decision:
 
 ## Owner intervention boundary
 
-`OWNER_INTERVENTION_REQUIRED=LIVE_PAYMENT_CONFIRMATION`
+`OWNER_INTERVENTION_REQUIRED=VERCEL_BILLING_REACTIVATION + LIVE_PAYMENT_CONFIRMATION`
 
 No real charge was initiated by this reconciliation.
 
@@ -180,5 +184,5 @@ Provider-side configuration is materially closed, including the Billing Portal d
 
 The remaining gap is not additional Stripe catalog configuration. It is exact-SHA production reconciliation plus legitimate LIVE end-to-end lifecycle evidence.
 
-`BILLING_SCOPE=70.83%`
+`BILLING_SCOPE=66.67%`
 `BILLING_TECHNICAL_E2E=NO_PASS`
