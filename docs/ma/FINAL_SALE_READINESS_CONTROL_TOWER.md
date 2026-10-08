@@ -442,7 +442,7 @@ This reconciliation does not change the 98-item score because requirement 36 was
 - PR #2363 is merged and its exact-head CI/review gate is closed.
 - A later authenticated Vercel billing reconciliation moved OPEX requirement #56 from OPEN to PARTIAL.
 - Canonical main observed on 2026-10-07 after PR #2371 is `63e0f5aa653e2796799e521338bb7fb2d18d7931`.
-- Canonical auditable M&A score is `36.5 / 98 = 37.24%`; remaining auditable evidence is `62.76%`.
+- Canonical auditable M&A score is `37.0 / 98 = 37.76%`; remaining auditable evidence is `62.24%`.
 - Any earlier 35.5/98 or 36.22% block in historical sections is a superseded checkpoint, not the current score.
 - Latest READY Vercel Production remains `def7bad00e082ce336734ff7658846fe87595c79`; main/Production equality remains FAIL until billing is regularized and a fresh deployment succeeds.
 
