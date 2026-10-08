@@ -71,7 +71,7 @@ export function evaluateAccountRecoveryCoverage(sources) {
   ]);
   const browserTests = containsEvery(sources.e2eTest, [
     "test.describe('enterprise account recovery'",
-    'login exposes a localized recovery entrypoint',
+    'login exposes the canonical English recovery entrypoint',
     'recovery request presents the same generic success message',
     'reset completion rejects a missing or expired recovery session',
   ]);
