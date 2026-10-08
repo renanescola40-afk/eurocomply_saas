@@ -16,7 +16,7 @@ Classification: REPOSITORY_SAFE_CONTROL_DOCUMENT — NOT AN EXECUTED OR BUYER-AP
 9. Provider transfer: `../ma-diligence/PROVIDER_TRANSFER_MATRIX.md` and `../ma-diligence/PROVIDER_TRANSFER_CHANGE_OF_CONTROL_REVIEW_2026-10-05.md`.
 10. Commercial: `../ma-diligence/COMMERCIAL_PIPELINE_EVIDENCE_REGISTER.md` (keep named private communications out of public source).
 
-## Evidence scoring — 2026-10-07 matrix snapshot, not a new live provider attestation
+## Evidence scoring — 2026-10-08 matrix snapshot, not a new live provider attestation
 CLOSED = 1; PARTIAL = 0.5; OPEN = 0; evidenced N/A only. No template earns external evidence credit.
 | Domain | Points | Requirements | Percent |
 | --- | ---: | ---: | ---: |
@@ -24,13 +24,13 @@ CLOSED = 1; PARTIAL = 0.5; OPEN = 0; evidenced N/A only. No template earns exter
 | IP and OSS | 14.0 | 20 | 70.00% |
 | Financial | 7.0 | 26 | 26.92% |
 | Tax | 0.0 | 12 | 0.00% |
-| Commercial | 6.5 | 15 | 43.33% |
+| Commercial | 7.0 | 15 | 46.67% |
 | Providers | 4.0 | 8 | 50.00% |
-| TOTAL AUDITABLE M&A EVIDENCE | 36.5 | 98 | 37.24% |
+| TOTAL AUDITABLE M&A EVIDENCE | 37.0 | 98 | 37.76% |
 
 Separate gauges, not additive:
 - INTERNAL_DOCUMENTATION = 100% **as reported in existing internal coverage registers only**; not proof of signed documents or complete evidence.
-- BUYER_MATERIALS = (11 PASS + 1 PARTIAL × 0.5) / 12 = 95.83% (2026-10-07).
+- BUYER_MATERIALS = (11 PASS + 1 PARTIAL × 0.5) / 12 = 95.83% (2026-10-08).
 - TRANSACTION DOCUMENT COVERAGE = 65/65 templates/coverage; EXECUTED = 0 in the referenced control tower.
 - DATA ROOM CAPABILITY = 175/175 internal documentary capabilities claimed by the 2026-09-28 inventory; official-source readiness not implied.
 
