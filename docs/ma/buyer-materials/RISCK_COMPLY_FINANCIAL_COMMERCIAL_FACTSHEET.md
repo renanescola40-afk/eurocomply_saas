@@ -20,7 +20,7 @@ Purpose: buyer-facing factual summary. Not a substitute for accountant-prepared 
 | Current GTM state | Product completed before full GTM scaling; strategy shifted toward strategic sale | OWNER_PROVIDED_TRANSACTION_POSITION |
 | Pricing architecture | Existing commercial catalog and enterprise pricing references exist in repository | IMPLEMENTED_COMMERCIAL_MATERIAL |
 | Buyer outreach | 352 unique sent messages were credited in the current M&A control tower before latest buyer-response reconciliation | VERIFIED_CONTROL_TOWER |
-| Human substantive buyer responses | Two strategic-buyer conversations currently qualify as TIER_2_HUMAN_INTEREST | CONTROLLED_MAILBOX_EVIDENCE |
+| Human substantive buyer responses | Twilio currently qualifies as active TIER_2_HUMAN_INTEREST / MATERIALS_REQUESTED; Banyan progressed through human review and is now CLOSED_LOST_NOT_FIT | CONTROLLED_MAILBOX_EVIDENCE |
 | Routed strategic responses | Two additional strategic-buyer conversations are currently classified as TIER_1_ROUTED | CONTROLLED_MAILBOX_EVIDENCE |
 
 ## Revenue truth boundary
