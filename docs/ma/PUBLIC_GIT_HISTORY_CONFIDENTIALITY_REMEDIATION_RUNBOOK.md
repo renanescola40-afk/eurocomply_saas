@@ -17,6 +17,27 @@ This runbook is preparation only. No history rewrite, force push, repository vis
 - repository visibility is public;
 - confidentiality therefore remains OPEN.
 
+
+## Ref inventory precheck — 2026-10-08
+
+Authenticated branch enumeration against the repository returned at least 1,000 branch refs across the first 10 pages and still returned a continuation cursor. Therefore the branch inventory is larger than 1,000 refs and was not exhaustively enumerated in this bounded reconciliation.
+
+Operational consequence:
+- do not execute a public-history rewrite from a partial ref inventory;
+- complete the authoritative ref inventory before any destructive remediation window;
+- treat branches, tags, PR refs, forks and collaborator clones as independent reachability surfaces;
+- preserve the current `CONFIDENTIALITY_CLOSED=NO` status until the applicable verification gates are completed.
+
+Current precheck state:
+
+```text
+AUTHENTICATED_BRANCH_REFS_OBSERVED=>=1000
+BRANCH_ENUMERATION_COMPLETE=NO
+DESTRUCTIVE_HISTORY_REWRITE_READY=NO
+PRIVATE_FIRST_CONTAINMENT_PREPARED=YES_WITH_OWNER_APPROVAL_REQUIRED
+CONFIDENTIALITY_CLOSED=NO
+```
+
 ## Required safeguards before any destructive remediation
 
 1. Freeze merges and direct pushes temporarily.
@@ -165,7 +186,7 @@ CURRENT_TREE_SANITIZED=PASS
 PUBLIC_HISTORY_PURGED=PASS_OR_NOT_PUBLICLY_REACHABLE
 REPOSITORY_VISIBILITY=APPROVED_TARGET_STATE
 BRANCH_PROTECTION=RESTORED_AND_VERIFIED
-PER_REF_EXPECTED_VALUE_LEASES=PASS
+PER_REF_EXPECTED_VALUE_LEASES=PASS_OR_NOT_APPLICABLE
 COLLABORATOR_CLONE_CLEANUP=PASS
 FORK_CLEANUP=PASS_OR_NOT_APPLICABLE
 GITHUB_SUPPORT_PURGE=COMPLETE_IF_REQUIRED
@@ -174,4 +195,4 @@ CONFIDENTIALITY_CLOSED=PASS
 
 ## Approval boundary
 
-Executing a history rewrite, force-push/force-with-lease, temporary branch-protection exception, or repository visibility change is a high-impact repository operation. It must not be represented as complete until actually performed and verified.
+Executing a history rewrite, force-push/force-with-lease, temporary branch-protection exception, or repository visibility change is a high-impact repository operation. It must not be represented as complete until actually performed and verified. If the approved remediation path uses private-only containment and no ref rewrite occurs, per-ref expected-value leases are correctly recorded as NOT_APPLICABLE rather than PASS.

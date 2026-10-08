@@ -1,6 +1,6 @@
 # RISCK COMPLY — M&A Requirement Status Matrix
 
-Date: 2026-10-07  
+Date: 2026-10-08  
 Scoring scope: requirements 1–98 from the Corporate + IP + Financial + Tax M&A Diligence Closure Master  
 Status: `AUDITABLE_SCORING_ACTIVE`
 
@@ -136,11 +136,11 @@ Tax subtotal: **0.0 / 12 = 0.00%**
 | 85 | Customer logos | OPEN | 0.0 | Not claimed. |
 | 86 | Churn | OPEN | 0.0 | No customer baseline credited. |
 | 87 | Retention | OPEN | 0.0 | No customer baseline credited. |
-| 88 | Sales cycle | PARTIAL | 0.5 | GTM process exists; observed buyer-cycle dataset incomplete. |
+| 88 | Sales cycle | CLOSED | 1.0 | Attributable mailbox timestamps now provide a bounded strategic-buyer response/outcome dataset across routed, active-interest and closed-lost cycles. Scope is buyer-cycle evidence only; it does not claim customer conversion or revenue. |
 | 89 | GTM model | CLOSED | 1.0 | Sales/GTM playbooks exist. |
 | 90 | Addressable market claims | CLOSED | 1.0 | Official Eurostat enterprise-base data and EU AI Act scope are reconciled in ADDRESSABLE_MARKET_CLAIMS_SUBSTANTIATION_2026-10-06.md with explicit TAM/SAM/SOM truth boundaries. |
 
-Commercial subtotal: **6.5 / 15 = 43.33%**
+Commercial subtotal: **7.0 / 15 = 46.67%**
 
 ## Providers — requirements 91–98
 
@@ -166,14 +166,14 @@ CORPORATE=5.0/17
 IP=14.0/20
 FINANCIAL=7.0/26
 TAX=0.0/12
-COMMERCIAL=6.5/15
+COMMERCIAL=7.0/15
 PROVIDERS=4.0/8
 
-TOTAL_SCORE=36.5
+TOTAL_SCORE=37.0
 TOTAL_REQUIREMENTS=98
 
-AUDITABLE_MA_EVIDENCE_CLOSURE=36.5/98=37.24%
-AUDITABLE_MA_EVIDENCE_REMAINING=62.76%
+AUDITABLE_MA_EVIDENCE_CLOSURE=37.0/98=37.76%
+AUDITABLE_MA_EVIDENCE_REMAINING=62.24%
 ```
 
 This replaces prior non-reproducible overall management percentages. It does **not** reduce the separate internal-documentation score:
@@ -220,10 +220,10 @@ FINANCIAL_TAX_GO=PASS_INTERNAL_CLOSURE_ONLY
 - The later 2026-10-07 financial reconciliation changes OPEX (#56) from OPEN to PARTIAL based on new authenticated provider billing evidence.
 
 ```text
-TOTAL_SCORE=36.5
+TOTAL_SCORE=37.0
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=37.24%
-AUDITABLE_MA_EVIDENCE_REMAINING=62.76%
+AUDITABLE_MA_EVIDENCE_CLOSURE=37.76%
+AUDITABLE_MA_EVIDENCE_REMAINING=62.24%
 POST_P0_SCORE_CHANGE=+1.0_REQUIREMENT_FROM_FINANCIAL_RECONCILIATION
 ```
 
@@ -247,3 +247,18 @@ POST_MERGE_SCORE_CHANGE=0
 ```
 
 These values are the current canonical score after the 2026-10-07 OPEX reconciliation. The source-confidentiality reconciliation itself changed no requirement score.
+
+
+## Commercial buyer-cycle evidence promotion — 2026-10-08
+
+Requirement #88 moves from PARTIAL to CLOSED for the current diligence stage. The mailbox now contains attributable strategic-buyer cycles with measured outbound-to-response/outcome timings across Banyan Software, Twilio, Temenos, Mollie, Bucher Industries and Sartorius, in addition to the earlier B3, ServiceNow and BPI timing data.
+
+Truth boundary: this closes the observed strategic-buyer cycle evidence requirement. It does not assert customer sales-cycle duration, customer conversion, revenue, contract execution, LOI or acquisition offer.
+
+```text
+COMMERCIAL=7.0/15=46.67%
+TOTAL_SCORE=37.0/98
+AUDITABLE_MA_EVIDENCE_CLOSURE=37.76%
+AUDITABLE_MA_EVIDENCE_REMAINING=62.24%
+REQUIREMENT_88=CLOSED_WITH_BUYER_CYCLE_SCOPE_BOUNDARY
+```

@@ -245,13 +245,13 @@ CORPORATE=5.0/17=29.41%
 IP=14.0/20=70.00%
 FINANCIAL=7.0/26=26.92%
 TAX=0.0/12=0.00%
-COMMERCIAL=6.5/15=43.33%
+COMMERCIAL=7.0/15=46.67%
 PROVIDERS=4.0/8=50.00%
 
-TOTAL_SCORE=36.5
+TOTAL_SCORE=37.0
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
-REMAINING_AUDITABLE_MA_EVIDENCE_PERCENT=62.76%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.76%
+REMAINING_AUDITABLE_MA_EVIDENCE_PERCENT=62.24%
 INTERNAL_DOCUMENT_READINESS_PERCENT=100%
 ```
 
@@ -262,8 +262,8 @@ This score now includes one bounded financial evidence change: OPEX (#56) is PAR
 Canonical mailbox evidence currently supports:
 - `TOTAL_OUTREACH=352` unique sent messages across the defined acquisition + pilot/procurement scope
 - `DELIVERY_FAILURE_MESSAGES=22`
-- Banyan Software: TIER_2_HUMAN_INTEREST — substantive human response requesting additional business information; not an offer, NDA, LOI or diligence acceptance
-- Twilio: TIER_2_HUMAN_INTEREST — substantive human response requesting additional business/product information; not an offer, NDA, LOI or diligence acceptance
+- Banyan Software: CLOSED_LOST_NOT_FIT — Corporate Development reviewed the supplied business picture and declined the opportunity at the current pre-commercial stage
+- Twilio: TIER_2_HUMAN_INTEREST — Corporate Development requested financial metrics, use cases and team bios; materials were supplied; no NDA, diligence acceptance, offer or LOI is credited
 - B3: TIER_1_ROUTED — routed to responsible team
 - ServiceNow: TIER_1_ROUTED — routed to Corporate Development
 - BPI: pilot proposal under analysis
@@ -279,7 +279,7 @@ Strict stage interpretation:
 
 Therefore:
 ```text
-REAL_BUYER_INTEREST=TIER_2_HUMAN_INTEREST_CREDITED_FOR_BANYAN_AND_TWILIO
+REAL_BUYER_INTEREST=TIER_2_HUMAN_INTEREST_CREDITED_FOR_TWILIO; BANYAN=CLOSED_LOST_NOT_FIT
 NDAS=0_CREDITED
 DILIGENCE_PROCESSES=0_CREDITED
 OFFERS=0_CREDITED
@@ -388,17 +388,17 @@ This is an M&A diligence control score, not a product-security certification.
 
 ```text
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
-AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.76%
 CORPORATE_PERCENT=29.41%
 IP_PERCENT=70.00%
 FINANCIAL_PERCENT=26.92%
 TAX_PERCENT=0.00%
-COMMERCIAL_PERCENT=43.33%
+COMMERCIAL_PERCENT=46.67%
 PROVIDER_PERCENT=50.00%
 SECURITY_DILIGENCE_PERCENT=70.00%
 
-SALE_READINESS_PERCENT=37.24%
-REMAINING_PERCENT=62.76%
+SALE_READINESS_PERCENT=37.76%
+REMAINING_PERCENT=62.24%
 
 FINAL_MA_GO=NO_PASS
 ```
@@ -442,7 +442,7 @@ This reconciliation does not change the 98-item score because requirement 36 was
 - PR #2363 is merged and its exact-head CI/review gate is closed.
 - A later authenticated Vercel billing reconciliation moved OPEX requirement #56 from OPEN to PARTIAL.
 - Canonical main observed on 2026-10-07 after PR #2371 is `63e0f5aa653e2796799e521338bb7fb2d18d7931`.
-- Canonical auditable M&A score is `36.5 / 98 = 37.24%`; remaining auditable evidence is `62.76%`.
+- Canonical auditable M&A score is `37.0 / 98 = 37.76%`; remaining auditable evidence is `62.24%`.
 - Any earlier 35.5/98 or 36.22% block in historical sections is a superseded checkpoint, not the current score.
 - Latest READY Vercel Production remains `def7bad00e082ce336734ff7658846fe87595c79`; main/Production equality remains FAIL until billing is regularized and a fresh deployment succeeds.
 
@@ -450,9 +450,9 @@ This reconciliation does not change the 98-item score because requirement 36 was
 OBSERVED_MAIN_SHA_AT_RECONCILIATION=b9b55790cc26b8761d437a0b37dc6d88eb48f274
 PRODUCTION_SHA=def7bad00e082ce336734ff7658846fe87595c79
 MAIN_PRODUCTION_SHA_EQUALITY=FAIL
-CANONICAL_TOTAL_SCORE=36.5/98
-CANONICAL_SALE_READINESS_PERCENT=37.24%
-CANONICAL_REMAINING_PERCENT=62.76%
+CANONICAL_TOTAL_SCORE=37.0/98
+CANONICAL_SALE_READINESS_PERCENT=37.76%
+CANONICAL_REMAINING_PERCENT=62.24%
 INTERNAL_DOCUMENT_READINESS_PERCENT=100.00%
 FINAL_MA_GO=NO_PASS
 ```
@@ -483,7 +483,7 @@ BANYAN_STAGE=TIER_2_HUMAN_INTEREST
 TWILIO_STAGE=TIER_2_HUMAN_INTEREST
 SERVICENOW_STAGE=TIER_1_ROUTED
 B3_STAGE=TIER_1_ROUTED
-AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.76%
 FINAL_MA_GO=NO_PASS
 ```
 
@@ -529,6 +529,27 @@ HISTORICAL_PUBLIC_GIT_EXPOSURE=OPEN
 HISTORY_REWRITE_EXECUTED=NO
 REPOSITORY_VISIBILITY_CHANGE_EXECUTED=NO
 BUYER_MATERIALS_INTERNAL_CLOSURE_PERCENT=95.83%
-AUDITABLE_MA_EVIDENCE_PERCENT=37.24%
+AUDITABLE_MA_EVIDENCE_PERCENT=37.76%
+FINAL_MA_GO=NO_PASS
+```
+
+
+## 20. Strategic-buyer cycle closure — 2026-10-08
+
+The commercial evidence register now contains a bounded strategic-buyer response/outcome dataset with attributable timestamps and outcomes across multiple counterparties. Requirement #88 Sales cycle is CLOSED for the current M&A diligence stage with an explicit scope boundary: observed strategic-buyer cycle evidence only, not customer sales conversion.
+
+Current notable states:
+- Banyan Software: `CLOSED_LOST_NOT_FIT` after human Corporate Development review;
+- Twilio: `TIER_2_HUMAN_INTEREST / MATERIALS_REQUESTED`;
+- Temenos, Mollie, Bucher Industries and Sartorius: attributable closed-lost/declined outcomes;
+- no NDA, LOI, offer, signed pilot, customer or revenue is inferred.
+
+```text
+OBSERVED_MAIN_SHA_AT_RECONCILIATION=93a5c9633fb3e9c1b0b80906e1b7e7f814cb3261
+COMMERCIAL_PERCENT=46.67%
+TOTAL_SCORE=37.0/98
+SALE_READINESS_PERCENT=37.76%
+REMAINING_PERCENT=62.24%
+REQUIREMENT_88=CLOSED
 FINAL_MA_GO=NO_PASS
 ```
