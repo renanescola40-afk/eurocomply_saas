@@ -30,7 +30,7 @@ CLOSED = 1; PARTIAL = 0.5; OPEN = 0; evidenced N/A only. No template earns exter
 
 Separate gauges, not additive:
 - INTERNAL_DOCUMENTATION = 100% **as reported in existing internal coverage registers only**; not proof of signed documents or complete evidence.
-- BUYER_MATERIALS = (11 PASS + 1 PARTIAL × 0.5) / 12 = 95.83% (2026-10-08).
+- BUYER_MATERIALS = (11 PASS + 1 PARTIAL × 0.5) / 12 = 95.83% (2026-10-07 source matrix).
 - TRANSACTION DOCUMENT COVERAGE = 65/65 templates/coverage; EXECUTED = 0 in the referenced control tower.
 - DATA ROOM CAPABILITY = 175/175 internal documentary capabilities claimed by the 2026-09-28 inventory; official-source readiness not implied.
 
