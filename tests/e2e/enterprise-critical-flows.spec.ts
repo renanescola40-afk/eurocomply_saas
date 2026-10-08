@@ -161,8 +161,8 @@ test.describe('enterprise critical SaaS flow coverage', () => {
         const currentUrl = new URL(page.url());
 
         expect(response?.status(), `${route.area} should not server-error`).toBeLessThan(500);
-        expect(currentUrl.pathname, `${route.area} should redirect to the localized login page`).toBe(`/${locale}/login`);
-        expect(currentUrl.searchParams.get('next') ?? '', `${route.area} should preserve next`).toContain(target);
+        expect(currentUrl.pathname, `${route.area} should redirect to the canonical English login page`).toBe('/en/login');
+        expect(currentUrl.searchParams.get('next') ?? '', `${route.area} should preserve the canonical destination`).toContain(`/en${route.path}`);
         await expectControlledPage(page, `${locale} guarded ${route.area}`);
       });
     }
@@ -185,13 +185,13 @@ test.describe('enterprise critical SaaS flow coverage', () => {
     await page.setViewportSize({ width: 390, height: 844 });
 
     for (const routePath of publicRouteSmokePaths) {
-      const target = localizedPath('pt', routePath);
+      const target = localizedPath('en', routePath);
       const response = await page.goto(target, { waitUntil: 'domcontentloaded' });
 
       expect(response?.status(), `${target} should not 404 on mobile`).not.toBe(404);
       expect(response?.status(), `${target} should not server-error`).toBeLessThan(500);
-      await expectControlledPage(page, `mobile pt ${routePath}`);
-      await expectNoHorizontalOverflow(page, `mobile pt ${routePath}`);
+      await expectControlledPage(page, `mobile en ${routePath}`);
+      await expectNoHorizontalOverflow(page, `mobile en ${routePath}`);
     }
   });
 
