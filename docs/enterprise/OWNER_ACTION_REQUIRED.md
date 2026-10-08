@@ -1,10 +1,15 @@
 # Owner action required
 
-Last reconciled: 2026-09-10
+Last reconciled: 2026-10-08
 
 ## Current state
 
-There is **no immediate owner action required to continue repository-only pre-pentest preparation** under #2048.
+There are now **two explicit owner real-money actions on the billing/release path**, while repository-only preparation can continue independently:
+
+1. reactivate Vercel resource creation by resolving the overdue team balance / valid payment-method requirement;
+2. only after exact-SHA Production deployment succeeds, perform one legitimate Stripe LIVE payment confirmation through the normal production checkout when ready to close Billing Technical E2E.
+
+These actions must remain sequenced: Vercel reactivation first, legitimate LIVE billing confirmation second.
 
 Current exact evidence at reconciliation:
 
@@ -20,15 +25,38 @@ Current exact evidence at reconciliation:
 
 The previously listed Layer8 meeting on 2026-08-25 has passed and is historical evidence only. It is not a current owner task.
 
-## Next unavoidable owner decisions — not yet due
+## Next unavoidable owner decisions
 
 The following actions become owner-required only when their prerequisites are actually ready.
 
-### 1. Production release / data-plane authority
+### 1. Vercel billing reactivation — CURRENTLY DUE
+
+Authenticated Vercel deployment creation has returned `402 Payment Required / resource_creation_blocked`, with the provider stating that the team has an overdue balance and requires billing regularization / a valid payment method before resource creation can resume.
+
+Owner action:
+- regularize the Vercel account billing state through the provider UI;
+- do not share card or banking credentials in repository issues, logs, chat transcripts, or CI;
+- after reactivation, rerun the governed exact-main Production deployment and verify main/Production SHA equality.
+
+Classification: `OWNER_REAL_MONEY_ACTION / BLOCKED_EXTERNAL`.
+
+### 2. Legitimate Stripe LIVE payment confirmation — DUE AFTER EXACT-SHA DEPLOYMENT
+
+After Vercel reactivation and successful exact-main Production deployment, use the normal production application as an authorized organization owner to complete one genuine self-serve checkout with an authorized real payment method. Do not create synthetic commercial objects through the Stripe API as a substitute.
+
+Expected evidence chain:
+
+`checkout -> customer -> subscription -> signed LIVE webhook -> event ledger -> production database -> plan -> entitlement -> quota`
+
+Then run the canonical final Billing closeout workflow with the legitimate organization/subscription/event identifiers.
+
+Classification: `OWNER_REAL_MONEY_ACTION / LIVE_PAYMENT_CONFIRMATION`.
+
+### 3. Production release / data-plane authority
 
 Any Production deployment, Supabase Production write/promotion, rollback/restore, secret rotation or equivalent consequential Production change must use its own governed technical lane and explicit owner authority where required. This pentest-preparation document does not grant that authority.
 
-### 2. Final independent assessor selection
+### 4. Final independent assessor selection
 
 Select the terminal independent assessor only after written evidence is sufficient to compare:
 
@@ -45,7 +73,7 @@ Select the terminal independent assessor only after written evidence is sufficie
 
 7ASecurity is not selected and is intentionally held. Candidate status must not be converted into terminal pentest credit.
 
-### 3. Final Rules of Engagement and test GO
+### 5. Final Rules of Engagement and test GO
 
 After the final release and dedicated test environment are frozen and a provider is selected, owner approval is required for the final written ROE. It must bind:
 
