@@ -17,8 +17,8 @@ Detailed correspondence and reply drafts remain controlled outside the public re
 
 | Buyer organization | Current classification | Repository-safe meaning |
 |---|---|---|
-| Banyan Software | TIER_2_HUMAN_INTEREST | A substantive human response exists and additional business information was requested. No NDA, offer, LOI or diligence acceptance is credited. |
-| Twilio | TIER_2_HUMAN_INTEREST | A substantive human response exists and additional business/product information was requested. No NDA, offer, LOI or diligence acceptance is credited. |
+| Banyan Software | CLOSED_LOST_NOT_FIT | Corporate Development reviewed the supplied business picture and declined the opportunity at the current pre-commercial stage. No active buyer process is credited. |
+| Twilio | TIER_2_HUMAN_INTEREST / MATERIALS_REQUESTED | Corporate Development requested financial metrics, product use cases and team bios; the requested summary materials were supplied. No NDA, offer, LOI or diligence acceptance is credited. |
 | ServiceNow | TIER_1_ROUTED | Opportunity was routed internally. Substantive acquisition interest is not yet credited. |
 | B3 | TIER_1_ROUTED | Opportunity was routed internally. Substantive acquisition interest is not yet credited. |
 
@@ -44,3 +44,9 @@ TWILIO_RESPONSE_MATERIALS_READY=YES
 SERVICENOW_RESPONSE_MATERIALS_READY=YES
 B3_RESPONSE_MATERIALS_READY=YES
 EMAIL_SEND_AUTHORIZATION=NOT_GRANTED
+
+
+Current response-pack truth boundary — 2026-10-08:
+- Banyan response materials remain useful as historical diligence material, but the live opportunity is closed-lost/not-fit.
+- Twilio response materials are the active strategic-buyer response pack.
+- No outbound email is authorized by this file itself.
