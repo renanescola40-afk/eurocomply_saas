@@ -17,6 +17,27 @@ This runbook is preparation only. No history rewrite, force push, repository vis
 - repository visibility is public;
 - confidentiality therefore remains OPEN.
 
+
+## Ref inventory precheck — 2026-10-08
+
+Authenticated branch enumeration against the repository returned at least 1,000 branch refs across the first 10 pages and still returned a continuation cursor. Therefore the branch inventory is larger than 1,000 refs and was not exhaustively enumerated in this bounded reconciliation.
+
+Operational consequence:
+- do not execute a public-history rewrite from a partial ref inventory;
+- complete the authoritative ref inventory before any destructive remediation window;
+- treat branches, tags, PR refs, forks and collaborator clones as independent reachability surfaces;
+- preserve the current `CONFIDENTIALITY_CLOSED=NO` status until the applicable verification gates are completed.
+
+Current precheck state:
+
+```text
+AUTHENTICATED_BRANCH_REFS_OBSERVED=>=1000
+BRANCH_ENUMERATION_COMPLETE=NO
+DESTRUCTIVE_HISTORY_REWRITE_READY=NO
+PRIVATE_FIRST_CONTAINMENT_PREPARED=YES_WITH_OWNER_APPROVAL_REQUIRED
+CONFIDENTIALITY_CLOSED=NO
+```
+
 ## Required safeguards before any destructive remediation
 
 1. Freeze merges and direct pushes temporarily.
