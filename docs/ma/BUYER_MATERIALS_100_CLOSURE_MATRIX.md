@@ -44,8 +44,8 @@ Product: RISCK COMPLY
 ## Current buyer pipeline classification
 
 Repository-safe company-level classification:
-- Banyan Software: TIER_2_HUMAN_INTEREST
-- Twilio: TIER_2_HUMAN_INTEREST
+- Banyan Software: CLOSED_LOST_NOT_FIT
+- Twilio: TIER_2_HUMAN_INTEREST / MATERIALS_REQUESTED
 - ServiceNow: TIER_1_ROUTED
 - B3: TIER_1_ROUTED
 
@@ -70,3 +70,10 @@ Current score:
 BUYER_MATERIALS_INTERNAL_CLOSURE_PERCENT=95.83%
 
 This means the buyer-facing document set is materially complete, but the buyer-response-readiness row is only PARTIAL because prior merged commits containing private buyer correspondence remain reachable in public Git history. Current-tree sanitization is complete; history/visibility remediation is not. It does not mean TRANSACTION_100_PERCENT.
+
+
+## 2026-10-08 buyer-state delta
+
+- Banyan Software moved from substantive human interest to `CLOSED_LOST_NOT_FIT` after Corporate Development reviewed the supplied business picture and declined the opportunity at the current stage.
+- Twilio remains `TIER_2_HUMAN_INTEREST / MATERIALS_REQUESTED`; requested summary materials were supplied, but no NDA, diligence acceptance, offer or LOI is credited.
+- This changes current buyer-state classification, not transaction-signing readiness.
