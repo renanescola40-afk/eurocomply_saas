@@ -165,7 +165,7 @@ CURRENT_TREE_SANITIZED=PASS
 PUBLIC_HISTORY_PURGED=PASS_OR_NOT_PUBLICLY_REACHABLE
 REPOSITORY_VISIBILITY=APPROVED_TARGET_STATE
 BRANCH_PROTECTION=RESTORED_AND_VERIFIED
-PER_REF_EXPECTED_VALUE_LEASES=PASS
+PER_REF_EXPECTED_VALUE_LEASES=PASS_OR_NOT_APPLICABLE
 COLLABORATOR_CLONE_CLEANUP=PASS
 FORK_CLEANUP=PASS_OR_NOT_APPLICABLE
 GITHUB_SUPPORT_PURGE=COMPLETE_IF_REQUIRED
@@ -174,4 +174,4 @@ CONFIDENTIALITY_CLOSED=PASS
 
 ## Approval boundary
 
-Executing a history rewrite, force-push/force-with-lease, temporary branch-protection exception, or repository visibility change is a high-impact repository operation. It must not be represented as complete until actually performed and verified.
+Executing a history rewrite, force-push/force-with-lease, temporary branch-protection exception, or repository visibility change is a high-impact repository operation. It must not be represented as complete until actually performed and verified. If the approved remediation path uses private-only containment and no ref rewrite occurs, per-ref expected-value leases are correctly recorded as NOT_APPLICABLE rather than PASS.
