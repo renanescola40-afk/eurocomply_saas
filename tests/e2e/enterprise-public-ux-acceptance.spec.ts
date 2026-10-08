@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const SUPPORTED_LOCALES = ['en', 'pt', 'es', 'fr', 'it', 'de'] as const;
+const SUPPORTED_LOCALES = ['en'] as const;
+const HISTORICAL_LOCALES = ['pt', 'es', 'fr', 'it', 'de'] as const;
 const PUBLIC_SURFACES = ['/', '/pricing', '/login'] as const;
 
 async function expectHealthyPublicSurface(page: Page, label: string) {
@@ -27,8 +28,9 @@ async function expectHealthyPublicSurface(page: Page, label: string) {
 }
 
 async function expectLocale(page: Page, locale: string, label: string) {
-  await expect(page.locator('html'), `${label} should declare its requested locale`).toHaveAttribute('lang', locale);
-  expect(new URL(page.url()).pathname, `${label} should retain the locale prefix`).toMatch(new RegExp(`^/${locale}(?:/|$)`));
+  await expect(page.locator('html'), `${label} should declare canonical English`).toHaveAttribute('lang', 'en');
+  expect(locale, `${label} should execute only the canonical public locale`).toBe('en');
+  expect(new URL(page.url()).pathname, `${label} should retain the canonical English prefix`).toMatch(/^\/en(?:\/|$)/);
 }
 
 async function expectNoHorizontalOverflow(page: Page, label: string) {
@@ -83,11 +85,25 @@ test.describe('enterprise public UX acceptance', () => {
     });
   }
 
+  for (const locale of HISTORICAL_LOCALES) {
+    test(`${locale} public surfaces redirect to canonical English`, async ({ page }) => {
+      for (const surface of PUBLIC_SURFACES) {
+        const historicalPath = surface === '/' ? `/${locale}` : `/${locale}${surface}`;
+        const response = await page.goto(historicalPath, { waitUntil: 'domcontentloaded' });
+        expect(response?.status(), `${historicalPath} should redirect without server failure`).toBeLessThan(500);
+        await expectHealthyPublicSurface(page, `${locale} redirect ${surface}`);
+        await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+        const expectedPath = surface === '/' ? '/en' : `/en${surface}`;
+        expect(new URL(page.url()).pathname).toBe(expectedPath);
+      }
+    });
+  }
+
   test('mobile public conversion surfaces remain usable without horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
     for (const surface of PUBLIC_SURFACES) {
-      const path = surface === '/' ? '/pt' : `/pt${surface}`;
+      const path = surface === '/' ? '/en' : `/en${surface}`;
       const response = await page.goto(path, { waitUntil: 'domcontentloaded' });
       expect(response?.status(), `${path} should not fail on mobile`).toBeLessThan(500);
       await expectHealthyPublicSurface(page, `mobile ${path}`);
