@@ -6,7 +6,7 @@ Seller: SAMUEL CERQUEIRA, UNIPESSOAL LDA
 Purpose: full-sale M&A diligence readiness  
 Status: `INTERNAL_DOCUMENT_READINESS=100 / OVERALL_TRANSACTION_READINESS=NOT_100`
 
-> **CURRENT SCORE AUTHORITY — 2026-10-08 reconciliation:** The numerical values in the historical 2026-10-05 snapshot below are superseded. Current requirements and weightings are defined in `M_AND_A_REQUIREMENT_STATUS_MATRIX.md` (dated 2026-10-07): Corporate 5/17; IP 14/20; Financial 7/26; Tax 0/12; Commercial 6.5/15; Providers 4/8; **TOTAL 36.5/98 = 37.24%**, remaining **62.76%**. Buyer materials use a **separate** matrix (11.5/12 = 95.83%); neither measure implies legal/title/closing readiness. Do not quote 36.73% as the current score. Source accounting, official tax/registry and executed IP title remain open.
+> **CURRENT SCORE AUTHORITY — 2026-10-08 reconciliation:** The numerical values in the historical 2026-10-05 snapshot below are superseded. Current requirements and weightings are defined in `M_AND_A_REQUIREMENT_STATUS_MATRIX.md` (updated 2026-10-08): Corporate 5/17; IP 14/20; Financial 7/26; Tax 0/12; Commercial 7/15; Providers 4/8; **TOTAL 37.0/98 = 37.76%**, remaining **62.24%**. The former 36.5/98 = 37.24% snapshot preceded the evidenced buyer-cycle promotion of requirement #88. Buyer materials use a **separate** matrix (11.5/12 = 95.83%); neither measure implies legal/title/closing readiness. Do not quote 36.73% as the current score. Source accounting, official tax/registry and executed IP title remain open.
 
 ## Historical snapshot (2026-10-05; superseded scores)
 
