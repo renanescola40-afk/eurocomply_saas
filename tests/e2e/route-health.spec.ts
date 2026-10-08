@@ -284,13 +284,13 @@ function isPrelaunchGatedPublicRoute(route: RouteCase) {
   return PRELAUNCH_AUTH_REDIRECTS_ENABLED && (route.name === 'login' || route.name === 'signup');
 }
 
-async function expectWaitlistGate(page: Page, locale: Locale, label: string) {
-  await expect(page).toHaveURL(new RegExp(`/${locale}(?:$|[?#])`));
+async function expectWaitlistGate(page: Page, _locale: Locale, label: string) {
+  await expect(page).toHaveURL(/\/en(?:$|[?#])/);
   await expect(page.locator('#waitlist-form'), `${label} should land on waitlist form`).toBeVisible();
 }
 
-async function expectLocalizedLoginRedirect(page: Page, locale: Locale, label: string) {
-  await expect(page, `${label} should redirect to localized login`).toHaveURL(new RegExp(`/${locale}/login(?:$|[?#])`));
+async function expectLocalizedLoginRedirect(page: Page, _locale: Locale, label: string) {
+  await expect(page, `${label} should redirect to canonical English login`).toHaveURL(/\/en\/login(?:$|[?#])/);
 }
 
 test.describe('anonymous visitor public route health', () => {
