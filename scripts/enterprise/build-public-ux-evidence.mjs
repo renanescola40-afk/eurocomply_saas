@@ -11,7 +11,8 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const UX_OUTPUT = 'docs/security/evidence/runtime/ux-acceptance-validation.json';
 const LOCALE_OUTPUT = 'docs/security/evidence/runtime/localization-validation.json';
 const DEFAULT_GITHUB_CHECKS = 'artifacts/enterprise-readiness/github-checks-evidence.json';
-const REQUIRED_LOCALES = ['en', 'pt', 'es', 'fr', 'it', 'de'];
+const REQUIRED_LOCALES = ['en'];
+const HISTORICAL_LOCALES = ['pt', 'es', 'fr', 'it', 'de'];
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -44,7 +45,9 @@ export function evaluatePublicUxCoverage(
     dashboardComponent = '',
   } = {},
 ) {
-  const localeCoverage = REQUIRED_LOCALES.every((locale) => specSource.includes(`'${locale}'`));
+  const localeCoverage = REQUIRED_LOCALES.every((locale) => specSource.includes(`'${locale}'`))
+    && HISTORICAL_LOCALES.every((locale) => specSource.includes(`'${locale}'`))
+    && specSource.includes('public surfaces redirect to canonical English');
   const onboardingObjectStepContract = containsEvery(onboardingComponent, [
     'const stepDefinitions = [',
     "id: 'create-organization'",
@@ -81,8 +84,8 @@ export function evaluatePublicUxCoverage(
       && specSource.includes('expectNoHorizontalOverflow')
       && specSource.includes('mobile public conversion surfaces'),
     supportedLocales: localeCoverage
-      && specSource.includes("toHaveAttribute('lang', locale)")
-      && specSource.includes('retain the locale prefix'),
+      && specSource.includes("toHaveAttribute('lang', 'en')")
+      && specSource.includes('canonical English prefix'),
     controlledErrors: specSource.includes('Unhandled Runtime Error')
       && specSource.includes('/undefined')
       && specSource.includes('visible placeholder links'),
@@ -108,7 +111,7 @@ export function evaluatePublicUxCoverage(
       ]),
     onboardingRouteBoundary: criticalFlowSpec.includes("{ area: 'onboarding', path: '/onboarding' }")
       && criticalFlowSpec.includes('redirects anonymous visitors to localized login')
-      && productJourneySpec.includes("'/pt/onboarding?plan=professional'")
+      && productJourneySpec.includes("'/en/onboarding?plan=professional'")
       && productJourneySpec.includes('preserves next'),
     dashboardComponentAcceptance: containsEvery(authenticatedProductTest, [
       "describe('authenticated dashboard UX acceptance'",
@@ -137,7 +140,7 @@ export function evaluatePublicUxCoverage(
     ]),
     dashboardRouteBoundary: criticalFlowSpec.includes("{ area: 'dashboard organization', path: '/dashboard/organizations' }")
       && criticalFlowSpec.includes('redirects anonymous visitors to localized login')
-      && productJourneySpec.includes("'/pt/dashboard/organizations'")
+      && productJourneySpec.includes("'/en/dashboard/organizations'")
       && productJourneySpec.includes('anonymous private redirect response is no-store'),
   };
 
@@ -286,6 +289,7 @@ export function buildPublicUxEvidence({
       checkResults: {
         supportedLocales: coverage.checks.supportedLocales,
         expectedLocales: REQUIRED_LOCALES,
+        redirectedHistoricalLocales: HISTORICAL_LOCALES,
         exactShaProvenance,
         executionProven,
       },
@@ -295,7 +299,7 @@ export function buildPublicUxEvidence({
         'tests/e2e/enterprise-public-ux-acceptance.spec.ts',
         DEFAULT_GITHUB_CHECKS,
       ],
-      evidenceBoundary: 'Validates that every supported locale prefix renders the public landing, pricing and login surfaces with matching HTML language metadata on the exact SHA. It does not certify translation quality or legal review of localized copy.',
+      evidenceBoundary: 'Validates that English is the only canonical public locale for landing, pricing and login surfaces and that historical pt/es/fr/it/de locale prefixes redirect to the equivalent English surface on the exact SHA. It does not certify translation quality or legal review of retired localized copy.',
     },
   };
 }
