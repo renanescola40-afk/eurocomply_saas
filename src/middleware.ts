@@ -182,15 +182,9 @@ function applySupabaseSessionCookies(response: NextResponse, sessionResponse?: N
   return response;
 }
 
-function detectLocale(req: NextRequest): string {
-  // English is the product default. Only an explicit user locale preference
-  // may override it; geography and browser headers must not silently switch
-  // the SaaS into another language.
-  const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
-  if (cookieLocale && locales.includes(cookieLocale as 'en')) {
-    return cookieLocale;
-  }
-
+function detectLocale(_req: NextRequest): string {
+  // The public canonical locale is always English. Historical locale cookies
+  // must never select a non-English route.
   return defaultLocale;
 }
 
