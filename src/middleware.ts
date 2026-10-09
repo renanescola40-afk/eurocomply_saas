@@ -339,23 +339,17 @@ export default async function middleware(req: NextRequest) {
   if (pathnameHasLocale) {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
-    const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
-    const isAuthEntry = isAuthEntryRoute(pathname, locale);
-    const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;
-    const sessionCheck = shouldCheckAuth ? await hasSupabaseSession(req) : null;
+    // Public routes must remain reachable when Supabase Auth is slow or unavailable.
+    // Authentication is checked only for private paths; private access still fails closed.
+    // Authenticated-user convenience redirects on public entry pages are intentionally
+    // omitted here rather than making availability depend on an upstream Auth request.
+    const sessionCheck = !isPublic ? await hasSupabaseSession(req) : null;
     const isAuthenticated = sessionCheck?.isAuthenticated ?? false;
 
     if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
       const response = withPrivateNoStore(NextResponse.redirect(loginUrl));
-      return withRequestId(applySupabaseSessionCookies(response, sessionCheck?.response), requestId);
-    }
-
-    if (isAuthenticated && (isMarketingHome || isAuthEntry)) {
-      const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
-      appendSafeAuthQuery(dashboardUrl, req);
-      const response = withPrivateNoStore(NextResponse.redirect(dashboardUrl));
       return withRequestId(applySupabaseSessionCookies(response, sessionCheck?.response), requestId);
     }
 
