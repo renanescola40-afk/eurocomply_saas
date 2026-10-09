@@ -38,10 +38,9 @@ test.describe('public production landing', () => {
 
   test('exposes only canonical English in the language selector', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
-    const selector = page.getByRole('button', { name: 'Select language' }).first();
+    const selector = page.locator('[aria-label="Select language"]:visible').first();
     await expect(selector).toBeVisible();
-    await selector.click();
-    await expect(page.getByRole('button', { name: /English/i }).last()).toBeVisible();
+    await expect(selector.getByRole('link', { name: /^en$/i })).toBeVisible();
     await expect(page.locator('a[href="/pt"]')).toHaveCount(0);
   });
 
