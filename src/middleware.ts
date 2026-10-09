@@ -14,13 +14,11 @@ import {
 const intlMiddleware = createIntlMiddleware(routing);
 const LOCALE_COOKIE = 'NEXT_LOCALE';
 const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
-const AUTH_SUCCESS_PATH = '/onboarding';
 const SENTRY_TUNNEL_PATH = '/monitoring';
 const BEAGLE_DOMAIN_VERIFICATION_PATH = '/_e8f1hq2qpr6fuvd036hr4l97yn8octew';
 const INTERNAL_PATHNAME_HEADER = 'x-risck-internal-pathname';
 const PREMIUM_NEWS_PATH = '/dashboard/organizations/reports-governance/news';
 const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
-const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup', '/register']);
 
 const PUBLIC_ROUTES = [
   '/',
@@ -109,14 +107,6 @@ function isPublicRoute(pathname: string, locale: string): boolean {
   );
 }
 
-function isAuthEntryRoute(pathname: string, locale: string): boolean {
-  return AUTH_ENTRY_ROUTES.has(stripLocale(pathname, locale));
-}
-
-function shouldCheckMarketingHomeAuth(pathname: string, locale: string): boolean {
-  return pathname === `/${locale}`;
-}
-
 function withPrivateNoStore(response: NextResponse) {
   response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   return response;
@@ -189,14 +179,6 @@ function applySupabaseSessionCookies(response: NextResponse, sessionResponse?: N
   }
 
   return response;
-}
-
-function appendSafeAuthQuery(url: URL, req: NextRequest) {
-  const plan = req.nextUrl.searchParams.get('plan')?.trim().toLowerCase();
-
-  if (plan && CHECKOUT_PLAN_IDS.has(plan)) {
-    url.searchParams.set('plan', plan);
-  }
 }
 
 function detectLocale(req: NextRequest): string {
