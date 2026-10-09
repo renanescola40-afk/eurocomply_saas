@@ -79,19 +79,19 @@ describe('Supabase middleware session cookie propagation', () => {
     supabaseMock.setAll = null;
   });
 
-  it('redirects a valid authenticated login request to localized onboarding', async () => {
+  it('serves public login without initializing Supabase even when an auth session could exist', async () => {
     configureSession({ user: { id: 'user-valid' } });
 
     const response = await middleware(makeRequest('/en/login'));
-    const location = responseLocation(response);
 
-    expect(response.status).toBe(307);
-    expect(location?.pathname).toBe('/en/onboarding');
-    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
     expect(response.headers.get('x-request-id')).toBeTruthy();
+    expect(supabaseMock.createServerClient).not.toHaveBeenCalled();
+    expect(supabaseMock.getUser).not.toHaveBeenCalled();
   });
 
-  it('returns refreshed Supabase cookies on the authenticated redirect response', async () => {
+  it('does not refresh Supabase cookies on public login because public availability must not depend on Auth', async () => {
     configureSession({
       user: { id: 'user-refreshed' },
       cookies: [
@@ -105,9 +105,11 @@ describe('Supabase middleware session cookie propagation', () => {
 
     const response = await middleware(makeRequest('/en/login?plan=growth'));
 
-    expect(responseLocation(response)?.pathname).toBe('/en/onboarding');
-    expect(responseLocation(response)?.searchParams.get('plan')).toBe('growth');
-    expect(response.cookies.get('sb-project-auth-token')?.value).toBe('refreshed-session');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+    expect(response.cookies.get('sb-project-auth-token')).toBeUndefined();
+    expect(supabaseMock.createServerClient).not.toHaveBeenCalled();
+    expect(supabaseMock.getUser).not.toHaveBeenCalled();
   });
 
   it('propagates cookie cleanup for an expired or revoked private session', async () => {
