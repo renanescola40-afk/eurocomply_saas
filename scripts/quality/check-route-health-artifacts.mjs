@@ -68,7 +68,7 @@ const contentMarkers = {
     'mobile viewport',
   ],
   'tests/e2e/product-critical-journeys.spec.ts': [
-    'landing and pricing production CTAs stay routable and localized',
+    'landing and pricing production CTAs stay routable on canonical English routes',
     'pricing exposes only actionable critical CTAs',
     'signup route is reachable from the production landing',
     'login route is reachable from the production landing',
