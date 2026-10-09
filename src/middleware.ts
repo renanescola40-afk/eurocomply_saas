@@ -14,13 +14,11 @@ import {
 const intlMiddleware = createIntlMiddleware(routing);
 const LOCALE_COOKIE = 'NEXT_LOCALE';
 const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
-const AUTH_SUCCESS_PATH = '/onboarding';
 const SENTRY_TUNNEL_PATH = '/monitoring';
 const BEAGLE_DOMAIN_VERIFICATION_PATH = '/_e8f1hq2qpr6fuvd036hr4l97yn8octew';
 const INTERNAL_PATHNAME_HEADER = 'x-risck-internal-pathname';
 const PREMIUM_NEWS_PATH = '/dashboard/organizations/reports-governance/news';
 const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
-const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup', '/register']);
 
 const PUBLIC_ROUTES = [
   '/',
@@ -109,14 +107,6 @@ function isPublicRoute(pathname: string, locale: string): boolean {
   );
 }
 
-function isAuthEntryRoute(pathname: string, locale: string): boolean {
-  return AUTH_ENTRY_ROUTES.has(stripLocale(pathname, locale));
-}
-
-function shouldCheckMarketingHomeAuth(pathname: string, locale: string): boolean {
-  return pathname === `/${locale}`;
-}
-
 function withPrivateNoStore(response: NextResponse) {
   response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   return response;
@@ -189,14 +179,6 @@ function applySupabaseSessionCookies(response: NextResponse, sessionResponse?: N
   }
 
   return response;
-}
-
-function appendSafeAuthQuery(url: URL, req: NextRequest) {
-  const plan = req.nextUrl.searchParams.get('plan')?.trim().toLowerCase();
-
-  if (plan && CHECKOUT_PLAN_IDS.has(plan)) {
-    url.searchParams.set('plan', plan);
-  }
 }
 
 function detectLocale(req: NextRequest): string {
@@ -339,23 +321,17 @@ export default async function middleware(req: NextRequest) {
   if (pathnameHasLocale) {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
-    const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
-    const isAuthEntry = isAuthEntryRoute(pathname, locale);
-    const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;
-    const sessionCheck = shouldCheckAuth ? await hasSupabaseSession(req) : null;
+    // Public routes must remain reachable when Supabase Auth is slow or unavailable.
+    // Authentication is checked only for private paths; private access still fails closed.
+    // Authenticated-user convenience redirects on public entry pages are intentionally
+    // omitted here rather than making availability depend on an upstream Auth request.
+    const sessionCheck = !isPublic ? await hasSupabaseSession(req) : null;
     const isAuthenticated = sessionCheck?.isAuthenticated ?? false;
 
     if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
       const response = withPrivateNoStore(NextResponse.redirect(loginUrl));
-      return withRequestId(applySupabaseSessionCookies(response, sessionCheck?.response), requestId);
-    }
-
-    if (isAuthenticated && (isMarketingHome || isAuthEntry)) {
-      const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
-      appendSafeAuthQuery(dashboardUrl, req);
-      const response = withPrivateNoStore(NextResponse.redirect(dashboardUrl));
       return withRequestId(applySupabaseSessionCookies(response, sessionCheck?.response), requestId);
     }
 
