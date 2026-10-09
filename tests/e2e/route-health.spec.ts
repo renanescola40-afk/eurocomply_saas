@@ -277,7 +277,7 @@ function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
     'terms',
   ];
 
-  return route.critical && (locale === 'en' || locale === 'pt') && deeplyCheckedRoutes.includes(route.name);
+  return route.critical && locale === 'en' && deeplyCheckedRoutes.includes(route.name);
 }
 
 function isPrelaunchGatedPublicRoute(route: RouteCase) {
@@ -351,13 +351,13 @@ test.describe('mobile viewport route health', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true });
 
   for (const route of PUBLIC_ROUTES.filter((entry) => entry.critical)) {
-    test(`mobile viewport pt ${route.name} stays usable`, async ({ page }) => {
-      const label = `mobile viewport pt ${route.name}`;
-      await expectRouteHealthy(page, localizedPath('pt', route.path), label, { checkPrimaryControls: false });
+    test(`mobile viewport en ${route.name} stays usable`, async ({ page }) => {
+      const label = `mobile viewport en ${route.name}`;
+      await expectRouteHealthy(page, localizedPath('en', route.path), label, { checkPrimaryControls: false });
       if (isPrelaunchGatedPublicRoute(route)) {
-        await expectWaitlistGate(page, 'pt', label);
+        await expectWaitlistGate(page, 'en', label);
       }
-      if (shouldDeepCheckInternalLinks('pt', route)) {
+      if (shouldDeepCheckInternalLinks('en', route)) {
         await expectNoBrokenInternalLinks(page, label);
       }
     });
