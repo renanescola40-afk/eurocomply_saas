@@ -9,24 +9,23 @@ function readRepoFile(path: string) {
 }
 
 describe('auth and onboarding redirect invariants', () => {
-  it('keeps authenticated public auth entries on localized onboarding instead of dashboard', () => {
+  it('keeps public auth and marketing routes independent from Supabase session availability', () => {
     const middleware = readRepoFile('src/middleware.ts');
 
-    expect(middleware).toContain("const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations'");
-    expect(middleware).toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
-    expect(middleware).toContain('isAuthenticated && (isMarketingHome || isAuthEntry)');
-    expect(middleware).toContain('AUTH_SUCCESS_PATH');
-    expect(middleware).toContain('NextResponse.redirect(dashboardUrl)');
+    expect(middleware).toContain('const sessionCheck = !isPublic ? await hasSupabaseSession(req) : null');
+    expect(middleware).toContain('if (!isAuthenticated && !isPublic)');
+    expect(middleware).not.toContain('isAuthenticated && (isMarketingHome || isAuthEntry)');
+    expect(middleware).not.toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
   });
 
-  it('preserves only allowlisted billing plans when auth entries redirect to onboarding', () => {
+  it('keeps private-route authentication fail-closed while checkout plan validation remains local', () => {
     const middleware = readRepoFile('src/middleware.ts');
 
-    expect(middleware).toContain('function appendSafeAuthQuery(url: URL, req: NextRequest)');
+    expect(middleware).toContain('async function hasSupabaseSession(req: NextRequest)');
+    expect(middleware).toContain('const sessionCheck = !isPublic ? await hasSupabaseSession(req) : null');
     expect(middleware).toContain("req.nextUrl.searchParams.get('plan')?.trim().toLowerCase()");
     expect(middleware).toContain('CHECKOUT_PLAN_IDS.has(plan)');
-    expect(middleware).toContain("url.searchParams.set('plan', plan)");
-    expect(middleware).toContain('appendSafeAuthQuery(dashboardUrl, req)');
+    expect(middleware).toContain("pricingUrl.searchParams.set('checkout', 'select_plan')");
   });
 
   it('keeps unauthenticated dashboard users on login with a safe localized next value', () => {
