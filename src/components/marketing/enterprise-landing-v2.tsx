@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { EnterpriseProductJourney } from '@/components/marketing/enterprise-product-journey';
+import { EnterpriseBuyerFaq } from '@/components/marketing/enterprise-buyer-faq';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 type LandingCopy = {
@@ -198,6 +199,7 @@ export function EnterpriseLandingV2({ locale: requestedLocale }: { locale: strin
         </section>
 
         <EnterpriseProductJourney locale={locale} />
+        <EnterpriseBuyerFaq locale={locale} />
 
         <section className="border-y border-slate-800/80 bg-[#080d16] px-4 py-24 sm:px-6 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-center lg:justify-between"><div className="max-w-3xl"><h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">{text.finalTitle}</h2><p className="mt-5 text-base leading-8 text-slate-400">{text.finalText}</p></div><Link href={demoHref} className="inline-flex h-12 shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-500">{text.primary}<ArrowRight className="h-4 w-4" /></Link></div></section>
       </main>
