@@ -19,13 +19,14 @@ describe('Phase 5 dashboard invariants', () => {
     expect(home).toContain('EnterpriseHome');
   });
 
-  it('keeps marketing/auth middleware routed through onboarding', () => {
+  it('keeps public marketing/auth routes available while private routes retain Supabase guards', () => {
     const middleware = read('src/middleware.ts');
     expect(middleware).toContain("const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations'");
-    expect(middleware).toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
-    expect(middleware).toContain('shouldCheckMarketingHomeAuth');
+    expect(middleware).toContain('const sessionCheck = !isPublic ? await hasSupabaseSession(req) : null');
+    expect(middleware).toContain('if (!isAuthenticated && !isPublic)');
     expect(middleware).toContain('hasSupabaseSession');
     expect(middleware).toContain('withPrivateNoStore');
+    expect(middleware).not.toContain('shouldCheckMarketingHomeAuth');
   });
 
   it('keeps locale layout and auth pages on the shared Supabase auth shell', () => {
