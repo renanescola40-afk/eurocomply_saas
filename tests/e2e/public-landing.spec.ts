@@ -1,39 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const localeExpectations = {
-  en: {
-    heading: /AI moves fast\.\s*Governance keeps up\./i,
-    inventory: /AI inventory|risk assessments/i,
-    evidence: /evidence workflows|activity history/i,
-  },
-  pt: {
-    heading: /A IA avança\.\s*A governança acompanha\./i,
-    inventory: /inventário de IA|avaliações de risco/i,
-    evidence: /workflows de evidência|histórico de atividade/i,
-  },
-  es: {
-    heading: /gobernanza de IA/i,
-    inventory: /inventario de IA|evaluaciones de riesgo/i,
-    evidence: /flujos de evidencia|historial de actividad/i,
-  },
-  fr: {
-    heading: /gouvernance IA/i,
-    inventory: /inventaire IA|évaluations des risques/i,
-    evidence: /workflows de preuves|historique d’activité/i,
-  },
-  it: {
-    heading: /governance IA/i,
-    inventory: /inventario IA|valutazioni del rischio/i,
-    evidence: /workflow di evidenza|storico delle attività/i,
-  },
-  de: {
-    heading: /KI-Governance/i,
-    inventory: /KI-Inventar|Risikobewertungen/i,
-    evidence: /Nachweisworkflows|Aktivitätshistorie/i,
-  },
-} as const;
-
-type LandingLocale = keyof typeof localeExpectations;
+const historicalLocales = ['pt', 'es', 'fr', 'it', 'de'] as const;
 
 async function expectNoHorizontalOverflow(page: Page, label: string) {
   const hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
@@ -46,7 +13,7 @@ async function expectProductionLanding(page: Page) {
   await expect(page).toHaveURL(/\/en\/?$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('link', { name: /RISCK COMPLY/i }).first()).toBeVisible();
-  await expect(page.locator('main h1:visible').first()).toContainText(/AI governance/i);
+  await expect(page.locator('main h1:visible').first()).toContainText(/AI moves fast\.\s*Governance keeps up\./i);
   await expect(page.locator('body')).toContainText(/AI inventory|risk assessments/i);
   await expect(page.locator('body')).toContainText(/evidence workflows|activity history/i);
   for (const path of ['/en/signup', '/en/login', '/en/pricing']) {
