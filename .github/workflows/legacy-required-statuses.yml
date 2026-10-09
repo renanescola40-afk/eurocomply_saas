@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   secret-scan:
-    name: Scan repository for accidental secret exposure
+    name: Legacy compatibility secret scan
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -37,7 +37,7 @@ jobs:
         run: npm run security:public-secrets
 
   quality:
-    name: CI / quality
+    name: Legacy compatibility quality
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -69,7 +69,7 @@ jobs:
         run: npm run build
 
   enterprise-merge-gate:
-    name: Enterprise merge/deploy gate
+    name: Legacy compatibility enterprise gate
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     needs: [secret-scan, quality]
