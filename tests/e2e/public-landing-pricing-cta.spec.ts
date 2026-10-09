@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const LOCALE = 'pt';
+const LOCALE = 'en';
 
 test.describe('public landing production CTA navigation', () => {
   test('primary public CTAs route to signup, login and pricing', async ({ page }) => {
