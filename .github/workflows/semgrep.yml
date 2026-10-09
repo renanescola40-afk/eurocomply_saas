@@ -32,13 +32,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Install pinned Semgrep without Docker Hub
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check --no-input --retries 5 --timeout 60 "semgrep==${SEMGREP_VERSION}"
+          python -m pip install --disable-pip-version-check --no-input --retries 5 --timeout 60 "setuptools<81" "semgrep==${SEMGREP_VERSION}"
           installed_version="$(semgrep --version | head -n 1 | tr -d '[:space:]')"
           if [ "$installed_version" != "$SEMGREP_VERSION" ]; then
             echo "::error title=Semgrep version mismatch::Expected $SEMGREP_VERSION, got $installed_version."
