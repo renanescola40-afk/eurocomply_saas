@@ -66,7 +66,7 @@ for (const viewport of [
       await expect(email).toBeFocused();
 
       await page.goto('/en/signup?plan=professional', { waitUntil: 'domcontentloaded' });
-      const signupEmail = page.getByRole('textbox', { name: /^email profissional$/i });
+      const signupEmail = page.getByRole('textbox', { name: /^work email$/i });
       await expect(signupEmail).toBeVisible();
       await signupEmail.focus();
       await expect(signupEmail).toBeFocused();
