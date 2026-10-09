@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('public enterprise security questionnaire', () => {
-  test('renders the localized buyer page without unsupported claims', async ({ page }) => {
-    const response = await page.goto('/pt/trust/security-questionnaire', { waitUntil: 'domcontentloaded' });
+  test('renders the canonical English buyer page without unsupported claims', async ({ page }) => {
+    const response = await page.goto('/en/trust/security-questionnaire', { waitUntil: 'domcontentloaded' });
     expect(response?.status()).toBeLessThan(500);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/evidências|evidencias/i);
+    await expect(page).toHaveURL(/\/en\/trust\/security-questionnaire\/?$/);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByRole('main').getByText(/SOC 2 or ISO 27001 certification is claimed/i)).toBeVisible();
     await expect(page.getByRole('link', { name: /JSON/i })).toHaveAttribute('href', '/api/trust/security-questionnaire');
   });
