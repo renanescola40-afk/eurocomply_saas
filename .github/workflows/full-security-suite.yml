@@ -269,12 +269,26 @@ jobs:
     name: Semgrep SAST
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container:
-      image: semgrep/semgrep:1.97.0
+    env:
+      SEMGREP_VERSION: '1.97.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned Semgrep without Docker Hub
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-input --retries 5 --timeout 60 "semgrep==${SEMGREP_VERSION}"
+          installed_version="$(semgrep --version | head -n 1 | tr -d '[:space:]')"
+          if [ "$installed_version" != "$SEMGREP_VERSION" ]; then
+            echo "::error title=Semgrep version mismatch::Expected $SEMGREP_VERSION, got $installed_version."
+            exit 1
+          fi
       - name: Run Semgrep rules
         run: semgrep scan --config p/owasp-top-ten --config p/typescript --config p/javascript --severity ERROR --error --metrics off src
 
