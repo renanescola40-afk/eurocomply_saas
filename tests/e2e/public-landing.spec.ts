@@ -2,12 +2,12 @@ import { expect, test, type Page } from '@playwright/test';
 
 const localeExpectations = {
   en: {
-    heading: /AI governance/i,
+    heading: /AI moves fast\.\s*Governance keeps up\./i,
     inventory: /AI inventory|risk assessments/i,
     evidence: /evidence workflows|activity history/i,
   },
   pt: {
-    heading: /governan[cç]a de IA/i,
+    heading: /A IA avança\.\s*A governança acompanha\./i,
     inventory: /inventário de IA|avaliações de risco/i,
     evidence: /workflows de evidência|histórico de atividade/i,
   },

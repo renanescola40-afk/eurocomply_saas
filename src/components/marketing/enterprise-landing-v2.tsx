@@ -30,9 +30,9 @@ type LandingCopy = {
 const en: LandingCopy = {
   nav: { product: 'Product', solutions: 'Solutions', resources: 'Resources', pricing: 'Pricing', about: 'About', login: 'Log in', demo: 'Book a Demo' },
   badge: 'AI governance for EU AI Act preparation',
-  titleA: 'AI Governance', titleB: 'Made Simple.',
-  subtitle: 'The all-in-one platform to manage AI risk, organize governance evidence and build a review-ready operating model for European teams.',
-  primary: 'Book a Demo', secondary: 'See How It Works',
+  titleA: 'AI moves fast.', titleB: 'Governance keeps up.',
+  subtitle: 'Bring your AI systems, risks, owners and evidence into one controlled workspace. Understand what needs attention and keep governance moving.' ,
+  primary: 'Book a Demo', secondary: 'Explore the Platform',
   trust: [
     { title: 'AI Act workflows', text: 'Structured governance operations for EU AI Act readiness.' },
     { title: 'Controlled by design', text: 'Role-based access, protected sessions and organization isolation.' },
@@ -55,9 +55,9 @@ const en: LandingCopy = {
 const pt: LandingCopy = {
   nav: { product: 'Produto', solutions: 'Soluções', resources: 'Recursos', pricing: 'Preços', about: 'Sobre', login: 'Entrar', demo: 'Marcar Demo' },
   badge: 'Governança de IA e preparação para o AI Act',
-  titleA: 'Governança de IA', titleB: 'Mais Simples.',
-  subtitle: 'A plataforma para gerir risco de IA, organizar evidências de governança e criar uma operação preparada para revisão para equipas europeias.',
-  primary: 'Marcar Demo', secondary: 'Ver Como Funciona',
+  titleA: 'A IA avança.', titleB: 'A governança acompanha.',
+  subtitle: 'Reúna sistemas de IA, riscos, responsáveis e evidências num único espaço de trabalho. Saiba o que precisa de atenção e mantenha a governança em movimento.',
+  primary: 'Marcar demonstração', secondary: 'Conhecer a Plataforma',
   trust: [
     { title: 'Workflows AI Act', text: 'Operações estruturadas de governança para preparação ao EU AI Act.' },
     { title: 'Segurança enterprise', text: 'Acesso por função, sessões protegidas e isolamento por organização.' },
@@ -176,7 +176,7 @@ export function EnterpriseLandingV2({ locale: requestedLocale }: { locale: strin
 
       <main>
         <section className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 lg:px-8 lg:pb-28 lg:pt-24">
-          <div className="pointer-events-none absolute left-[48%] top-16 h-[38rem] w-[38rem] rounded-full bg-blue-600/[0.09] blur-3xl" />
+          <div aria-hidden="true" className="pointer-events-none absolute left-[48%] top-16 h-[38rem] w-[38rem] rounded-full bg-blue-600/[0.09] blur-3xl motion-safe:animate-pulse" />
           <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
             <div className="relative z-10">
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1.5 text-[11px] font-semibold text-blue-300"><ShieldCheck className="h-3.5 w-3.5" />{text.badge}</div>

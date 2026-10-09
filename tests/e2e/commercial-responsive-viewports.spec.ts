@@ -19,11 +19,11 @@ async function expectHealthyResponsiveSurface(page: Page, route: string, width: 
 }
 
 const publicCommercialRoutes = [
-  '/pt/pricing',
-  '/pt/checkout?plan=professional',
-  '/pt/login',
-  '/pt/signup?plan=professional',
-  '/pt/trust',
+  '/en/pricing',
+  '/en/checkout?plan=professional',
+  '/en/login',
+  '/en/signup?plan=professional',
+  '/en/trust',
 ] as const;
 
 for (const viewport of [
@@ -48,25 +48,25 @@ for (const viewport of [
     }
 
     test('pricing keeps a visible primary conversion action', async ({ page }) => {
-      await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('link', { name: /iniciar teste|professional|demo|vendas/i }).first()).toBeVisible();
+      await page.goto('/en/pricing', { waitUntil: 'domcontentloaded' });
+      await expect(page.getByRole('link', { name: /start|professional|demo|sales/i }).first()).toBeVisible();
     });
 
     test('checkout keeps the selected-plan action reachable without horizontal scrolling', async ({ page }) => {
-      await page.goto('/pt/checkout?plan=professional', { waitUntil: 'domcontentloaded' });
+      await page.goto('/en/checkout?plan=professional', { waitUntil: 'domcontentloaded' });
       await expect(page.getByText(/Professional/).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: /criar conta e continuar|entrar e continuar/i }).first()).toBeVisible();
+      await expect(page.getByRole('link', { name: /create account and continue|sign in and continue/i }).first()).toBeVisible();
     });
 
     test('login and signup retain visible labels and keyboard-focusable controls', async ({ page }) => {
-      await page.goto('/pt/login', { waitUntil: 'domcontentloaded' });
-      const email = page.getByRole('textbox', { name: /^email profissional$/i });
+      await page.goto('/en/login', { waitUntil: 'domcontentloaded' });
+      const email = page.getByRole('textbox', { name: /^work email$/i });
       await expect(email).toBeVisible();
       await email.focus();
       await expect(email).toBeFocused();
 
-      await page.goto('/pt/signup?plan=professional', { waitUntil: 'domcontentloaded' });
-      const signupEmail = page.getByRole('textbox', { name: /^email profissional$/i });
+      await page.goto('/en/signup?plan=professional', { waitUntil: 'domcontentloaded' });
+      const signupEmail = page.getByRole('textbox', { name: /^work email$/i });
       await expect(signupEmail).toBeVisible();
       await signupEmail.focus();
       await expect(signupEmail).toBeFocused();
