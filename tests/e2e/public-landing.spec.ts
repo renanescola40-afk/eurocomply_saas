@@ -10,7 +10,7 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
 async function expectProductionLanding(page: Page) {
   const response = await page.goto('/en', { waitUntil: 'domcontentloaded' });
   expect(response?.status()).toBeLessThan(500);
-  await expect(page).toHaveURL(new RegExp('/en/?
+  await expect(page).toHaveURL(/\/en\/?$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('link', { name: /RISCK COMPLY/i }).first()).toBeVisible();
   await expect(page.locator('main h1:visible').first()).toContainText(/AI governance/i);
