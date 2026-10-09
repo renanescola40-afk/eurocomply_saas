@@ -32,7 +32,7 @@ const en: LandingCopy = {
   badge: 'AI governance for EU AI Act preparation',
   titleA: 'AI moves fast.', titleB: 'Governance keeps up.',
   subtitle: 'Bring your AI systems, risks, owners and evidence into one controlled workspace. Understand what needs attention and keep governance moving.' ,
-  primary: 'Explore the Platform', secondary: 'See How It Works',
+  primary: 'Book a Demo', secondary: 'Explore the Platform',
   trust: [
     { title: 'AI Act workflows', text: 'Structured governance operations for EU AI Act readiness.' },
     { title: 'Controlled by design', text: 'Role-based access, protected sessions and organization isolation.' },
@@ -57,7 +57,7 @@ const pt: LandingCopy = {
   badge: 'Governança de IA e preparação para o AI Act',
   titleA: 'A IA avança.', titleB: 'A governança acompanha.',
   subtitle: 'Reúna sistemas de IA, riscos, responsáveis e evidências num único espaço de trabalho. Saiba o que precisa de atenção e mantenha a governança em movimento.',
-  primary: 'Conhecer a Plataforma', secondary: 'Ver Como Funciona',
+  primary: 'Marcar demonstração', secondary: 'Conhecer a Plataforma',
   trust: [
     { title: 'Workflows AI Act', text: 'Operações estruturadas de governança para preparação ao EU AI Act.' },
     { title: 'Segurança enterprise', text: 'Acesso por função, sessões protegidas e isolamento por organização.' },
