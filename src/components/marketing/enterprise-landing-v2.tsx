@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { PublicFooter } from '@/components/marketing/public-footer';
+import { EnterpriseProductJourney } from '@/components/marketing/enterprise-product-journey';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 type LandingCopy = {
@@ -28,7 +29,7 @@ type LandingCopy = {
 
 const en: LandingCopy = {
   nav: { product: 'Product', solutions: 'Solutions', resources: 'Resources', pricing: 'Pricing', about: 'About', login: 'Log in', demo: 'Book a Demo' },
-  badge: 'EU AI Act Ready',
+  badge: 'AI governance for EU AI Act preparation',
   titleA: 'AI Governance', titleB: 'Made Simple.',
   subtitle: 'The all-in-one platform to manage AI risk, organize governance evidence and build a review-ready operating model for European teams.',
   primary: 'Book a Demo', secondary: 'See How It Works',
@@ -36,7 +37,7 @@ const en: LandingCopy = {
     { title: 'AI Act workflows', text: 'Structured governance operations for EU AI Act readiness.' },
     { title: 'Controlled by design', text: 'Role-based access, protected sessions and organization isolation.' },
     { title: 'From discovery to review', text: 'From AI inventory to evidence, owners, actions and review.' },
-    { title: 'Audit ready', text: 'Traceable activity and evidence preparation for review.' },
+    { title: 'Evidence for review', text: 'Traceable activity and organized evidence to support review workflows.' },
   ],
   platformEyebrow: 'Enterprise governance control plane',
   platformTitle: 'One operational source of truth for AI governance.',
@@ -53,7 +54,7 @@ const en: LandingCopy = {
 
 const pt: LandingCopy = {
   nav: { product: 'Produto', solutions: 'Soluções', resources: 'Recursos', pricing: 'Preços', about: 'Sobre', login: 'Entrar', demo: 'Marcar Demo' },
-  badge: 'Preparado para o EU AI Act',
+  badge: 'Governança de IA e preparação para o AI Act',
   titleA: 'Governança de IA', titleB: 'Mais Simples.',
   subtitle: 'A plataforma para gerir risco de IA, organizar evidências de governança e criar uma operação preparada para revisão para equipas europeias.',
   primary: 'Marcar Demo', secondary: 'Ver Como Funciona',
@@ -61,7 +62,7 @@ const pt: LandingCopy = {
     { title: 'Workflows AI Act', text: 'Operações estruturadas de governança para preparação ao EU AI Act.' },
     { title: 'Segurança enterprise', text: 'Acesso por função, sessões protegidas e isolamento por organização.' },
     { title: 'Governança ponta a ponta', text: 'Do inventário de IA às evidências, responsáveis, ações e revisão.' },
-    { title: 'Pronto para auditoria', text: 'Atividade rastreável e preparação de evidências para revisão.' },
+    { title: 'Evidências para revisão', text: 'Atividade rastreável e evidências organizadas para apoiar processos de revisão.' },
   ],
   platformEyebrow: 'Plano de controlo de governança enterprise',
   platformTitle: 'Visibilidade pronta para decisão em vez de mais um dashboard cheio de ruído.',
@@ -195,6 +196,8 @@ export function EnterpriseLandingV2({ locale: requestedLocale }: { locale: strin
         <section id="platform" className="px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
           <div className="mx-auto max-w-7xl"><div className="max-w-4xl"><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-400">{text.platformEyebrow}</p><h2 className="mt-4 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">{text.platformTitle}</h2><p className="mt-5 max-w-3xl text-base leading-8 text-slate-400">{text.platformText}</p></div><div id="solutions" className="mt-12 grid gap-4 md:grid-cols-2">{text.features.map((feature, index) => <article key={feature.title} className="rounded-xl border border-slate-800 bg-[#0b121e] p-6"><div className="flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">0{index + 1}</span><ArrowRight className="h-4 w-4 text-slate-700" /></div><h3 className="mt-8 text-xl font-semibold text-white">{feature.title}</h3><p className="mt-3 text-sm leading-7 text-slate-500">{feature.text}</p></article>)}</div></div>
         </section>
+
+        <EnterpriseProductJourney locale={locale} />
 
         <section className="border-y border-slate-800/80 bg-[#080d16] px-4 py-24 sm:px-6 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-center lg:justify-between"><div className="max-w-3xl"><h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">{text.finalTitle}</h2><p className="mt-5 text-base leading-8 text-slate-400">{text.finalText}</p></div><Link href={demoHref} className="inline-flex h-12 shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-500">{text.primary}<ArrowRight className="h-4 w-4" /></Link></div></section>
       </main>
