@@ -43,6 +43,7 @@ describe('global commercial access boundary', () => {
     expect(classifyLocalizedCommercialRoute('/pt/pricing', 'pt')).toBe('public');
     expect(classifyLocalizedCommercialRoute('/pt/checkout', 'pt')).toBe('public');
     expect(classifyLocalizedCommercialRoute('/pt/cookie-policy', 'pt')).toBe('public');
+    expect(classifyLocalizedCommercialRoute('/en/recover-password', 'en')).toBe('public');
     expect(classifyLocalizedCommercialRoute('/pt/acceptable-use', 'pt')).toBe('public');
     expect(classifyLocalizedCommercialRoute('/pt/transfers', 'pt')).toBe('public');
     expect(classifyLocalizedCommercialRoute('/pt/checkout/complete', 'pt')).toBe('billing_recovery');
