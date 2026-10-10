@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, CalendarDays, CheckCircle2, Send } from 'lucide-react';
 import { PublicFooter } from '@/components/marketing/public-footer';
+import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 import { SalesContactForm } from '@/components/marketing/sales-contact-form';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
@@ -46,6 +48,18 @@ function copyFor(locale: Locale, intent?: string) {
     bullets: ['AI inventory and owners', 'Risk classification and evidence', 'Policies and governance reports', 'Procurement and security review'],
     subject: demoIntent ? 'RISCK COMPLY demo request' : 'RISCK COMPLY enterprise sales',
   };
+}
+
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale: requestedLocale } = await params;
+  const locale = getSafeLocale(requestedLocale);
+  return makePublicMetadata({
+    locale,
+    path: '/contact',
+    title: 'Contact RISCK COMPLY | Enterprise AI Governance',
+    description: 'Contact RISCK COMPLY about enterprise AI governance workflows, rollout, procurement and security review.',
+  });
 }
 
 export default async function ContactPage({ params, searchParams }: PageProps) {
