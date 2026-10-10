@@ -34,7 +34,11 @@ describe('canonical locale registry', () => {
     expect(routingSource).toContain('export const locales = SUPPORTED_LOCALES;');
     expect(routingSource).not.toMatch(/export const locales = \[/);
 
-    expect(requestConfigSource).toContain("import { isSupportedLocale } from './lib/i18n/locales';");
-    expect(requestConfigSource).not.toContain("locale as 'en'");
+    expect(requestConfigSource).toContain("locale: 'en'");
+    expect(requestConfigSource).toContain("import('./messages/en.json')");
+    expect(requestConfigSource).not.toContain('./messages/' + '
+  });
+});
+ + '{locale}.json');
   });
 });
