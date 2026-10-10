@@ -16,18 +16,21 @@ Railway is accepted as a contingency hosting provider candidate for an isolated 
 
 This decision authorizes repository-side preparation and a non-production or isolated validation deployment only. It does not authorize DNS cutover, production traffic migration, Stripe LIVE webhook changes, or replacement of Vercel as the primary provider without successful runtime validation and explicit owner approval.
 
-The supported Railway Infrastructure as Code format is `.railway/railway.ts`. Deprecated `railway.toml` / `railway.json` Config as Code must not be used for new services.
+Railway provider settings will be provisioned explicitly in the connected Railway project/service rather than through repository Infrastructure as Code. This avoids depending on an undeclared Railway SDK or a repository configuration file that cannot be evaluated from a clean checkout.
 
 ## Deployment authority
 
 - GitHub `main` remains the source of truth.
 - The exact intended `main` SHA must be deployed and recorded.
 - Provider-side secrets must be configured directly in Railway; secrets must never be committed.
+- Build command: `npm run build`.
+- Start command: `npm run start`.
+- Healthcheck path: `/api/health`.
 - Any production cutover requires owner approval after validation evidence is complete.
 
 ## Regional and privacy boundary
 
-The failover service must be placed in an EU-compatible Railway region before production use. Region selection is intentionally not hardcoded until the connected Railway account exposes the available region set and the privacy/DPA review is reconciled.
+The failover service must be placed in an EU-compatible Railway region before production use. Region selection is intentionally deferred until the connected Railway account exposes the available region set and the privacy/DPA review is reconciled.
 
 No customer production data may be intentionally migrated solely for preview validation.
 
