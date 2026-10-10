@@ -46,7 +46,7 @@ export function validateContractCounselPack({ root = process.cwd() } = {}) {
   const manifest = readJson(root, MANIFEST_PATH);
   if (manifest.schema !== 'risck-comply.contract-counsel-pack.v1') failures.push('manifest_schema_invalid');
   if (manifest.status !== 'HUMAN_REVIEW_REQUIRED') failures.push('manifest_status_must_require_human_review');
-  if (!Array.isArray(manifest.documents) || manifest.documents.length !== 9) failures.push('manifest_must_list_nine_documents');
+  if (!Array.isArray(manifest.documents) || manifest.documents.length !== 11) failures.push('manifest_must_list_eleven_documents');
 
   const documents = [];
   for (const entry of manifest.documents ?? []) {
@@ -91,7 +91,7 @@ export function validateContractCounselPack({ root = process.cwd() } = {}) {
     generatedAt: new Date().toISOString(),
     status: failures.length === 0 ? 'READY_FOR_FOUNDER_AND_COUNSEL_HANDOFF' : 'PACKAGE_PREPARATION_FAILED',
     preparedDocumentCount: documents.length,
-    expectedDocumentCount: 9,
+    expectedDocumentCount: 11,
     founderFactsUnresolvedCount,
     founderFactsComplete: false,
     counselAccepted: false,
