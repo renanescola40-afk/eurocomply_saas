@@ -11,7 +11,7 @@ const route = read('src/app/api/counsel/legal-reviews/[reviewId]/route.ts');
 
 describe('Legal Assurance Counsel cockpit', () => {
   it('opens only the assigned review path from the Counsel inbox', () => {
-    expect(inbox).toContain('`/${locale}/counsel/${review.id}`');
+    expect(inbox).toContain('`/en/counsel/${review.id}`');
     expect(inbox).toContain("review.status === 'CONFLICT_CHECK_PENDING'");
     expect(inbox).toContain("review.status === 'ENGAGEMENT_PENDING'");
   });
