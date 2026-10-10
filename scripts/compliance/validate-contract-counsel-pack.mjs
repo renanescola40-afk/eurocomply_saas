@@ -6,6 +6,20 @@ import { pathToFileURL } from 'node:url';
 
 const MANIFEST_PATH = 'docs/legal-review-preparation/legal-pack/manifest.json';
 const MARKDOWN_ACCEPTED_STATUS = /\*\*Status:\*\*\s*`?(?:ACCEPTED|COUNSEL_ACCEPTED)`?/;
+const REQUIRED_DOCUMENT_IDS = [
+  'terms',
+  'msa',
+  'enterprise-order-form',
+  'privacy',
+  'dpa',
+  'subprocessors',
+  'service-schedule',
+  'claims',
+  'partner-counsel',
+  'master-opinion',
+  'decision-sheet',
+];
+const EXPECTED_DOCUMENT_COUNT = REQUIRED_DOCUMENT_IDS.length;
 
 function readText(root, path) {
   return readFileSync(join(root, path), 'utf8');
@@ -46,7 +60,18 @@ export function validateContractCounselPack({ root = process.cwd() } = {}) {
   const manifest = readJson(root, MANIFEST_PATH);
   if (manifest.schema !== 'risck-comply.contract-counsel-pack.v1') failures.push('manifest_schema_invalid');
   if (manifest.status !== 'HUMAN_REVIEW_REQUIRED') failures.push('manifest_status_must_require_human_review');
-  if (!Array.isArray(manifest.documents) || manifest.documents.length !== 9) failures.push('manifest_must_list_nine_documents');
+  if (!Array.isArray(manifest.documents) || manifest.documents.length !== EXPECTED_DOCUMENT_COUNT) {
+    failures.push('manifest_document_count_invalid');
+  }
+  const manifestDocumentIds = (manifest.documents ?? []).map((entry) => entry?.id).filter(Boolean);
+  const uniqueManifestDocumentIds = new Set(manifestDocumentIds);
+  if (uniqueManifestDocumentIds.size !== manifestDocumentIds.length) failures.push('manifest_document_ids_must_be_unique');
+  for (const id of REQUIRED_DOCUMENT_IDS) {
+    if (!uniqueManifestDocumentIds.has(id)) failures.push(`manifest_missing_required_document:${id}`);
+  }
+  for (const id of uniqueManifestDocumentIds) {
+    if (!REQUIRED_DOCUMENT_IDS.includes(id)) failures.push(`manifest_contains_unexpected_document:${id}`);
+  }
 
   const documents = [];
   for (const entry of manifest.documents ?? []) {
@@ -91,7 +116,7 @@ export function validateContractCounselPack({ root = process.cwd() } = {}) {
     generatedAt: new Date().toISOString(),
     status: failures.length === 0 ? 'READY_FOR_FOUNDER_AND_COUNSEL_HANDOFF' : 'PACKAGE_PREPARATION_FAILED',
     preparedDocumentCount: documents.length,
-    expectedDocumentCount: 9,
+    expectedDocumentCount: EXPECTED_DOCUMENT_COUNT,
     founderFactsUnresolvedCount,
     founderFactsComplete: false,
     counselAccepted: false,
