@@ -1,5 +1,5 @@
 import type { Locale } from '@/lib/i18n/routing';
-import { getCanonicalUrl, getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
+import { getCanonicalUrl, getSiteUrl } from '@/lib/seo/public-metadata';
 
 type SiteStructuredDataProps = {
   locale: Locale;
@@ -17,7 +17,6 @@ export function SiteStructuredData({ locale, title, description }: SiteStructure
         '@type': 'Organization',
         '@id': `${siteUrl}/#organization`,
         name: 'RISCK COMPLY',
-        alternateName: 'Risck Comply',
         url: siteUrl,
         logo: {
           '@type': 'ImageObject',
@@ -30,15 +29,13 @@ export function SiteStructuredData({ locale, title, description }: SiteStructure
         '@id': `${siteUrl}/#website`,
         url: siteUrl,
         name: 'RISCK COMPLY',
-        alternateName: 'Risck Comply',
         publisher: { '@id': `${siteUrl}/#organization` },
-        inLanguage: Object.values(localeLanguageTags),
+        inLanguage: 'en',
       },
       {
         '@type': 'SoftwareApplication',
         '@id': `${siteUrl}/#software`,
         name: 'RISCK COMPLY',
-        alternateName: 'Risck Comply',
         url: siteUrl,
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
@@ -51,7 +48,7 @@ export function SiteStructuredData({ locale, title, description }: SiteStructure
         url: pageUrl,
         name: title,
         description,
-        inLanguage: localeLanguageTags[locale],
+        inLanguage: 'en',
         isPartOf: { '@id': `${siteUrl}/#website` },
         about: { '@id': `${siteUrl}/#software` },
       },
