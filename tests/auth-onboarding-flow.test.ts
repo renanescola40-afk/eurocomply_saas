@@ -28,6 +28,22 @@ describe('auth and onboarding redirect invariants', () => {
     expect(middleware).toContain("pricingUrl.searchParams.set('checkout', 'select_plan')");
   });
 
+  it('bounds private-route auth latency and fails closed when the provider stalls', () => {
+    const middleware = readRepoFile('src/middleware.ts');
+
+    expect(middleware).toContain('const PRIVATE_AUTH_TIMEOUT_MS = 5_000');
+    expect(middleware).toContain('const authResult = await Promise.race([');
+    expect(middleware).toContain("if (authResult.kind === 'timeout')");
+    expect(middleware).toContain('return { isAuthenticated: false, response, timedOut: true }');
+    expect(middleware).toContain('if (sessionCheck?.timedOut)');
+    expect(middleware).toContain("new NextResponse('Authentication service temporarily unavailable'");
+    expect(middleware).toContain('status: 503');
+    expect(middleware).toContain("headers: { 'Retry-After': '5' }");
+    expect(middleware.indexOf('if (sessionCheck?.timedOut)')).toBeLessThan(
+      middleware.indexOf('if (!isAuthenticated && !isPublic)'),
+    );
+  });
+
   it('keeps unauthenticated dashboard users on login with a safe localized next value', () => {
     const dashboard = readRepoFile('src/app/[locale]/dashboard/organizations/page.tsx');
     const observability = readRepoFile('src/app/[locale]/dashboard/observability/page.tsx');

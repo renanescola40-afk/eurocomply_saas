@@ -18,6 +18,7 @@ const SENTRY_TUNNEL_PATH = '/monitoring';
 const BEAGLE_DOMAIN_VERIFICATION_PATH = '/_e8f1hq2qpr6fuvd036hr4l97yn8octew';
 const INTERNAL_PATHNAME_HEADER = 'x-risck-internal-pathname';
 const PREMIUM_NEWS_PATH = '/dashboard/organizations/reports-governance/news';
+const PRIVATE_AUTH_TIMEOUT_MS = 5_000;
 const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
 
 const PUBLIC_ROUTES = [
@@ -170,6 +171,7 @@ function preserveTrustedRequestOverrides(response: NextResponse, req: NextReques
 type SupabaseSessionCheck = {
   isAuthenticated: boolean;
   response: NextResponse;
+  timedOut?: boolean;
 };
 
 function applySupabaseSessionCookies(response: NextResponse, sessionResponse?: NextResponse) {
@@ -254,11 +256,27 @@ async function hasSupabaseSession(req: NextRequest): Promise<SupabaseSessionChec
     },
   });
 
-  const { data, error } = await supabase.auth.getUser();
-  return {
-    isAuthenticated: !error && Boolean(data.user),
-    response,
-  };
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const authResult = await Promise.race([
+      supabase.auth.getUser().then((result) => ({ kind: 'result' as const, result })),
+      new Promise<{ kind: 'timeout' }>((resolve) => {
+        timeoutHandle = setTimeout(() => resolve({ kind: 'timeout' }), PRIVATE_AUTH_TIMEOUT_MS);
+      }),
+    ]);
+
+    if (authResult.kind === 'timeout') {
+      return { isAuthenticated: false, response, timedOut: true };
+    }
+
+    const { data, error } = authResult.result;
+    return {
+      isAuthenticated: !error && Boolean(data.user),
+      response,
+    };
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
 }
 
 export default async function middleware(req: NextRequest) {
@@ -337,6 +355,16 @@ export default async function middleware(req: NextRequest) {
     // omitted here rather than making availability depend on an upstream Auth request.
     const sessionCheck = !isPublic ? await hasSupabaseSession(req) : null;
     const isAuthenticated = sessionCheck?.isAuthenticated ?? false;
+
+    if (sessionCheck?.timedOut) {
+      const response = withPrivateNoStore(
+        new NextResponse('Authentication service temporarily unavailable', {
+          status: 503,
+          headers: { 'Retry-After': '5' },
+        }),
+      );
+      return withRequestId(applySupabaseSessionCookies(response, sessionCheck.response), requestId);
+    }
 
     if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
