@@ -33,7 +33,9 @@ describe('international SEO acquisition architecture', () => {
 
     expect(routing).toContain("localePrefix: 'always'");
     expect(routing).toContain('alternateLinks: false');
-    expect(metadata).toContain("'x-default': `${appUrl}/${defaultLocale}${normalizedPath}`");
+    expect(metadata).toContain("const englishUrl = `${appUrl}/en${normalizedPath}`");
+    expect(metadata).toContain("'x-default': englishUrl");
+    expect(metadata).not.toContain('const entries = locales.map');
 
     expect(nextConfig).toContain('localeLessPublicCanonicalRedirects');
     expect(nextConfig).toContain("source: '/:path(pricing|enterprise|resources|faq|about|contact|book-demo|trust|security|compliance|data-processing|sla|privacy|terms|cookie-policy|acceptable-use|transfers|dpa|subprocessors|status|vulnerability-disclosure)'");
@@ -62,7 +64,7 @@ describe('international SEO acquisition architecture', () => {
     }
   });
 
-  it('publishes localized feature routes with canonical, hreflang and structured data', () => {
+  it('keeps feature content available while advertising only the English canonical in hreflang', () => {
     const featureRoute = read('src/app/[locale]/features/[feature]/page.tsx');
     const helpers = read('src/lib/seo/feature-pages/index.ts');
 
@@ -71,8 +73,9 @@ describe('international SEO acquisition architecture', () => {
     expect(featureRoute).toContain("'@type': 'FAQPage'");
     expect(featureRoute).toContain("'@type': 'BreadcrumbList'");
     expect(featureRoute).toContain("'@type': 'SoftwareApplication'");
-    expect(helpers).toContain("'x-default'");
-    expect(helpers).toContain('getFeaturePath');
+    expect(helpers).toContain("const englishUrl = `${siteUrl}${getFeaturePath('en', key)}`");
+    expect(helpers).toContain("'x-default': englishUrl");
+    expect(helpers).not.toContain('const entries = locales.map');
   });
 
   it('keeps feature and tool pages public, cached and discoverable in the sitemap', () => {
@@ -83,9 +86,10 @@ describe('international SEO acquisition architecture', () => {
     expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/features\/'/);
     expect(middleware).toMatch(/PUBLIC_ROUTE_PREFIXES\s*=\s*\[[^\]]*'\/tools\/'/);
     expect(nextConfig).toContain('/features/:path*');
-    expect(sitemap).toContain('getFeaturePages');
+    expect(sitemap).toContain("getFeaturePages('en')");
+    expect(sitemap).toContain("getFeaturePath('en', page.key)");
     expect(sitemap).toContain('getFeatureLanguageAlternates');
-    expect(sitemap).toContain('getFeaturePath');
+    expect(sitemap).not.toContain('locales.flatMap');
   });
 
   it('adds brand entity data and keeps provisional status or mixed-language assurance pages out of the acquisition index', () => {

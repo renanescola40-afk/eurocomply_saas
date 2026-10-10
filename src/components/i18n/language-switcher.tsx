@@ -7,11 +7,11 @@ import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
 const languageLabels: Record<Locale, string> = {
   en: 'Select language',
-  pt: 'Selecionar idioma',
-  es: 'Seleccionar idioma',
-  fr: 'Sélectionner la langue',
-  it: 'Seleziona lingua',
-  de: 'Sprache auswählen',
+  pt: 'Select language',
+  es: 'Select language',
+  fr: 'Select language',
+  it: 'Select language',
+  de: 'Select language',
 };
 
 const localeStorageKey = 'risck-comply-locale';
@@ -59,7 +59,7 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
       translate="no"
     >
       {!compact ? <Globe2 className={`ml-2 h-4 w-4 ${isDark ? 'text-white/60' : 'text-muted-foreground'}`} /> : null}
-      {locales.map((locale) => {
+      {(['en'] as const).map((locale) => {
         const active = locale === currentLocale;
         const baseTargetPath = switchLocalePath(pathname, locale);
         const mobileVisibility = compact && !active ? 'hidden sm:inline-flex' : 'inline-flex';
