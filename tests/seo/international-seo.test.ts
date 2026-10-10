@@ -53,7 +53,7 @@ describe('international SEO acquisition architecture', () => {
     for (const featureKey of featureKeys) {
       expect(english).toContain(`key: '${featureKey}'`);
     }
-    expect(english.match(/\\n\\s+slug: '/g)?.length).toBe(featureKeys.length);
+    expect(english.match(/\n\s+slug: '/g)?.length).toBe(featureKeys.length);
 
     for (const locale of localeFiles.filter((value) => value !== 'en')) {
       const path = `src/lib/seo/feature-pages/${locale}.ts`;
