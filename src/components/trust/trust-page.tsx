@@ -35,8 +35,9 @@ export function TrustCenterPage({ locale, page }: { locale: Locale; page: TrustP
         </div>
       </header>
 
-      <section className="border-b border-slate-800/80 px-4 py-14 sm:px-6 md:py-20">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.16fr_0.84fr] lg:items-start">
+      <section className="relative overflow-hidden border-b border-slate-800/80 px-4 py-14 sm:px-6 md:py-20">
+        <div aria-hidden="true" className="pointer-events-none absolute left-[58%] top-0 h-[34rem] w-[34rem] rounded-full bg-blue-600/[0.075] blur-3xl" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.16fr_0.84fr] lg:items-start">
           <div>
             <p className="inline-flex max-w-3xl items-start gap-2 rounded-lg border border-blue-400/15 bg-blue-500/[0.06] px-3 py-2 text-xs font-medium leading-5 text-blue-100/80">
               <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-300" aria-hidden="true" />
@@ -60,7 +61,7 @@ export function TrustCenterPage({ locale, page }: { locale: Locale; page: TrustP
             <p className="mt-5 text-sm text-white/32">{ui.lastUpdated}: {page.updated}</p>
           </div>
 
-          <aside className="overflow-hidden rounded-xl border border-slate-800/80 bg-[#0d1522]">
+          <aside className="overflow-hidden rounded-2xl border border-slate-800/80 bg-[#0d1522] shadow-[0_24px_80px_rgba(0,0,0,.22)]">
             <div className="border-b border-slate-800 px-5 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-300/65">{ui.portal}</p>
             </div>
@@ -71,7 +72,7 @@ export function TrustCenterPage({ locale, page }: { locale: Locale; page: TrustP
                   <Link
                     key={item.slug}
                     href={`/${locale}/${item.slug}`}
-                    className={`group flex items-center justify-between px-5 py-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400 ${active ? 'bg-blue-500/[0.11] text-blue-100' : 'text-white/52 hover:bg-blue-500/[0.055] hover:text-white'}`}
+                    className={`group flex items-center justify-between px-5 py-4 text-sm font-medium transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400 ${active ? 'bg-blue-500/[0.11] text-blue-100' : 'text-white/52 hover:bg-blue-500/[0.055] hover:text-white'}`}
                   >
                     <span>{item.navLabel}</span>
                     <ArrowRight className={`h-4 w-4 transition ${active ? 'text-blue-200/75' : 'text-white/24 group-hover:translate-x-0.5 group-hover:text-blue-200/70'}`} aria-hidden="true" />
@@ -86,9 +87,9 @@ export function TrustCenterPage({ locale, page }: { locale: Locale; page: TrustP
       <section className="px-4 py-14 sm:px-6 md:py-16">
         <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-2">
           {page.sections.map((section) => (
-            <article key={section.title} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-5 md:p-6">
+            <article key={section.title} className="group rounded-2xl border border-slate-800/80 bg-[#0d1522] p-5 transition-colors duration-200 hover:border-blue-400/25 md:p-6">
               <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-400/15 bg-blue-500/[0.06] text-blue-300">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-400/15 bg-blue-500/[0.06] text-blue-300 transition group-hover:border-blue-400/30 group-hover:bg-blue-500/[0.1]">
                   <FileText className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <h2 className="text-xl font-semibold tracking-[-0.025em] text-white/88">{section.title}</h2>
