@@ -63,6 +63,67 @@ const PUBLIC_ROUTES = [
 
 const PUBLIC_ROUTE_PREFIXES = ['/features/', '/tools/'] as const;
 
+const HISTORICAL_FEATURE_SLUGS_TO_ENGLISH: Record<string, Record<string, string>> = {
+  pt: {
+    'inventario-de-ia': 'ai-inventory',
+    'avaliacao-de-risco-de-ia': 'ai-risk-assessment',
+    'gestao-de-evidencias': 'evidence-management',
+    'workflows-de-governanca-de-ia': 'ai-governance-workflows',
+    'risco-de-fornecedores-de-ia': 'vendor-ai-risk',
+    'preparacao-para-o-ai-act': 'eu-ai-act-readiness',
+    'trilhos-de-auditoria-de-ia': 'ai-governance-audit-trails',
+    'documentacao-de-compliance-de-ia': 'ai-compliance-documentation',
+  },
+  es: {
+    'inventario-de-ia': 'ai-inventory',
+    'evaluacion-de-riesgos-de-ia': 'ai-risk-assessment',
+    'gestion-de-evidencias': 'evidence-management',
+    'flujos-de-gobernanza-de-ia': 'ai-governance-workflows',
+    'riesgo-de-proveedores-de-ia': 'vendor-ai-risk',
+    'preparacion-para-el-ai-act': 'eu-ai-act-readiness',
+    'registros-de-auditoria-de-ia': 'ai-governance-audit-trails',
+    'documentacion-de-compliance-de-ia': 'ai-compliance-documentation',
+  },
+  fr: {
+    'inventaire-ia': 'ai-inventory',
+    'evaluation-des-risques-ia': 'ai-risk-assessment',
+    'gestion-des-preuves': 'evidence-management',
+    'workflows-de-gouvernance-ia': 'ai-governance-workflows',
+    'risque-fournisseurs-ia': 'vendor-ai-risk',
+    'preparation-ai-act': 'eu-ai-act-readiness',
+    'pistes-audit-ia': 'ai-governance-audit-trails',
+    'documentation-conformite-ia': 'ai-compliance-documentation',
+  },
+  it: {
+    'inventario-ia': 'ai-inventory',
+    'valutazione-rischio-ia': 'ai-risk-assessment',
+    'gestione-evidenze': 'evidence-management',
+    'workflow-governance-ia': 'ai-governance-workflows',
+    'rischio-fornitori-ia': 'vendor-ai-risk',
+    'preparazione-ai-act': 'eu-ai-act-readiness',
+    'tracce-audit-ia': 'ai-governance-audit-trails',
+    'documentazione-compliance-ia': 'ai-compliance-documentation',
+  },
+  de: {
+    'ki-inventar': 'ai-inventory',
+    'ki-risikobewertung': 'ai-risk-assessment',
+    'nachweismanagement': 'evidence-management',
+    'ki-governance-workflows': 'ai-governance-workflows',
+    'ki-anbieterrisiko': 'vendor-ai-risk',
+    'ai-act-vorbereitung': 'eu-ai-act-readiness',
+    'ki-audit-protokolle': 'ai-governance-audit-trails',
+    'ki-compliance-dokumentation': 'ai-compliance-documentation',
+  },
+};
+
+function canonicalEnglishRedirectRest(locale: string, rest: string) {
+  const match = rest.match(/^features\/([^/]+)$/);
+  if (!match) return rest;
+
+  const englishSlug = HISTORICAL_FEATURE_SLUGS_TO_ENGLISH[locale]?.[match[1]];
+  return englishSlug ? `features/${englishSlug}` : rest;
+}
+
 const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
   '/dashboard/organizations/vendors': '/vendor-assurance',
   '/dashboard/organizations/risks': '/dashboard/organizations/risks',
@@ -303,7 +364,8 @@ export default async function middleware(req: NextRequest) {
 
   const localeSegment = pathname.split('/').filter(Boolean)[0];
   if (localeSegment && locales.includes(localeSegment as 'en') && localeSegment !== 'en') {
-    const rest = pathname.split('/').filter(Boolean).slice(1).join('/');
+    const historicalRest = pathname.split('/').filter(Boolean).slice(1).join('/');
+    const rest = canonicalEnglishRedirectRest(localeSegment, historicalRest);
     const redirectUrl = new URL(`/en${rest ? `/${rest}` : ''}`, req.url);
     redirectUrl.search = req.nextUrl.search;
     const response = NextResponse.redirect(redirectUrl, 308);
