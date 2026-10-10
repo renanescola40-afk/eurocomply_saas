@@ -76,7 +76,7 @@ describe('final commercial UX closure contracts', () => {
     expect(inviteMemberForm).not.toContain('value="member"');
     expect(teamSettings).toContain("if (role === 'admin') return 'Admin'");
     expect(teamSettings).toContain("if (role === 'editor') return 'Editor'");
-    expect(teamSettings).toContain("return 'Visualizador'");
+    expect(teamSettings).toContain("return 'Viewer'");
   });
 
   it('keeps roster recovery available when invitation entitlement or seat capacity is locked', () => {

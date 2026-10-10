@@ -44,23 +44,21 @@ describe('international SEO acquisition architecture', () => {
     expect(nextConfig).toContain("destination: '/en/trust/:path*'");
     expect(nextConfig).toContain('permanent: true');
 
-    // Feature slugs are localized, so a generic /features/* -> /en/features/*
-    // redirect would be unsafe for Spanish/French/German localized slugs.
+    // Historical locale feature URLs are redirected to canonical English by middleware.
     expect(nextConfig).not.toContain("destination: '/en/features/:path*'");
   });
 
-  it('ships eight fully authored feature intents in every supported locale', () => {
-    for (const locale of localeFiles) {
+  it('keeps one authored English feature catalog and historical compatibility modules', () => {
+    const english = read('src/lib/seo/feature-pages/en.ts');
+    for (const featureKey of featureKeys) {
+      expect(english).toContain(`key: '${featureKey}'`);
+    }
+    expect(english.match(/\\n\\s+slug: '/g)?.length).toBe(featureKeys.length);
+
+    for (const locale of localeFiles.filter((value) => value !== 'en')) {
       const path = `src/lib/seo/feature-pages/${locale}.ts`;
-      expect(existsSync(path), `missing localized feature file ${path}`).toBe(true);
-      const content = read(path);
-
-      for (const featureKey of featureKeys) {
-        expect(content).toContain(`key: '${featureKey}'`);
-      }
-
-      expect(content.match(/\n\s+slug: '/g)?.length).toBe(featureKeys.length);
-      expect(content).not.toContain(': enFeaturePages');
+      expect(existsSync(path), `missing compatibility feature file ${path}`).toBe(true);
+      expect(read(path)).toContain('enFeaturePages as');
     }
   });
 

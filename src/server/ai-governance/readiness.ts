@@ -202,8 +202,7 @@ export type AiGovernanceReadiness = {
   capabilities: AiComplianceCapability[];
 };
 
-const localeContext: Record<Locale, AiGovernanceReadiness['countryContext']> = {
-  en: {
+const ENGLISH_COUNTRY_CONTEXT: AiGovernanceReadiness['countryContext'] = {
     locale: 'en',
     regionLabel: 'Europe / International',
     language: 'English',
@@ -212,58 +211,16 @@ const localeContext: Record<Locale, AiGovernanceReadiness['countryContext']> = {
       'Capture the operating country per AI system when the customer has multi-country deployments.',
       'Map national market-surveillance authority details during enterprise onboarding before formal reporting.',
     ],
-  },
-  pt: {
-    locale: 'pt',
-    regionLabel: 'Portugal',
-    language: 'Português de Portugal',
-    guidance: [
-      'Mantenha políticas e evidências críticas em português quando a equipa operacional estiver em Portugal.',
-      'Registe o país de operação por sistema de IA para separar obrigações locais de obrigações pan-europeias.',
-      'Confirme a autoridade nacional aplicável durante o onboarding enterprise antes de qualquer reporte formal.',
-    ],
-  },
-  es: {
-    locale: 'es',
-    regionLabel: 'España',
-    language: 'Español',
-    guidance: [
-      'Mantén políticas y evidencias críticas en español para equipos operativos en España.',
-      'Registra el país de operación por sistema de IA para separar obligaciones locales y europeas.',
-      'Confirma la autoridad nacional aplicable durante el onboarding enterprise antes de cualquier reporte formal.',
-    ],
-  },
-  fr: {
-    locale: 'fr',
-    regionLabel: 'France',
-    language: 'Français',
-    guidance: [
-      'Conservez les politiques et preuves critiques en français lorsque les équipes opèrent en France.',
-      'Renseignez le pays d’exploitation de chaque système IA pour distinguer obligations locales et européennes.',
-      'Validez l’autorité nationale applicable pendant l’onboarding enterprise avant tout signalement formel.',
-    ],
-  },
-  it: {
-    locale: 'it',
-    regionLabel: 'Italia',
-    language: 'Italiano',
-    guidance: [
-      'Mantieni policy ed evidenze critiche in italiano per i team operativi in Italia.',
-      'Registra il paese operativo per ogni sistema IA per separare obblighi locali e pan-europei.',
-      'Conferma l’autorità nazionale applicabile durante l’onboarding enterprise prima di qualsiasi report formale.',
-    ],
-  },
-  de: {
-    locale: 'de',
-    regionLabel: 'Deutschland / DACH',
-    language: 'Deutsch',
-    guidance: [
-      'Halten Sie kritische Richtlinien und Nachweise auf Deutsch bereit, wenn operative Teams in DACH arbeiten.',
-      'Erfassen Sie das Einsatzland je KI-System, um lokale und europäische Pflichten sauber zu trennen.',
-      'Bestätigen Sie die zuständige nationale Behörde im Enterprise-Onboarding vor formellen Meldungen.',
-    ],
-  },
+  };
+const localeContext: Record<Locale, AiGovernanceReadiness['countryContext']> = {
+  en: ENGLISH_COUNTRY_CONTEXT,
+  pt: ENGLISH_COUNTRY_CONTEXT,
+  es: ENGLISH_COUNTRY_CONTEXT,
+  fr: ENGLISH_COUNTRY_CONTEXT,
+  it: ENGLISH_COUNTRY_CONTEXT,
+  de: ENGLISH_COUNTRY_CONTEXT,
 };
+
 
 function percentage(value: number, total: number) {
   if (total <= 0) return 0;
