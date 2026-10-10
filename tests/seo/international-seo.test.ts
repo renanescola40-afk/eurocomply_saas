@@ -99,7 +99,8 @@ describe('international SEO acquisition architecture', () => {
     expect(homepage).toContain('SiteStructuredData');
     expect(structuredData).toContain("'@type': 'WebSite'");
     expect(structuredData).toContain("'@type': 'Organization'");
-    expect(structuredData).toContain("alternateName: 'Risck Comply'");
+    expect(structuredData).not.toContain("alternateName: 'Risck Comply'");
+    expect(structuredData).toContain("inLanguage: 'en'");
     expect(nextConfig).toContain('provisionalLocaleNoIndexHeaders');
     expect(sitemap).not.toContain("'/status'");
   });
