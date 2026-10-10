@@ -19,6 +19,18 @@ const copy = {
   de: ENGLISH_COPY,
 } as const;
 
+type Locale = keyof typeof copy;
+type Review = {
+  id: string;
+  organization_id: string;
+  law_firm_id: string | null;
+  review_type: string;
+  jurisdiction: string;
+  status: string;
+  priority: string;
+  updated_at: string;
+};
+
 type Counsel = { id: string; lawFirmId: string; professionalName: string; jurisdictions: string[]; specialties: string[] };
 type LoadState = 'loading' | 'ready' | 'unavailable' | 'denied' | 'error';
 
@@ -31,7 +43,7 @@ function statusTone(status: string) {
 
 export default function CounselPortalPage() {
   const params = useParams();
-  const locale = ((params.locale as string) in copy ? params.locale : 'pt') as Locale;
+  const locale: Locale = 'en';
   const t = copy[locale];
   const [state, setState] = useState<LoadState>('loading');
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -103,11 +115,11 @@ export default function CounselPortalPage() {
             <article key={review.id} className="space-y-4 p-5">
               <div className="grid gap-4 lg:grid-cols-[1.2fr_.8fr_.8fr_.8fr] lg:items-center">
                 <div><div className="flex flex-wrap items-center gap-2"><h2 className="font-medium text-white/90">{review.review_type}</h2><Badge className={statusTone(review.status)}>{review.status}</Badge></div><p className="mt-2 text-xs text-white/38">{review.priority}</p></div>
-                <Meta label={t.customer} value={review.organization_id} /><Meta label={t.jurisdiction} value={review.jurisdiction} /><Meta label={t.updated} value={new Date(review.updated_at).toLocaleString(locale)} />
+                <Meta label={t.customer} value={review.organization_id} /><Meta label={t.jurisdiction} value={review.jurisdiction} /><Meta label={t.updated} value={new Date(review.updated_at).toLocaleString('en-GB')} />
               </div>
               {review.status === 'CONFLICT_CHECK_PENDING' ? <div className="flex flex-wrap gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"><span className="mr-auto text-sm text-white/55">{t.conflict}</span><Button size="sm" onClick={() => void gate(review, 'CONFLICT_ACCEPT')} disabled={busyReviewId === review.id} className="bg-emerald-600 hover:bg-emerald-500">{t.acceptConflict}</Button><Button size="sm" variant="outline" onClick={() => void gate(review, 'CONFLICT_DECLINE')} disabled={busyReviewId === review.id} className="border-red-300/20 bg-red-300/[0.04] text-red-200 hover:bg-red-300/[0.08]">{t.decline}</Button></div> : null}
               {review.status === 'ENGAGEMENT_PENDING' ? <div className="grid gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 md:grid-cols-[1fr_auto_auto]"><Input aria-label={t.reference} placeholder={t.reference} value={references[review.id] ?? ''} onChange={(event) => setReferences((current) => ({ ...current, [review.id]: event.target.value }))} className="border-white/[0.09] bg-[#0a111c] text-white" /><Button size="sm" onClick={() => void gate(review, 'ENGAGEMENT_ACCEPT')} disabled={busyReviewId === review.id || !(references[review.id]?.trim())} className="bg-violet-600 hover:bg-violet-500">{t.acceptEngagement}</Button><Button size="sm" variant="outline" onClick={() => void gate(review, 'ENGAGEMENT_DECLINE')} disabled={busyReviewId === review.id} className="border-red-300/20 bg-red-300/[0.04] text-red-200 hover:bg-red-300/[0.08]">{t.decline}</Button></div> : null}
-              {!['CONFLICT_CHECK_PENDING', 'ENGAGEMENT_PENDING', 'DECLINED', 'CANCELLED', 'EXPIRED', 'SUPERSEDED'].includes(review.status) ? <div className="flex justify-end"><Button asChild size="sm" variant="outline" className="border-violet-300/20 bg-violet-300/[0.04] text-violet-100 hover:bg-violet-300/[0.08]"><a href={`/${locale}/counsel/${review.id}`}>{t.open}</a></Button></div> : null}
+              {!['CONFLICT_CHECK_PENDING', 'ENGAGEMENT_PENDING', 'DECLINED', 'CANCELLED', 'EXPIRED', 'SUPERSEDED'].includes(review.status) ? <div className="flex justify-end"><Button asChild size="sm" variant="outline" className="border-violet-300/20 bg-violet-300/[0.04] text-violet-100 hover:bg-violet-300/[0.08]"><a href={`/en/counsel/${review.id}`}>{t.open}</a></Button></div> : null}
             </article>
           ))}
         </CardContent>
