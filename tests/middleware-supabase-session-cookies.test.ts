@@ -180,6 +180,16 @@ describe('Supabase middleware session cookie propagation', () => {
     expect(response.cookies.get('NEXT_LOCALE')?.secure).toBe(true);
   });
 
+  it('maps historical localized feature slugs to their English canonical equivalent', async () => {
+    const response = await middleware(makeRequest('/pt/features/avaliacao-de-risco-de-ia'));
+    const location = responseLocation(response);
+
+    expect(response.status).toBe(308);
+    expect(location?.pathname).toBe('/en/features/ai-risk-assessment');
+    expect(response.cookies.get('NEXT_LOCALE')?.value).toBe('en');
+    expect(supabaseMock.createServerClient).not.toHaveBeenCalled();
+  });
+
   it('serves the exact Beagle verification pathname without locale or auth redirects', async () => {
     const response = await middleware(
       makeRequest('/_e8f1hq2qpr6fuvd036hr4l97yn8octew'),
