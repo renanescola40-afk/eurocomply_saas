@@ -1,5 +1,5 @@
 import { locales, type Locale } from '@/lib/i18n/routing';
-import { getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
+import { getSiteUrl } from '@/lib/seo/public-metadata';
 
 import { deFeaturePages } from './de';
 import { enFeaturePages } from './en';
@@ -43,10 +43,10 @@ export function getFeatureStaticParams(): FeatureStaticParam[] {
 
 export function getFeatureLanguageAlternates(key: FeatureKey): Record<string, string> {
   const siteUrl = getSiteUrl();
-  const entries = locales.map((locale) => [localeLanguageTags[locale], `${siteUrl}${getFeaturePath(locale, key)}`]);
+  const englishUrl = `${siteUrl}${getFeaturePath('en', key)}`;
 
   return {
-    ...Object.fromEntries(entries),
-    'x-default': `${siteUrl}${getFeaturePath('en', key)}`,
+    en: englishUrl,
+    'x-default': englishUrl,
   };
 }

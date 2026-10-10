@@ -55,8 +55,8 @@ describe('public account recovery contract', () => {
 
   it('exposes localized, actionable request and completion routes', () => {
     expect(recoveryPage).toContain("fetch('/api/auth/recovery'");
-    expect(login).toContain('href={`/${locale}/recuperar-senha`}');
-    expect(middleware).toContain("'/recuperar-senha'");
+    expect(login).toContain('href={`/${locale}/recover-password`}');
+    expect(middleware).toContain("'/recover-password'");
     expect(middleware).toContain("'/reset-password'");
 
     for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {

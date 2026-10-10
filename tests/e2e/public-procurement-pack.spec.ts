@@ -5,8 +5,9 @@ const locales = ['en', 'pt', 'es', 'fr', 'it', 'de'] as const;
 test.describe('public enterprise procurement pack', () => {
   for (const locale of locales) {
     test(`renders for ${locale}`, async ({ page }) => {
-      const expectedPath = `/${locale}/trust/procurement-pack`;
-      const response = await page.goto(expectedPath, { waitUntil: 'domcontentloaded' });
+      const requestedPath = `/${locale}/trust/procurement-pack`;
+      const expectedPath = '/en/trust/procurement-pack';
+      const response = await page.goto(requestedPath, { waitUntil: 'domcontentloaded' });
 
       expect(response?.status()).toBeLessThan(400);
       expect(new URL(page.url()).pathname).toBe(expectedPath);
@@ -16,7 +17,7 @@ test.describe('public enterprise procurement pack', () => {
         links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
       );
       expect(destinations).toContain('/api/trust/procurement-pack');
-      expect(destinations).toContain(`/${locale}/trust`);
+      expect(destinations).toContain('/en/trust');
 
       const layout = await page.evaluate(() => {
         const viewportWidth = window.innerWidth;

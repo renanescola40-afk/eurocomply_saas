@@ -23,6 +23,7 @@ const PUBLIC_ROUTES = new Set([
   '/contact',
   '/book-demo',
   '/recuperar-senha',
+  '/recover-password',
   '/reset-password',
   '/atualizar-senha',
   '/trust',
