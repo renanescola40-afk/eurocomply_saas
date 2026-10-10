@@ -32,7 +32,7 @@ async function expectProtectedRouteStable(page: Page, path: string, label: strin
 
   expect(response?.status(), `${label} did not return a response`).toBeDefined();
   expect(response?.status(), `${label} returned a server error`).toBeLessThan(500);
-  await expect(page).toHaveURL(/\/pt\/login/);
+  await expect(page).toHaveURL(/\/en\/login/);
   await expect(page.locator('body')).toBeVisible();
 
   const timing = await getNavigationTiming(page);

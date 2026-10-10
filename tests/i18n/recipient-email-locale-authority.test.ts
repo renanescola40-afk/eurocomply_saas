@@ -39,13 +39,13 @@ const billingWebhook = readFileSync(join(process.cwd(), 'src/server/billing/stri
 const trialReminder = readFileSync(join(process.cwd(), 'src/app/api/internal/trial-reminders/route.ts'), 'utf8');
 
 describe('recipient locale authority', () => {
-  it('accepts only configured locales and falls back deterministically to English', () => {
+  it('forces configured and historical recipient locales to English', () => {
     expect(RECIPIENT_LOCALE_METADATA_KEY).toBe('preferred_language');
     expect(RECIPIENT_LOCALE_FALLBACK).toBe('en');
 
     for (const locale of locales) {
-      expect(resolveRecipientLocale(locale)).toBe(locale);
-      expect(getRecipientLocaleFromMetadata({ preferred_language: locale })).toBe(locale);
+      expect(resolveRecipientLocale(locale)).toBe('en');
+      expect(getRecipientLocaleFromMetadata({ preferred_language: locale })).toBe('en');
     }
 
     for (const invalid of [null, undefined, '', 'nl', 'pt-BR', 42, {}, []]) {
@@ -60,7 +60,7 @@ describe('recipient locale authority', () => {
     const existing = { full_name: 'Example User', analytics_opt_out: true };
     const next = withRecipientLocaleMetadata(existing, 'fr');
 
-    expect(next).toEqual({ ...existing, preferred_language: 'fr' });
+    expect(next).toEqual({ ...existing, preferred_language: 'en' });
     expect(existing).not.toHaveProperty('preferred_language');
   });
 
@@ -84,8 +84,11 @@ describe('recipient locale authority', () => {
 
   it('persists the preference through Auth metadata instead of a nonexistent profiles column', () => {
     expect(profileControls).toContain('supabase.auth.updateUser');
-    expect(profileControls).toContain('withRecipientLocaleMetadata(metadata, selectedLanguage)');
+    expect(profileControls).toContain("const persistedLanguage: Locale = 'en'");
+    expect(profileControls).toContain('withRecipientLocaleMetadata(metadata, persistedLanguage)');
+    expect(profileControls).toContain("const PROFILE_LANGUAGE_OPTIONS = ['en']");
     expect(profileControls).toContain('LOCALE_META[language].nativeName');
+    expect(profileControls).not.toContain('{locales.map((language) => (');
     expect(profileControls).not.toMatch(/from\(['"]profiles['"]\)[\s\S]*preferred_language/);
     expect(profileControls).not.toContain("update({ preferred_language");
     expect(supabaseTypes).not.toContain('preferred_language: string | null');
@@ -119,7 +122,7 @@ describe('recipient locale authority', () => {
     }
   });
 
-  it('renders every shared transactional template in all configured locales', () => {
+  it('renders every shared transactional template in English regardless of historical locale', () => {
     const builders = [
       (locale: string) => welcomeOnboardingEmail({ locale, organizationName: 'ACME GmbH', dashboardUrl: '/dashboard' }),
       (locale: string) => organizationCreatedEmail({ locale, organizationName: 'ACME GmbH', organizationUrl: '/organizations/acme', createdByName: 'Jane Doe' }),
@@ -139,9 +142,9 @@ describe('recipient locale authority', () => {
       for (const locale of locales) {
         const email = builder(locale);
         expect(email.subject).toBeTruthy();
-        expect(email.html).toContain(`lang="${locale}"`);
+        expect(email.html).toContain('lang="en"');
         expect(email.text).toBeTruthy();
-        if (locale !== 'en') expect(email.subject).not.toBe(english.subject);
+        expect(email.subject).toBe(english.subject);
       }
     }
   });
