@@ -1,52 +1,34 @@
-import { locales, type Locale } from '@/lib/i18n/routing';
+import { type Locale } from '@/lib/i18n/routing';
 import { getSiteUrl } from '@/lib/seo/public-metadata';
 
-import { deFeaturePages } from './de';
 import { enFeaturePages } from './en';
-import { esFeaturePages } from './es';
-import { frFeaturePages } from './fr';
-import { itFeaturePages } from './it';
-import { ptFeaturePages } from './pt';
-import { FEATURE_KEYS, type FeatureKey, type FeaturePageCopy, type FeatureStaticParam, type LocalizedFeaturePages } from './types';
-
-const featurePagesByLocale: Record<Locale, LocalizedFeaturePages> = {
-  en: enFeaturePages,
-  pt: ptFeaturePages,
-  es: esFeaturePages,
-  fr: frFeaturePages,
-  it: itFeaturePages,
-  de: deFeaturePages,
-};
+import { FEATURE_KEYS, type FeatureKey, type FeaturePageCopy, type FeatureStaticParam } from './types';
 
 export { FEATURE_KEYS } from './types';
 export type { FeatureKey, FeaturePageCopy } from './types';
 
-export function getFeaturePages(locale: Locale): FeaturePageCopy[] {
-  return FEATURE_KEYS.map((key) => featurePagesByLocale[locale][key]);
+export function getFeaturePages(_locale: Locale): FeaturePageCopy[] {
+  return FEATURE_KEYS.map((key) => enFeaturePages[key]);
 }
 
-export function getFeaturePage(locale: Locale, key: FeatureKey): FeaturePageCopy {
-  return featurePagesByLocale[locale][key];
+export function getFeaturePage(_locale: Locale, key: FeatureKey): FeaturePageCopy {
+  return enFeaturePages[key];
 }
 
-export function getFeaturePageBySlug(locale: Locale, slug: string): FeaturePageCopy | null {
-  return getFeaturePages(locale).find((page) => page.slug === slug) ?? null;
+export function getFeaturePageBySlug(_locale: Locale, slug: string): FeaturePageCopy | null {
+  return getFeaturePages('en').find((page) => page.slug === slug) ?? null;
 }
 
-export function getFeaturePath(locale: Locale, key: FeatureKey) {
-  return `/${locale}/features/${getFeaturePage(locale, key).slug}`;
+export function getFeaturePath(_locale: Locale, key: FeatureKey) {
+  return `/en/features/${getFeaturePage('en', key).slug}`;
 }
 
 export function getFeatureStaticParams(): FeatureStaticParam[] {
-  return locales.flatMap((locale) => getFeaturePages(locale).map((page) => ({ locale, feature: page.slug })));
+  return getFeaturePages('en').map((page) => ({ locale: 'en', feature: page.slug }));
 }
 
 export function getFeatureLanguageAlternates(key: FeatureKey): Record<string, string> {
   const siteUrl = getSiteUrl();
   const englishUrl = `${siteUrl}${getFeaturePath('en', key)}`;
-
-  return {
-    en: englishUrl,
-    'x-default': englishUrl,
-  };
+  return { en: englishUrl, 'x-default': englishUrl };
 }
