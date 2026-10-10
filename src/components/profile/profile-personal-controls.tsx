@@ -12,7 +12,9 @@ import {
   getRecipientLocaleFromMetadata,
   withRecipientLocaleMetadata,
 } from '@/lib/i18n/recipient-locale';
-import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
+import { LOCALE_META, type Locale } from '@/lib/i18n/routing';
+
+const PROFILE_LANGUAGE_OPTIONS = ['en'] as const satisfies readonly Locale[];
 
 type MessageState = {
   tone: 'success' | 'error' | 'info';
@@ -134,12 +136,14 @@ export function ProfilePersonalControls({ locale }: ProfilePersonalControlsProps
     setSavingLanguage(true);
 
     try {
+      const persistedLanguage: Locale = 'en';
       const { error } = await supabase.auth.updateUser({
-        data: withRecipientLocaleMetadata(metadata, selectedLanguage),
+        data: withRecipientLocaleMetadata(metadata, persistedLanguage),
       });
 
       if (error) throw error;
-      setSavedLanguage(selectedLanguage);
+      setSelectedLanguage(persistedLanguage);
+      setSavedLanguage(persistedLanguage);
       setMessage({ tone: 'success', text: copy.languageSaved });
     } catch {
       setMessage({ tone: 'error', text: copy.languageSaveError });
@@ -249,7 +253,7 @@ export function ProfilePersonalControls({ locale }: ProfilePersonalControlsProps
           <div className="p-5">
             <label htmlFor="preferred-language" className="mb-1.5 block text-xs font-medium text-white/48">{copy.languageLabel}</label>
             <select id="preferred-language" value={selectedLanguage} onChange={(event) => setSelectedLanguage(event.target.value as Locale)} className={inputClass}>
-              {locales.map((language) => (
+              {PROFILE_LANGUAGE_OPTIONS.map((language) => (
                 <option key={language} value={language}>{LOCALE_META[language].nativeName}</option>
               ))}
             </select>

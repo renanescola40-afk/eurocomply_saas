@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('enterprise account recovery', () => {
-  test('login exposes a localized recovery entrypoint', async ({ page }) => {
+  test('login exposes the canonical English recovery entrypoint', async ({ page }) => {
     await page.goto('/pt/login', { waitUntil: 'domcontentloaded' });
 
-    const recoveryLink = page.getByRole('link', { name: /esqueceu a senha/i });
+    await expect(page).toHaveURL(/\/en\/login(?:$|[?#])/);
+    const recoveryLink = page.getByRole('link', { name: /forgot your password/i });
     await expect(recoveryLink).toBeVisible();
-    await expect(recoveryLink).toHaveAttribute('href', '/pt/recuperar-senha');
+    await expect(recoveryLink).toHaveAttribute('href', '/en/recover-password');
   });
 
   test('recovery request presents the same generic success message', async ({ page }) => {
@@ -23,14 +24,14 @@ test.describe('enterprise account recovery', () => {
     });
 
     const syntheticEmail = 'user@company.com';
-    await page.goto('/en/recuperar-senha', { waitUntil: 'domcontentloaded' });
-    await page.getByLabel('Work email').fill(syntheticEmail);
+    await page.goto('/en/recover-password', { waitUntil: 'domcontentloaded' });
+    await page.getByLabel('Work email', { exact: true }).fill(syntheticEmail);
     await page.getByRole('button', { name: 'Send recovery link' }).click();
 
     await expect(page.locator('main').getByRole('status')).toContainText(
       'If an account exists for that email, a secure recovery link will be sent.',
     );
-    await expect(page.getByLabel('Work email')).toHaveValue('');
+    await expect(page.getByLabel('Work email', { exact: true })).toHaveValue('');
     await expect(page.locator('body')).not.toContainText(syntheticEmail);
   });
 
@@ -44,11 +45,11 @@ test.describe('enterprise account recovery', () => {
       });
     });
 
-    await page.goto('/pt/recuperar-senha', { waitUntil: 'domcontentloaded' });
-    await page.getByLabel('Email profissional').fill('user@company.com');
-    await page.getByRole('button', { name: 'Enviar link de recuperação' }).click();
+    await page.goto('/en/recover-password', { waitUntil: 'domcontentloaded' });
+    await page.getByLabel('Work email', { exact: true }).fill('user@company.com');
+    await page.getByRole('button', { name: 'Send recovery link' }).click();
 
-    await expect(page.locator('main').getByRole('alert')).toContainText(/temporariamente indisponível/i);
+    await expect(page.locator('main').getByRole('alert')).toContainText(/temporarily unavailable/i);
     await expect(page.locator('body')).not.toContainText('account_recovery_unavailable');
   });
 
@@ -58,7 +59,7 @@ test.describe('enterprise account recovery', () => {
     await expect(page.locator('main').getByRole('alert')).toContainText(/invalid or expired/i);
     await expect(page.getByRole('link', { name: 'Request a new link' })).toHaveAttribute(
       'href',
-      '/en/recuperar-senha',
+      '/en/recover-password',
     );
     await expect(page.locator('input[type="password"]')).toHaveCount(0);
   });

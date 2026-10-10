@@ -122,7 +122,7 @@ export default function ResetPasswordPage() {
         {state === 'invalid' ? (
           <div className="mt-6 space-y-4">
             <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.08] px-4 py-3 text-sm leading-6 text-amber-100" role="alert">{text.invalid}</div>
-            <Link href={`/${locale}/recuperar-senha`} className="flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">{text.request}</Link>
+            <Link href={`/${locale}/recover-password`} className="flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">{text.request}</Link>
           </div>
         ) : null}
 
