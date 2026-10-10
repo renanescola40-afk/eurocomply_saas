@@ -114,6 +114,7 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
             </div>
           </div>
         </div>
+        </div>
       </section>
       <div className="border-t border-slate-800/80 bg-[#080d16]">
       <SalesContactForm
