@@ -1,12 +1,14 @@
 # Contract and Counsel Pack — Status
 
-**Repository preparation:** `IN_PROGRESS`  
+**Repository preparation:** `IN_PROGRESS — CORE CONTRACT TEMPLATE COVERAGE COMPLETE`  
 **Founder facts:** `FOUNDER_FACT_REQUIRED`  
 **Counsel approval:** `HUMAN_REVIEW_REQUIRED`
 
 | Document | Draft | Founder facts | Counsel decision |
 |---|---|---|---|
 | Terms of Service | Prepared | Required | Required |
+| Master Services Agreement | Prepared review draft | Required | Required before execution |
+| Enterprise Order Form | Prepared customer-specific review template | Required | Required before execution |
 | Privacy Policy | Prepared | Required | Required |
 | Data Processing Addendum | Prepared | Required | Required |
 | Subprocessor Register | Prepared | Required | Required |
