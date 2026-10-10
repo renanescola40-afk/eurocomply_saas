@@ -7,6 +7,11 @@ import { getLocaleAlternates, getSiteUrl, localeLanguageTags } from '@/lib/seo/p
 const acquisitionPaths = ['', '/pricing'] as const;
 const englishAssurancePaths = ['/trust', '/security', '/compliance', '/data-processing', '/sla', '/privacy', '/terms', '/dpa', '/subprocessors'] as const;
 const englishGrowthPaths = [
+  '/about',
+  '/faq',
+  '/book-demo',
+  '/contact',
+  '/enterprise',
   '/resources',
   '/tools',
   '/tools/ai-act-readiness',
@@ -22,7 +27,8 @@ function priorityFor(path: string) {
   if (path === '/pricing' || path === '/tools/ai-act-readiness') return 0.9;
   if (path.startsWith('/tools/')) return 0.88;
   if (path === '/tools') return 0.86;
-  if (path === '/trust' || path === '/resources') return 0.85;
+  if (path === '/trust' || path === '/resources' || path === '/about' || path === '/enterprise') return 0.85;
+  if (path === '/faq' || path === '/book-demo' || path === '/contact') return 0.8;
   if (path === '/security' || path === '/compliance' || path === '/data-processing' || path === '/sla') return 0.8;
   return 0.7;
 }
