@@ -25,13 +25,13 @@ test.describe('enterprise account recovery', () => {
 
     const syntheticEmail = 'user@company.com';
     await page.goto('/en/recover-password', { waitUntil: 'domcontentloaded' });
-    await page.getByLabel('Work email').fill(syntheticEmail);
+    await page.getByLabel('Work email', { exact: true }).fill(syntheticEmail);
     await page.getByRole('button', { name: 'Send recovery link' }).click();
 
     await expect(page.locator('main').getByRole('status')).toContainText(
       'If an account exists for that email, a secure recovery link will be sent.',
     );
-    await expect(page.getByLabel('Work email')).toHaveValue('');
+    await expect(page.getByLabel('Work email', { exact: true })).toHaveValue('');
     await expect(page.locator('body')).not.toContainText(syntheticEmail);
   });
 
@@ -46,7 +46,7 @@ test.describe('enterprise account recovery', () => {
     });
 
     await page.goto('/en/recover-password', { waitUntil: 'domcontentloaded' });
-    await page.getByLabel('Work email').fill('user@company.com');
+    await page.getByLabel('Work email', { exact: true }).fill('user@company.com');
     await page.getByRole('button', { name: 'Send recovery link' }).click();
 
     await expect(page.locator('main').getByRole('alert')).toContainText(/temporarily unavailable/i);
