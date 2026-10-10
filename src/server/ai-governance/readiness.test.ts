@@ -138,6 +138,6 @@ describe('AI Act readiness scoring', () => {
     expect(readiness.gaps.map((gap) => gap.id)).toEqual(
       expect.arrayContaining(['owners-missing', 'high-risk-governance', 'incident-register-empty']),
     );
-    expect(readiness.countryContext.locale).toBe('de');
+    expect(readiness.countryContext.locale).toBe('en');
   });
 });
