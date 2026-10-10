@@ -104,16 +104,15 @@ describe('upgrade center entitlement truth', () => {
     expect(page).not.toContain('{commerce.add(addOn.name, addOn.priceMonthly)}');
   });
 
-  it('localizes the Upgrade Center chrome across every configured product language', () => {
+  it('uses one canonical English Upgrade Center copy authority', () => {
     const copy = read('src/lib/i18n/add-ons-copy.ts');
     const page = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
 
-    for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
-      expect(copy).toContain(`${locale}: {`);
-    }
+    expect(copy).toContain('const ENGLISH_COPY');
+    expect(copy).toContain('return ENGLISH_COPY');
     expect(copy).toContain('billingAuthorityBody');
     expect(copy).toContain('contactBillingAdmin');
     expect(copy).toContain('categories:');
-    expect(page).toContain('function commerceCopy(locale: string)');
-  });
+    expect(page).toContain('getAddOnsCopy');
+  });;
 });

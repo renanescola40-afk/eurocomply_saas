@@ -16,14 +16,7 @@ type HistoryItem = {
   summary?: Record<string, unknown> | null;
 };
 
-const copy = {
-  en: { title: 'Assessment History', subtitle: 'Recent EU AI Act readiness snapshots', empty: 'No saved assessments yet.', completed: 'completed' },
-  pt: { title: 'Histórico de Avaliações', subtitle: 'Snapshots recentes de prontidão EU AI Act', empty: 'Nenhuma avaliação salva ainda.', completed: 'concluído' },
-  es: { title: 'Historial de Evaluaciones', subtitle: 'Snapshots recientes de preparación EU AI Act', empty: 'Aún no hay evaluaciones guardadas.', completed: 'completado' },
-  fr: { title: 'Historique des évaluations', subtitle: 'Aperçus récents de préparation EU AI Act', empty: 'Aucune évaluation enregistrée pour le moment.', completed: 'terminé' },
-  it: { title: 'Storico valutazioni', subtitle: 'Snapshot recenti di prontezza EU AI Act', empty: 'Nessuna valutazione salvata ancora.', completed: 'completato' },
-  de: { title: 'Bewertungshistorie', subtitle: 'Aktuelle EU-AI-Act-Bereitschaftssnapshots', empty: 'Noch keine gespeicherten Bewertungen.', completed: 'abgeschlossen' },
-} as const;
+const ENGLISH_COPY = { title: 'Assessment History', subtitle: 'Recent EU AI Act readiness snapshots', empty: 'No saved assessments yet.', completed: 'completed' } as const;
 
 function scoreTone(score: number) {
   if (score >= 80) return 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200';
@@ -32,7 +25,7 @@ function scoreTone(score: number) {
 }
 
 export default function GapAnalysisHistory({ workspaceId, locale }: { workspaceId?: string | null; locale: string }) {
-  const t = copy[(locale as keyof typeof copy) || 'en'] ?? copy.en;
+  const t = ENGLISH_COPY;
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -75,7 +68,7 @@ export default function GapAnalysisHistory({ workspaceId, locale }: { workspaceI
             <div className="mb-2 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-sm text-white/60">
                 <Clock className="h-4 w-4" />
-                {new Date(item.created_at).toLocaleDateString(locale)}
+                {new Date(item.created_at).toLocaleDateString('en-GB')}
               </div>
               <Badge className={`border ${scoreTone(item.score)}`}>{item.score}%</Badge>
             </div>

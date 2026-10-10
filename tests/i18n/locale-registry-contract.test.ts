@@ -29,12 +29,13 @@ describe('canonical locale registry', () => {
     expect(isSupportedLocale('de')).toBe(true);
   });
 
-  it('prevents routing and request configuration from duplicating locale arrays', () => {
+  it('keeps one locale registry while forcing request messages to English', () => {
     expect(routingSource).toContain("import { SUPPORTED_LOCALES, type Locale } from './locales';");
     expect(routingSource).toContain('export const locales = SUPPORTED_LOCALES;');
-    expect(routingSource).not.toMatch(/export const locales = \[/);
+    expect(routingSource).not.toContain('export const locales = [');
 
-    expect(requestConfigSource).toContain("import { isSupportedLocale } from './lib/i18n/locales';");
-    expect(requestConfigSource).not.toContain("locale as 'en'");
+    expect(requestConfigSource).toContain("locale: 'en'");
+    expect(requestConfigSource).toContain("import('./messages/en.json')");
+    expect(requestConfigSource).not.toContain('messages/' + '$' + '{locale}.json');
   });
 });

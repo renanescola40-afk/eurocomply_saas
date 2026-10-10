@@ -29,22 +29,11 @@ type TeamSettingsSectionProps = {
   inviteBlockReason: InviteBlockReason;
 };
 
-const readOnlyCopy: Record<string, string> = {
-  en: 'Your role can review team access but cannot invite, remove or cancel invitations.',
-  pt: 'A sua função pode consultar o acesso da equipa, mas não pode convidar, remover membros ou cancelar convites.',
-  es: 'Tu rol puede consultar el acceso del equipo, pero no puede invitar, eliminar miembros ni cancelar invitaciones.',
-  fr: 'Votre rôle peut consulter les accès de l’équipe, mais ne peut pas inviter, retirer des membres ou annuler des invitations.',
-  it: 'Il tuo ruolo può consultare gli accessi del team, ma non può invitare, rimuovere membri o annullare inviti.',
-  de: 'Ihre Rolle kann Teamzugriffe einsehen, aber keine Einladungen senden, Mitglieder entfernen oder Einladungen abbrechen.',
-};
-
-const inviteBlockedCopy: Record<string, { plan: string; capacity: string; action: string }> = {
-  en: { plan: 'New team invitations are not available on the current subscription entitlement. Existing member access remains manageable.', capacity: 'The current team-seat capacity is full. Remove an unused member or review the subscription before sending another invitation.', action: 'Review billing and capacity' },
-  pt: { plan: 'Novos convites de equipa não estão disponíveis no entitlement atual da subscrição. O acesso dos membros existentes continua gerível.', capacity: 'A capacidade atual de lugares da equipa está esgotada. Remova um membro sem utilização ou reveja a subscrição antes de enviar outro convite.', action: 'Rever faturação e capacidade' },
-  es: { plan: 'Las nuevas invitaciones de equipo no están disponibles con el entitlement actual de la suscripción. El acceso de miembros existentes sigue siendo gestionable.', capacity: 'La capacidad actual del equipo está completa. Elimina un miembro sin uso o revisa la suscripción antes de enviar otra invitación.', action: 'Revisar facturación y capacidad' },
-  fr: { plan: 'Les nouvelles invitations d’équipe ne sont pas disponibles avec l’entitlement actuel. Les accès existants restent gérables.', capacity: 'La capacité actuelle de l’équipe est atteinte. Retirez un membre inutilisé ou révisez l’abonnement avant une nouvelle invitation.', action: 'Vérifier facturation et capacité' },
-  it: { plan: 'I nuovi inviti al team non sono disponibili con l’entitlement corrente. Gli accessi esistenti restano gestibili.', capacity: 'La capacità attuale del team è completa. Rimuovi un membro non utilizzato o rivedi l’abbonamento prima di inviare un altro invito.', action: 'Controlla fatturazione e capacità' },
-  de: { plan: 'Neue Teameinladungen sind mit dem aktuellen Subscription-Entitlement nicht verfügbar. Bestehende Zugriffe bleiben verwaltbar.', capacity: 'Die aktuelle Teamkapazität ist ausgeschöpft. Entfernen Sie ein nicht benötigtes Mitglied oder prüfen Sie das Abonnement vor einer weiteren Einladung.', action: 'Abrechnung und Kapazität prüfen' },
+const READ_ONLY_COPY = 'Your role can review team access but cannot invite, remove or cancel invitations.';
+const INVITE_BLOCKED_COPY = {
+  plan: 'New team invitations are not available on the current subscription entitlement. Existing member access remains manageable.',
+  capacity: 'The current team-seat capacity is full. Remove an unused member or review the subscription before sending another invitation.',
+  action: 'Review billing and capacity',
 };
 
 async function parseError(response: Response, fallback: string) {
@@ -55,7 +44,7 @@ async function parseError(response: Response, fallback: string) {
 function toApiInviteRole(role: InviteMemberInput['role']) {
   if (role === 'admin') return 'Admin';
   if (role === 'editor') return 'Editor';
-  return 'Visualizador';
+  return 'Viewer';
 }
 
 function teamActionRequest(operation: PendingTeamOperation, token: string) {
@@ -77,14 +66,13 @@ export function TeamSettingsSection({
 }: TeamSettingsSectionProps) {
   const router = useRouter();
   const copy = getTeamWorkflowCopy(locale);
-  const blockedCopy = inviteBlockedCopy[locale] ?? inviteBlockedCopy.en;
   const [pendingOperation, setPendingOperation] = useState<PendingTeamOperation | null>(null);
 
   const enqueueInvite = useCallback((payload: { email: string; role: string; locale: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'invite', payload, resolve, reject })), []);
   const enqueueRemoveMember = useCallback((payload: { memberId: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'remove-member', payload, resolve, reject })), []);
   const enqueueCancelInvitation = useCallback((payload: { invitationId: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'cancel-invitation', payload, resolve, reject })), []);
 
-  const handleInvite = useCallback((input: InviteMemberInput) => enqueueInvite({ email: input.email, role: toApiInviteRole(input.role), locale }), [enqueueInvite, locale]);
+  const handleInvite = useCallback((input: InviteMemberInput) => enqueueInvite({ email: input.email, role: toApiInviteRole(input.role), locale: 'en' }), [enqueueInvite]);
   const handleRemoveMember = useCallback((memberId: string) => enqueueRemoveMember({ memberId }), [enqueueRemoveMember]);
   const handleCancelInvitation = useCallback((invitationId: string) => enqueueCancelInvitation({ invitationId }), [enqueueCancelInvitation]);
 
@@ -119,20 +107,20 @@ export function TeamSettingsSection({
       </div>
 
       {!canManageTeam ? (
-        <p className="rounded-xl border border-slate-800 bg-[#0b121e] p-4 text-sm text-slate-400" role="status">{readOnlyCopy[locale] ?? readOnlyCopy.en}</p>
+        <p className="rounded-xl border border-slate-800 bg-[#0b121e] p-4 text-sm text-slate-400" role="status">{READ_ONLY_COPY}</p>
       ) : canInviteMembers ? (
         <div className="rounded-xl border border-slate-800 bg-[#0b121e] p-5 sm:p-6">
-          <InviteMemberForm locale={locale} canInviteAdmin={canInviteAdmin} onSubmit={handleInvite} />
+          <InviteMemberForm locale="en" canInviteAdmin={canInviteAdmin} onSubmit={handleInvite} />
         </div>
       ) : (
         <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.07] p-4 text-sm text-amber-200" role="status">
-          <p>{inviteBlockReason === 'capacity' ? blockedCopy.capacity : blockedCopy.plan}</p>
-          <Link href={`/${locale}/dashboard/organizations/billing`} className="mt-3 inline-flex rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold outline-none transition hover:bg-amber-400/[0.08] focus-visible:ring-2 focus-visible:ring-amber-400/40">{blockedCopy.action}</Link>
+          <p>{inviteBlockReason === 'capacity' ? INVITE_BLOCKED_COPY.capacity : INVITE_BLOCKED_COPY.plan}</p>
+          <Link href="/en/dashboard/organizations/billing" className="mt-3 inline-flex rounded-lg border border-amber-400/20 px-3 py-2 text-xs font-semibold outline-none transition hover:bg-amber-400/[0.08] focus-visible:ring-2 focus-visible:ring-amber-400/40">{INVITE_BLOCKED_COPY.action}</Link>
         </div>
       )}
 
       <TeamManagementCard
-        locale={locale}
+        locale="en"
         members={members}
         invitations={invitations}
         currentUserId={currentUserId}

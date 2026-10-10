@@ -9,13 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
+const ENGLISH_COPY = { badge: 'External Counsel', title: 'Assigned legal reviews', subtitle: 'Matter-scoped access only. Customer administration, billing and unrelated matters are outside this portal.', unavailable: 'Counsel Portal is not enabled for this environment.', denied: 'A verified Counsel profile and an explicit matter assignment are required.', pending: 'External legal validation remains pending.', refresh: 'Refresh', empty: 'No legal reviews are assigned.', conflict: 'Conflict check', acceptConflict: 'Conflict clear', decline: 'Decline matter', engagement: 'Engagement', reference: 'Engagement reference', acceptEngagement: 'Accept engagement', inReview: 'Review workflow', open: 'Open review', firm: 'Law firm', jurisdiction: 'Jurisdiction', customer: 'Customer', updated: 'Updated' };
 const copy = {
-  en: { badge: 'External Counsel', title: 'Assigned legal reviews', subtitle: 'Matter-scoped access only. Customer administration, billing and unrelated matters are outside this portal.', unavailable: 'Counsel Portal is not enabled for this environment.', denied: 'A verified Counsel profile and an explicit matter assignment are required.', pending: 'External legal validation remains pending.', refresh: 'Refresh', empty: 'No legal reviews are assigned.', conflict: 'Conflict check', acceptConflict: 'Conflict clear', decline: 'Decline matter', engagement: 'Engagement', reference: 'Engagement reference', acceptEngagement: 'Accept engagement', inReview: 'Review workflow', open: 'Open review', firm: 'Law firm', jurisdiction: 'Jurisdiction', customer: 'Customer', updated: 'Updated' },
-  pt: { badge: 'External Counsel', title: 'Revisoes juridicas atribuidas', subtitle: 'Acesso apenas ao matter atribuido. Administracao do cliente, billing e matters nao relacionados ficam fora deste portal.', unavailable: 'O Counsel Portal nao esta habilitado neste ambiente.', denied: 'E necessario um perfil de Counsel verificado e uma atribuicao explicita ao matter.', pending: 'A validacao juridica externa continua pendente.', refresh: 'Atualizar', empty: 'Nenhuma revisao juridica atribuida.', conflict: 'Conflict check', acceptConflict: 'Sem conflito', decline: 'Recusar matter', engagement: 'Engagement', reference: 'Referencia do engagement', acceptEngagement: 'Aceitar engagement', inReview: 'Fluxo de revisao', open: 'Abrir revisao', firm: 'Escritorio', jurisdiction: 'Jurisdicao', customer: 'Cliente', updated: 'Atualizado' },
-  es: { badge: 'External Counsel', title: 'Revisiones juridicas asignadas', subtitle: 'Acceso solo al matter asignado. Administracion, billing y asuntos no relacionados quedan fuera del portal.', unavailable: 'Counsel Portal no esta habilitado en este entorno.', denied: 'Se requiere un perfil Counsel verificado y una asignacion explicita.', pending: 'La validacion juridica externa sigue pendiente.', refresh: 'Actualizar', empty: 'No hay revisiones juridicas asignadas.', conflict: 'Conflict check', acceptConflict: 'Sin conflicto', decline: 'Rechazar asunto', engagement: 'Engagement', reference: 'Referencia del engagement', acceptEngagement: 'Aceptar engagement', inReview: 'Flujo de revision', open: 'Abrir revision', firm: 'Despacho', jurisdiction: 'Jurisdiccion', customer: 'Cliente', updated: 'Actualizado' },
-  fr: { badge: 'External Counsel', title: 'Revues juridiques attribuees', subtitle: 'Acces limite au dossier attribue. Administration client, facturation et dossiers non lies restent hors portail.', unavailable: 'Counsel Portal nest pas active dans cet environnement.', denied: 'Un profil Counsel verifie et une attribution explicite sont requis.', pending: 'La validation juridique externe reste en attente.', refresh: 'Actualiser', empty: 'Aucune revue juridique attribuee.', conflict: 'Conflict check', acceptConflict: 'Aucun conflit', decline: 'Refuser le dossier', engagement: 'Engagement', reference: 'Reference engagement', acceptEngagement: 'Accepter engagement', inReview: 'Flux de revue', open: 'Ouvrir la revue', firm: 'Cabinet', jurisdiction: 'Juridiction', customer: 'Client', updated: 'Mis a jour' },
-  it: { badge: 'External Counsel', title: 'Revisioni legali assegnate', subtitle: 'Accesso solo al matter assegnato. Amministrazione cliente, billing e matter non correlati restano fuori dal portale.', unavailable: 'Counsel Portal non e abilitato in questo ambiente.', denied: 'Sono richiesti un profilo Counsel verificato e unassegnazione esplicita.', pending: 'La validazione legale esterna resta in sospeso.', refresh: 'Aggiorna', empty: 'Nessuna revisione legale assegnata.', conflict: 'Conflict check', acceptConflict: 'Nessun conflitto', decline: 'Rifiuta matter', engagement: 'Engagement', reference: 'Riferimento engagement', acceptEngagement: 'Accetta engagement', inReview: 'Flusso revisione', open: 'Apri revisione', firm: 'Studio', jurisdiction: 'Giurisdizione', customer: 'Cliente', updated: 'Aggiornato' },
-  de: { badge: 'External Counsel', title: 'Zugewiesene rechtliche Prufungen', subtitle: 'Nur fallbezogener Zugriff. Kundenadministration, Billing und fremde Matters bleiben ausserhalb dieses Portals.', unavailable: 'Counsel Portal ist in dieser Umgebung nicht aktiviert.', denied: 'Ein verifiziertes Counsel-Profil und eine explizite Fallzuweisung sind erforderlich.', pending: 'Die externe rechtliche Validierung steht weiterhin aus.', refresh: 'Aktualisieren', empty: 'Keine rechtlichen Prufungen zugewiesen.', conflict: 'Conflict check', acceptConflict: 'Kein Konflikt', decline: 'Matter ablehnen', engagement: 'Engagement', reference: 'Engagement-Referenz', acceptEngagement: 'Engagement annehmen', inReview: 'Review-Workflow', open: 'Prufung offnen', firm: 'Kanzlei', jurisdiction: 'Jurisdiktion', customer: 'Kunde', updated: 'Aktualisiert' },
+  en: ENGLISH_COPY,
+  pt: ENGLISH_COPY,
+  es: ENGLISH_COPY,
+  fr: ENGLISH_COPY,
+  it: ENGLISH_COPY,
+  de: ENGLISH_COPY,
 } as const;
 
 type Locale = keyof typeof copy;
@@ -29,6 +30,7 @@ type Review = {
   priority: string;
   updated_at: string;
 };
+
 type Counsel = { id: string; lawFirmId: string; professionalName: string; jurisdictions: string[]; specialties: string[] };
 type LoadState = 'loading' | 'ready' | 'unavailable' | 'denied' | 'error';
 
@@ -41,7 +43,7 @@ function statusTone(status: string) {
 
 export default function CounselPortalPage() {
   const params = useParams();
-  const locale = ((params.locale as string) in copy ? params.locale : 'pt') as Locale;
+  const locale: Locale = 'en';
   const t = copy[locale];
   const [state, setState] = useState<LoadState>('loading');
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -113,11 +115,11 @@ export default function CounselPortalPage() {
             <article key={review.id} className="space-y-4 p-5">
               <div className="grid gap-4 lg:grid-cols-[1.2fr_.8fr_.8fr_.8fr] lg:items-center">
                 <div><div className="flex flex-wrap items-center gap-2"><h2 className="font-medium text-white/90">{review.review_type}</h2><Badge className={statusTone(review.status)}>{review.status}</Badge></div><p className="mt-2 text-xs text-white/38">{review.priority}</p></div>
-                <Meta label={t.customer} value={review.organization_id} /><Meta label={t.jurisdiction} value={review.jurisdiction} /><Meta label={t.updated} value={new Date(review.updated_at).toLocaleString(locale)} />
+                <Meta label={t.customer} value={review.organization_id} /><Meta label={t.jurisdiction} value={review.jurisdiction} /><Meta label={t.updated} value={new Date(review.updated_at).toLocaleString('en-GB')} />
               </div>
               {review.status === 'CONFLICT_CHECK_PENDING' ? <div className="flex flex-wrap gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"><span className="mr-auto text-sm text-white/55">{t.conflict}</span><Button size="sm" onClick={() => void gate(review, 'CONFLICT_ACCEPT')} disabled={busyReviewId === review.id} className="bg-emerald-600 hover:bg-emerald-500">{t.acceptConflict}</Button><Button size="sm" variant="outline" onClick={() => void gate(review, 'CONFLICT_DECLINE')} disabled={busyReviewId === review.id} className="border-red-300/20 bg-red-300/[0.04] text-red-200 hover:bg-red-300/[0.08]">{t.decline}</Button></div> : null}
               {review.status === 'ENGAGEMENT_PENDING' ? <div className="grid gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 md:grid-cols-[1fr_auto_auto]"><Input aria-label={t.reference} placeholder={t.reference} value={references[review.id] ?? ''} onChange={(event) => setReferences((current) => ({ ...current, [review.id]: event.target.value }))} className="border-white/[0.09] bg-[#0a111c] text-white" /><Button size="sm" onClick={() => void gate(review, 'ENGAGEMENT_ACCEPT')} disabled={busyReviewId === review.id || !(references[review.id]?.trim())} className="bg-violet-600 hover:bg-violet-500">{t.acceptEngagement}</Button><Button size="sm" variant="outline" onClick={() => void gate(review, 'ENGAGEMENT_DECLINE')} disabled={busyReviewId === review.id} className="border-red-300/20 bg-red-300/[0.04] text-red-200 hover:bg-red-300/[0.08]">{t.decline}</Button></div> : null}
-              {!['CONFLICT_CHECK_PENDING', 'ENGAGEMENT_PENDING', 'DECLINED', 'CANCELLED', 'EXPIRED', 'SUPERSEDED'].includes(review.status) ? <div className="flex justify-end"><Button asChild size="sm" variant="outline" className="border-violet-300/20 bg-violet-300/[0.04] text-violet-100 hover:bg-violet-300/[0.08]"><a href={`/${locale}/counsel/${review.id}`}>{t.open}</a></Button></div> : null}
+              {!['CONFLICT_CHECK_PENDING', 'ENGAGEMENT_PENDING', 'DECLINED', 'CANCELLED', 'EXPIRED', 'SUPERSEDED'].includes(review.status) ? <div className="flex justify-end"><Button asChild size="sm" variant="outline" className="border-violet-300/20 bg-violet-300/[0.04] text-violet-100 hover:bg-violet-300/[0.08]"><a href={`/en/counsel/${review.id}`}>{t.open}</a></Button></div> : null}
             </article>
           ))}
         </CardContent>

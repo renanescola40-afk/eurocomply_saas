@@ -241,11 +241,9 @@ describe('public legal review surfaces', () => {
       expect(localizedSource).not.toContain(stalePhrase);
     }
 
-    expect(localizedSource).toContain('uma lei, contrato ou requisito do comprador específico a exigir');
-    expect(localizedSource).toContain('una ley, contrato o requisito específico del comprador');
-    expect(localizedSource).toContain('une loi, un contrat ou une exigence spécifique de l’acheteur');
-    expect(localizedSource).toContain('una legge, un contratto o un requisito specifico dell’acquirente');
-    expect(localizedSource).toContain('ein Gesetz, Vertrag oder eine spezifische Käuferanforderung');
+    expect(localizedSource).toContain("return getTrustCenterPage(slug, 'en')");
+    expect(localizedSource).toContain('const ENGLISH_UI');
+    expect(localizedSource).not.toMatch(/uma lei|una ley|une loi|una legge|ein Gesetz/i);
   });
 
   it('dates provider revalidation explicitly and marks untranslated provider evidence as English', async () => {

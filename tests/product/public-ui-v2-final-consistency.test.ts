@@ -114,17 +114,11 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).not.toContain('bg-white/[0.025]');
   });
 
-  it('keeps international landing copy and feature discovery while enforcing the V2 brand contract', async () => {
+  it('keeps the legacy international landing entrypoint pinned to the English enterprise home', async () => {
     const source = await readFile(INTERNATIONAL_HOME, 'utf8');
-    expect(source).toContain('getFeaturePages(locale)');
-    expect(source).toContain('/brand/risck-comply-wordmark.svg');
-    expect(source).toContain('bg-[#050913]');
-    expect(source).toContain('bg-blue-600');
-    expect(source).toContain('text-emerald-300');
-    expect(source).not.toContain('cyan-');
-    expect(source).not.toContain('radial-gradient');
-    expect(source).not.toContain('rounded-[2rem]');
-    expect(source).not.toContain('ShieldCheck');
+    expect(source).toContain('EnterpriseHome locale="en"');
+    expect(source).not.toContain('getFeaturePages(locale)');
+    expect(source).not.toMatch(/pt:|es:|fr:|it:|de:/);
   });
 
   it('keeps localized SEO and feature content while removing legacy cyan/green marketing chrome', async () => {

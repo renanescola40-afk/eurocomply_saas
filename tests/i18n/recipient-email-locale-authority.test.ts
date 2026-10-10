@@ -106,19 +106,10 @@ describe('recipient locale authority', () => {
     expect(authQuery).toContain('locale: getRecipientLocaleFromMetadata(metadata)');
   });
 
-  it('localizes the profile application chrome across every configured locale', () => {
+  it('renders canonical English profile chrome for every historical locale', () => {
     const english = profileCopyByLocale.en;
     for (const locale of locales) {
-      const copy = profileCopyByLocale[locale];
-      expect(copy.title).toBeTruthy();
-      expect(copy.languageTitle).toBeTruthy();
-      expect(copy.languageSave).toBeTruthy();
-      expect(copy.resetPassword).toBeTruthy();
-      expect(copy.supportAction).toBeTruthy();
-      if (locale !== 'en') {
-        expect(copy.title).not.toBe(english.title);
-        expect(copy.languageTitle).not.toBe(english.languageTitle);
-      }
+      expect(profileCopyByLocale[locale]).toEqual(english);
     }
   });
 
