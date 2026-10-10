@@ -72,17 +72,25 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
 
 
   return (
-    <main className="min-h-screen bg-[#050913] px-4 py-10 text-white sm:px-6 lg:px-8">
-      <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl items-center">
-        <div className="w-full rounded-2xl border border-white/10 bg-[#0d1522] p-6 md:p-10">
-          <Link
-            href={`/${activeLocale}`}
-            aria-label="RISCK COMPLY home"
-            className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
-          >
-            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={178} height={32} priority />
+    <main className="min-h-screen bg-[#050913] text-white">
+      <header className="border-b border-slate-800/80 bg-[#050913]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <Link href={`/${activeLocale}`} aria-label="RISCK COMPLY home" className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={210} height={44} priority className="h-9 w-auto" />
           </Link>
-          <div className="mt-10 grid gap-8 lg:grid-cols-[.95fr_1.05fr] lg:items-center">
+          <div className="flex items-center gap-2">
+            <Link href={`/${activeLocale}/pricing`} className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white sm:inline-flex">Pricing</Link>
+            <Link href={`/${activeLocale}/trust`} className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white md:inline-flex">Trust Center</Link>
+            <Link href={`/${activeLocale}/login`} className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">Log in</Link>
+          </div>
+        </div>
+      </header>
+
+      <section className="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+        <div aria-hidden="true" className="pointer-events-none absolute left-[8%] top-0 h-[30rem] w-[30rem] rounded-full bg-blue-600/[0.08] blur-3xl" />
+        <div className="relative mx-auto flex max-w-5xl items-center">
+        <div className="w-full rounded-2xl border border-white/10 bg-[#0d1522] p-6 md:p-10">
+          <div className="grid gap-8 lg:grid-cols-[.95fr_1.05fr] lg:items-center">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-300/70">{copy.eyebrow}</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-6xl">{copy.title}</h1>
@@ -120,12 +128,15 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
             </div>
           </div>
         </div>
+        </div>
       </section>
+      <div className="border-t border-slate-800/80 bg-[#080d16]">
       <SalesContactForm
         locale={activeLocale}
         intent={intent ?? 'sales'}
         plan={plan || 'enterprise'}
       />
+      </div>
       <PublicFooter locale={activeLocale} />
     </main>
   );
