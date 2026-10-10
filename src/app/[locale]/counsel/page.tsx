@@ -9,26 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
+const ENGLISH_COPY = { badge: 'External Counsel', title: 'Assigned legal reviews', subtitle: 'Matter-scoped access only. Customer administration, billing and unrelated matters are outside this portal.', unavailable: 'Counsel Portal is not enabled for this environment.', denied: 'A verified Counsel profile and an explicit matter assignment are required.', pending: 'External legal validation remains pending.', refresh: 'Refresh', empty: 'No legal reviews are assigned.', conflict: 'Conflict check', acceptConflict: 'Conflict clear', decline: 'Decline matter', engagement: 'Engagement', reference: 'Engagement reference', acceptEngagement: 'Accept engagement', inReview: 'Review workflow', open: 'Open review', firm: 'Law firm', jurisdiction: 'Jurisdiction', customer: 'Customer', updated: 'Updated' };
 const copy = {
-  en: { badge: 'External Counsel', title: 'Assigned legal reviews', subtitle: 'Matter-scoped access only. Customer administration, billing and unrelated matters are outside this portal.', unavailable: 'Counsel Portal is not enabled for this environment.', denied: 'A verified Counsel profile and an explicit matter assignment are required.', pending: 'External legal validation remains pending.', refresh: 'Refresh', empty: 'No legal reviews are assigned.', conflict: 'Conflict check', acceptConflict: 'Conflict clear', decline: 'Decline matter', engagement: 'Engagement', reference: 'Engagement reference', acceptEngagement: 'Accept engagement', inReview: 'Review workflow', open: 'Open review', firm: 'Law firm', jurisdiction: 'Jurisdiction', customer: 'Customer', updated: 'Updated' },
-  pt: { badge: 'External Counsel', title: 'Revisoes juridicas atribuidas', subtitle: 'Acesso apenas ao matter atribuido. Administracao do cliente, billing e matters nao relacionados ficam fora deste portal.', unavailable: 'O Counsel Portal nao esta habilitado neste ambiente.', denied: 'E necessario um perfil de Counsel verificado e uma atribuicao explicita ao matter.', pending: 'A validacao juridica externa continua pendente.', refresh: 'Atualizar', empty: 'Nenhuma revisao juridica atribuida.', conflict: 'Conflict check', acceptConflict: 'Sem conflito', decline: 'Recusar matter', engagement: 'Engagement', reference: 'Referencia do engagement', acceptEngagement: 'Aceitar engagement', inReview: 'Fluxo de revisao', open: 'Abrir revisao', firm: 'Escritorio', jurisdiction: 'Jurisdicao', customer: 'Cliente', updated: 'Atualizado' },
-  es: { badge: 'External Counsel', title: 'Revisiones juridicas asignadas', subtitle: 'Acceso solo al matter asignado. Administracion, billing y asuntos no relacionados quedan fuera del portal.', unavailable: 'Counsel Portal no esta habilitado en este entorno.', denied: 'Se requiere un perfil Counsel verificado y una asignacion explicita.', pending: 'La validacion juridica externa sigue pendiente.', refresh: 'Actualizar', empty: 'No hay revisiones juridicas asignadas.', conflict: 'Conflict check', acceptConflict: 'Sin conflicto', decline: 'Rechazar asunto', engagement: 'Engagement', reference: 'Referencia del engagement', acceptEngagement: 'Aceptar engagement', inReview: 'Flujo de revision', open: 'Abrir revision', firm: 'Despacho', jurisdiction: 'Jurisdiccion', customer: 'Cliente', updated: 'Actualizado' },
-  fr: { badge: 'External Counsel', title: 'Revues juridiques attribuees', subtitle: 'Acces limite au dossier attribue. Administration client, facturation et dossiers non lies restent hors portail.', unavailable: 'Counsel Portal nest pas active dans cet environnement.', denied: 'Un profil Counsel verifie et une attribution explicite sont requis.', pending: 'La validation juridique externe reste en attente.', refresh: 'Actualiser', empty: 'Aucune revue juridique attribuee.', conflict: 'Conflict check', acceptConflict: 'Aucun conflit', decline: 'Refuser le dossier', engagement: 'Engagement', reference: 'Reference engagement', acceptEngagement: 'Accepter engagement', inReview: 'Flux de revue', open: 'Ouvrir la revue', firm: 'Cabinet', jurisdiction: 'Juridiction', customer: 'Client', updated: 'Mis a jour' },
-  it: { badge: 'External Counsel', title: 'Revisioni legali assegnate', subtitle: 'Accesso solo al matter assegnato. Amministrazione cliente, billing e matter non correlati restano fuori dal portale.', unavailable: 'Counsel Portal non e abilitato in questo ambiente.', denied: 'Sono richiesti un profilo Counsel verificato e unassegnazione esplicita.', pending: 'La validazione legale esterna resta in sospeso.', refresh: 'Aggiorna', empty: 'Nessuna revisione legale assegnata.', conflict: 'Conflict check', acceptConflict: 'Nessun conflitto', decline: 'Rifiuta matter', engagement: 'Engagement', reference: 'Riferimento engagement', acceptEngagement: 'Accetta engagement', inReview: 'Flusso revisione', open: 'Apri revisione', firm: 'Studio', jurisdiction: 'Giurisdizione', customer: 'Cliente', updated: 'Aggiornato' },
-  de: { badge: 'External Counsel', title: 'Zugewiesene rechtliche Prufungen', subtitle: 'Nur fallbezogener Zugriff. Kundenadministration, Billing und fremde Matters bleiben ausserhalb dieses Portals.', unavailable: 'Counsel Portal ist in dieser Umgebung nicht aktiviert.', denied: 'Ein verifiziertes Counsel-Profil und eine explizite Fallzuweisung sind erforderlich.', pending: 'Die externe rechtliche Validierung steht weiterhin aus.', refresh: 'Aktualisieren', empty: 'Keine rechtlichen Prufungen zugewiesen.', conflict: 'Conflict check', acceptConflict: 'Kein Konflikt', decline: 'Matter ablehnen', engagement: 'Engagement', reference: 'Engagement-Referenz', acceptEngagement: 'Engagement annehmen', inReview: 'Review-Workflow', open: 'Prufung offnen', firm: 'Kanzlei', jurisdiction: 'Jurisdiktion', customer: 'Kunde', updated: 'Aktualisiert' },
+  en: ENGLISH_COPY,
+  pt: ENGLISH_COPY,
+  es: ENGLISH_COPY,
+  fr: ENGLISH_COPY,
+  it: ENGLISH_COPY,
+  de: ENGLISH_COPY,
 } as const;
 
-type Locale = keyof typeof copy;
-type Review = {
-  id: string;
-  organization_id: string;
-  law_firm_id: string | null;
-  review_type: string;
-  jurisdiction: string;
-  status: string;
-  priority: string;
-  updated_at: string;
-};
 type Counsel = { id: string; lawFirmId: string; professionalName: string; jurisdictions: string[]; specialties: string[] };
 type LoadState = 'loading' | 'ready' | 'unavailable' | 'denied' | 'error';
 
