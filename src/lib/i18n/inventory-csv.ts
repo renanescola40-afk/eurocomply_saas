@@ -20,7 +20,11 @@ export interface InventoryDisplayCsvRow {
   assessmentDate: string;
 }
 
-const ENGLISH_COPY = {
+const ENGLISH_COPY: {
+  headers: string[];
+  risks: Record<string, string>;
+  statuses: Record<string, string>;
+} = {
     headers: ['Name', 'Vendor', 'Department', 'Risk level', 'Status', 'Assessment date'],
     risks: { unacceptable: 'Unacceptable', high: 'High risk', limited: 'Limited risk', minimal: 'Minimal risk' },
     statuses: { review: 'In review', compliant: 'Compliant', non_compliant: 'Non-compliant', mitigated: 'Mitigated' },
@@ -33,7 +37,7 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 }
 
-export function buildLocalizedInventoryCsv(rows: InventoryCsvRow[], locale: InventoryCsvLocale): string {
+export function buildLocalizedInventoryCsv(rows: InventoryCsvRow[], _locale: InventoryCsvLocale): string {
   const copy = ENGLISH_COPY;
   const values = rows.map((row) => [
     row.name,
@@ -49,7 +53,7 @@ export function buildLocalizedInventoryCsv(rows: InventoryCsvRow[], locale: Inve
 
 export function buildLocalizedInventoryDisplayCsv(
   rows: InventoryDisplayCsvRow[],
-  locale: InventoryCsvLocale,
+  _locale: InventoryCsvLocale,
 ): string {
   const copy = ENGLISH_COPY;
   return rowsToCsv([
