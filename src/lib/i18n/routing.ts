@@ -7,62 +7,15 @@ export type { Locale } from './locales';
 
 export const defaultLocale: Locale = 'en';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mapa de país → idioma (para deteção automática europeia)
-// ─────────────────────────────────────────────────────────────────────────────
-export const COUNTRY_TO_LOCALE: Record<string, Locale> = {
-  // DACH
-  DE: 'de',
-  AT: 'de',
-  CH: 'de',
-
-  // Iberia
-  ES: 'es',
-  PT: 'pt',
-
-  // França
-  FR: 'fr',
-
-  // Itália
-  IT: 'it',
-
-  // UK & global
-  GB: 'en',
-  US: 'en',
-  IE: 'en',
-  NL: 'en',
-  BE: 'en',
-  PL: 'en',
-  SE: 'en',
-  DK: 'en',
-  NO: 'en',
-  FI: 'en',
-  CZ: 'en',
-  RO: 'en',
-  HU: 'en',
-  GR: 'en',
-  HR: 'en',
-  SK: 'en',
-  BG: 'en',
-  LT: 'en',
-  LV: 'en',
-  EE: 'en',
-  SI: 'en',
-  LU: 'en',
-  MT: 'en',
-  CY: 'en',
-};
+export const COUNTRY_TO_LOCALE: Record<string, Locale> = Object.fromEntries(
+  ['DE','AT','CH','ES','PT','FR','IT','GB','US','IE','NL','BE','PL','SE','DK','NO','FI','CZ','RO','HU','GR','HR','SK','BG','LT','LV','EE','SI','LU','MT','CY']
+    .map((country) => [country, 'en']),
+) as Record<string, Locale>;
 
 export const routing = defineRouting({
   locales,
   defaultLocale,
-  // Always use explicit locale prefixes for predictable SaaS routing and SEO:
-  // /en, /pt, /es, /fr, /it, /de
   localePrefix: 'always',
-  // Keep next-intl's server-written locale preference aligned with the client
-  // writers and with the HTTPS-only Production contract. This is a preference
-  // cookie (not an auth cookie), but Secure prevents it from being emitted over
-  // plaintext transport and closes the external scanner finding.
   localeCookie: {
     name: 'NEXT_LOCALE',
     maxAge: 60 * 60 * 24 * 365,
@@ -70,21 +23,14 @@ export const routing = defineRouting({
     sameSite: 'lax',
     secure: true,
   },
-  // Public metadata + sitemap are the single hreflang authority. Keeping the
-  // next-intl response Link header enabled creates a competing x-default based
-  // on the unprefixed request path, while HTML metadata intentionally points
-  // x-default to the canonical English URL.
   alternateLinks: false,
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Nomes europeus para o seletor de idioma
-// ─────────────────────────────────────────────────────────────────────────────
 export const LOCALE_META: Record<Locale, { name: string; nativeName: string; region: string }> = {
   en: { name: 'English', nativeName: 'English', region: 'Europe / International' },
-  pt: { name: 'Portuguese', nativeName: 'Português de Portugal', region: 'Portugal' },
-  es: { name: 'Spanish', nativeName: 'Español de España', region: 'España' },
-  fr: { name: 'French', nativeName: 'Français', region: 'France' },
-  it: { name: 'Italian', nativeName: 'Italiano', region: 'Italia' },
-  de: { name: 'German', nativeName: 'Deutsch', region: 'Deutschland' },
+  pt: { name: 'English', nativeName: 'English', region: 'Portugal' },
+  es: { name: 'English', nativeName: 'English', region: 'Spain' },
+  fr: { name: 'English', nativeName: 'English', region: 'France' },
+  it: { name: 'English', nativeName: 'English', region: 'Italy' },
+  de: { name: 'English', nativeName: 'English', region: 'Germany' },
 };
