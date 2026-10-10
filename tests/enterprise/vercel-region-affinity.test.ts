@@ -11,7 +11,7 @@ describe('Vercel production region affinity', () => {
     expect(vercelConfig.regions).toEqual(['dub1']);
   });
 
-  it('allows native Git deployment while Enterprise assurance remains independently governed', () => {
-    expect(vercelConfig.git?.deploymentEnabled).toBe(true);
+  it('disables native Git deployment in favor of governed prebuilt production releases', () => {
+    expect(vercelConfig.git?.deploymentEnabled).toBe(false);
   });
 });
