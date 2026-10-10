@@ -10,6 +10,8 @@ All documents in this directory are **review drafts**, not final legal instrumen
 ## Included drafts
 
 - Terms of Service
+- Master Services Agreement
+- Enterprise Order Form
 - Privacy Policy
 - Data Processing Addendum
 - Subprocessor Register
