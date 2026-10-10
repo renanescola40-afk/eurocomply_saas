@@ -21,16 +21,16 @@ describe('buildLocalizedInventoryCsv', () => {
     expect(csv).toContain('High risk,In review,31/12/2026');
   });
 
-  it('localizes German values and date punctuation', () => {
+  it('uses canonical English values for historical German locale input', () => {
     const csv = buildLocalizedInventoryCsv([row], 'de');
-    expect(csv).toContain('Risikostufe');
-    expect(csv).toContain('Hohes Risiko,In Prüfung,31.12.2026');
+    expect(csv).toContain('Name,Vendor,Department,Risk level,Status,Assessment date');
+    expect(csv).toContain('High risk,In review,31/12/2026');
   });
 
-  it('preserves Portuguese terminology', () => {
+  it('uses canonical English values for historical Portuguese locale input', () => {
     const csv = buildLocalizedInventoryCsv([row], 'pt');
-    expect(csv).toContain('Nível de risco,Estado,Data da avaliação');
-    expect(csv).toContain('Alto risco,Em revisão,31/12/2026');
+    expect(csv).toContain('Name,Vendor,Department,Risk level,Status,Assessment date');
+    expect(csv).toContain('High risk,In review,31/12/2026');
   });
 
   it('escapes quotes and preserves unknown values', () => {
@@ -45,7 +45,7 @@ describe('buildLocalizedInventoryCsv', () => {
     expect(csv).not.toContain('\n=IMPORTXML');
   });
 
-  it('exports already-localized visible rows with localized headers', () => {
+  it('exports visible rows with canonical English headers', () => {
     const csv = buildLocalizedInventoryDisplayCsv([{
       name: 'Recruiting AI',
       vendor: 'Vendor One',
@@ -55,7 +55,7 @@ describe('buildLocalizedInventoryCsv', () => {
       assessmentDate: '31.12.2026',
     }], 'de');
 
-    expect(csv).toContain('Name,Anbieter,Abteilung,Risikostufe,Status,Bewertungsdatum');
+    expect(csv).toContain('Name,Vendor,Department,Risk level,Status,Assessment date');
     expect(csv).toContain('Hohes Risiko,In Prüfung,31.12.2026');
   });
 });
