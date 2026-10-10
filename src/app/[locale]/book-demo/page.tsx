@@ -36,12 +36,24 @@ export default async function BookDemoPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[#050913] text-white">
-      <section className="mx-auto grid max-w-7xl gap-10 px-4 pb-20 pt-20 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:px-8 lg:pt-24">
-        <div>
-          <Link href={`/${locale}`} aria-label="RISCK COMPLY home" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
-            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={178} height={32} priority />
+      <header className="border-b border-slate-800/80 bg-[#050913]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <Link href={`/${locale}`} aria-label="RISCK COMPLY home" className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={210} height={44} priority className="h-9 w-auto" />
           </Link>
-          <div className="mt-8 inline-flex items-center gap-2 rounded-lg border border-blue-400/20 bg-blue-500/[0.07] px-4 py-2 text-sm font-medium text-blue-100">
+          <div className="flex items-center gap-2">
+            <Link href={`/${locale}/pricing`} className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white sm:inline-flex">Pricing</Link>
+            <Link href={`/${locale}/trust`} className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white md:inline-flex">Trust Center</Link>
+            <Link href={`/${locale}/login`} className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">Log in</Link>
+          </div>
+        </div>
+      </header>
+
+      <section className="relative overflow-hidden">
+        <div aria-hidden="true" className="pointer-events-none absolute left-[12%] top-10 h-[28rem] w-[28rem] rounded-full bg-blue-600/[0.08] blur-3xl" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-20 pt-16 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:px-8 lg:pt-20">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-blue-400/20 bg-blue-500/[0.07] px-4 py-2 text-sm font-medium text-blue-100">
             <Users className="h-4 w-4" /> Enterprise readiness mapping
           </div>
           <h1 className="mt-7 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-[-0.06em] text-white sm:text-6xl">
@@ -69,15 +81,16 @@ export default async function BookDemoPage({ params }: PageProps) {
         </div>
 
         <BookDemoForm locale={locale} />
+        </div>
       </section>
 
-      <section className="border-y border-slate-800/80 bg-white/[0.02] px-4 py-16 sm:px-6 lg:px-8">
+      <section className="border-y border-slate-800/80 bg-[#080d16] px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-300/65">What you get</p>
           <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {outcomes.map(([title, text, Icon]) => (
-              <article key={title} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-5">
-                <Icon className="h-5 w-5 text-blue-300" aria-hidden="true" />
+              <article key={title} className="group rounded-2xl border border-slate-800/80 bg-[#0d1522] p-5 transition-colors duration-200 hover:border-blue-400/30">
+                <Icon className="h-5 w-5 text-blue-300 transition group-hover:text-blue-200" aria-hidden="true" />
                 <h2 className="mt-4 text-lg font-semibold text-white">{title}</h2>
                 <p className="mt-3 text-sm leading-6 text-white/50">{text}</p>
               </article>
