@@ -15,12 +15,15 @@ describe('contract and counsel handoff pack', () => {
 
     expect(report.failures).toEqual([]);
     expect(report.status).toBe('READY_FOR_FOUNDER_AND_COUNSEL_HANDOFF');
-    expect(report.preparedDocumentCount).toBe(9);
-    expect(report.expectedDocumentCount).toBe(9);
+    expect(report.preparedDocumentCount).toBe(11);
+    expect(report.expectedDocumentCount).toBe(11);
     expect(report.founderFactsUnresolvedCount).toBeGreaterThan(0);
     expect(report.founderFactsComplete).toBe(false);
     expect(report.counselAccepted).toBe(false);
     expect(report.legalAcceptanceStatus).toBe('HUMAN_REVIEW_REQUIRED');
+    expect(report.documents.map((document: { id: string }) => document.id)).toEqual(
+      expect.arrayContaining(['msa', 'enterprise-order-form']),
+    );
   });
 
   it('keeps claims and final decisions non-crediting', () => {
