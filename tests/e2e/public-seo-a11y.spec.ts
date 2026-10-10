@@ -33,8 +33,9 @@ async function expectSeoMetadata(page: Page, path: string) {
   expect(canonicalHref).toBeTruthy();
   expect(normalizePathname(new URL(canonicalHref || 'https://example.invalid').pathname)).toBe(normalizePathname(path));
 
-  await expect(page.locator('link[rel="alternate"][hreflang="pt-PT"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveCount(1);
   await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="alternate"][hreflang]:not([hreflang="en"]):not([hreflang="x-default"])')).toHaveCount(0);
 }
 
 test.describe('public SEO and accessibility smoke', () => {
