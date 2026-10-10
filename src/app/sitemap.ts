@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-import { locales, type Locale } from '@/lib/i18n/routing';
+import { type Locale } from '@/lib/i18n/routing';
 import { getFeatureLanguageAlternates, getFeaturePages, getFeaturePath } from '@/lib/seo/feature-pages';
 import { getLocaleAlternates, getSiteUrl, localeLanguageTags } from '@/lib/seo/public-metadata';
 
@@ -46,19 +46,15 @@ function coreAlternates(appUrl: string, locale: Locale, path: string) {
 export default function sitemap(): MetadataRoute.Sitemap {
   const appUrl = getSiteUrl();
 
-  const coreEntries: MetadataRoute.Sitemap = locales.flatMap((locale) => {
-    const paths = locale === 'en' ? [...acquisitionPaths, ...englishAssurancePaths] : [...acquisitionPaths];
-
-    return paths.map((path) => ({
-      url: localizedUrl(appUrl, locale, path),
-      lastModified: stableLastModified,
-      changeFrequency: path === '' || path === '/pricing' ? 'weekly' : 'monthly',
-      priority: priorityFor(path),
-      alternates: {
-        languages: coreAlternates(appUrl, locale, path),
-      },
-    }));
-  });
+  const coreEntries: MetadataRoute.Sitemap = [...acquisitionPaths, ...englishAssurancePaths].map((path) => ({
+    url: localizedUrl(appUrl, 'en', path),
+    lastModified: stableLastModified,
+    changeFrequency: path === '' || path === '/pricing' ? 'weekly' : 'monthly',
+    priority: priorityFor(path),
+    alternates: {
+      languages: coreAlternates(appUrl, 'en', path),
+    },
+  }));
 
   const growthEntries: MetadataRoute.Sitemap = englishGrowthPaths.map((path) => {
     const url = localizedUrl(appUrl, 'en', path);
@@ -71,17 +67,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
-  const featureEntries: MetadataRoute.Sitemap = locales.flatMap((locale) =>
-    getFeaturePages(locale).map((page) => ({
-      url: `${appUrl}${getFeaturePath(locale, page.key)}`,
-      lastModified: stableLastModified,
-      changeFrequency: 'weekly',
-      priority: 0.85,
-      alternates: {
-        languages: getFeatureLanguageAlternates(page.key),
-      },
-    })),
-  );
+  const featureEntries: MetadataRoute.Sitemap = getFeaturePages('en').map((page) => ({
+    url: `${appUrl}${getFeaturePath('en', page.key)}`,
+    lastModified: stableLastModified,
+    changeFrequency: 'weekly',
+    priority: 0.85,
+    alternates: {
+      languages: getFeatureLanguageAlternates(page.key),
+    },
+  }));
 
   return [...coreEntries, ...growthEntries, ...featureEntries];
 }
