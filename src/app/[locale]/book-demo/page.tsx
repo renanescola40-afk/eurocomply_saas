@@ -1,8 +1,10 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Building2, CalendarDays, FileText, ShieldCheck, Users } from 'lucide-react';
 import { BookDemoForm } from '@/components/marketing/book-demo-form';
 import { PublicFooter } from '@/components/marketing/public-footer';
+import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 type PageProps = {
@@ -28,6 +30,18 @@ const agenda = [
 
 function resolveLocale(value: string) {
   return (locales.includes(value as Locale) ? value : defaultLocale) as Locale;
+}
+
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale: requestedLocale } = await params;
+  const locale = getSafeLocale(requestedLocale);
+  return makePublicMetadata({
+    locale,
+    path: '/book-demo',
+    title: 'Book a RISCK COMPLY Demo | AI Governance Workflows',
+    description: 'Book a RISCK COMPLY demo to review AI inventory, risk, policy, evidence and procurement workflows with your team context.',
+  });
 }
 
 export default async function BookDemoPage({ params }: PageProps) {

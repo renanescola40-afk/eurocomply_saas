@@ -24,6 +24,12 @@ const publicCommercialRoutes = [
   '/en/login',
   '/en/signup?plan=professional',
   '/en/trust',
+  '/en/about',
+  '/en/resources',
+  '/en/faq',
+  '/en/book-demo',
+  '/en/contact',
+  '/en/enterprise',
 ] as const;
 
 for (const viewport of [

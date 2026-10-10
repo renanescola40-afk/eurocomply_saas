@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Building2, ClipboardCheck, FileText, LockKeyhole, Scale, ShieldCheck, Users } from 'lucide-react';
 import { PublicFooter } from '@/components/marketing/public-footer';
+import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 type PageProps = { params: Promise<{ locale: string }> };
@@ -35,6 +37,18 @@ const enterprisePackage = [
 
 function resolveLocale(value: string) {
   return (locales.includes(value as Locale) ? value : defaultLocale) as Locale;
+}
+
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale: requestedLocale } = await params;
+  const locale = getSafeLocale(requestedLocale);
+  return makePublicMetadata({
+    locale,
+    path: '/enterprise',
+    title: 'RISCK COMPLY Enterprise | AI Governance Operations',
+    description: 'Explore RISCK COMPLY enterprise AI governance workflows for inventory, risk, evidence, procurement and security review.',
+  });
 }
 
 export default async function EnterprisePage({ params }: PageProps) {

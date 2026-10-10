@@ -1,8 +1,10 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, CircleHelp, LockKeyhole, ReceiptText } from 'lucide-react';
 
 import { PublicFooter } from '@/components/marketing/public-footer';
+import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 
 const faqs = [
   {
@@ -37,6 +39,18 @@ const faqs = [
 type FaqPageProps = {
   params: Promise<{ locale: string }>;
 };
+
+
+export async function generateMetadata({ params }: FaqPageProps): Promise<Metadata> {
+  const { locale: requestedLocale } = await params;
+  const locale = getSafeLocale(requestedLocale);
+  return makePublicMetadata({
+    locale,
+    path: '/faq',
+    title: 'RISCK COMPLY FAQ | Product, Security and Billing',
+    description: 'Answers to common questions about RISCK COMPLY product scope, security, data handling and billing workflows.',
+  });
+}
 
 export default async function FaqPage({ params }: FaqPageProps) {
   const { locale } = await params;
