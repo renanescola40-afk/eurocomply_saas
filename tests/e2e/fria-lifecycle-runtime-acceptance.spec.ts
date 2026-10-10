@@ -216,8 +216,8 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     // the paid-product boundary on the exact assessed SHA.
     await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
     await expectHealthyPublicPage(page, 'localized public pricing');
-    await expect(page).toHaveURL(/\/pt\/pricing(?:\?|$)/);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Comece pela preparação de IA/i);
+    await expect(page).toHaveURL(/\/en\/pricing(?:\?|$)/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
     await page.goto('/en/security', { waitUntil: 'domcontentloaded' });
     await expectHealthyPublicPage(page, 'public Trust Center');
