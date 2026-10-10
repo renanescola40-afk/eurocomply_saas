@@ -26,6 +26,7 @@ Provision the Railway service explicitly from the connected Railway project usin
 - healthcheck timeout: 300 seconds
 - restart policy: restart on failure with a bounded retry policy
 - region: EU-compatible region, selected only after provider availability/privacy review
+- GitHub autodeploy: disabled; production deployments must be manually triggered for the exact approved SHA
 
 Do not rely on `railway.toml`, `railway.json`, or `.railway/railway.ts` in this repository. The failover configuration is intentionally provider-provisioned until a repository-managed Railway IaC SDK is deliberately added and lockfile-aligned.
 
@@ -33,8 +34,8 @@ Do not copy secrets into source control. Configure protected environment variabl
 
 ## Required validation before any DNS change
 
-1. Provision the isolated Railway service with the settings above.
-2. Deploy the exact intended `main` SHA and record it.
+1. Provision the isolated Railway service with the settings above and disable GitHub autodeploy.
+2. Manually deploy the exact intended `main` SHA and record it. Do not deploy merely because `main` advanced.
 3. Configure the same production-safe environment contract required by `.env.example` and `docs/production-runbook.md`.
 4. Keep Stripe LIVE webhooks pointed at the current production endpoint until the failover runtime is verified.
 5. Verify:
@@ -49,7 +50,8 @@ Do not copy secrets into source control. Configure protected environment variabl
    - `/api/internal/compliance-alerts` — `5 4 * * *`
    - `/api/internal/marketing/linkedin/process` — `*/15 * * * *`
 7. Run smoke tests against the temporary Railway hostname.
-8. Do not change `risckcomply.com` or `www.risckcomply.com` until the alternate runtime has passed all release gates.
+8. Require the same release discipline used for the primary provider: exact-current-main validation, required GitHub checks, protected-environment approval where available, health/readiness smoke tests, and explicit owner approval before a production cutover.
+9. Do not change `risckcomply.com` or `www.risckcomply.com` until the alternate runtime has passed all release gates.
 
 ## Security boundaries
 
