@@ -85,7 +85,9 @@ describe('recipient locale authority', () => {
   it('persists the preference through Auth metadata instead of a nonexistent profiles column', () => {
     expect(profileControls).toContain('supabase.auth.updateUser');
     expect(profileControls).toContain('withRecipientLocaleMetadata(metadata, selectedLanguage)');
+    expect(profileControls).toContain("const PROFILE_LANGUAGE_OPTIONS = ['en']");
     expect(profileControls).toContain('LOCALE_META[language].nativeName');
+    expect(profileControls).not.toContain('{locales.map((language) => (');
     expect(profileControls).not.toMatch(/from\(['"]profiles['"]\)[\s\S]*preferred_language/);
     expect(profileControls).not.toContain("update({ preferred_language");
     expect(supabaseTypes).not.toContain('preferred_language: string | null');
