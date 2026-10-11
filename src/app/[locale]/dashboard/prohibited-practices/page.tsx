@@ -25,8 +25,8 @@ const copy = {
 
 export default function ProhibitedPracticesPage() {
   const params = useParams<{ locale?: string }>();
-  const locale = params.locale === 'pt' ? 'pt' : 'en';
-  const text = copy[locale];
+  const locale = 'en';
+  const text = copy.en;
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [selectedReview, setSelectedReview] = useState('');
   const [selectedSignal, setSelectedSignal] = useState<SignalCode>('subliminal_manipulation');
