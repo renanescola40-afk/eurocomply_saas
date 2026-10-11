@@ -63,6 +63,19 @@ describe('TailAdmin phase 6 secondary dashboard closure', () => {
     expect(reports).toContain("endpoint: '/api/reports/executive.csv'");
   });
 
+  it('keeps Gap Analysis responsive and English-only on direct runtime branches', async () => {
+    const gapAnalysis = await readFile(GAP_ANALYSIS, 'utf8');
+    const shortcut = await readFile(new URL('../../src/components/GapAnalysisShortcut.tsx', import.meta.url), 'utf8');
+
+    expect(gapAnalysis).toContain('w-full min-w-0');
+    expect(gapAnalysis).toContain('sm:min-w-[220px]');
+    expect(gapAnalysis).not.toContain("false ? 'Relatório PDF gerado com sucesso.'");
+    expect(gapAnalysis).not.toContain("false\n        ? 'Não foi possível gerar o relatório PDF.");
+    expect(shortcut).toContain("router.push('/en/dashboard/gap-analysis')");
+    expect(shortcut).toContain('safe-area-inset-bottom');
+    expect(shortcut).toContain('hidden sm:inline');
+  });
+
   it('does not present observability thresholds as live production measurements', async () => {
     const source = await readFile(OBSERVABILITY, 'utf8');
 
