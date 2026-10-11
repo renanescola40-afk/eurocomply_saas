@@ -30,7 +30,7 @@ function escapeHtml(value: string | number | null | undefined) {
 }
 
 function formatJoinedAt(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : 'en-GB', {
+  return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'full',
     timeStyle: 'short',
     timeZone: 'Europe/Lisbon',
@@ -42,7 +42,7 @@ function formatRemaining(joinedAt: string, launchAt: string, locale: string) {
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
-  return locale === 'pt' ? `${days} dias, ${hours} horas e ${minutes} minutos` : `${days} days, ${hours} hours and ${minutes} minutes`;
+  return `${days} days, ${hours} hours and ${minutes} minutes`;
 }
 
 function premiumEmailShell(title: string, preview: string, body: string) {
@@ -67,7 +67,7 @@ function premiumEmailShell(title: string, preview: string, body: string) {
 }
 
 export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
-  const isPt = input.locale === 'pt';
+  const isPt = false;
   const joinedAt = formatJoinedAt(input.joinedAt, input.locale);
   const launchLabel = isPt ? '1 de agosto de 2026, 07:00 Europe/Lisbon' : '1 August 2026, 07:00 Europe/Lisbon';
   const remaining = formatRemaining(input.joinedAt, input.launchAt, input.locale);
