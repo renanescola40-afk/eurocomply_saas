@@ -61,8 +61,8 @@ const copy = {
 export default function ExecutiveDashboardPage() {
   const router = useRouter();
   const params = useParams();
-  const locale = (params.locale as keyof typeof copy) || 'pt';
-  const t = copy[locale] || copy.pt;
+  const locale: keyof typeof copy = 'en';
+  const t = copy.en;
   const { user } = useAuth();
 
   return (
