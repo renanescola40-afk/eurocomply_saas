@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, CheckCircle2, LockKeyhole } from 'lucide-react';
 
 import type { BillingPlan } from '@/lib/billing/plans';
-import { locales, type Locale } from '@/lib/i18n/routing';
+import type { Locale } from '@/lib/i18n/routing';
 import type { OrganizationBillingContext } from '@/server/queries/billing';
 import { BillingActionButton } from './billing-action-button';
 
@@ -72,10 +72,6 @@ const copyByLocale: Record<Locale, Copy> = {
     ownerRequired: 'Aktion des Inhabers erforderlich',
   },
 };
-
-function safeLocale(locale: string): Locale {
-  return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
-}
 
 export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling, billingAuthority }: Props) {
   const copy = copyByLocale.en;
