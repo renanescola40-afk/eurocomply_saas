@@ -45,7 +45,7 @@ export function OnboardingRuntimeBoundary({
   onSaveDraft,
   onComplete,
 }: Props) {
-  const isPt = locale === 'pt';
+  const isPt = false;
   const enterpriseSelected = requestedPlan === 'enterprise';
   const enterprisePath = `/${locale}/contact?intent=enterprise&plan=enterprise&source=onboarding`;
 

@@ -3,7 +3,7 @@ import { CheckCircle2, LockKeyhole } from 'lucide-react';
 
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
-import { locales, type Locale } from '@/lib/i18n/routing';
+import type { Locale } from '@/lib/i18n/routing';
 import type { OrganizationBillingContext } from '@/server/queries/billing';
 import { BillingActionButton } from './billing-action-button';
 
@@ -75,10 +75,6 @@ const billingCopy: Record<Locale, BillingCopy> = {
   },
 };
 
-function safeLocale(locale: string): Locale {
-  return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
-}
-
 function formatLimitValue(value: number, copy: BillingCopy) {
   if (!Number.isFinite(value) || value <= 0 || value === Number.MAX_SAFE_INTEGER) return copy.unlimited;
   return new Intl.NumberFormat().format(value);
@@ -111,9 +107,9 @@ function ReadOnlyBillingNotice({ locale, copy }: { locale: string; copy: Billing
 }
 
 export function BillingPageView({ locale, billing, canManageBilling, checkout, billingError }: BillingPageViewProps) {
-  const activeLocale = safeLocale(locale);
-  const copy = billingCopy[activeLocale];
-  const pricingCopy = getCommercialSurfaceCopy(activeLocale).pricing;
+  const activeLocale: Locale = 'en';
+  const copy = billingCopy.en;
+  const pricingCopy = getCommercialSurfaceCopy('en').pricing;
   const currentPlan = getBillingPlan(billing.plan) ?? BILLING_PLANS[0];
   const hasActivePlan = billing.status === 'active' || billing.status === 'trialing';
   const stripeManaged = billing.authority === 'stripe_live';

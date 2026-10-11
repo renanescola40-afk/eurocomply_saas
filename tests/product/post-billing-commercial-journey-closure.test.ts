@@ -127,7 +127,7 @@ describe('post-billing commercial customer journey closure', () => {
 
     expect(page).toContain('function getPublicBillingFailureMessage(locale: string)');
     expect(page).toContain('resolvedSearchParams.billing_error');
-    expect(page).toContain('getPublicBillingFailureMessage(locale)');
+    expect(page).toContain("getPublicBillingFailureMessage('en')");
     expect(page).not.toContain('billingError={resolvedSearchParams.billing_error}');
   });
 

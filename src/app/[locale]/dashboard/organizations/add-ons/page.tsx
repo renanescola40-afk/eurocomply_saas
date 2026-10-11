@@ -146,8 +146,8 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   noStore();
   const { locale } = await params;
   const query = searchParams ? await searchParams : {};
-  const copy = getAddOnsCopy(locale);
-  const commerce = commerceCopy(locale);
+  const copy = getAddOnsCopy('en');
+  const commerce = commerceCopy('en');
   const selectedPlan = query.plan ? getBillingPlan(query.plan) : undefined;
   const user = await getCurrentUser();
 
