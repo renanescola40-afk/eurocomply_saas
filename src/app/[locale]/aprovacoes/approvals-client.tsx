@@ -27,9 +27,9 @@ type ToastState = {
 };
 
 const fallbackApprovals: Approval[] = [
-  { id: 'demo-privacy-policy', title: 'Privacy Policy v2', owner: 'Compliance Lead', status: 'Pending', submittedAt: 'Hoje' },
-  { id: 'demo-risk-matrix', title: 'GDPR Risk Matrix', owner: 'Security Owner', status: 'Pending', submittedAt: 'Ontem' },
-  { id: 'demo-vendor-review', title: 'Vendor Review Record', owner: 'Legal Counsel', status: 'Approved', submittedAt: 'Esta semana' },
+  { id: 'demo-privacy-policy', title: 'Privacy Policy v2', owner: 'Compliance Lead', status: 'Pending', submittedAt: 'Today' },
+  { id: 'demo-risk-matrix', title: 'GDPR Risk Matrix', owner: 'Security Owner', status: 'Pending', submittedAt: 'Yesterday' },
+  { id: 'demo-vendor-review', title: 'Vendor Review Record', owner: 'Legal Counsel', status: 'Approved', submittedAt: 'This week' },
 ];
 
 function normalizeApprovalStatus(status?: string | null): Approval['status'] {

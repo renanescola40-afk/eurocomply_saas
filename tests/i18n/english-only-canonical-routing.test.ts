@@ -45,6 +45,24 @@ describe('English-only canonical customer surface', () => {
   });
 
 
+  it('keeps direct customer-facing residual surfaces English-only', () => {
+    const approvals = read('src/app/[locale]/aprovacoes/approvals-client.tsx');
+    const legacyOrganizations = read('src/app/[locale]/dashboard/organizations/clerk/page.tsx');
+
+    expect(approvals).toContain("submittedAt: 'Today'");
+    expect(approvals).toContain("submittedAt: 'Yesterday'");
+    expect(approvals).toContain("submittedAt: 'This week'");
+    expect(approvals).not.toContain("submittedAt: 'Hoje'");
+    expect(approvals).not.toContain("submittedAt: 'Ontem'");
+    expect(approvals).not.toContain("submittedAt: 'Esta semana'");
+
+    expect(legacyOrganizations).toContain('Legacy flow retired');
+    expect(legacyOrganizations).toContain('Centralized organization management');
+    expect(legacyOrganizations).toContain('Open organizations');
+    expect(legacyOrganizations).not.toContain('Fluxo legado retirado');
+    expect(legacyOrganizations).not.toContain('Gestão centralizada de organizações');
+  });
+
   it('uses English as the sole application dictionary', () => {
     const appDictionary = read('src/lib/i18n/app-dictionary.ts');
     expect(appDictionary).toContain('return dictionaries.en;');
