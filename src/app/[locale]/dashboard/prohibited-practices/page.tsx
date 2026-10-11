@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, RefreshCw, ShieldAlert } from 'lucide-react';
 
@@ -24,7 +23,6 @@ const copy = {
 };
 
 export default function ProhibitedPracticesPage() {
-  const params = useParams<{ locale?: string }>();
   const locale = 'en';
   const text = copy.en;
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
