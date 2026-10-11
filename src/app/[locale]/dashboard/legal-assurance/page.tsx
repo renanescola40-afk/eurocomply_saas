@@ -44,8 +44,8 @@ function statusTone(status: string) {
 export default function LegalAssurancePage() {
   const router = useRouter();
   const params = useParams();
-  const locale = ((params.locale as string) in copy ? params.locale : 'pt') as Locale;
-  const t = copy[locale];
+  const locale: Locale = 'en';
+  const t = copy.en;
   const [reviews, setReviews] = useState<Review[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [submitting, setSubmitting] = useState(false);
