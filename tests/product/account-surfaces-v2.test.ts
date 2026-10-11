@@ -21,6 +21,8 @@ describe('RISCK COMPLY UI V2 account surfaces', () => {
     expect(source).toContain('getOrganizationBillingAuthority(organization.id)');
     expect(source).toContain('<EnterpriseDashboardShell');
     expect(source).toContain('bg-[#0d1522]');
+    expect(source).toContain('rounded-xl');
+    expect(source).not.toContain('rounded-2xl');
     expect(source).toContain('text-blue-300');
     expect(source).not.toContain('text-emerald-300');
   });
@@ -36,6 +38,8 @@ describe('RISCK COMPLY UI V2 account surfaces', () => {
     expect(profile).toContain("roleHasPermission(organization.role, 'manage_settings')");
     expect(profile).toContain('canManageDashboardBilling(organization.role)');
     expect(profile).toContain('bg-[#0d1522]');
+    expect(profile).toContain('rounded-xl');
+    expect(profile).not.toContain('rounded-2xl');
     expect(controls).toContain('supabase.auth.updateUser');
     expect(controls).toContain('resetPassword(primaryEmail)');
     expect(controls).toContain('await signOut()');
