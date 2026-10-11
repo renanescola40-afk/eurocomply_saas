@@ -343,7 +343,7 @@ const copyByLocale: Record<Locale, LandingCopy> = {
 };
 
 function ProductPreview({ locale }: { locale: Locale }) {
-  const isPt = locale === 'pt';
+  const isPt = false;
 
   return (
     <div className="relative mx-auto w-full max-w-[720px]">
@@ -802,10 +802,10 @@ function WorkflowSection({ copy }: { copy: LandingCopy }) {
 
 function SecuritySection({ copy, locale }: { copy: LandingCopy; locale: Locale }) {
   const items: Array<[IconType, string]> = [
-    [Fingerprint, locale === 'pt' ? 'Controlo de acesso por função' : 'Role-based access'],
-    [Building2, locale === 'pt' ? 'Isolamento por organização' : 'Organization isolation'],
-    [LockKeyhole, locale === 'pt' ? 'Rotas e sessões protegidas' : 'Protected routes and sessions'],
-    [Layers3, locale === 'pt' ? 'Histórico e rastreabilidade' : 'History and traceability'],
+    [Fingerprint, false ? 'Controlo de acesso por função' : 'Role-based access'],
+    [Building2, false ? 'Isolamento por organização' : 'Organization isolation'],
+    [LockKeyhole, false ? 'Rotas e sessões protegidas' : 'Protected routes and sessions'],
+    [Layers3, false ? 'Histórico e rastreabilidade' : 'History and traceability'],
   ];
 
   return (
@@ -822,9 +822,9 @@ function SecuritySection({ copy, locale }: { copy: LandingCopy; locale: Locale }
 
             <div className="mt-9 flex flex-wrap gap-3">
               {[
-                locale === 'pt' ? 'Sem promessas jurídicas falsas' : 'No false legal promises',
-                locale === 'pt' ? 'Evidência organizada' : 'Structured evidence',
-                locale === 'pt' ? 'Responsabilidade visível' : 'Visible accountability',
+                false ? 'Sem promessas jurídicas falsas' : 'No false legal promises',
+                false ? 'Evidência organizada' : 'Structured evidence',
+                false ? 'Responsabilidade visível' : 'Visible accountability',
               ].map((item) => (
                 <span
                   key={item}
@@ -860,9 +860,9 @@ function SecuritySection({ copy, locale }: { copy: LandingCopy; locale: Locale }
 
         <div className="mt-10 grid gap-3 border-t border-white/10 pt-8 sm:grid-cols-3">
           {[
-            [Zap, locale === 'pt' ? 'Operação rápida' : 'Fast operation'],
-            [Activity, locale === 'pt' ? 'Sinais visíveis' : 'Visible signals'],
-            [FileCheck2, locale === 'pt' ? 'Revisões preparadas' : 'Review-ready packs'],
+            [Zap, false ? 'Operação rápida' : 'Fast operation'],
+            [Activity, false ? 'Sinais visíveis' : 'Visible signals'],
+            [FileCheck2, false ? 'Revisões preparadas' : 'Review-ready packs'],
           ].map(([Icon, label]) => {
             const ItemIcon = Icon as IconType;
             return (
