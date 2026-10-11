@@ -92,7 +92,7 @@ function priorityTone(priority?: string | null) {
 }
 
 export function EnterpriseExecutiveOverviewV2({ locale, summary, tasks, topRisks, vendorsRequiringReview, documentsExpiringSoon, aiSystemSummary, auditEvents, workflowReadiness, basePath, tasksPath }: Props) {
-  const text = locale === 'pt' ? copy.pt : copy.en;
+  const text = copy.en;
   const riskCompletion = percentage(summary.totals.risks, summary.openRisks);
   const taskCompletion = percentage(summary.totals.tasks, summary.openTasks);
   const evidenceReadiness = percentage(summary.totals.documents, summary.missingDocuments);
