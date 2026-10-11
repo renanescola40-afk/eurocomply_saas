@@ -203,7 +203,7 @@ export default function ApprovalsClient({ locale, initialDocuments = [] }: { loc
                   <button
                     type="button"
                     disabled={busyId === approval.id || approval.status === 'Approved'}
-                    onClick={() => updateStatus(approval.id, 'Aprovado')}
+                    onClick={() => updateStatus(approval.id, 'Approved')}
                     className="inline-flex h-9 items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-300/[0.08] px-3 text-xs font-semibold text-emerald-100/85 transition hover:bg-emerald-300/[0.13] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/35 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" /> {busyId === approval.id ? 'Processing...' : 'Approve'}
@@ -211,7 +211,7 @@ export default function ApprovalsClient({ locale, initialDocuments = [] }: { loc
                   <button
                     type="button"
                     disabled={busyId === approval.id || approval.status === 'Rejected'}
-                    onClick={() => updateStatus(approval.id, 'Rejeitado')}
+                    onClick={() => updateStatus(approval.id, 'Rejected')}
                     className="inline-flex h-9 items-center gap-2 rounded-lg border border-rose-300/20 bg-rose-300/[0.055] px-3 text-xs font-semibold text-rose-100/80 transition hover:bg-rose-300/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/35 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <XCircle className="h-3.5 w-3.5" /> Reject
