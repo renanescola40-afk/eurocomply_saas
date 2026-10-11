@@ -174,8 +174,7 @@ const ptLabels: Partial<Record<string, Pick<TrustPage, 'navLabel' | 'title' | 's
 
 export function getTrustCenterPage(slug: string, locale: Locale): TrustPage {
   const base = pageCopy[slug] ?? pageCopy.trust;
-  const localized = locale === 'pt' ? ptLabels[slug] : undefined;
-  return { slug, updated, ...base, ...localized };
+  return { slug, updated, ...base };
 }
 
 export function getTrustCenterPages(locale: Locale): TrustPage[] {
