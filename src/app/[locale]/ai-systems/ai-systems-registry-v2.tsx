@@ -94,7 +94,7 @@ function humanize(value: string | null | undefined) {
 function formatUpdated(value: string, locale: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : 'en-GB', {
+  return new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -102,7 +102,7 @@ function formatUpdated(value: string, locale: string) {
 }
 
 export function AiSystemsRegistryV2({ locale, systems, organizationName }: AiSystemsRegistryV2Props) {
-  const t = locale === 'pt' ? copy.pt : copy.en;
+  const t = copy.en;
   const [query, setQuery] = useState('');
   const [riskFilter, setRiskFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
