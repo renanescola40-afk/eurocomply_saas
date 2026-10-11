@@ -180,8 +180,8 @@ describe('public legal review surfaces', () => {
     const source = await readFile(TERMS_PAGE, 'utf8');
 
     expect(source).toContain('const copy: Partial<Record<Locale, TermsCopy>> = { en, pt }');
-    expect(source).toContain("const contentLocale: Locale = copy[locale] ? locale : 'en';");
-    expect(source).toContain('const page = copy[contentLocale] ?? en');
+    expect(source).toContain("const contentLocale: Locale = 'en';");
+    expect(source).toContain('const page = en;');
     expect(source).toContain('contentLanguage={contentLocale}');
     expect(source).toContain('No liability cap or indemnity is represented as effective by this review draft');
   });
