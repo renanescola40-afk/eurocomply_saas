@@ -55,7 +55,7 @@ export default async function BillingPage({ params, searchParams }: BillingPageP
   const canManageBilling = canManageDashboardBilling(organization.role);
   const selectedPlan = getBillingPlan(resolvedSearchParams.plan);
   const billingError = resolvedSearchParams.billing_error
-    ? getPublicBillingFailureMessage(locale)
+    ? getPublicBillingFailureMessage('en')
     : undefined;
 
   return (
