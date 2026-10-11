@@ -18,7 +18,7 @@ The prior management percentages have been superseded by the reproducible 98-ite
 
 Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. Templates alone do not earn external-evidence credit. Every numerator and denominator is listed in that matrix.
 
-## Current scores
+## Historical 2026-10-05 scores (superseded — do not quote as current)
 
 | Measure | Score | Meaning |
 |---|---:|---|
@@ -29,7 +29,7 @@ Each original requirement is scored `CLOSED=1.0`, `PARTIAL=0.5`, or `OPEN=0.0`. 
 ```text
 TOTAL_EVIDENCE_POINTS=36.0
 TOTAL_REQUIREMENTS=98
-AUDITABLE_MA_EVIDENCE_CLOSURE=36.73%
+AUDITABLE_MA_EVIDENCE_CLOSURE=36.73% # HISTORICAL_ONLY
 AUDITABLE_MA_EVIDENCE_REMAINING=63.27%
 INTERNAL_DOCUMENT_READINESS=100%
 MANDATORY_INTERNAL_DOCUMENT_BLOCKERS=0
