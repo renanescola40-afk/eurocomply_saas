@@ -44,7 +44,7 @@ describe('waitlist state resolver', () => {
     expect(source).toContain("import { resolveWaitlistSubmitFeedback } from '@/components/marketing/waitlist-state';");
     expect(source).toContain('const [website, setWebsite] = useState');
     expect(source).toContain('const [consentToContact, setConsentToContact] = useState(false)');
-    expect(source).toContain('body: JSON.stringify({ companyName, email, role, website, locale: activeLocale, consentToContact })');
+    expect(source).toContain('body: JSON.stringify({ companyName, email, role, website, locale: 'en', consentToContact })');
     expect(source).not.toContain('consentToContact: true');
     expect(source).toContain('name="website"');
     expect(source).toContain('name="consentToContact"');
