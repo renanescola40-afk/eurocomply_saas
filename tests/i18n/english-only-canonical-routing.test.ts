@@ -63,6 +63,29 @@ describe('English-only canonical customer surface', () => {
     expect(legacyOrganizations).not.toContain('Gestão centralizada de organizações');
   });
 
+  it('keeps authenticated secondary surfaces on canonical English runtime copy', () => {
+    const surfaces = [
+      'src/app/[locale]/dashboard/executive/page.tsx',
+      'src/app/[locale]/dashboard/board-report/page.tsx',
+      'src/app/[locale]/dashboard/audit-pack/page.tsx',
+      'src/app/[locale]/dashboard/evidence/evidence-vault-client.tsx',
+      'src/app/[locale]/dashboard/legal-assurance/page.tsx',
+      'src/app/[locale]/dashboard/legal-assurance/[reviewId]/page.tsx',
+      'src/app/[locale]/counsel/[reviewId]/page.tsx',
+    ];
+
+    for (const surface of surfaces) {
+      const source = read(surface);
+      expect(source, surface).toContain("const locale: Locale = 'en'");
+      expect(source, surface).toContain('copy.en');
+      expect(source, surface).not.toContain(" : 'pt') as Locale");
+    }
+
+    const login = read('src/app/[locale]/login/page.tsx');
+    expect(login).toContain("return 'Forgot your password?';");
+    expect(login).not.toContain("'Esqueceu a senha?'");
+  });
+
   it('uses English as the sole application dictionary', () => {
     const appDictionary = read('src/lib/i18n/app-dictionary.ts');
     expect(appDictionary).toContain('return dictionaries.en;');
