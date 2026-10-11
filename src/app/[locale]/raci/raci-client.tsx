@@ -37,7 +37,7 @@ function activeLocale(locale: string): Locale {
 }
 
 export default function RaciClient({ locale, initialRows }: { locale: string; initialRows: RaciRow[] }) {
-  const t = copy[activeLocale(locale)];
+  const t = copy.en;
   const [rows, setRows] = useState(initialRows);
   const [status, setStatus] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
   const [savingDocumentId, setSavingDocumentId] = useState<string | null>(null);
