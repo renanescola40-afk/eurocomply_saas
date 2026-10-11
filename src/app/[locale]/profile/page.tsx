@@ -91,7 +91,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
         </header>
 
         <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
-          <article className="overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d1522]">
+          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522]">
             <div className="flex items-center gap-4 border-b border-white/[0.06] px-5 py-5">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-500/15 text-sm font-black text-blue-100">
                 {initials(user.firstName, user.lastName, user.email)}
@@ -108,7 +108,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
             </dl>
           </article>
 
-          <article className="overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d1522]">
+          <article className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522]">
             <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10 text-blue-300"><Building2 className="h-4 w-4" aria-hidden="true" /></div>
               <div>
@@ -125,7 +125,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
 
         <ProfilePersonalControls locale={safeLocale} />
 
-        <section className="overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d1522]" aria-labelledby="account-controls-title">
+        <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522]" aria-labelledby="account-controls-title">
           <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10 text-blue-300"><UserRound className="h-4 w-4" aria-hidden="true" /></div>
             <h2 id="account-controls-title" className="text-sm font-semibold text-white/88">{copy.accountControls}</h2>
