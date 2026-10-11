@@ -203,7 +203,7 @@ async function verifyStepUpChallenge(body: Record<string, unknown>) {
 }
 
 export async function getBillingStepUpToken(locale: string) {
-  const copy = getStepUpCopy(locale);
+  const copy = getStepUpCopy('en');
   const initialChallenge = await createStepUpChallenge({ action: 'manage_billing' });
 
   if (initialChallenge.provider === 'enterprise_idp' || initialChallenge.requiresCode === false) {
@@ -295,7 +295,7 @@ export function BillingActionButton({ action, locale, planId, addOns, preserveEx
   const [loading, setLoading] = useState(false);
   const [paidGaUnavailable, setPaidGaUnavailable] = useState<string | null>(null);
   const [legalAccepted, setLegalAccepted] = useState(false);
-  const legalCopy = getLegalAcceptanceCopy(locale);
+  const legalCopy = getLegalAcceptanceCopy('en');
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -331,7 +331,7 @@ export function BillingActionButton({ action, locale, planId, addOns, preserveEx
       }
 
       if (!response.ok && json.error === PUBLIC_PAID_GA_ERROR_CODE) {
-        setPaidGaUnavailable(getPublicPaidGaUnavailableCopy(locale));
+        setPaidGaUnavailable(getPublicPaidGaUnavailableCopy('en'));
         return;
       }
 
