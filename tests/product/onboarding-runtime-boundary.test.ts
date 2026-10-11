@@ -31,7 +31,7 @@ describe('onboarding runtime boundary', () => {
       code: 'runtime_unavailable',
       retryable: true,
     });
-    expect(result.message).toContain('Não foi possível concluir');
+    expect(result.message).toContain('Activation could not be completed');
     expect(result.message).not.toContain('postgres');
     expect(result.message).not.toContain('secret');
     expect(JSON.stringify(result)).not.toContain(providerDetail);
@@ -52,7 +52,7 @@ describe('onboarding runtime boundary', () => {
     expect(denied).toMatchObject({ code: 'not_authorized', retryable: false });
     expect(denied.message).toContain('not allowed');
     expect(invitation).toMatchObject({ code: 'invitation_delivery_failed', retryable: true });
-    expect(invitation.message).toContain('convites');
+    expect(invitation.message).toContain('team invitations were not delivered');
   });
 
   it('catches both server mutations and exposes one assisted Enterprise path', () => {
