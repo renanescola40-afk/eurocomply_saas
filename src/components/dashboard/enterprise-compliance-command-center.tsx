@@ -258,8 +258,8 @@ const safeSectionLabels = [
   'Plan limits',
 ];
 
-function getCopy(locale: Locale) {
-  return locale === 'pt' ? portugueseCopy : englishCopy;
+function getCopy(_locale: Locale) {
+  return englishCopy;
 }
 
 function formatCount(value: number | undefined | null) {

@@ -187,9 +187,8 @@ type StepId = (typeof steps)[number][0];
 const normalize = <T extends string>(values: readonly T[], value: string | null | undefined, fallback: T): T => values.includes(value as T) ? value as T : fallback;
 const parseInviteEmails = (value: string) => Array.from(new Set(value.split(/[\n,;]/).map((item) => item.trim().toLowerCase()).filter((item) => item.includes('@')))).slice(0, 10);
 
-function translate(locale: string, english: string, portuguese?: string) {
-  if (locale === 'pt') return portuguese ?? english;
-  return inlineTranslations[locale]?.[english] ?? english;
+function translate(_locale: string, english: string, _portuguese?: string) {
+  return english;
 }
 
 function initialForm(state: OnboardingActivationInitialState, requestedPlan?: string | null): FormState {
