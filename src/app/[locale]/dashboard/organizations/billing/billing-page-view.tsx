@@ -121,14 +121,14 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
 
   return (
     <main className="min-h-0 bg-transparent text-white">
-      <div className="w-full space-y-6">
+      <div className="mx-auto w-full max-w-[1480px] space-y-7 px-3 pb-10 sm:px-5 lg:px-7">
         <header className="flex flex-col gap-5 border-b border-slate-800 pb-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0 max-w-3xl">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-400">{copy.eyebrow}</p>
             <h1 id="billing-title" className="mt-2 max-w-4xl text-3xl font-semibold tracking-[-0.035em] text-white">{canManageBilling ? copy.manageTitle : copy.reviewTitle}</h1>
             <p className="mt-2 text-sm leading-6 text-slate-400">{copy.subtitle}</p>
           </div>
-          <div className="flex flex-wrap gap-2 text-[11px] text-slate-500 xl:max-w-md xl:justify-end">
+          <div className="flex flex-wrap gap-2 text-[11px] text-slate-400 xl:max-w-md xl:justify-end">
             {copy.signals.map((label) => (
               <span key={label} className="rounded-md border border-slate-800 bg-[#0d1624] px-2.5 py-1">{label}</span>
             ))}
@@ -139,7 +139,7 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
           <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
             <div className="px-5 py-5 sm:px-6">
               <div className="flex flex-wrap items-center gap-3">
-                <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-600">{copy.currentPlan}</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-slate-400">{copy.currentPlan}</p>
                 {contractManaged ? <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-300">{copy.salesLed}</span> : null}
               </div>
               <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -147,8 +147,9 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
                 <span className="text-xs font-medium text-slate-500">{formatStatus(billing.status, copy)}</span>
               </div>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">{copy.currentPlanDescription}</p>
-              <p className="mt-3 text-xs leading-5 text-slate-600">{copy.usageGuidance}</p>
+              <p className="mt-3 text-xs leading-5 text-slate-400">{copy.usageGuidance}</p>
             </div>
+            {(stripeManaged && canManageBilling) || (contractManaged && canManageBilling) || !canManageBilling || hasActivePlan ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-800 bg-[#080e18] px-5 py-4 sm:px-6 lg:border-l lg:border-t-0 lg:justify-end">
               {canManageBilling && stripeManaged ? (
                 <BillingActionButton action="portal" locale={locale} className="rounded-lg bg-blue-600 text-white hover:bg-blue-700">{copy.openPortal}</BillingActionButton>
@@ -163,6 +164,7 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
                 <Link href={`/${locale}/dashboard`} className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-semibold text-slate-300 transition hover:border-blue-500/50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.continueToDashboard}</Link>
               ) : null}
             </div>
+            ) : null}
           </div>
         </section>
 
@@ -191,12 +193,12 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 id="available-plans-title" className="text-sm font-semibold text-slate-100">{copy.availablePlans}</h2>
-              <p className="mt-1 text-xs text-slate-600">{copy.usageGuidance}</p>
+              <p className="mt-1 text-xs text-slate-400">{copy.usageGuidance}</p>
             </div>
             <span className="rounded-md border border-slate-800 bg-[#0d1624] px-2.5 py-1 font-mono text-xs font-semibold tabular-nums text-slate-400">{BILLING_PLANS.length}</span>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 min-[1900px]:grid-cols-4">
             {BILLING_PLANS.map((plan) => {
               const isCurrent = hasActivePlan && plan.id === currentPlan.id;
               const isSalesLed = plan.salesLed;
@@ -214,10 +216,10 @@ export function BillingPageView({ locale, billing, canManageBilling, checkout, b
                   <div className="flex items-start justify-between gap-3 px-5 pt-5">
                     <div className="min-w-0">
                       <h3 className="text-base font-semibold text-slate-100">{plan.name}</h3>
-                      <p className="mt-1.5 text-sm leading-6 text-slate-500">{description}</p>
+                      <p className="mt-1.5 text-sm leading-6 text-slate-400">{description}</p>
                     </div>
                     {isCurrent ? <span className="shrink-0 rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-blue-300">{copy.current}</span> : null}
-                    {isSalesLed && !isCurrent ? <span className="shrink-0 rounded-md border border-slate-700 bg-slate-900/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">{copy.salesLed}</span> : null}
+                    {isSalesLed && !isCurrent ? <span className="shrink-0 rounded-md border border-slate-700 bg-slate-900/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-300">{copy.salesLed}</span> : null}
                   </div>
 
                   <p className="px-5 pt-4 text-2xl font-semibold tracking-[-0.035em] text-white">{formatPlanPrice(plan, copy)}</p>
