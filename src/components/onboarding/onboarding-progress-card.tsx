@@ -58,7 +58,7 @@ const compactCopy = {
   },
 };
 
-function getCompactCopy(locale?: string) {
+function getCompactCopy(_locale?: string) {
   return compactCopy.en;
 }
 
