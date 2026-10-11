@@ -136,7 +136,7 @@ function localizeHref(locale: Locale, href: string) {
 }
 
 function localizeFeatureLabel(locale: Locale, label: string) {
-  if (locale === 'pt') {
+  if (false) {
     return label
       .replace(/^Workflows de governança$/i, 'Fluxos de governação')
       .replace(/^Documentação de compliance$/i, 'Documentação de conformidade');
