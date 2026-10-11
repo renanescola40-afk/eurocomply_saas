@@ -299,9 +299,7 @@ export default function GapAnalysisPage() {
       });
 
       if (!assessmentResult.ok) {
-        setSaveMessage(false
-          ? 'Não foi possível salvar a avaliação. O relatório não foi gerado.'
-          : 'The assessment could not be saved. The report was not generated.');
+        setSaveMessage('The assessment could not be saved. The report was not generated.');
         return;
       }
 
@@ -315,11 +313,9 @@ export default function GapAnalysisPage() {
       });
 
       await downloadPdfReport(assessmentResult.assessmentId);
-      setSaveMessage(false ? 'Relatório PDF gerado com sucesso.' : 'PDF report generated successfully.');
+      setSaveMessage('PDF report generated successfully.');
     } catch {
-      setSaveMessage(false
-        ? 'Não foi possível gerar o relatório PDF. Tente novamente.'
-        : 'The PDF report could not be generated. Please try again.');
+      setSaveMessage('The PDF report could not be generated. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -338,7 +334,7 @@ export default function GapAnalysisPage() {
             <h1 className="max-w-3xl text-3xl font-semibold tracking-tight md:text-4xl">{t.title}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48 md:text-base">{t.subtitle}</p>
           </div>
-          <div className="min-w-[220px] rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+          <div className="w-full min-w-0 rounded-xl border border-white/[0.08] bg-white/[0.025] p-4 sm:min-w-[220px] lg:w-auto">
             <div className="flex items-center justify-between gap-3">
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">{t.score}</span>
               <Badge className={`border ${status.tone}`}><StatusIcon className="mr-1 h-3.5 w-3.5" />{status.label}</Badge>
