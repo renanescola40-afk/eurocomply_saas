@@ -96,7 +96,7 @@ export function WaitlistCountdown({ copy, launchTargetIso }: { copy: WaitlistInt
   );
 }
 
-export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLocale: Locale; copy: WaitlistInteractionCopy; commercialEmail: string }) {
+export function WaitlistForm({ copy, commercialEmail }: { activeLocale: Locale; copy: WaitlistInteractionCopy; commercialEmail: string }) {
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
@@ -120,7 +120,7 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
       const response = await fetch('/api/prelaunch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName, email, role, website, locale: activeLocale, consentToContact }),
+        body: JSON.stringify({ companyName, email, role, website, locale: 'en', consentToContact }),
       });
       const payload = (await response.json().catch(() => null)) as WaitlistApiResponse | null;
 
@@ -134,7 +134,7 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
         signal: payload?.emailed,
         successMessage: copy.form.success,
         confirmedMessage: copy.form.emailSuccess,
-        warningMessage: emailWarningMessage(activeLocale, payload, commercialEmail),
+        warningMessage: emailWarningMessage('en', payload, commercialEmail),
       });
 
       setMessage(feedback.message);
@@ -191,7 +191,7 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
             onChange={(event) => setConsentToContact(event.target.checked)}
             className="mt-1 h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-950 text-blue-600 accent-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1522]"
           />
-          <span>{consentLabels[activeLocale]}</span>
+          <span>{consentLabels.en}</span>
         </label>
       </div>
 
