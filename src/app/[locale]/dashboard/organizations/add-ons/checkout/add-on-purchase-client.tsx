@@ -34,67 +34,19 @@ type Props = {
   quantity: number;
 };
 
-function copy(locale: string) {
-  switch (locale) {
-    case 'pt':
-      return {
-        before: 'Confirme para criar a cobrança do add-on na sua subscrição atual. Nenhum acesso é liberado antes do pagamento.',
-        confirm: 'Confirmar e continuar para pagamento',
-        opening: 'A preparar pagamento seguro…',
-        payStripe: 'Pagar com Stripe',
-        waiting: 'Pagamento em processamento. O acesso só será ativado após confirmação do Stripe.',
-        confirmed: 'Pagamento confirmado. Add-on ativo.',
-        back: 'Voltar para Integrações',
-        retry: 'Tentar novamente',
-        failed: 'O pagamento não foi concluído. Nenhum acesso foi ativado.',
-        stripeWindow: 'Conclua o pagamento na página segura do Stripe. Esta página acompanhará a ativação automaticamente.',
-      };
-    case 'es':
-      return {
-        before: 'Confirma para crear el cargo del add-on en tu suscripción actual. No se activa ningún acceso antes del pago.',
-        confirm: 'Confirmar y continuar al pago', opening: 'Preparando pago seguro…', payStripe: 'Pagar con Stripe',
-        waiting: 'Pago en proceso. El acceso solo se activará tras la confirmación de Stripe.',
-        confirmed: 'Pago confirmado. Add-on activo.', back: 'Volver a Integraciones', retry: 'Reintentar',
-        failed: 'El pago no se completó. No se ha activado ningún acceso.',
-        stripeWindow: 'Completa el pago en la página segura de Stripe. Esta página seguirá la activación automáticamente.',
-      };
-    case 'fr':
-      return {
-        before: 'Confirmez pour créer la facturation de l’add-on sur votre abonnement actuel. Aucun accès n’est activé avant paiement.',
-        confirm: 'Confirmer et continuer vers le paiement', opening: 'Préparation du paiement sécurisé…', payStripe: 'Payer avec Stripe',
-        waiting: 'Paiement en cours. L’accès ne sera activé qu’après confirmation par Stripe.',
-        confirmed: 'Paiement confirmé. Add-on actif.', back: 'Retour aux Intégrations', retry: 'Réessayer',
-        failed: 'Le paiement n’a pas abouti. Aucun accès n’a été activé.',
-        stripeWindow: 'Terminez le paiement sur la page Stripe sécurisée. Cette page suivra automatiquement l’activation.',
-      };
-    case 'it':
-      return {
-        before: 'Conferma per creare l’addebito dell’add-on sull’abbonamento attuale. Nessun accesso viene attivato prima del pagamento.',
-        confirm: 'Conferma e continua al pagamento', opening: 'Preparazione del pagamento sicuro…', payStripe: 'Paga con Stripe',
-        waiting: 'Pagamento in elaborazione. L’accesso sarà attivato solo dopo la conferma di Stripe.',
-        confirmed: 'Pagamento confermato. Add-on attivo.', back: 'Torna a Integrazioni', retry: 'Riprova',
-        failed: 'Il pagamento non è stato completato. Nessun accesso è stato attivato.',
-        stripeWindow: 'Completa il pagamento sulla pagina Stripe sicura. Questa pagina monitorerà automaticamente l’attivazione.',
-      };
-    case 'de':
-      return {
-        before: 'Bestätigen Sie, um die Add-on-Abrechnung für Ihr bestehendes Abonnement zu erstellen. Vor Zahlung wird kein Zugriff aktiviert.',
-        confirm: 'Bestätigen und zur Zahlung fortfahren', opening: 'Sichere Zahlung wird vorbereitet…', payStripe: 'Mit Stripe bezahlen',
-        waiting: 'Zahlung wird verarbeitet. Zugriff wird erst nach Stripe-Bestätigung aktiviert.',
-        confirmed: 'Zahlung bestätigt. Add-on aktiv.', back: 'Zurück zu Integrationen', retry: 'Erneut versuchen',
-        failed: 'Die Zahlung wurde nicht abgeschlossen. Es wurde kein Zugriff aktiviert.',
-        stripeWindow: 'Schließen Sie die Zahlung auf der sicheren Stripe-Seite ab. Diese Seite verfolgt die Aktivierung automatisch.',
-      };
-    default:
-      return {
-        before: 'Confirm to create the add-on charge on your existing subscription. No access is activated before payment.',
-        confirm: 'Confirm and continue to payment', opening: 'Preparing secure payment…', payStripe: 'Pay with Stripe',
-        waiting: 'Payment is processing. Access activates only after Stripe confirms payment.',
-        confirmed: 'Payment confirmed. Add-on active.', back: 'Back to Integrations', retry: 'Try again',
-        failed: 'Payment was not completed. No access has been activated.',
-        stripeWindow: 'Complete payment on Stripe’s secure page. This page will automatically track activation.',
-      };
-  }
+function copy(_locale: string) {
+  return {
+    before: 'Confirm to create the add-on charge on your existing subscription. No access is activated before payment.',
+    confirm: 'Confirm and continue to payment',
+    opening: 'Preparing secure payment…',
+    payStripe: 'Pay with Stripe',
+    waiting: 'Payment is processing. Access activates only after Stripe confirms payment.',
+    confirmed: 'Payment confirmed. Add-on active.',
+    back: 'Back to Integrations',
+    retry: 'Try again',
+    failed: 'Payment was not completed. No access has been activated.',
+    stripeWindow: 'Complete payment on Stripe’s secure page. This page will automatically track activation.',
+  };
 }
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -201,7 +153,7 @@ export function AddOnPurchaseClient({ locale, addOnSlug, addOnName, quantity }: 
 
   if (active) {
     return (
-      <section className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5" role="status" aria-live="polite">
+      <section className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5" role="status" aria-live="polite">
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-300" aria-hidden="true" />
           <div>
@@ -217,7 +169,7 @@ export function AddOnPurchaseClient({ locale, addOnSlug, addOnName, quantity }: 
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-white/[0.08] bg-[#101715] p-5">
+    <section className="space-y-4 rounded-xl border border-white/[0.08] bg-[#101715] p-5">
       <div className="flex items-start gap-3 text-sm text-white/55">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
         <p>{processing ? (hostedInvoiceUrl ? text.stripeWindow : text.waiting) : text.before}</p>
