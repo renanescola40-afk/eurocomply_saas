@@ -78,7 +78,7 @@ function safeLocale(locale: string): Locale {
 }
 
 export function BillingPlanIntentBanner({ locale, selectedPlan, canManageBilling, billingAuthority }: Props) {
-  const copy = copyByLocale[safeLocale(locale)];
+  const copy = copyByLocale.en;
   const requiresSales = selectedPlan.salesLed || billingAuthority === 'signed_contract';
 
   return (
