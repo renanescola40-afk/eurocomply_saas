@@ -38,6 +38,8 @@ describe('auth entry brand V2', () => {
     expect(source).toContain('getSalesLedHref(activeLocale, selectedPlan.id)');
     expect(source).toContain('BILLING_PLANS.map');
     expect(source).toContain('bg-[#07101a]');
+    expect(source).toContain('minLength={12}');
+    expect(source).toContain('(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{12,}');
   });
 
   it('uses the signup result session as the immediate continuation authority', () => {
@@ -45,5 +47,15 @@ describe('auth entry brand V2', () => {
 
     expect(auth).toContain('const { data, error } = await supabase.auth.signUp');
     expect(auth).toContain('session: data?.session ?? null');
+  });
+});
+
+describe('authenticated product commercial gate', () => {
+  it('fails closed before rendering paid product content for an unlicensed organization', () => {
+    const source = read('src/components/dashboard/authenticated-product-shell.tsx');
+
+    expect(source).toContain('getOrganizationBillingAuthority(organization.id)');
+    expect(source).toContain('if (!authority.licensed)');
+    expect(source).toContain('redirect(getPaymentRequiredPath(locale, organization.selected_plan))');
   });
 });
