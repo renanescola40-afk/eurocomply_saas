@@ -14,7 +14,7 @@ const fieldClassName =
   'h-12 w-full rounded-lg border border-slate-700 bg-slate-950/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-blue-400/60 focus-visible:ring-2 focus-visible:ring-blue-400/50';
 
 export function SalesContactForm({ locale, intent, plan }: SalesContactFormProps) {
-  const pt = locale === 'pt';
+  const pt = false;
   const [state, setState] = useState<SubmitState>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
 
