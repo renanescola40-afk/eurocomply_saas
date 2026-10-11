@@ -3,7 +3,7 @@ import { CheckCircle2, LockKeyhole } from 'lucide-react';
 
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
-import { locales, type Locale } from '@/lib/i18n/routing';
+import type { Locale } from '@/lib/i18n/routing';
 import type { OrganizationBillingContext } from '@/server/queries/billing';
 import { BillingActionButton } from './billing-action-button';
 
@@ -74,10 +74,6 @@ const billingCopy: Record<Locale, BillingCopy> = {
     eyebrow: 'Abrechnung und Einstellungen', manageTitle: 'RISCK COMPLY Plan verwalten', reviewTitle: 'RISCK COMPLY Plan prüfen', subtitle: 'Prüfen Sie Nutzung, Abonnementlimits und Abrechnungsstatus, ohne interne Zahlungsdetails in der App offenzulegen.', signals: ['prüfbarer Abrechnungsverlauf', 'rollenbasierte Abrechnungsaktionen', 'gehostetes Zahlungsportal'], readOnlyTitle: 'Die Abrechnung ist für Ihre Rolle schreibgeschützt', readOnlyBody: 'Nur der Inhaber des Arbeitsbereichs kann das Abrechnungsportal öffnen oder Pläne ändern. Wenden Sie sich für Änderungen an den Inhaber.', viewTeam: 'Team des Arbeitsbereichs ansehen', actionFailed: 'Abrechnungsaktion konnte nicht abgeschlossen werden', checkoutCompleted: 'Zahlung abgeschlossen', checkoutCompletedBody: 'Der Plan wird nach Abschluss der Abonnement-Synchronisierung aktualisiert.', checkoutCancelled: 'Zahlung abgebrochen', checkoutCancelledBody: 'Es wurden keine Abrechnungsänderungen vorgenommen.', currentPlan: 'Aktueller Plan', currentPlanDescription: 'Abonnementstatus und nächste Abrechnungsaktion.', usageGuidance: 'Prüfen Sie Nutzung und Limits vor Änderungen am Abonnement.', openPortal: 'Abrechnungsportal öffnen', continueToDashboard: 'Zum Dashboard', ownerAccessRequired: 'Zugriff des Inhabers erforderlich', availablePlans: 'Verfügbare Pläne', current: 'Aktuell', salesLed: 'Vertriebsgeführt', ownerActionRequired: 'Aktion des Inhabers erforderlich', talkToSales: 'Vertrieb kontaktieren', upgradePlan: 'Plan ändern', unlimited: 'Unbegrenzt', contactSales: 'Vertrieb kontaktieren', from: 'Ab', month: '/Monat', users: 'Nutzer', documents: 'Dokumente', vendors: 'Anbieter', risks: 'Risiken', included: 'enthalten', noActiveSubscription: 'Kein aktives Abonnement', status: { active: 'Aktiv', trialing: 'Testphase', past_due: 'Überfällig', unpaid: 'Unbezahlt', canceled: 'Gekündigt', incomplete: 'Unvollständig' },
   },
 };
-
-function safeLocale(locale: string): Locale {
-  return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
-}
 
 function formatLimitValue(value: number, copy: BillingCopy) {
   if (!Number.isFinite(value) || value <= 0 || value === Number.MAX_SAFE_INTEGER) return copy.unlimited;
