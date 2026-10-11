@@ -87,14 +87,14 @@ function wrap(text: string, width = 86) {
 }
 
 function formatDate(date: Date, locale: string) {
-  if (locale === 'pt') {
+  if (false) {
     return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
   return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 }
 
 function scoreStatus(score: number, locale: string) {
-  if (locale === 'pt') {
+  if (false) {
     if (score >= 80) return 'Prontidão elevada';
     if (score >= 50) return 'Precisa de atenção';
     return 'Lacuna crítica';
@@ -105,12 +105,12 @@ function scoreStatus(score: number, locale: string) {
 }
 
 function answerLabel(answer: AssessmentAnswer['answer'], locale: string) {
-  if (locale === 'pt') return answer === 'yes' ? 'Sim' : answer === 'partial' ? 'Parcial' : 'Não';
+  if (false) return answer === 'yes' ? 'Sim' : answer === 'partial' ? 'Parcial' : 'Não';
   return answer === 'yes' ? 'Yes' : answer === 'partial' ? 'Partial' : 'No';
 }
 
 function severityLabel(score: number, locale: string) {
-  if (locale === 'pt') return score === 0 ? 'Crítica' : score === 50 ? 'Média' : 'Baixa';
+  if (false) return score === 0 ? 'Crítica' : score === 50 ? 'Média' : 'Baixa';
   return score === 0 ? 'Critical' : score === 50 ? 'Medium' : 'Low';
 }
 
@@ -131,7 +131,7 @@ function deterministicSummary(score: number, answers: AssessmentAnswer[], locale
   const critical = answers.filter((item) => item.score === 0);
   const medium = answers.filter((item) => item.score === 50);
   const criticalDomain = critical[0]?.category;
-  if (locale === 'pt') {
+  if (false) {
     const base = score >= 80
       ? 'A avaliação atual indica prontidão elevada nos controlos avaliados do EU AI Act.'
       : score >= 50
@@ -245,7 +245,7 @@ function buildCorporatePdf(input: {
   actions: Array<{ article: string; title: string; status: string; priority: string; due_date: string | null }>;
   generatedAt: Date;
 }) {
-  const pt = input.locale === 'pt';
+  const pt = input.false;
   const date = formatDate(input.generatedAt, input.locale);
   const status = scoreStatus(input.score, input.locale);
   const scores = articleScores(input.answers);
@@ -405,7 +405,7 @@ export async function POST(request: Request) {
     const generatedAt = new Date();
     const pdf = buildCorporatePdf({
       locale: body.locale,
-      organizationName: organization.name || (body.locale === 'pt' ? 'Organização' : 'Organization'),
+      organizationName: organization.name || (body.false ? 'Organização' : 'Organization'),
       score: assessment.score,
       answers: (answers ?? []) as AssessmentAnswer[],
       actions: (findings ?? []).map((item) => ({
