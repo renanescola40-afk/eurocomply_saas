@@ -27,9 +27,9 @@ function text(value: unknown, fallback = '—') { return typeof value === 'strin
 export default function LegalAssuranceMatterPage() {
   const params = useParams();
   const router = useRouter();
-  const locale = ((params.locale as string) in copy ? params.locale : 'pt') as Locale;
+  const locale: Locale = 'en';
   const reviewId = String(params.reviewId ?? '');
-  const t = copy[locale];
+  const t = copy.en;
   const [payload, setPayload] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
