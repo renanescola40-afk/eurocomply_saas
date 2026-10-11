@@ -44,4 +44,10 @@ describe('English-only canonical customer surface', () => {
     expect(onboarding).toContain('const isPt = false;');
   });
 
+
+  it('uses English as the sole application dictionary', () => {
+    const appDictionary = read('src/lib/i18n/app-dictionary.ts');
+    expect(appDictionary).toContain('return dictionaries.en;');
+  });
+
 });
