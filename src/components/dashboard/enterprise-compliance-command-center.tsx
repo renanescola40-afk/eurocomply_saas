@@ -259,7 +259,7 @@ const safeSectionLabels = [
 ];
 
 function getCopy(locale: Locale) {
-  return locale === 'pt' ? portugueseCopy : englishCopy;
+  return englishCopy;
 }
 
 function formatCount(value: number | undefined | null) {
