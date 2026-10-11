@@ -122,8 +122,8 @@ export default function AuditPackPage() {
   const router = useRouter();
   const params = useParams();
   const { user } = useAuth();
-  const locale = ((params.locale as string) in copy ? params.locale : 'pt') as Locale;
-  const t = copy[locale];
+  const locale: Locale = 'en';
+  const t = copy.en;
   const [data, setData] = useState<AuditPackData | null>(null);
   const [loading, setLoading] = useState(false);
 
