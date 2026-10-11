@@ -35,7 +35,7 @@ function formatDateTime(value: string | null | undefined, locale: string, fallba
   if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return fallback;
-  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale, {
+  return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(date);
@@ -85,7 +85,7 @@ function getEnterpriseReadinessCopy(locale: string) {
     },
   } as const;
 
-  return locale === 'pt' ? copy.pt : copy.en;
+  return copy.en;
 }
 
 export const dynamic = 'force-dynamic';
