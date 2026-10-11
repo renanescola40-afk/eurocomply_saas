@@ -86,6 +86,31 @@ describe('English-only canonical customer surface', () => {
     expect(login).not.toContain("'Esqueceu a senha?'");
   });
 
+  it('keeps billing, add-ons and onboarding runtime selectors pinned to English', () => {
+    const addOns = read('src/app/[locale]/dashboard/organizations/add-ons/page.tsx');
+    const billingPage = read('src/app/[locale]/dashboard/organizations/billing/page.tsx');
+    const billingView = read('src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx');
+    const billingIntent = read('src/app/[locale]/dashboard/organizations/billing/billing-plan-intent-banner.tsx');
+    const billingAction = read('src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx');
+    const onboarding = read('src/app/[locale]/onboarding/page.tsx');
+    const onboardingBoundary = read('src/components/onboarding/onboarding-runtime-boundary.tsx');
+    const onboardingProgress = read('src/components/onboarding/onboarding-progress-card.tsx');
+
+    expect(addOns).toContain("getAddOnsCopy('en')");
+    expect(addOns).toContain("commerceCopy('en')");
+    expect(billingPage).toContain("getPublicBillingFailureMessage('en')");
+    expect(billingView).toContain("const activeLocale: Locale = 'en';");
+    expect(billingView).toContain('const copy = billingCopy.en;');
+    expect(billingIntent).toContain('const copy = copyByLocale.en;');
+    expect(billingAction).toContain("const copy = getStepUpCopy('en');");
+    expect(billingAction).toContain("const legalCopy = getLegalAcceptanceCopy('en');");
+    expect(billingAction).toContain("getPublicPaidGaUnavailableCopy('en')");
+    expect(onboarding).toContain("getPurchaseCopy('en')");
+    expect(onboarding).toContain("getCommercialSurfaceCopy('en').pricing");
+    expect(onboardingBoundary).toContain('const isPt = false;');
+    expect(onboardingProgress).toContain('return compactCopy.en;');
+  });
+
   it('uses English as the sole application dictionary', () => {
     const appDictionary = read('src/lib/i18n/app-dictionary.ts');
     expect(appDictionary).toContain('return dictionaries.en;');
