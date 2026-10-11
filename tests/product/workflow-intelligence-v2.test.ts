@@ -13,9 +13,9 @@ describe('workflow and intelligence surfaces V2', () => {
     expect(source).toContain('hover:border-blue-300/25');
     expect(source).toContain("fetch(`/api/documents/${encodeURIComponent(id)}/approval`");
     expect(source).toContain("method: 'POST'");
-    expect(source).toContain("const action = status === 'Aprovado' ? 'approve' : 'reject'");
-    expect(source).toContain('workflow demo seguro');
-    expect(source).toContain("status === 'Aprovado'");
+    expect(source).toContain("const action = status === 'Approved' ? 'approve' : 'reject'");
+    expect(source).toContain('safe demo workflow');
+    expect(source).toContain("status === 'Approved'");
     expect(source).toContain('border-emerald-300/15');
     expect(source).toContain('border-rose-300/15');
     expect(source).toContain('border-amber-300/15');
