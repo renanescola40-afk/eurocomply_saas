@@ -33,8 +33,10 @@ describe('AI reassessment localization', () => {
     }
   });
 
-  it('falls back to English only for unknown locales', () => {
-    expect(getAiSystemEditCopy('fr')).toBe(aiSystemEditCopy.fr);
+  it('always serves English runtime copy for supported and unknown locales', () => {
+    for (const locale of aiSystemEditLocales) {
+      expect(getAiSystemEditCopy(locale)).toBe(aiSystemEditCopy.en);
+    }
     expect(getAiSystemEditCopy('unknown')).toBe(aiSystemEditCopy.en);
     expect(getAiSystemEditCopy()).toBe(aiSystemEditCopy.en);
   });
