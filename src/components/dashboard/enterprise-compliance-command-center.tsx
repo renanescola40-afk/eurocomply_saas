@@ -258,7 +258,7 @@ const safeSectionLabels = [
   'Plan limits',
 ];
 
-function getCopy(locale: Locale) {
+function getCopy(_locale: Locale) {
   return englishCopy;
 }
 
