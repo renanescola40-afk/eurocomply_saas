@@ -159,24 +159,11 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
   },
 };
 
-const ptLabels: Partial<Record<string, Pick<TrustPage, 'navLabel' | 'title' | 'subtitle'>>> = {
-  trust: { navLabel: 'Centro de Confianca', title: 'Centro de Confianca', subtitle: 'Informacao publica para revisao de seguranca, privacidade, disponibilidade e disclosure responsavel.' },
-  security: { navLabel: 'Seguranca', title: 'Seguranca', subtitle: 'Controlos de aplicacao e infraestrutura para proteger workspaces e apoiar security review.' },
-  privacy: { navLabel: 'Privacidade', title: 'Aviso de Privacidade', subtitle: 'Como a RISCK COMPLY descreve o tratamento de dados pessoais para utilizadores e clientes.' },
-  terms: { navLabel: 'Termos', title: 'Termos de Servico', subtitle: 'Termos publicos base para utilizacao da RISCK COMPLY.' },
-  dpa: { navLabel: 'DPA', title: 'Data Processing Addendum', subtitle: 'Resumo de compromissos esperados de tratamento de dados para clientes enterprise.' },
-  subprocessors: { navLabel: 'Subprocessadores', title: 'Subprocessadores', subtitle: 'Fornecedores usados para entregar, proteger, hospedar, faturar e operar o servico.' },
-  sla: { navLabel: 'SLA', title: 'Compromissos de Servico', subtitle: 'Linguagem honesta sobre disponibilidade e suporte, sem prometer 24/7 sem equipa dedicada.' },
-  status: { navLabel: 'Estado', title: 'Estado do Sistema', subtitle: 'Superficie publica para disponibilidade e comunicacao verificada de incidentes.' },
-  'data-processing': { navLabel: 'Tratamento de Dados', title: 'Tratamento de Dados', subtitle: 'Visao operacional dos dados tratados e como devem ser controlados.' },
-  [disclosureSlug]: { navLabel: 'Disclosure de Vulnerabilidades', title: 'Disclosure de Vulnerabilidades', subtitle: 'Como clientes e reviewers de seguranca podem reportar problemas com seguranca.' },
-};
-
-export function getTrustCenterPage(slug: string, locale: Locale): TrustPage {
+export function getTrustCenterPage(slug: string, _locale: Locale): TrustPage {
   const base = pageCopy[slug] ?? pageCopy.trust;
   return { slug, updated, ...base };
 }
 
-export function getTrustCenterPages(locale: Locale): TrustPage[] {
-  return TRUST_CENTER_ROUTES.map((slug) => getTrustCenterPage(slug, locale));
+export function getTrustCenterPages(_locale: Locale): TrustPage[] {
+  return TRUST_CENTER_ROUTES.map((slug) => getTrustCenterPage(slug, 'en'));
 }
