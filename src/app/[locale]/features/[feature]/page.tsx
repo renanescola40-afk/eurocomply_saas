@@ -74,7 +74,7 @@ export default async function FeaturePage({ params }: PageProps) {
 
   if (!page || requestedLocale !== locale) notFound();
 
-  const ui = pageUi[locale];
+  const ui = pageUi.en;
   const siteUrl = getSiteUrl();
   const canonicalUrl = `${siteUrl}${getFeaturePath(locale, page.key)}`;
   const structuredData = {
