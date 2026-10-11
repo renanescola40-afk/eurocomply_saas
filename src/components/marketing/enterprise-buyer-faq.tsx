@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
 export function EnterpriseBuyerFaq({ locale }: { locale: string }) {
-  const pt = locale === 'pt';
+  const pt = false;
   const questions = pt ? [
     { q: 'O que posso organizar na RISCK COMPLY?', a: 'A plataforma reúne inventário de sistemas de IA, avaliações estruturadas, responsáveis, ações e documentação de suporte em workspaces de governança.' },
     { q: 'A plataforma garante conformidade com o EU AI Act?', a: 'Não. A RISCK COMPLY apoia processos de governança e preparação de evidências. As obrigações e decisões jurídicas dependem do contexto de cada organização e devem ser avaliadas por profissionais competentes.' },
