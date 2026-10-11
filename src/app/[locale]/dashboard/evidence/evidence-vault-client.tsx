@@ -60,8 +60,8 @@ export default function EvidenceVaultClient({ canonicalOrganizationId }: { canon
   const params = useParams();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const locale = ((params.locale as string) in copy ? params.locale : 'pt') as Locale;
-  const t = copy[locale];
+  const locale: Locale = 'en';
+  const t = copy.en;
   const requestedOrganizationId = searchParams.get('organizationId') || canonicalOrganizationId;
 
   const [items, setItems] = useState<EvidenceItem[]>([]);
