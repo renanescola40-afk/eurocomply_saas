@@ -111,9 +111,9 @@ function ReadOnlyBillingNotice({ locale, copy }: { locale: string; copy: Billing
 }
 
 export function BillingPageView({ locale, billing, canManageBilling, checkout, billingError }: BillingPageViewProps) {
-  const activeLocale = safeLocale(locale);
-  const copy = billingCopy[activeLocale];
-  const pricingCopy = getCommercialSurfaceCopy(activeLocale).pricing;
+  const activeLocale: Locale = 'en';
+  const copy = billingCopy.en;
+  const pricingCopy = getCommercialSurfaceCopy('en').pricing;
   const currentPlan = getBillingPlan(billing.plan) ?? BILLING_PLANS[0];
   const hasActivePlan = billing.status === 'active' || billing.status === 'trialing';
   const stripeManaged = billing.authority === 'stripe_live';
