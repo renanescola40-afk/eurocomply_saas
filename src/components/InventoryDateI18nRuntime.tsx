@@ -59,12 +59,10 @@ function replaceInventoryDates(root: ParentNode, locale: Locale) {
 
 export default function InventoryDateI18nRuntime() {
   const pathname = usePathname();
-  const params = useParams();
-  const locale = ((params.locale as Locale) || 'en') as Locale;
+  const locale: Locale = 'en';
 
   useEffect(() => {
     if (!pathname.includes('/dashboard/inventario')) return;
-    if (locale === 'pt') return;
 
     const apply = () => replaceInventoryDates(document.body, locale);
     apply();
