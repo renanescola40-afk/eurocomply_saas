@@ -66,25 +66,25 @@ export default async function OrganizationSettingsPage({ params }: { params: Pro
           </header>
 
           <section className="grid gap-4 sm:grid-cols-3" aria-label={text.identity}>
-            <article className="rounded-2xl border border-white/[0.075] bg-[#0d1522] p-5">
+            <article className="rounded-xl border border-white/[0.075] bg-[#0d1522] p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/32">{text.name}</p>
               <p className="mt-2 truncate text-lg font-semibold text-white/88">{organization.name}</p>
             </article>
-            <article className="rounded-2xl border border-white/[0.075] bg-[#0d1522] p-5">
+            <article className="rounded-xl border border-white/[0.075] bg-[#0d1522] p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/32">{text.slug}</p>
               <p className="mt-2 truncate font-mono text-sm font-semibold text-blue-100/80">{organization.slug ?? '—'}</p>
             </article>
-            <article className="rounded-2xl border border-white/[0.075] bg-[#0d1522] p-5">
+            <article className="rounded-xl border border-white/[0.075] bg-[#0d1522] p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/32">{text.role}</p>
               <p className="mt-2 text-lg font-semibold capitalize text-white/88">{organization.role}</p>
             </article>
           </section>
 
           {!canManageSettings ? (
-            <p className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.045] p-4 text-sm leading-6 text-amber-50/72" role="status">{text.readonly}</p>
+            <p className="rounded-xl border border-amber-300/15 bg-amber-300/[0.045] p-4 text-sm leading-6 text-amber-50/72" role="status">{text.readonly}</p>
           ) : null}
 
-          <section className="overflow-hidden rounded-2xl border border-white/[0.075] bg-[#0d1522]" aria-labelledby="organization-admin-title">
+          <section className="overflow-hidden rounded-xl border border-white/[0.075] bg-[#0d1522]" aria-labelledby="organization-admin-title">
             <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10 text-blue-300">
                 <Building2 className="h-4 w-4" aria-hidden="true" />
