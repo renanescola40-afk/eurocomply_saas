@@ -245,7 +245,7 @@ function buildCorporatePdf(input: {
   actions: Array<{ article: string; title: string; status: string; priority: string; due_date: string | null }>;
   generatedAt: Date;
 }) {
-  const pt = input.false;
+  const pt = false;
   const date = formatDate(input.generatedAt, input.locale);
   const status = scoreStatus(input.score, input.locale);
   const scores = articleScores(input.answers);
@@ -405,7 +405,7 @@ export async function POST(request: Request) {
     const generatedAt = new Date();
     const pdf = buildCorporatePdf({
       locale: body.locale,
-      organizationName: organization.name || (body.false ? 'Organização' : 'Organization'),
+      organizationName: organization.name || ('Organization'),
       score: assessment.score,
       answers: (answers ?? []) as AssessmentAnswer[],
       actions: (findings ?? []).map((item) => ({
