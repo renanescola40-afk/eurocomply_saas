@@ -54,7 +54,7 @@ describe('public paid GA checkout gate', () => {
 
   it('surfaces the paid-GA denial as an accurate canonical English commercial availability state', () => {
     expect(billingActionButton).toContain("const PUBLIC_PAID_GA_ERROR_CODE = 'public_paid_ga_not_enabled'");
-    expect(billingActionButton).toContain('setPaidGaUnavailable(getPublicPaidGaUnavailableCopy('en'))');
+    expect(billingActionButton).toContain("setPaidGaUnavailable(getPublicPaidGaUnavailableCopy('en'))");
     expect(billingActionButton).toContain('role="status"');
     expect(billingActionButton).toContain('New self-serve subscriptions are not available yet. Contact our sales team to continue.');
     expect(billingActionButton).toContain('As novas subscrições self-service ainda não estão disponíveis.');
