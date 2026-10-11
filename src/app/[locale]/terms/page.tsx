@@ -302,8 +302,8 @@ const copy: Partial<Record<Locale, TermsCopy>> = { en, pt };
 export default async function TermsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
   const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
-  const contentLocale: Locale = copy[locale] ? locale : 'en';
-  const page = copy[contentLocale] ?? en;
+  const contentLocale: Locale = 'en';
+  const page = en;
 
   return (
     <PublicLegalReviewPage
