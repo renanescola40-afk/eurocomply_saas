@@ -220,7 +220,7 @@ function buildActions(summary: DashboardSummary, basePath: string, t: Copy, work
   return actions.slice(0, 4);
 }
 
-export function NextBestActions({ summary, basePath, workflowReadiness, locale = 'en' }: NextBestActionsProps) {
+export function NextBestActions({ summary, basePath, workflowReadiness, locale: _locale = 'en' }: NextBestActionsProps) {
   const t = copy.en;
   const actions = buildActions(summary, basePath, t, workflowReadiness);
 
