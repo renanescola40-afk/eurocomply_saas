@@ -173,7 +173,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
     searchParams ?? Promise.resolve(emptySearchParams),
   ]);
   const safeLocale = getSafeLocale(locale);
-  const pricingCopy = getCommercialSurfaceCopy(safeLocale).pricing;
+  const pricingCopy = getCommercialSurfaceCopy('en').pricing;
   const planQuery = getPlanQuery(resolvedSearchParams.plan);
   const requestedPlan = getOnboardingPlanIntent(resolvedSearchParams.plan);
   const requestedBillingPlan = getBillingPlan(resolvedSearchParams.plan) ?? getBillingPlan('professional')!;
@@ -196,7 +196,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
   }
 
   if (!organization) {
-    const copy = getPurchaseCopy(safeLocale);
+    const copy = getPurchaseCopy('en');
 
     async function createPurchaseContext(formData: FormData) {
       'use server';
