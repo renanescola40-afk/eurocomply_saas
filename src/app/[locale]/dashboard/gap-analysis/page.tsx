@@ -163,7 +163,7 @@ export default function GapAnalysisPage() {
   const router = useRouter();
   const { user } = useAuth();
   const locale = locales.includes(params.locale as Locale) ? (params.locale as Locale) : 'en';
-  const t = copy[locale];
+  const t = copy.en;
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -214,7 +214,7 @@ export default function GapAnalysisPage() {
       .filter((q) => answers[q.id] === 'no' || answers[q.id] === 'partial')
       .map((q) => ({
         article: q.article,
-        recommendation: q.recommendation[locale],
+        recommendation: q.recommendation.en,
         severity: answers[q.id] === 'no' ? 'critical' as const : 'medium' as const,
       }));
     const persistedAnswers = questions
@@ -224,14 +224,14 @@ export default function GapAnalysisPage() {
         return {
           question_id: q.id,
           article: q.article,
-          category: q.category[locale],
+          category: q.category.en,
           answer,
           score: answerScore(answer) as 0 | 50 | 100,
-          recommendation: q.recommendation[locale],
+          recommendation: q.recommendation.en,
         };
       });
     return { completed, total, score, byArticle, actions, persistedAnswers };
-  }, [answers, locale]);
+  }, [answers]);
 
   const status = statusForScore(result.score, t);
   const StatusIcon = status.icon;
@@ -299,7 +299,7 @@ export default function GapAnalysisPage() {
       });
 
       if (!assessmentResult.ok) {
-        setSaveMessage(locale === 'pt'
+        setSaveMessage(false
           ? 'Não foi possível salvar a avaliação. O relatório não foi gerado.'
           : 'The assessment could not be saved. The report was not generated.');
         return;
@@ -315,9 +315,9 @@ export default function GapAnalysisPage() {
       });
 
       await downloadPdfReport(assessmentResult.assessmentId);
-      setSaveMessage(locale === 'pt' ? 'Relatório PDF gerado com sucesso.' : 'PDF report generated successfully.');
+      setSaveMessage(false ? 'Relatório PDF gerado com sucesso.' : 'PDF report generated successfully.');
     } catch {
-      setSaveMessage(locale === 'pt'
+      setSaveMessage(false
         ? 'Não foi possível gerar o relatório PDF. Tente novamente.'
         : 'The PDF report could not be generated. Please try again.');
     } finally {
@@ -363,9 +363,9 @@ export default function GapAnalysisPage() {
               <div key={q.id} className="p-5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="rounded-lg border-emerald-300/15 bg-emerald-300/[0.06] text-emerald-200">{q.article}</Badge>
-                  <span className="text-xs text-white/35">{q.category[locale]}</span>
+                  <span className="text-xs text-white/35">{q.category.en}</span>
                 </div>
-                <h2 className="mt-3 text-base font-medium leading-6 text-white/82">{q.text[locale]}</h2>
+                <h2 className="mt-3 text-base font-medium leading-6 text-white/82">{q.text.en}</h2>
                 <div className="mt-4 grid gap-2 sm:grid-cols-3">
                   {(['yes', 'partial', 'no'] as Answer[]).filter(Boolean).map((answer) => (
                     <button

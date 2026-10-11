@@ -80,8 +80,8 @@ export default function GapAnalysisPdfPage() {
   const router = useRouter();
   const { user } = useAuth();
   const locale = locales.includes(params.locale as Locale) ? (params.locale as Locale) : 'en';
-  const t = copy[locale];
-  const reportT = reportCopy[locale];
+  const t = copy.en;
+  const reportT = reportCopy.en;
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -99,15 +99,15 @@ export default function GapAnalysisPdfPage() {
     }, {});
     const actions = questions
       .filter((q) => answers[q.id] === 'no' || answers[q.id] === 'partial')
-      .map((q) => ({ article: q.article, recommendation: q.recommendation[locale], severity: answers[q.id] === 'no' ? 'critical' as const : 'medium' as const }));
+      .map((q) => ({ article: q.article, recommendation: q.recommendation.en, severity: answers[q.id] === 'no' ? 'critical' as const : 'medium' as const }));
     const persistedAnswers = questions
       .filter((q) => answers[q.id] === 'yes' || answers[q.id] === 'partial' || answers[q.id] === 'no')
       .map((q) => {
         const answer = answers[q.id] as 'yes' | 'partial' | 'no';
-        return { question_id: q.id, article: q.article, category: q.category[locale], answer, score: answerScore(answer) as 0 | 50 | 100, recommendation: q.recommendation[locale] };
+        return { question_id: q.id, article: q.article, category: q.category.en, answer, score: answerScore(answer) as 0 | 50 | 100, recommendation: q.recommendation.en };
       });
     return { completed, total, score, byArticle, actions, persistedAnswers };
-  }, [answers, locale]);
+  }, [answers]);
 
   const status = statusForScore(result.score, t);
   const StatusIcon = status.icon;
@@ -133,7 +133,7 @@ export default function GapAnalysisPdfPage() {
       articleBreakdown: Object.entries(result.byArticle).map(([article, item]) => ({ article, score: item.total })),
       answers: questions.map((q) => {
         const answer = answers[q.id] || '';
-        return { article: q.article, category: q.category[locale], question: q.text[locale], answer: answerLabels[answer], score: answerScore(answer), recommendation: q.recommendation[locale] };
+        return { article: q.article, category: q.category.en, question: q.text.en, answer: answerLabels[answer], score: answerScore(answer), recommendation: q.recommendation.en };
       }),
       actions: result.actions,
       labels: { title: t.badge, subtitle: t.subtitle, score: t.score, status: reportT.status, generatedBy: reportT.generatedBy, generatedAt: reportT.generatedAt, company: reportT.company, organization: reportT.organization, questions: t.questions, articleBreakdown: t.articleBreakdown, actionPlan: t.actionPlan, noActions: t.noActions, questionnaire: reportT.questionnaire, answer: reportT.answer, recommendation: reportT.recommendation, severity: reportT.severity, critical: t.critical, medium: reportT.medium, executiveSummary: reportT.executiveSummary, scope: reportT.scope },
@@ -188,7 +188,7 @@ export default function GapAnalysisPdfPage() {
           <section className="space-y-4">
             {questions.map((q) => (
               <Card key={q.id} className="border-white/10 bg-white/[0.045] text-white">
-                <CardHeader><div className="flex flex-wrap items-center gap-2"><Badge className="border-blue-400/20 bg-blue-500/10 text-blue-200">{q.article}</Badge><span className="text-sm text-white/48">{q.category[locale]}</span></div><CardTitle className="text-xl">{q.text[locale]}</CardTitle></CardHeader>
+                <CardHeader><div className="flex flex-wrap items-center gap-2"><Badge className="border-blue-400/20 bg-blue-500/10 text-blue-200">{q.article}</Badge><span className="text-sm text-white/48">{q.category.en}</span></div><CardTitle className="text-xl">{q.text.en}</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {(['yes', 'partial', 'no'] as Answer[]).filter(Boolean).map((answer) => (

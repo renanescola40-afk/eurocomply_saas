@@ -45,7 +45,7 @@ const editCopy: Record<Locale, { edit: string; save: string; saving: string; can
 
 function formatDueDate(value: string | null | undefined, locale: string, noDueDate: string, invalidDueDate: string) {
   if (!value) return noDueDate;
-  return formatCalendarDate(value, locale === 'pt' ? 'pt-PT' : locale, {
+  return formatCalendarDate(value, 'en', {
     month: 'short', day: 'numeric', year: 'numeric',
   }) ?? invalidDueDate;
 }
@@ -72,7 +72,7 @@ function TaskRows({ locale, task, onDelete, onComplete, onEdit }: {
 }) {
   const copy = getCoreWorkflowCopy(locale).tasks;
   const safeLocale = locales.includes(locale as Locale) ? (locale as Locale) : 'en';
-  const actionCopy = editCopy[safeLocale];
+  const actionCopy = editCopy.en;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

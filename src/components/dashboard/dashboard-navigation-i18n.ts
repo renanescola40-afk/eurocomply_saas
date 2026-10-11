@@ -136,39 +136,39 @@ const addOnsCopy: Record<string, { label: string; description: string }> = {
 };
 
 function getAiGovernanceCopy(locale: string) {
-  return aiGovernanceCopy[locale] ?? aiGovernanceCopy.en;
+  return aiGovernanceCopy.en;
 }
 
 function getRolesCopy(locale: string) {
-  return rolesCopy[locale] ?? rolesCopy.en;
+  return rolesCopy.en;
 }
 
 function getReadinessCopy(locale: string) {
-  return readinessCopy[locale] ?? readinessCopy.en;
+  return readinessCopy.en;
 }
 
 function getRetentionCopy(locale: string) {
-  return retentionCopy[locale] ?? retentionCopy.en;
+  return retentionCopy.en;
 }
 
 function getContinuityCopy(locale: string) {
-  return continuityCopy[locale] ?? continuityCopy.en;
+  return continuityCopy.en;
 }
 
 function getVendorAssuranceCopy(locale: string) {
-  return vendorAssuranceCopy[locale] ?? vendorAssuranceCopy.en;
+  return vendorAssuranceCopy.en;
 }
 
 function getQuestionnaireCopy(locale: string) {
-  return questionnaireCopy[locale] ?? questionnaireCopy.en;
+  return questionnaireCopy.en;
 }
 
 function getEvidencePackCopy(locale: string) {
-  return evidencePackCopy[locale] ?? evidencePackCopy.en;
+  return evidencePackCopy.en;
 }
 
 function getAddOnsCopy(locale: string) {
-  return addOnsCopy[locale] ?? addOnsCopy.en;
+  return addOnsCopy.en;
 }
 
 export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuItem[] {

@@ -125,5 +125,5 @@ export const aiSystemEditCopy = {
 } satisfies Record<AiSystemEditLocale, AiSystemEditCopy>;
 
 export function getAiSystemEditCopy(locale?: string): AiSystemEditCopy {
-  return aiSystemEditCopy[aiSystemEditLocales.includes(locale as AiSystemEditLocale) ? locale as AiSystemEditLocale : 'en'];
+  return aiSystemEditCopy.en;
 }

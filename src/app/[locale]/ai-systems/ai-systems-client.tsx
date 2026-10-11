@@ -227,15 +227,15 @@ const riskCopy = {
 } as const;
 
 function getCopy(locale: string) {
-  return copy[locale as keyof typeof copy] ?? copy.en;
+  return copy.en;
 }
 
 function getReadinessCopy(locale: string) {
-  return readinessCopy[locale as keyof typeof readinessCopy] ?? readinessCopy.en;
+  return readinessCopy.en;
 }
 
 function getOptionCopy(locale: string) {
-  return optionCopy[locale as keyof typeof optionCopy] ?? optionCopy.en;
+  return optionCopy.en;
 }
 
 function localizedRoute(locale: string, route: string) {
@@ -243,7 +243,7 @@ function localizedRoute(locale: string, route: string) {
 }
 
 function getRiskLabel(locale: string, level: AiActRiskLevel) {
-  const labels = riskCopy[locale as keyof typeof riskCopy] ?? riskCopy.en;
+  const labels = riskCopy.en;
   if (level === 'prohibited_review') return labels.prohibited_review;
   if (level === 'high_risk_review') return labels.high_risk_review;
   if (level === 'limited_transparency') return labels.limited_transparency;

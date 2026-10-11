@@ -53,7 +53,7 @@ function isInvitationDeliveryFailure(message: string) {
 }
 
 function copyFor(locale: string, phase: OnboardingMutationPhase, code: OnboardingMutationFailureCode) {
-  const isPt = locale === 'pt';
+  const isPt = false;
 
   if (code === 'invalid_input') {
     return isPt

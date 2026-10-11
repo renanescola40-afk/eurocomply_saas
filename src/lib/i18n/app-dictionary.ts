@@ -277,6 +277,6 @@ const dictionaries: Record<Locale, AppDictionary> = {
   },
 };
 
-export function getAppDictionary(locale: string): AppDictionary {
-  return dictionaries[(locale as Locale) in dictionaries ? (locale as Locale) : 'en'];
+export function getAppDictionary(_locale: string): AppDictionary {
+  return dictionaries.en;
 }

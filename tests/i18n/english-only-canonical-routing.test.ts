@@ -32,4 +32,22 @@ describe('English-only canonical customer surface', () => {
     expect(read('src/app/[locale]/login/page.tsx')).toContain('recover-password');
     expect(read('src/app/[locale]/recover-password/page.tsx')).toContain("export { default } from '../recuperar-senha/page';");
   });
+  it('makes English the sole normalized runtime locale', () => {
+    const locales = read('src/lib/i18n/locales.ts');
+    expect(locales).toContain("return 'en';");
+  });
+
+  it('keeps runtime translation and onboarding errors English-only', () => {
+    const translator = read('src/components/i18n/global-runtime-translator.tsx');
+    const onboarding = read('src/lib/onboarding/action-failure.ts');
+    expect(translator).toContain('const target = row.en;');
+    expect(onboarding).toContain('const isPt = false;');
+  });
+
+
+  it('uses English as the sole application dictionary', () => {
+    const appDictionary = read('src/lib/i18n/app-dictionary.ts');
+    expect(appDictionary).toContain('return dictionaries.en;');
+  });
+
 });

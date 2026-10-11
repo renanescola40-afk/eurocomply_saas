@@ -28,7 +28,7 @@ export default async function OrganizationSettingsPage({ params }: { params: Pro
 
   const { locale } = await params;
   const safeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
-  const text = copy[safeLocale];
+  const text = copy.en;
   const user = await getCurrentUser();
   if (!user) redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/settings/organization`)}`);
 

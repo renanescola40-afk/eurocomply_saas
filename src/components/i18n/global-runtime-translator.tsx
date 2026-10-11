@@ -124,7 +124,7 @@ function buildTranslationMap(locale: Locale): TranslationMap {
   const map: TranslationMap = {};
 
   for (const row of rows) {
-    const target = row[locale];
+    const target = row.en;
     for (const source of Object.values(row)) {
       if (source && source !== target) map[source] = target;
     }
