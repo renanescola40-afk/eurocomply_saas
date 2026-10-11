@@ -56,7 +56,6 @@ function calculateRemaining(launchTargetIso: string): Remaining {
 
 function emailWarningMessage(locale: Locale, payload: WaitlistApiResponse | null, contactEmail: string) {
   const status = payload?.emailStatus ? ` (${payload.emailStatus})` : '';
-  if (locale === 'pt') return `O seu lugar foi guardado, mas ainda nao recebemos confirmacao automatica de envio do email${status}. Pode falar connosco diretamente em ${contactEmail}.`;
   return `Your place was saved, but we do not yet have automatic confirmation that the email was delivered${status}. You can contact us directly at ${contactEmail}.`;
 }
 
