@@ -111,6 +111,26 @@ describe('English-only canonical customer surface', () => {
     expect(onboardingProgress).toContain('return compactCopy.en;');
   });
 
+  it('pins final authenticated workflow selectors to canonical English', () => {
+    const nextBest = read('src/components/dashboard/next-best-actions.tsx');
+    const executive = read('src/components/dashboard/enterprise-executive-overview-v2.tsx');
+    const commandCenter = read('src/components/dashboard/enterprise-compliance-command-center.tsx');
+    const onboardingFlow = read('src/components/onboarding/b2b-onboarding-flow.tsx');
+    const prohibited = read('src/app/[locale]/dashboard/prohibited-practices/page.tsx');
+
+    expect(nextBest).toContain('const t = copy.en;');
+    expect(nextBest).not.toContain("locale === 'pt' ? copy.pt : copy.en");
+    expect(executive).toContain('const text = copy.en;');
+    expect(executive).not.toContain("locale === 'pt' ? copy.pt : copy.en");
+    expect(commandCenter).toContain('return englishCopy;');
+    expect(commandCenter).not.toContain("locale === 'pt' ? portugueseCopy : englishCopy");
+    expect(onboardingFlow).toContain('function translate(_locale: string, english: string, _portuguese?: string)');
+    expect(onboardingFlow).toContain('return english;');
+    expect(onboardingFlow).not.toContain("if (locale === 'pt')");
+    expect(prohibited).toContain("const locale = 'en';");
+    expect(prohibited).toContain('const text = copy.en;');
+  });
+
   it('uses English as the sole application dictionary', () => {
     const appDictionary = read('src/lib/i18n/app-dictionary.ts');
     expect(appDictionary).toContain('return dictionaries.en;');
