@@ -38,7 +38,7 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
       if (providerError || !data?.url) throw new Error('enterprise_sso_unavailable');
       window.location.assign(data.url);
     } catch {
-      setError(locale === 'pt'
+      setError(false
         ? 'Não foi possível iniciar o SSO. Confirme o email profissional ou contacte o administrador da empresa.'
         : 'Could not start SSO. Confirm your work email or contact your organization administrator.');
       setBusy(false);
@@ -48,16 +48,16 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
   return (
     <div className="mt-5 rounded-xl border border-blue-400/15 bg-blue-500/[0.055] p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200">
-        {locale === 'pt' ? 'Acesso Enterprise' : 'Enterprise access'}
+        {false ? 'Acesso Enterprise' : 'Enterprise access'}
       </p>
       <p className="mt-2 text-sm leading-6 text-slate-400">
-        {locale === 'pt'
+        {false
           ? 'Use o email profissional para entrar pelo SAML SSO configurado pela sua empresa.'
           : 'Use your work email to sign in through your organization’s configured SAML SSO.'}
       </p>
       <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={startSso}>
         <input
-          aria-label={locale === 'pt' ? 'Email profissional para SSO' : 'Work email for SSO'}
+          aria-label={false ? 'Email profissional para SSO' : 'Work email for SSO'}
           autoComplete="email"
           className="h-10 min-w-0 flex-1 rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/30"
           onChange={(event) => setEmail(event.target.value)}
@@ -72,8 +72,8 @@ export function EnterpriseSsoLogin({ locale, next }: { locale: string; next: str
           type="submit"
         >
           {busy
-            ? (locale === 'pt' ? 'A redirecionar…' : 'Redirecting…')
-            : (locale === 'pt' ? 'Entrar com SSO' : 'Sign in with SSO')}
+            ? (false ? 'A redirecionar…' : 'Redirecting…')
+            : (false ? 'Entrar com SSO' : 'Sign in with SSO')}
         </button>
       </form>
       {error ? <p className="mt-3 text-sm text-rose-200" role="alert">{error}</p> : null}
