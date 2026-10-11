@@ -40,7 +40,7 @@ function formatPermission(permission: string) {
 export default async function SecurityCenterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: requestedLocale } = await params;
   const locale = isSupportedLocale(requestedLocale) ? requestedLocale : 'en';
-  const t = copy[locale];
+  const t = copy.en;
   const user = await getCurrentUser();
 
   if (!user) {
