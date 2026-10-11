@@ -221,7 +221,7 @@ function buildActions(summary: DashboardSummary, basePath: string, t: Copy, work
 }
 
 export function NextBestActions({ summary, basePath, workflowReadiness, locale = 'en' }: NextBestActionsProps) {
-  const t = locale === 'pt' ? copy.pt : copy.en;
+  const t = copy.en;
   const actions = buildActions(summary, basePath, t, workflowReadiness);
 
   return (
