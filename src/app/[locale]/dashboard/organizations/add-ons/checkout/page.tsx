@@ -23,51 +23,18 @@ type PageProps = {
   searchParams?: Promise<{ addon?: string; quantity?: string }>;
 };
 
-function copy(locale: string) {
-  switch (locale) {
-    case 'pt':
-      return {
-        eyebrow: 'Compra segura de add-on', title: 'Rever e confirmar',
-        body: 'Confirme os detalhes antes de alterar a sua subscrição. O acesso só será ativado depois de o Stripe confirmar o pagamento e o webhook assinado reconciliar o add-on.',
-        currentPlan: 'Plano atual', organization: 'Organização', monthly: 'Preço recorrente', annualReference: 'Referência anual',
-        subtotal: 'Subtotal / proration', tax: 'Impostos calculados', dueNow: 'Total devido agora', recurring: 'Recorrente depois da compra',
-        month: '/mês', year: '/ano', secure: 'Pagamento processado pelo Stripe. A RISCK COMPLY não recebe nem armazena os dados brutos do cartão.',
-        providerTotal: 'O valor final é calculado pelo Stripe com base no momento da compra, proration e impostos aplicáveis.',
-        back: 'Voltar para Integrações', unavailable: 'Este add-on não está disponível para compra self-service neste momento.',
-        locked: 'A compra permanece bloqueada até os gates de billing base, exact-SHA de Produção e autorização final estarem aceitos.',
-        admin: 'Apenas Owner ou Admin com permissão de faturação pode comprar add-ons.', quantity: 'Quantidade',
-      };
-    case 'es':
-      return {
-        eyebrow: 'Compra segura de add-on', title: 'Revisar y confirmar',
-        body: 'Confirma los detalles antes de cambiar tu suscripción. El acceso solo se activa después de que Stripe confirme el pago y el webhook firmado reconcilie el add-on.',
-        currentPlan: 'Plan actual', organization: 'Organización', monthly: 'Precio recurrente', annualReference: 'Referencia anual', subtotal: 'Subtotal / prorrateo', tax: 'Impuestos calculados', dueNow: 'Total a pagar ahora', recurring: 'Recurrente después de la compra', month: '/mes', year: '/año', secure: 'Pago procesado por Stripe. RISCK COMPLY no recibe ni almacena datos brutos de la tarjeta.', providerTotal: 'Stripe calcula el importe final según el momento de compra, el prorrateo y los impuestos aplicables.', back: 'Volver a Integraciones', unavailable: 'Este add-on no está disponible para compra de autoservicio en este momento.', locked: 'La compra permanece bloqueada hasta aceptar billing base, exact-SHA de Producción y autorización final.', admin: 'Solo un Owner o Admin con permiso de facturación puede comprar add-ons.', quantity: 'Cantidad',
-      };
-    case 'fr':
-      return {
-        eyebrow: 'Achat sécurisé d’add-on', title: 'Vérifier et confirmer',
-        body: 'Vérifiez les détails avant de modifier votre abonnement. L’accès ne sera activé qu’après confirmation du paiement par Stripe et rapprochement du webhook signé.',
-        currentPlan: 'Forfait actuel', organization: 'Organisation', monthly: 'Prix récurrent', annualReference: 'Référence annuelle', subtotal: 'Sous-total / prorata', tax: 'Taxes calculées', dueNow: 'Total dû maintenant', recurring: 'Récurrent après achat', month: '/mois', year: '/an', secure: 'Paiement traité par Stripe. RISCK COMPLY ne reçoit ni ne stocke les données brutes de carte.', providerTotal: 'Le montant final est calculé par Stripe selon le moment de l’achat, le prorata et les taxes applicables.', back: 'Retour aux Intégrations', unavailable: 'Cet add-on n’est pas disponible en achat libre-service pour le moment.', locked: 'L’achat reste bloqué jusqu’à validation du billing de base, du SHA exact de Production et de l’autorisation finale.', admin: 'Seul un Owner ou Admin autorisé à gérer la facturation peut acheter des add-ons.', quantity: 'Quantité',
-      };
-    case 'it':
-      return {
-        eyebrow: 'Acquisto sicuro add-on', title: 'Rivedi e conferma',
-        body: 'Conferma i dettagli prima di modificare l’abbonamento. L’accesso sarà attivato solo dopo la conferma del pagamento Stripe e la riconciliazione del webhook firmato.',
-        currentPlan: 'Piano attuale', organization: 'Organizzazione', monthly: 'Prezzo ricorrente', annualReference: 'Riferimento annuale', subtotal: 'Subtotale / prorata', tax: 'Imposte calcolate', dueNow: 'Totale dovuto ora', recurring: 'Ricorrente dopo l’acquisto', month: '/mese', year: '/anno', secure: 'Pagamento elaborato da Stripe. RISCK COMPLY non riceve né conserva i dati grezzi della carta.', providerTotal: 'Stripe calcola il totale finale in base al momento dell’acquisto, al prorata e alle imposte applicabili.', back: 'Torna a Integrazioni', unavailable: 'Questo add-on non è attualmente disponibile per l’acquisto self-service.', locked: 'L’acquisto resta bloccato finché billing base, exact-SHA di Produzione e autorizzazione finale non sono accettati.', admin: 'Solo Owner o Admin con permesso di fatturazione può acquistare add-on.', quantity: 'Quantità',
-      };
-    case 'de':
-      return {
-        eyebrow: 'Sicherer Add-on-Kauf', title: 'Prüfen und bestätigen',
-        body: 'Prüfen Sie die Details vor der Änderung des Abonnements. Zugriff wird erst nach Stripe-Zahlungsbestätigung und Abgleich des signierten Webhooks aktiviert.',
-        currentPlan: 'Aktueller Plan', organization: 'Organisation', monthly: 'Wiederkehrender Preis', annualReference: 'Jahresreferenz', subtotal: 'Zwischensumme / Proration', tax: 'Berechnete Steuern', dueNow: 'Jetzt fälliger Gesamtbetrag', recurring: 'Wiederkehrend nach Kauf', month: '/Monat', year: '/Jahr', secure: 'Zahlung wird von Stripe verarbeitet. RISCK COMPLY erhält oder speichert keine Rohkartendaten.', providerTotal: 'Stripe berechnet den endgültigen Betrag anhand Kaufzeitpunkt, Proration und anwendbarer Steuern.', back: 'Zurück zu Integrationen', unavailable: 'Dieses Add-on ist derzeit nicht im Self-Service kaufbar.', locked: 'Der Kauf bleibt gesperrt, bis Basis-Billing, exakter Produktions-SHA und endgültige Freigabe akzeptiert sind.', admin: 'Nur Owner oder Admins mit Billing-Berechtigung können Add-ons kaufen.', quantity: 'Menge',
-      };
-    default:
-      return {
-        eyebrow: 'Secure add-on purchase', title: 'Review and confirm',
-        body: 'Confirm the details before changing your subscription. Access activates only after Stripe confirms payment and the signed webhook reconciles the add-on.',
-        currentPlan: 'Current plan', organization: 'Organization', monthly: 'Recurring price', annualReference: 'Annual reference', subtotal: 'Subtotal / proration', tax: 'Calculated tax', dueNow: 'Total due now', recurring: 'Recurring after purchase', month: '/month', year: '/year', secure: 'Payment is processed by Stripe. RISCK COMPLY does not receive or store raw card details.', providerTotal: 'Stripe calculates the final amount from purchase timing, proration and applicable tax.', back: 'Back to Integrations', unavailable: 'This add-on is not available for self-service purchase right now.', locked: 'Purchase remains locked until base billing, the exact Production SHA and final authorization are accepted.', admin: 'Only an Owner or Admin with billing permission can buy add-ons.', quantity: 'Quantity',
-      };
-  }
+function copy(_locale: string) {
+  return {
+    eyebrow: 'Secure add-on purchase', title: 'Review and confirm',
+    body: 'Confirm the details before changing your subscription. Access activates only after Stripe confirms payment and the signed webhook reconciles the add-on.',
+    currentPlan: 'Current plan', organization: 'Organization', monthly: 'Recurring price', annualReference: 'Annual reference',
+    subtotal: 'Subtotal / proration', tax: 'Calculated tax', dueNow: 'Total due now', recurring: 'Recurring after purchase',
+    month: '/month', year: '/year', secure: 'Payment is processed by Stripe. RISCK COMPLY does not receive or store raw card details.',
+    providerTotal: 'Stripe calculates the final amount from purchase timing, proration and applicable tax.',
+    back: 'Back to Integrations', unavailable: 'This add-on is not available for self-service purchase right now.',
+    locked: 'Purchase remains locked until base billing, the exact Production SHA and final authorization are accepted.',
+    admin: 'Only an Owner or Admin with billing permission can buy add-ons.', quantity: 'Quantity',
+  };
 }
 
 function formatMoney(cents: number, currency: string, locale: string) {
@@ -128,7 +95,7 @@ export default async function AddOnCheckoutPage({ params, searchParams }: PagePr
         </header>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="rounded-2xl border border-white/[0.08] bg-[#101715] p-6">
+          <section className="rounded-xl border border-white/[0.08] bg-[#101715] p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">Add-on</p>
@@ -153,7 +120,7 @@ export default async function AddOnCheckoutPage({ params, searchParams }: PagePr
           </section>
 
           <aside className="space-y-4">
-            <section className="rounded-2xl border border-white/[0.08] bg-[#101715] p-5">
+            <section className="rounded-xl border border-white/[0.08] bg-[#101715] p-5">
               <div className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-emerald-300" aria-hidden="true" /><h2 className="text-sm font-semibold text-white/80">Stripe</h2></div>
 
               {preview ? (
@@ -169,13 +136,13 @@ export default async function AddOnCheckoutPage({ params, searchParams }: PagePr
             </section>
 
             {!checkoutEnabled ? (
-              <section className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.055] p-4 text-sm leading-6 text-amber-100/80">{text.locked}</section>
+              <section className="rounded-xl border border-amber-300/20 bg-amber-300/[0.055] p-4 text-sm leading-6 text-amber-100/80">{text.locked}</section>
             ) : !canManageBilling ? (
-              <section className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.055] p-4 text-sm leading-6 text-amber-100/80">{text.admin}</section>
+              <section className="rounded-xl border border-amber-300/20 bg-amber-300/[0.055] p-4 text-sm leading-6 text-amber-100/80">{text.admin}</section>
             ) : preview && !previewError ? (
               <AddOnPurchaseClient locale={locale} addOnSlug={addOn.slug} addOnName={addOn.name} quantity={quantity} />
             ) : (
-              <section className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.055] p-4 text-sm leading-6 text-amber-100/80">
+              <section className="rounded-xl border border-amber-300/20 bg-amber-300/[0.055] p-4 text-sm leading-6 text-amber-100/80">
                 {text.unavailable}{previewError ? ` (${previewError})` : ''}
               </section>
             )}

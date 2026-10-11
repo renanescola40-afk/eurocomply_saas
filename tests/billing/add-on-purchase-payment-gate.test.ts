@@ -18,6 +18,20 @@ describe('add-on purchase payment authority', () => {
     expect(review).toContain('recurringMonthlyCents');
   });
 
+  it('keeps the add-on checkout on canonical compact English-only customer UI', () => {
+    const review = read('src/app/[locale]/dashboard/organizations/add-ons/checkout/page.tsx');
+    const client = read('src/app/[locale]/dashboard/organizations/add-ons/checkout/add-on-purchase-client.tsx');
+
+    expect(review).toContain("eyebrow: 'Secure add-on purchase'");
+    expect(review).toContain('rounded-xl');
+    expect(review).not.toContain('rounded-2xl');
+    expect(review).not.toContain("case 'pt':");
+    expect(client).toContain("confirm: 'Confirm and continue to payment'");
+    expect(client).toContain('rounded-xl');
+    expect(client).not.toContain('rounded-2xl');
+    expect(client).not.toContain("case 'pt':");
+  });
+
   it('accepts only bounded business intent from the browser', () => {
     const route = read('src/app/api/billing/add-ons/purchase/route.ts');
     const client = read('src/app/[locale]/dashboard/organizations/add-ons/checkout/add-on-purchase-client.tsx');
