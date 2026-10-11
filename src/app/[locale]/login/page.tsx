@@ -46,9 +46,9 @@ function signUpHref(locale: string, planId: string | null, nextPath: string) {
   return `/${locale}/signup?${params.toString()}`;
 }
 
-function recoveryLabel(locale: Locale, localizedLabel: string) {
+function recoveryLabel(_locale: Locale, localizedLabel: string) {
   if (localizedLabel.trim()) return localizedLabel;
-  return locale === 'pt' ? 'Esqueceu a senha?' : 'Forgot your password?';
+  return 'Forgot your password?';
 }
 
 function LoginContent() {
