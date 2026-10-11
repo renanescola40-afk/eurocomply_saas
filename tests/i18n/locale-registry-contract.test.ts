@@ -25,7 +25,8 @@ describe('canonical locale registry', () => {
   it('normalizes unknown or missing locales to English', () => {
     expect(normalizeLocale(undefined)).toBe('en');
     expect(normalizeLocale('nl')).toBe('en');
-    expect(normalizeLocale('pt')).toBe('pt');
+    expect(normalizeLocale('pt')).toBe('en');
+    expect(normalizeLocale('fr')).toBe('en');
     expect(isSupportedLocale('de')).toBe(true);
   });
 
