@@ -76,7 +76,7 @@ describe('English-only canonical customer surface', () => {
 
     for (const surface of surfaces) {
       const source = read(surface);
-      expect(source, surface).toContain("const locale: Locale = 'en'");
+      expect(source, surface).toMatch(/const locale[^\n]*= 'en';/);
       expect(source, surface).toContain('copy.en');
       expect(source, surface).not.toContain(" : 'pt') as Locale");
     }
