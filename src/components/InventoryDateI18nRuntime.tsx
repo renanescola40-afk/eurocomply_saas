@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 type Locale = 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de';
 
