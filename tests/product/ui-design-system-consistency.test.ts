@@ -92,6 +92,7 @@ describe('UI design system consistency closure', () => {
   it('keeps auth recovery and entry surfaces on one auth visual system', async () => {
     const authPages = [
       'src/app/[locale]/login/page.tsx',
+      'src/app/[locale]/signup/page.tsx',
       'src/app/[locale]/recuperar-senha/page.tsx',
       'src/app/[locale]/atualizar-senha/page.tsx',
       'src/app/[locale]/reset-password/page.tsx',

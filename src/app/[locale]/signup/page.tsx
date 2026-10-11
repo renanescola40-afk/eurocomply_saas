@@ -36,21 +36,8 @@ function getSafeSignupContinuation(locale: string, nextPath: string | null, plan
 }
 
 
-function getSignupPrivacyNotice(locale: Locale) {
-  switch (locale) {
-    case 'pt':
-      return { prefix: 'Ao criar uma conta, os seus dados são tratados conforme a', link: 'Política de Privacidade' };
-    case 'es':
-      return { prefix: 'Al crear una cuenta, tus datos se tratan según la', link: 'Política de Privacidad' };
-    case 'fr':
-      return { prefix: 'En créant un compte, vos données sont traitées conformément à la', link: 'Politique de confidentialité' };
-    case 'it':
-      return { prefix: 'Creando un account, i tuoi dati vengono trattati secondo la', link: 'Informativa sulla privacy' };
-    case 'de':
-      return { prefix: 'Wenn Sie ein Konto erstellen, werden Ihre Daten gemäß der', link: 'Datenschutzerklärung' };
-    default:
-      return { prefix: 'When you create an account, your data is handled as described in the', link: 'Privacy Policy' };
-  }
+function getSignupPrivacyNotice(_locale: Locale) {
+  return { prefix: 'When you create an account, your data is handled as described in the', link: 'Privacy Policy' };
 }
 
 function getPlanContinuationHref(nextPath: string, planId: string) {
@@ -91,22 +78,21 @@ function SignupChrome({ children, activeLocale }: { children: React.ReactNode; a
   const text = getCommercialSurfaceCopy(activeLocale).signup;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#07101a] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.20),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(124,58,237,0.10),transparent_32%)]" />
-      <div className="relative mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-8 px-5 py-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8">
+    <main className="min-h-screen bg-[#080e18] text-white">
+      <div className="mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1.04fr_0.96fr] lg:items-center lg:px-8">
         <section className="hidden lg:block">
           <Link href={`/${activeLocale}`} aria-label="RISCK COMPLY" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
             <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
           </Link>
-          <div className="mt-16 max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.34em] text-blue-200/80">{text.sideEyebrow}</p>
-            <h1 className="mt-5 text-5xl font-semibold tracking-[-0.05em] text-white xl:text-6xl">{text.sideTitle}</h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/62">{text.sideBody}</p>
+          <div className="mt-14 max-w-xl">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-300">{text.sideEyebrow}</p>
+            <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-white xl:text-5xl">{text.sideTitle}</h1>
+            <p className="mt-4 max-w-lg text-base leading-7 text-slate-400">{text.sideBody}</p>
           </div>
         </section>
 
         <section className="flex items-center justify-center">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[#0a1320]/88 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
+          <div className="w-full max-w-md rounded-xl border border-slate-800 bg-[#0b121e] p-6 sm:p-7">
             <Link href={`/${activeLocale}`} aria-label="RISCK COMPLY" className="mb-6 flex justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 lg:hidden">
               <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={164} height={32} priority className="h-6 w-auto" />
             </Link>
@@ -124,7 +110,7 @@ function SignupHeader({ activeLocale, title, subtitle }: { activeLocale: Locale;
     <div className="text-center">
       <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-200/80">{text.eyebrow}</p>
       <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">{title}</h1>
-      <p className="mt-3 text-sm leading-6 text-white/56">{subtitle}</p>
+      <p className="mt-3 text-sm leading-6 text-slate-400">{subtitle}</p>
     </div>
   );
 }
@@ -133,7 +119,7 @@ function SelectedPlanCard({ activeLocale, selectedPlan }: { activeLocale: Locale
   const text = getCommercialSurfaceCopy(activeLocale).signup;
 
   return (
-    <div className="mt-5 rounded-2xl border border-blue-300/20 bg-blue-400/10 p-4 text-sm text-blue-50">
+    <div className="mt-5 rounded-xl border border-blue-300/20 bg-blue-400/10 p-4 text-sm text-blue-50">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">{text.selectedPlan}</p>
       <div className="mt-2 flex items-end justify-between gap-3">
         <p className="text-xl font-semibold tracking-tight">{selectedPlan.name}</p>
@@ -155,11 +141,11 @@ function PlanSelection({ activeLocale, planSelectionNextHref, signInUrl }: { act
           const href = plan.salesLed ? getSalesLedHref(activeLocale, plan.id) : getSignupPlanHref(activeLocale, plan.id, nextWithPlan);
 
           return (
-            <Link key={plan.id} href={href} className="rounded-2xl border border-white/10 bg-black/30 p-4 transition hover:border-blue-300/60 hover:bg-blue-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">
+            <Link key={plan.id} href={href} className="rounded-xl border border-slate-700 bg-[#0d1624] p-4 transition hover:border-blue-300/60 hover:bg-blue-600/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-lg font-semibold text-white">{plan.name}</p>
-                  <p className="mt-1 text-xs leading-5 text-white/50">{plan.features[0]}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">{plan.features[0]}</p>
                 </div>
                 <p className="text-right text-xl font-bold text-blue-100">{getPlanPriceLabel(plan, activeLocale)}</p>
               </div>
@@ -168,7 +154,7 @@ function PlanSelection({ activeLocale, planSelectionNextHref, signInUrl }: { act
           );
         })}
       </div>
-      <p className="mt-6 text-center text-sm text-white/50">
+      <p className="mt-6 text-center text-sm text-slate-400">
         {text.haveAccount}{' '}
         <Link href={signInUrl} className="rounded-md font-semibold text-white hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{text.signIn}</Link>
       </p>
@@ -240,20 +226,20 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
       <SignupHeader activeLocale={activeLocale} title={pendingVerification ? text.verifyTitle : text.title} subtitle={pendingVerification ? text.verifySubtitle : text.subtitle} />
       <SelectedPlanCard activeLocale={activeLocale} selectedPlan={selectedPlan} />
 
-      {formError ? <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100" role="alert">{formError}</div> : null}
+      {formError ? <div className="mt-5 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100" role="alert">{formError}</div> : null}
 
       {pendingVerification ? (
-        <Link href={signInUrl} className="mt-6 flex w-full items-center justify-center rounded-2xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{text.signIn}</Link>
+        <Link href={signInUrl} className="mt-6 flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{text.signIn}</Link>
       ) : (
         <>
-          <button type="button" onClick={handleProvider} disabled={isSubmitting} className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? text.loading : text.google}</button>
+          <button type="button" onClick={handleProvider} disabled={isSubmitting} className="mt-6 flex w-full items-center justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? text.loading : text.google}</button>
           <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.24em] text-white/35"><span className="h-px flex-1 bg-white/10" />{text.divider}<span className="h-px flex-1 bg-white/10" /></div>
           <form onSubmit={handleEmailSignUp} className="space-y-4">
-            <label className="block text-sm font-medium text-white/70">{text.email}<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-200/40" placeholder="you@company.com" /></label>
-            <label className="block text-sm font-medium text-white/70">{text.password}<input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} required minLength={12} pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{12,}" title="Use at least 12 characters with uppercase, lowercase, a number and a symbol." autoComplete="new-password" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-200/40" /></label>
-            <button type="submit" disabled={isSubmitting} className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? text.loading : text.submit}</button>
+            <label className="block text-sm font-medium text-slate-300">{text.email}<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" className="mt-2 w-full rounded-xl border border-slate-700 bg-[#0d1624] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-200/40" placeholder="you@company.com" /></label>
+            <label className="block text-sm font-medium text-slate-300">{text.password}<input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} required minLength={12} pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{12,}" title="Use at least 12 characters with uppercase, lowercase, a number and a symbol." autoComplete="new-password" className="mt-2 w-full rounded-xl border border-slate-700 bg-[#0d1624] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-blue-300/60 focus-visible:ring-2 focus-visible:ring-blue-200/40" /></label>
+            <button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? text.loading : text.submit}</button>
           </form>
-          <p className="mt-4 text-center text-xs leading-5 text-white/42">
+          <p className="mt-4 text-center text-xs leading-5 text-slate-500">
             {privacyNotice.prefix}{' '}
             <Link href={`/${activeLocale}/privacy`} target="_blank" rel="noreferrer" className="font-medium text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">
               {privacyNotice.link}
@@ -272,8 +258,8 @@ function SalesLedPlanHandoff({ activeLocale, selectedPlan, signInUrl }: { active
     <SignupChrome activeLocale={activeLocale}>
       <SignupHeader activeLocale={activeLocale} title={text.salesLedTitle} subtitle={text.salesLedSubtitle} />
       <SelectedPlanCard activeLocale={activeLocale} selectedPlan={selectedPlan} />
-      <Link href={getSalesLedHref(activeLocale, selectedPlan.id)} className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{text.salesLed}</Link>
-      <p className="mt-6 text-center text-sm text-white/50">{text.haveAccount}{' '}<Link href={signInUrl} className="rounded-md font-semibold text-white hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{text.signIn}</Link></p>
+      <Link href={getSalesLedHref(activeLocale, selectedPlan.id)} className="mt-6 flex w-full items-center justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{text.salesLed}</Link>
+      <p className="mt-6 text-center text-sm text-slate-400">{text.haveAccount}{' '}<Link href={signInUrl} className="rounded-md font-semibold text-white hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{text.signIn}</Link></p>
     </SignupChrome>
   );
 }
@@ -281,8 +267,8 @@ function SalesLedPlanHandoff({ activeLocale, selectedPlan, signInUrl }: { active
 function SignupContent() {
   const params = useParams<{ locale: string }>();
   const searchParams = useSearchParams();
-  const locale = params?.locale ?? 'pt';
-  const activeLocale = (locales.includes(locale as Locale) ? locale : 'pt') as Locale;
+  const locale = params?.locale ?? 'en';
+  const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const selectedPlanId = normalizePlanId(searchParams.get('plan'));
   const continuationHref = getSafeSignupContinuation(activeLocale, searchParams.get('next'), selectedPlanId);
   const signInUrl = getSignInHref(activeLocale, selectedPlanId, continuationHref);
@@ -305,7 +291,7 @@ function SignupContent() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#07101a]" aria-busy="true" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#080e18]" aria-busy="true" />}>
       <SignupContent />
     </Suspense>
   );

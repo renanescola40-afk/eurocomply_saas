@@ -37,7 +37,14 @@ describe('auth entry brand V2', () => {
     expect(source).not.toContain('if (user) {');
     expect(source).toContain('getSalesLedHref(activeLocale, selectedPlan.id)');
     expect(source).toContain('BILLING_PLANS.map');
-    expect(source).toContain('bg-[#07101a]');
+    expect(source).toContain('bg-[#080e18]');
+    expect(source).toContain('rounded-xl');
+    expect(source).not.toContain('rounded-[2rem]');
+    expect(source).not.toContain('rounded-2xl');
+    expect(source).not.toContain('shadow-2xl');
+    expect(source).not.toContain('radial-gradient');
+    expect(source).toContain("const locale = params?.locale ?? 'en';");
+    expect(source).toContain("link: 'Privacy Policy'");
     expect(source).toContain('minLength={12}');
     expect(source).toContain('(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{12,}');
   });
