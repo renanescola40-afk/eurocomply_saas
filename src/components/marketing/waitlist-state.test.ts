@@ -44,14 +44,14 @@ describe('waitlist state resolver', () => {
     expect(source).toContain("import { resolveWaitlistSubmitFeedback } from '@/components/marketing/waitlist-state';");
     expect(source).toContain('const [website, setWebsite] = useState');
     expect(source).toContain('const [consentToContact, setConsentToContact] = useState(false)');
-    expect(source).toContain('body: JSON.stringify({ companyName, email, role, website, locale: 'en', consentToContact })');
+    expect(source).toContain("body: JSON.stringify({ companyName, email, role, website, locale: 'en', consentToContact })");
     expect(source).not.toContain('consentToContact: true');
     expect(source).toContain('name="website"');
     expect(source).toContain('name="consentToContact"');
     expect(source).toContain('required');
     expect(source).toContain('checked={consentToContact}');
     expect(source).toContain('onChange={(event) => setConsentToContact(event.target.checked)}');
-    expect(source).toContain("pt: 'Autorizo o contacto sobre o lançamento do RISCK COMPLY.'");
+    expect(source).toContain('<span>{consentLabels.en}</span>');
     expect(source).toContain('const feedback = resolveWaitlistSubmitFeedback({');
     expect(source).toContain(`signal: payload?.${flag}`);
     expect(source).toContain('successMessage: copy.form.success');
