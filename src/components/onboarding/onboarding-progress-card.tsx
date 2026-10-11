@@ -59,7 +59,7 @@ const compactCopy = {
 };
 
 function getCompactCopy(locale?: string) {
-  return locale === 'pt' ? compactCopy.pt : compactCopy.en;
+  return compactCopy.en;
 }
 
 function CompactActivationProgress({ state, locale }: { state: OnboardingState; locale?: string }) {
