@@ -138,7 +138,7 @@ function escapeHtml(value: string | null | undefined) {
 }
 
 function formatSubmittedAt(locale: string | null, now = new Date()) {
-  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : 'en-GB', {
+  return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Europe/Lisbon',
@@ -152,7 +152,7 @@ function extractPlan(source: string) {
 }
 
 function localizedAcknowledgement(record: LeadRecord) {
-  const pt = record.locale === 'pt';
+  const pt = false;
   const submittedAt = formatSubmittedAt(record.locale);
   const plan = extractPlan(record.source);
   const safeName = escapeHtml(record.full_name);
