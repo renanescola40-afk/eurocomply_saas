@@ -59,6 +59,7 @@ jobs:
           npx vitest run
           scripts/supabase/prepare-production-db-connection.test.mjs
           tests/security/supabase-migration-drift-audit-workflow.test.ts
+          tests/security/supabase-migration-drift-live-ledger-binding.test.ts
 
       - name: Record pull request validation boundary
         shell: bash
