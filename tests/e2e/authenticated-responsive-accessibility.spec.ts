@@ -27,6 +27,14 @@ test.describe('authenticated responsive and accessibility acceptance', () => {
     ['/en/dashboard/organizations/reports-governance/news', 'Regulatory Intelligence'],
     ['/en/dashboard/fria', 'FRIA workspace'],
     ['/en/ai-systems', 'AI systems'],
+    ['/en/ai-questionnaire', 'AI questionnaire'],
+    ['/en/policy-pack', 'policy pack'],
+    ['/en/document-generator', 'document generator'],
+    ['/en/ai-incidents', 'AI incidents'],
+    ['/en/audit-pack', 'audit pack'],
+    ['/en/vendor-assurance', 'vendor assurance'],
+    ['/en/security-center', 'security center'],
+    ['/en/enterprise-readiness', 'enterprise readiness'],
   ] as const;
 
   const viewports = [

@@ -165,6 +165,8 @@ export default function TenantMfaEnrollment({ locale, nextPath }: { locale: stri
 
         {qrCode ? (
           <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+            {/* Supabase returns the enrolled TOTP QR code as an inline data URL; render it directly rather than routing it through image optimization. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qrCode} alt="MFA enrollment QR code" className="mx-auto h-48 w-48 rounded-lg bg-white p-2" />
             {secret ? <p className="break-all text-xs text-slate-500">Manual key: {secret}</p> : null}
           </div>

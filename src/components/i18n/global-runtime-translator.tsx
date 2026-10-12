@@ -33,7 +33,7 @@ const rows: TranslationRow[] = [
 
   // Auth
   { en: 'Secure access', pt: 'Acesso seguro', es: 'Acceso seguro', fr: 'Accès sécurisé', it: 'Accesso sicuro', de: 'Sicherer Zugang' },
-  { en: 'Sign in to EuroComply', pt: 'Entrar no EuroComply', es: 'Entrar en EuroComply', fr: 'Connexion à EuroComply', it: 'Accedi a EuroComply', de: 'Bei EuroComply anmelden' },
+  { en: 'Sign in to RISCK COMPLY', pt: 'Entrar no RISCK COMPLY', es: 'Entrar en RISCK COMPLY', fr: 'Connexion à RISCK COMPLY', it: 'Accedi a RISCK COMPLY', de: 'Bei RISCK COMPLY anmelden' },
   { en: 'Access your compliance workspace with Google or email.', pt: 'Aceda ao seu workspace de compliance com Google ou email.', es: 'Accede a tu workspace de compliance con Google o email.', fr: 'Accédez à votre espace compliance avec Google ou email.', it: 'Accedi al workspace compliance con Google o email.', de: 'Melden Sie sich mit Google oder E-Mail an.' },
   { en: 'Continue with Google', pt: 'Continuar com Google', es: 'Continuar con Google', fr: 'Continuer avec Google', it: 'Continua con Google', de: 'Mit Google fortfahren' },
   { en: 'Email', pt: 'Email', es: 'Email', fr: 'Email', it: 'Email', de: 'E-Mail' },

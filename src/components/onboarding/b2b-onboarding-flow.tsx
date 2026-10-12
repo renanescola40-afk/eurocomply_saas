@@ -235,7 +235,7 @@ export function B2BOnboardingFlow({ locale, requestedPlan, initialState, onSaveD
   const [error, setError] = useState<string | null>(null);
 
   const inviteEmails = useMemo(() => parseInviteEmails(form.inviteEmailText), [form.inviteEmailText]);
-  const riskLevel = useMemo(() => inferInitialRiskLevel(form), [form.riskDomain, form.usesPersonalData, form.interactsWithPeople, form.generatesContent, form.biometricIdentification, form.manipulativeOrExploitative]);
+  const riskLevel = inferInitialRiskLevel(form);
   const documents = useMemo(() => getRecommendedDocuments({ riskLevel, usesPersonalData: form.usesPersonalData, interactsWithPeople: form.interactsWithPeople, generatesContent: form.generatesContent, sector: form.sector }), [riskLevel, form.usesPersonalData, form.interactsWithPeople, form.generatesContent, form.sector]);
   const tasks = useMemo(() => getSuggestedTasks({ riskLevel, recommendedDocuments: documents, inviteEmails }), [riskLevel, documents, inviteEmails]);
   const score = useMemo(() => calculateInitialReadinessScore({
