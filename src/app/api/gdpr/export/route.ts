@@ -163,7 +163,7 @@ export async function GET(request: Request) {
     organizationId: organization.id,
     userId: user.id,
     type: 'system',
-    message: 'Exportação GDPR preparada para a organização.',
+    message: 'GDPR export prepared for the organization.',
   });
 
   const body = {
