@@ -1,0 +1,11 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261006125506
+-- canonical source version: 20260721180000
+-- local source: supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql
+-- local source SHA-256: 652786fda5b8b9e78ca40bb02272693987afa2a711eacc32e395d38726fa2c4b
+-- remote ledger name: 20260721180000_annex_iv_technical_documentation_governance
+-- remote statement SHA-256: 652786fda5b8b9e78ca40bb02272693987afa2a711eacc32e395d38726fa2c4b
+-- reviewed by: owner-authorized-security-review
+-- reviewed at: 2026-10-12
+-- schema evidence reference: docs/security/evidence/database/supabase-migration-ledger-alias-review-2026-10-12.json
+-- No DDL. No migration-history repair.

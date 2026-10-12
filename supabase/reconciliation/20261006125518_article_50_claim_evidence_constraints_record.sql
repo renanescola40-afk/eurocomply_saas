@@ -1,0 +1,11 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261006125518
+-- canonical source version: 20260803133100
+-- local source: supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql
+-- local source SHA-256: 3608522681bf77f7f0c2380cd18e5d50b84ff4409976493a5ed513b945d839f9
+-- remote ledger name: 20260803133100_article_50_claim_evidence_constraints
+-- remote statement SHA-256: 3608522681bf77f7f0c2380cd18e5d50b84ff4409976493a5ed513b945d839f9
+-- reviewed by: owner-authorized-security-review
+-- reviewed at: 2026-10-12
+-- schema evidence reference: docs/security/evidence/database/supabase-migration-ledger-alias-review-2026-10-12.json
+-- No DDL. No migration-history repair.

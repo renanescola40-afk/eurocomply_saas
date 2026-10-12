@@ -1,0 +1,11 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261006125623
+-- canonical source version: 20261006140000
+-- local source: supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql
+-- local source SHA-256: d5465b63bbce5dadb4636ccd739231947832e90197b399ea356fbc4af0f094be
+-- remote ledger name: 20261006140000_harden_annex_iv_trigger_function_acl
+-- remote statement SHA-256: d5465b63bbce5dadb4636ccd739231947832e90197b399ea356fbc4af0f094be
+-- reviewed by: owner-authorized-security-review
+-- reviewed at: 2026-10-12
+-- schema evidence reference: docs/security/evidence/database/supabase-migration-ledger-alias-review-2026-10-12.json
+-- No DDL. No migration-history repair.
