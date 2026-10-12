@@ -141,7 +141,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
 <html lang="${escapeHtml(input.locale)}">
 <head>
   <meta charset="utf-8" />
-  <title>EuroComply - EU AI Act Gap Analysis - ${slugDate(input.generatedAt)}</title>
+  <title>RISCK COMPLY - EU AI Act Gap Analysis - ${slugDate(input.generatedAt)}</title>
   <style>
     @page { size: A4; margin: 18mm 16mm; }
     * { box-sizing: border-box; }
@@ -304,11 +304,11 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
   </style>
 </head>
 <body>
-  <div class="print-note">Use o destino “Guardar como PDF / Save as PDF” para baixar o relatório empresarial.</div>
+  <div class="print-note">Choose “Save as PDF” in the print dialog to export this report.</div>
   <main class="page">
     <header class="topbar">
       <div>
-        <div class="brand">Euro<span>Comply</span></div>
+        <div class="brand">RISCK <span>COMPLY</span></div>
         <div class="doc-type">${escapeHtml(input.labels.title)}</div>
       </div>
       <div style="text-align:right">
@@ -363,7 +363,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
     <section>
       <h2>${escapeHtml(input.labels.articleBreakdown)}</h2>
       <table>
-        <thead><tr><th>Artigo</th><th>${escapeHtml(input.labels.score)}</th></tr></thead>
+        <thead><tr><th>Article</th><th>${escapeHtml(input.labels.score)}</th></tr></thead>
         <tbody>${articleRows}</tbody>
       </table>
     </section>
@@ -371,7 +371,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
     <section>
       <h2>${escapeHtml(input.labels.actionPlan)}</h2>
       <table>
-        <thead><tr><th>#</th><th>Artigo</th><th>${escapeHtml(input.labels.severity)}</th><th>${escapeHtml(input.labels.recommendation)}</th></tr></thead>
+        <thead><tr><th>#</th><th>Article</th><th>${escapeHtml(input.labels.severity)}</th><th>${escapeHtml(input.labels.recommendation)}</th></tr></thead>
         <tbody>${actionRows}</tbody>
       </table>
     </section>
@@ -379,14 +379,14 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
     <section>
       <h2>${escapeHtml(input.labels.questionnaire)}</h2>
       <table>
-        <thead><tr><th>Artigo</th><th>Área</th><th>Pergunta</th><th>${escapeHtml(input.labels.answer)}</th><th>${escapeHtml(input.labels.score)}</th></tr></thead>
+        <thead><tr><th>Article</th><th>Area</th><th>Question</th><th>${escapeHtml(input.labels.answer)}</th><th>${escapeHtml(input.labels.score)}</th></tr></thead>
         <tbody>${answerRows}</tbody>
       </table>
     </section>
 
     <footer class="footer">
       ${escapeHtml(input.labels.scope)}<br />
-      EuroComply SaaS · ${escapeHtml(input.labels.generatedAt)} ${escapeHtml(generatedAt)}
+      RISCK COMPLY · ${escapeHtml(input.labels.generatedAt)} ${escapeHtml(generatedAt)}
     </footer>
   </main>
   <script>
@@ -407,7 +407,7 @@ export function openGapAnalysisPdfReport(input: GapAnalysisPdfReportInput) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `eurocomply-eu-ai-act-gap-analysis-${slugDate(input.generatedAt)}.html`;
+    link.download = `risck-comply-eu-ai-act-gap-analysis-${slugDate(input.generatedAt)}.html`;
     link.click();
     URL.revokeObjectURL(url);
     return;

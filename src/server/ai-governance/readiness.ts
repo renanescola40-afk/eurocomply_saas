@@ -34,7 +34,7 @@ export const AI_COMPLIANCE_PRODUCT_MAP: AiComplianceCapability[] = [
     id: 'ai_systems_inventory',
     title: 'AI Systems Inventory',
     route: '/ai-systems',
-    outcome: 'System of record for every AI use case, owner, lifecycle status and organization_id.',
+    outcome: 'System of record for every AI use case, owner, lifecycle status and workspace scope.',
     dataSource: 'ai_systems',
   },
   {
@@ -355,7 +355,7 @@ export function buildAiGovernanceReadiness(input: {
       id: 'owner-inventory',
       ownerRole: 'owner',
       title: 'Approve AI inventory scope',
-      description: 'Confirm every active, pilot and planned AI system is captured under the current organization_id.',
+      description: 'Confirm every active, pilot and planned AI system is captured in the current workspace.',
       route: '/ai-systems',
     },
     {

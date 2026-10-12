@@ -113,7 +113,7 @@ export function PrivacyAdminClient({ locale: _locale }: { locale: string }) {
             <input
               value={exportToken}
               onChange={(event) => setExportToken(event.target.value)}
-              placeholder="x-eurocomply-step-up-token"
+              placeholder="Paste the verification token"
               className="mt-2 h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             />
           </label>
@@ -138,7 +138,7 @@ export function PrivacyAdminClient({ locale: _locale }: { locale: string }) {
             </div>
           </div>
           <label className="mt-6 block text-sm font-medium text-slate-200">
-            Optional manual step-up token para <code className="text-slate-300">gdpr_delete</code>
+            Optional manual step-up token for GDPR deletion
             <input
               value={deleteToken}
               onChange={(event) => setDeleteToken(event.target.value)}

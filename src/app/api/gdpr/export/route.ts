@@ -163,7 +163,7 @@ export async function GET(request: Request) {
     organizationId: organization.id,
     userId: user.id,
     type: 'system',
-    message: 'Exportação GDPR preparada para a organização.',
+    message: 'GDPR export prepared for the organization.',
   });
 
   const body = {
@@ -172,7 +172,7 @@ export async function GET(request: Request) {
   };
 
   const fileName = sanitizeDocumentDownloadFileName(
-    `eurocomply-gdpr-export-${organization.slug ?? organization.id}.json`,
+    `risck-comply-gdpr-export-${organization.slug ?? organization.id}.json`,
   );
 
   return noStoreDownload(JSON.stringify(body, null, 2), {
