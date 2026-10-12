@@ -1,0 +1,6 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261006130430
+-- canonical source version: 20261006140500
+-- local source: supabase/migrations/20261006140500_reconcile_gap_task_reference_integrity.sql
+-- local source SHA-256: a6e961666eacd8c3b2bf1418097863b213e8bbec5bf2129a133e80d7d29174d2
+-- Provider ledger version maps to the canonical repository migration above.
