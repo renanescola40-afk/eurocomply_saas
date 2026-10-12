@@ -1,0 +1,11 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261006125514
+-- canonical source version: 20260803133000
+-- local source: supabase/migrations/20260803133000_article_50_product_integration.sql
+-- local source SHA-256: d56475e7132fb8f0a5d7131763ab44a2d7bed6922e63b80637994bd7239bc9e7
+-- remote ledger name: 20260803133000_article_50_product_integration
+-- remote statement SHA-256: d56475e7132fb8f0a5d7131763ab44a2d7bed6922e63b80637994bd7239bc9e7
+-- reviewed by: owner-authorized-security-review
+-- reviewed at: 2026-10-12
+-- schema evidence reference: docs/security/evidence/database/supabase-migration-ledger-alias-review-2026-10-12.json
+-- No DDL. No migration-history repair.

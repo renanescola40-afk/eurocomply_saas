@@ -1,0 +1,11 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261010075142
+-- canonical source version: 20261009210000
+-- local source: supabase/migrations/20261009210000_harden_active_membership_governance_read.sql
+-- local source SHA-256: ad75889e2e1643261156cedf36fe7bf82d90c7550491520d9f5641de98106ccb
+-- remote ledger name: harden_active_membership_governance_read
+-- remote statement SHA-256: 29bad3ef3fbb77aafc5ef789829f1f41acdcc0d1b4cd91fb2019e81c4b7430c6
+-- reviewed by: owner-authorized-security-review
+-- reviewed at: 2026-10-12
+-- schema evidence reference: docs/security/evidence/database/supabase-migration-ledger-alias-review-2026-10-12.json
+-- No DDL. No migration-history repair.
