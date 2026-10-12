@@ -68,7 +68,7 @@ export function buildOnboardingSteps(input: OnboardingState): OnboardingStep[] {
     {
       id: 'first-ai-system',
       title: 'Add first AI system',
-      description: 'Register the first AI use case with owner, purpose, vendor, lifecycle and organization_id.',
+      description: 'Register the first AI use case with owner, purpose, vendor, lifecycle and workspace scope.'
       status: status(input.hasFirstAiSystem ?? input.hasVendors),
     },
     {
