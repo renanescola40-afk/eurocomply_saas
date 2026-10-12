@@ -154,6 +154,20 @@ jobs:
             | tee migration-state-remote.txt \
             | tee "$EVIDENCE_DIR/migration-state-remote.txt"
 
+      - name: Capture immutable remote ledger statement digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(cat "$SUPABASE_DB_URL_FILE")"
+          command -v psql >/dev/null
+          psql "$DB_URL" \
+            --set ON_ERROR_STOP=1 \
+            --tuples-only \
+            --no-align \
+            --command "select coalesce(json_agg(t), '[]'::json)::text from (select version, name, encode(digest(convert_to(array_to_string(statements,E'\\n'),'UTF8'),'sha256'),'hex') as statement_sha256 from supabase_migrations.schema_migrations order by version) t;" \
+            > "$EVIDENCE_DIR/migration-ledger-remote-evidence.json"
+          test -s "$EVIDENCE_DIR/migration-ledger-remote-evidence.json"
+
       - name: Generate drift evidence
         id: drift
         shell: bash
@@ -163,6 +177,7 @@ jobs:
             supabase/migrations \
             migration-state-remote.txt \
             "$EVIDENCE_DIR" \
+            --remote-evidence="$EVIDENCE_DIR/migration-ledger-remote-evidence.json" \
             | tee migration-drift-summary.md \
             | tee "$EVIDENCE_DIR/migration-drift-summary.md"
           result=${PIPESTATUS[0]}
