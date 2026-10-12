@@ -165,7 +165,7 @@ jobs:
             --set ON_ERROR_STOP=1 \
             --tuples-only \
             --no-align \
-            --command "select coalesce(json_agg(t), '[]'::json)::text from (select version, name, encode(digest(convert_to(array_to_string(statements,E'\\n'),'UTF8'),'sha256'),'hex') as statement_sha256 from supabase_migrations.schema_migrations order by version) t;" \
+            --command "select coalesce(json_agg(t), '[]'::json)::text from (select version, name, encode(extensions.digest(convert_to(array_to_string(statements,E'\\n'),'UTF8'),'sha256'),'hex') as statement_sha256 from supabase_migrations.schema_migrations order by version) t;" \
             > "$EVIDENCE_DIR/migration-ledger-remote-evidence.json"
           test -s "$EVIDENCE_DIR/migration-ledger-remote-evidence.json"
 
