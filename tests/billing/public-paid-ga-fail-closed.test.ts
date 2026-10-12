@@ -52,6 +52,12 @@ describe('public paid GA checkout gate', () => {
     expect(checkoutRoute).not.toContain('NEXT_PUBLIC_RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID');
   });
 
+  it('binds validation checkout to an authenticated membership before tenant override', () => {
+    expect(checkoutRoute).toContain('getUserOrganizationMemberships(user.id)');
+    expect(checkoutRoute).toContain('validationMembership');
+    expect(checkoutRoute).toContain('membership.organization_id === validationOrganizationOverride');
+  });
+
   it('surfaces the paid-GA denial as an accurate canonical English commercial availability state', () => {
     expect(billingActionButton).toContain("const PUBLIC_PAID_GA_ERROR_CODE = 'public_paid_ga_not_enabled'");
     expect(billingActionButton).toContain("setPaidGaUnavailable(getPublicPaidGaUnavailableCopy('en'))");
