@@ -51,6 +51,16 @@
       "scope": "internal"
     },
     {
+      "id": "supabase-provider-resilience",
+      "owner": "platform-security",
+      "evidence": "release-validation/supabase-provider-resilience.json",
+      "acceptedStatuses": [
+        "PASS",
+        "SUCCESS"
+      ],
+      "scope": "external"
+    },
+    {
       "id": "supabase-rls-reconciliation",
       "owner": "security",
       "evidence": "release-validation/supabase-rls-reconciliation.json",
