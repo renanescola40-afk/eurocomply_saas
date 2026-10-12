@@ -233,6 +233,11 @@ describe('production runtime scorecard evidence', () => {
     expect(workflow).toContain('test "$MAIN_SHA" = "$TARGET_SHA"');
     expect(workflow).toContain(CANONICAL_PRODUCTION_URL);
     expect(smokeProof).toContain("const CANONICAL_HOST = 'www.risckcomply.com'");
+    expect(smokeProof).toContain("const CANONICAL_LOCALE = 'en'");
+    expect(smokeProof).toContain('request(`/${CANONICAL_LOCALE}`)');
+    expect(smokeProof).toContain('`/${CANONICAL_LOCALE}/login`');
+    expect(smokeProof).not.toContain("request('/pt')");
+    expect(smokeProof).not.toContain("includes('/pt/login')");
     expect(smokeProof).toContain("parsedBaseUrl.protocol !== 'https:'");
     expect(smokeProof).toContain("parsedBaseUrl.hostname.toLowerCase() !== CANONICAL_HOST");
     expect(smokeProof).toContain('readiness: protectedReadinessDiagnostics');
