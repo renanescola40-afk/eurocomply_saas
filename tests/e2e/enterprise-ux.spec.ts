@@ -42,6 +42,7 @@ async function expectNoTemplateSmell(page: Page, label: string) {
     /Unhandled Runtime Error|Application error|Stack trace|ReferenceError:|TypeError:|SyntaxError:|webpack-internal/i,
   );
   expect(page.url(), `${label} navigated to /undefined`).not.toContain('/undefined');
+  expect(bodyText, `${label} exposes internal tenant field names`).not.toMatch(/\borganization_id\b|\bworkspace_id\b/);
 }
 
 async function expectNoHorizontalOverflow(page: Page, label: string) {
