@@ -345,7 +345,7 @@ test('Enterprise closure contract has 17 unique controls and requires every dire
   assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 12);
   assert.equal(config.controls.filter((control) => control.scope === 'external').length, 5);
   assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'internal').length, 3);
-  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 2);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 3);
   assert.equal(byId.get('enterprise-runtime-closeout')?.evidence, 'enterprise-runtime-closeout.json');
 });
 
