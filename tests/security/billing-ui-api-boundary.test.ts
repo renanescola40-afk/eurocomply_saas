@@ -55,6 +55,13 @@ describe('billing UI API boundary', () => {
     expect(publicCheckoutPage).not.toContain('/onboarding?next=');
   });
 
+  it('aligns validation billing UI tenant selection with the checkout API override', () => {
+    expect(billingPageRoute).toContain('RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID');
+    expect(billingPageRoute).toContain('getUserOrganizationMemberships(user.id)');
+    expect(billingPageRoute).toContain('membership.organization_id === validationOrganizationOverride');
+    expect(billingPageRoute).toContain("process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED !== 'true'");
+  });
+
   it('routes contract-managed plan intent to sales before checkout', () => {
     expect(billingPageRoute).toContain('billingAuthority={billing.authority}');
     expect(billingPlanIntentBanner).toContain("billingAuthority: OrganizationBillingContext['authority']");

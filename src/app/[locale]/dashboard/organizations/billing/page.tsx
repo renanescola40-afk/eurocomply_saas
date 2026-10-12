@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
-import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
+import { getCurrentOrganizationForUser, getUserOrganizationMemberships } from '@/server/queries/current-organization';
 import { canManageDashboardBilling } from '@/server/queries/organization-dashboard';
 import { BillingPageView } from './billing-page-view';
 import { BillingPlanIntentBanner } from './billing-plan-intent-banner';
@@ -45,7 +45,14 @@ export default async function BillingPage({ params, searchParams }: BillingPageP
     redirect(`/${locale}/login`);
   }
 
-  const organization = await getCurrentOrganizationForUser(user.id);
+  const validationOrganizationOverride = process.env.RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID?.trim();
+  let organization = await getCurrentOrganizationForUser(user.id);
+
+  if (process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED !== 'true' && validationOrganizationOverride) {
+    const memberships = await getUserOrganizationMemberships(user.id);
+    const validationMembership = memberships.find((membership) => membership.organization_id === validationOrganizationOverride);
+    if (validationMembership) organization = validationMembership;
+  }
 
   if (!organization) {
     redirect(`/${locale}/dashboard`);
