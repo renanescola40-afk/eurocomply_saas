@@ -1,0 +1,6 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261006125509
+-- canonical source version: 20260721180100
+-- local source: supabase/migrations/20260721180100_annex_iv_package_section_integrity.sql
+-- local source SHA-256: a984d66947fe8c0a913907f1460100e612ebcbd68f551f5efa85bf5eb8896100
+-- Provider ledger version maps to the canonical repository migration above.
