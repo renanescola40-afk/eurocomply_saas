@@ -56,7 +56,7 @@ describe('waitlist state resolver', () => {
     expect(source).toContain(`signal: payload?.${flag}`);
     expect(source).toContain('successMessage: copy.form.success');
     expect(source).toContain('confirmedMessage: copy.form.emailSuccess');
-    expect(source).toContain('warningMessage: emailWarningMessage('en', payload, commercialEmail)');
+    expect(source).toContain("warningMessage: emailWarningMessage('en', payload, commercialEmail)");
     expect(source).toContain('setMessage(feedback.message)');
     expect(source).toContain('setStatus(feedback.status)');
   });
