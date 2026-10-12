@@ -89,6 +89,21 @@ export const FINAL_AUTHORITY_PRODUCERS = Object.freeze([
     }),
   }),
   Object.freeze({
+    id: 'supabase-provider-resilience',
+    scope: 'external',
+    workflow: 'production-provider-runtime-proof.yml',
+    workflowPath: '.github/workflows/production-provider-runtime-proof.yml',
+    artifact: (sha) => `production-provider-runtime-proof-${sha}`,
+    evidenceBasename: 'supabase-provider-resilience.json',
+    allowedEvents: Object.freeze(['push', 'workflow_dispatch']),
+    evidenceContract: contract({
+      schema: 'risck-comply.supabase-provider-resilience.v1',
+      evidenceItem: 'supabase-provider-resilience',
+      status: 'Complete',
+      outcome: 'passed',
+    }),
+  }),
+  Object.freeze({
     id: 'external-security-assurance',
     scope: 'external',
     workflow: 'external-security-assurance.yml',

@@ -23,7 +23,7 @@ function validDocumentFor(producer) {
   return document;
 }
 
-test('final authority producers require the five direct domain proofs and no raw test-mode Stripe authority', () => {
+test('final authority producers require the six direct domain proofs and no raw test-mode Stripe authority', () => {
   const ids = FINAL_AUTHORITY_PRODUCERS.map((producer) => producer.id);
   assert.deepEqual(ids.sort(), [
     'billing-product-live-closure',
@@ -31,6 +31,7 @@ test('final authority producers require the five direct domain proofs and no raw
     'product-commercial-qa',
     'production-provider-runtime',
     'supabase-production-acceptance',
+    'supabase-provider-resilience',
   ].sort());
 
   const workflows = FINAL_AUTHORITY_PRODUCERS.map((producer) => producer.workflow);
@@ -68,7 +69,7 @@ test('final authority producers require the five direct domain proofs and no raw
   assert.equal(external?.artifact(SHA), `external-security-assurance-accepted-${SHA}`);
   assert.equal(external?.scope, 'external');
   assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope !== 'external').length, 3);
-  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 2);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 3);
 });
 
 
@@ -97,7 +98,7 @@ test('external producer collection errors remain strict WAITING_EXTERNAL without
   assert.deepEqual(manifest.internalMissingProducerIds, []);
   assert.equal(manifest.externalStatus, 'Open');
   assert.equal(manifest.externalOutcome, 'blocked');
-  assert.deepEqual(manifest.externalMissingProducerIds.sort(), ['billing-product-live-closure', 'external-security-assurance']);
+  assert.deepEqual(manifest.externalMissingProducerIds.sort(), ['billing-product-live-closure', 'external-security-assurance', 'supabase-provider-resilience'].sort());
   assert.equal(manifest.status, 'Open');
   assert.equal(manifest.outcome, 'blocked');
   const external = manifest.producers.find((producer) => producer.id === 'external-security-assurance');
@@ -197,8 +198,8 @@ test('writer emits Enterprise 100 and Production GO only when closure and source
       status: 'Complete',
       outcome: 'passed',
       targetSha: SHA,
-      collectedProducerCount: 5,
-      requiredProducerCount: 5,
+      collectedProducerCount: 6,
+      requiredProducerCount: 6,
       missingProducerIds: [],
       producers: [],
     },
@@ -229,8 +230,8 @@ test('writer fails closed when an internal direct domain authority is missing', 
       status: 'Open',
       outcome: 'blocked',
       targetSha: SHA,
-      collectedProducerCount: 4,
-      requiredProducerCount: 5,
+      collectedProducerCount: 5,
+      requiredProducerCount: 6,
       missingProducerIds: ['production-provider-runtime'],
       internalStatus: 'Open',
       internalOutcome: 'blocked',
@@ -239,8 +240,8 @@ test('writer fails closed when an internal direct domain authority is missing', 
       internalMissingProducerIds: ['production-provider-runtime'],
       externalStatus: 'Complete',
       externalOutcome: 'passed',
-      externalCollectedProducerCount: 2,
-      externalRequiredProducerCount: 2,
+      externalCollectedProducerCount: 3,
+      externalRequiredProducerCount: 3,
       externalMissingProducerIds: [],
       producers: [],
     },
@@ -264,11 +265,13 @@ test('writer grants internal Product Ready while strict assurance waits for the 
       blockers: [
         'billing-product-live-closure:evidence_missing',
         'external-security-assurance:evidence_missing',
+        'supabase-provider-resilience:evidence_missing',
       ],
       internalBlockers: [],
       externalBlockers: [
         'billing-product-live-closure:evidence_missing',
         'external-security-assurance:evidence_missing',
+        'supabase-provider-resilience:evidence_missing',
       ],
       acceptedControls: 14,
       totalControls: 16,
@@ -280,8 +283,8 @@ test('writer grants internal Product Ready while strict assurance waits for the 
       outcome: 'blocked',
       targetSha: SHA,
       collectedProducerCount: 3,
-      requiredProducerCount: 5,
-      missingProducerIds: ['billing-product-live-closure', 'external-security-assurance'],
+      requiredProducerCount: 6,
+      missingProducerIds: ['billing-product-live-closure', 'external-security-assurance', 'supabase-provider-resilience'],
       internalStatus: 'Complete',
       internalOutcome: 'passed',
       internalCollectedProducerCount: 3,
@@ -290,8 +293,8 @@ test('writer grants internal Product Ready while strict assurance waits for the 
       externalStatus: 'Open',
       externalOutcome: 'blocked',
       externalCollectedProducerCount: 0,
-      externalRequiredProducerCount: 2,
-      externalMissingProducerIds: ['billing-product-live-closure', 'external-security-assurance'],
+      externalRequiredProducerCount: 3,
+      externalMissingProducerIds: ['billing-product-live-closure', 'external-security-assurance', 'supabase-provider-resilience'],
       producers: [],
     },
   });
@@ -340,7 +343,7 @@ test('Enterprise closure contract has 16 unique controls and requires every dire
   assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 12);
   assert.equal(config.controls.filter((control) => control.scope === 'external').length, 4);
   assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'internal').length, 3);
-  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 2);
+  assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 3);
   assert.equal(byId.get('enterprise-runtime-closeout')?.evidence, 'enterprise-runtime-closeout.json');
 });
 
