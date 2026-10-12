@@ -191,8 +191,8 @@ test('writer emits Enterprise 100 and Production GO only when closure and source
       passed: true,
       expectedSha: SHA,
       blockers: [],
-      acceptedControls: 17,
-      totalControls: 17,
+      acceptedControls: 16,
+      totalControls: 16,
     },
     sourceManifest: {
       status: 'Complete',
@@ -221,8 +221,8 @@ test('writer fails closed when an internal direct domain authority is missing', 
       expectedSha: SHA,
       blockers: [],
       internalBlockers: [],
-      acceptedControls: 17,
-      totalControls: 17,
+      acceptedControls: 16,
+      totalControls: 16,
       internalAcceptedControls: 12,
       internalTotalControls: 12,
     },
@@ -274,7 +274,7 @@ test('writer grants internal Product Ready while strict assurance waits for the 
         'supabase-provider-resilience:evidence_missing',
       ],
       acceptedControls: 14,
-      totalControls: 17,
+      totalControls: 16,
       internalAcceptedControls: 12,
       internalTotalControls: 12,
     },
@@ -323,27 +323,25 @@ test('workflow does not accept arbitrary run IDs and always emits the canonical 
   assert.match(deprecated, /exit 1/);
 });
 
-test('Enterprise closure contract has 17 unique controls and requires every direct domain authority', () => {
+test('Enterprise closure contract has 16 unique controls and requires every direct domain authority', () => {
   const config = JSON.parse(readFileSync('config/enterprise-100-closure.json', 'utf8'));
   const ids = config.controls.map((control) => control.id);
   const byId = new Map(config.controls.map((control) => [control.id, control]));
 
-  assert.equal(config.controls.length, 17);
+  assert.equal(config.controls.length, 16);
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(byId.get('billing-product-live-closure')?.evidence, 'final-billing-product-live-closeout.json');
   assert.equal(byId.get('billing-product-live-closure')?.scope, 'external');
   assert.equal(byId.get('supabase-production-acceptance')?.evidence, 'production-acceptance.json');
   assert.equal(byId.get('product-commercial-qa')?.evidence, 'fria-runtime-evidence.json');
   assert.equal(byId.get('production-provider-runtime')?.evidence, 'production-secrets-provider-stores.json');
-  assert.equal(byId.get('supabase-provider-resilience')?.evidence, 'release-validation/supabase-provider-resilience.json');
-  assert.equal(byId.get('supabase-provider-resilience')?.scope, 'external');
   assert.equal(byId.get('external-security-assurance')?.evidence, 'external-security-assurance-decision.json');
   assert.equal(byId.get('external-security-assurance')?.scope, 'external');
   assert.equal(byId.get('legal-publication')?.scope, 'external');
   assert.equal(byId.get('final-go-no-go')?.scope, 'external');
   assert.equal(byId.get('enterprise-runtime-closeout')?.scope, 'internal');
   assert.equal(config.controls.filter((control) => control.scope === 'internal').length, 12);
-  assert.equal(config.controls.filter((control) => control.scope === 'external').length, 5);
+  assert.equal(config.controls.filter((control) => control.scope === 'external').length, 4);
   assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'internal').length, 3);
   assert.equal(FINAL_AUTHORITY_PRODUCERS.filter((producer) => producer.scope === 'external').length, 3);
   assert.equal(byId.get('enterprise-runtime-closeout')?.evidence, 'enterprise-runtime-closeout.json');
