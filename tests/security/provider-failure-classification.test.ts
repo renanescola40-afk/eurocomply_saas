@@ -122,6 +122,21 @@ describe('provider failure classification', () => {
       },
     );
 
+    expectSummary(
+      classifyProviderFailure('stripe', 'checkout_session_create', {
+        type: 'StripeInvalidRequestError',
+        statusCode: 400,
+        raw: { code: 'parameter_invalid_integer', type: 'invalid_request_error' },
+      }),
+      {
+        kind: 'invalid_request',
+        code: 'parameter_invalid_integer',
+        retryable: false,
+        publicCode: 'provider_rejected_request',
+        httpStatus: 502,
+      },
+    );
+
     const configuration = providerConfigurationFailure(
       'resend',
       'send_email',
