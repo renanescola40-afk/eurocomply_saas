@@ -56,7 +56,7 @@ type ProviderErrorLike = {
   response?: { status?: unknown } | null;
   param?: unknown;
   requestId?: unknown;
-  raw?: { code?: unknown; type?: unknown; statusCode?: unknown; param?: unknown; requestId?: unknown } | null;
+  raw?: { code?: unknown; type?: unknown; statusCode?: unknown; param?: unknown; requestId?: unknown; message?: unknown } | null;
 };
 
 const SAFE_TOKEN = /[^a-z0-9_.-]+/g;
@@ -202,6 +202,21 @@ function inferKind(error: ProviderErrorLike): ProviderFailureKind {
 }
 
 function inferProviderCode(error: ProviderErrorLike, kind: ProviderFailureKind) {
+  const message = [error.message, error.raw?.message]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+    .toLowerCase();
+
+  if (message.includes('no such price')) return 'no_such_price';
+  if (message.includes('no such customer')) return 'no_such_customer';
+  if (message.includes('expires_at')) return 'invalid_expires_at';
+  if (message.includes('idempotency')) return 'idempotency_error';
+  if (message.includes('customer_update')) return 'invalid_customer_update';
+  if (message.includes('automatic_tax')) return 'invalid_automatic_tax';
+  if (message.includes('tax_id_collection')) return 'invalid_tax_id_collection';
+  if (message.includes('payment_method_collection')) return 'invalid_payment_method_collection';
+  if (message.includes('allow_promotion_codes')) return 'invalid_allow_promotion_codes';
+
   const candidate = error.raw?.code ?? error.param ?? error.raw?.param ?? error.code ?? error.type ?? error.raw?.type ?? error.name;
   return normalizeToken(candidate, kind);
 }
