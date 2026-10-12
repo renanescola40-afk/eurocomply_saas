@@ -3,4 +3,9 @@
 -- canonical source version: 20260722200000
 -- local source: supabase/migrations/20260722200000_annex_iv_operational_workflow.sql
 -- local source SHA-256: ea03f251ec326c93c2d48778b813fe3531d4db94aa65db9677e2db0408009952
--- Provider ledger version maps to the canonical repository migration above.
+-- remote ledger name: 20260722200000_annex_iv_operational_workflow
+-- remote statement SHA-256: ea03f251ec326c93c2d48778b813fe3531d4db94aa65db9677e2db0408009952
+-- reviewed by: owner-authorized-security-review
+-- reviewed at: 2026-10-12
+-- schema evidence reference: docs/security/evidence/runtime/supabase-migration-ledger-alias-review-2026-10-12.json
+-- No DDL. No migration-history repair.
