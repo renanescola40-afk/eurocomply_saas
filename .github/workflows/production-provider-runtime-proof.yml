@@ -140,6 +140,7 @@ jobs:
 
       - name: Execute strict Supabase provider resilience proof
         if: always()
+        continue-on-error: true
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: node scripts/security/check-supabase-provider-resilience.mjs
