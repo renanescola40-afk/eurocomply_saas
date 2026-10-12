@@ -122,7 +122,11 @@ export function EnterpriseAccessConsole() {
   const [resolutionReason, setResolutionReason] = useState<Record<string, string>>({});
 
   const load = useCallback(async (quiet = false) => {
-    quiet ? setRefreshing(true) : setLoading(true);
+    if (quiet) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const [runtimeResponse, contentionResponse] = await Promise.all([
