@@ -1,0 +1,6 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261006125623
+-- canonical source version: 20261006140000
+-- local source: supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql
+-- local source SHA-256: bcc0aa80903c4e85748804f10ec53fc0beeb97b19894b7418cee8548e952d738
+-- Provider ledger hotfix is represented by the canonical repository migration above.
