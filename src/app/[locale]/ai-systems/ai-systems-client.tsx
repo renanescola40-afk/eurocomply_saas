@@ -172,13 +172,30 @@ const copy = {
 } as const;
 
 const readinessCopy = {
-  en: { score: 'Readiness score', notAssessed: 'Not assessed', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
+  en: { score: 'AI Act readiness', notAssessed: 'Not assessed', gaps: 'Priority gaps', actions: 'Action plan by role', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every action links to a live workflow. Metrics are shown only when supported by workspace data.', questionnaire: 'Usage questionnaire', policy: 'Policy pack', documents: 'Document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected in the current workspace data.', dataSource: 'Data source' },
   pt: { score: 'Score de prontidão', notAssessed: 'Não avaliado', gaps: 'Análise de gaps', actions: 'Plano de ação por papel', country: 'Contexto de compliance por país', productMap: 'Mapa do produto de compliance de IA', productSubtitle: 'Cada CTA aponta para uma rota funcional. Métricas só aparecem quando existem dados reais.', questionnaire: 'Executar questionário de uso', policy: 'Gerar policy pack', documents: 'Abrir gerador de documentos', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'Nenhum gap crítico detetado nos dados atuais.', dataSource: 'Fonte de dados' },
   es: { score: 'Score de preparación', notAssessed: 'No evaluado', gaps: 'Análisis de gaps', actions: 'Plan de acción por rol', country: 'Contexto de compliance por país', productMap: 'Mapa del producto de compliance de IA', productSubtitle: 'Cada CTA apunta a una ruta funcional. Las métricas solo aparecen cuando existen datos del workspace.', questionnaire: 'Ejecutar cuestionario de uso', policy: 'Generar pack de políticas', documents: 'Abrir generador de documentos', owner: 'Owner', admin: 'Admin', member: 'Miembro', viewer: 'Visualizador', noGaps: 'No se detectaron gaps críticos en los datos actuales.', dataSource: 'Fuente de datos' },
   fr: { score: 'Score de préparation', notAssessed: 'Non évalué', gaps: 'Analyse des écarts', actions: 'Plan d’action par rôle', country: 'Contexte compliance par pays', productMap: 'Carte du produit de compliance IA', productSubtitle: 'Chaque CTA mène à une route fonctionnelle. Les métriques ne sont affichées qu’avec des données du workspace.', questionnaire: 'Lancer le questionnaire d’usage', policy: 'Générer le pack de politiques', documents: 'Ouvrir le générateur de documents', owner: 'Owner', admin: 'Admin', member: 'Membre', viewer: 'Lecteur', noGaps: 'Aucun écart critique détecté dans les données actuelles.', dataSource: 'Source des données' },
   it: { score: 'Score di preparazione', notAssessed: 'Non valutato', gaps: 'Analisi dei gap', actions: 'Piano d’azione per ruolo', country: 'Contesto compliance per paese', productMap: 'Mappa prodotto compliance IA', productSubtitle: 'Ogni CTA porta a una rotta funzionante. Le metriche appaiono solo quando supportate dai dati del workspace.', questionnaire: 'Esegui questionario d’uso', policy: 'Genera policy pack', documents: 'Apri generatore documenti', owner: 'Owner', admin: 'Admin', member: 'Membro', viewer: 'Visualizzatore', noGaps: 'Nessun gap critico rilevato nei dati attuali.', dataSource: 'Fonte dati' },
   de: { score: 'Readiness-Score', notAssessed: 'Nicht bewertet', gaps: 'Gap-Analyse', actions: 'Rollenbasierter Aktionsplan', country: 'Länderspezifischer Compliance-Kontext', productMap: 'KI-Compliance-Produktkarte', productSubtitle: 'Jeder CTA führt zu einer funktionierenden Route. Kennzahlen erscheinen nur mit Workspace-Daten.', questionnaire: 'Nutzungsfragebogen starten', policy: 'Policy-Paket erzeugen', documents: 'Dokumentgenerator öffnen', owner: 'Owner', admin: 'Admin', member: 'Mitglied', viewer: 'Leser', noGaps: 'Keine kritischen Lücken in den aktuellen Daten erkannt.', dataSource: 'Datenquelle' },
 } as const;
+
+const readinessStatusLabels: Record<AiGovernanceReadiness['status'], string> = {
+  not_started: 'Not started',
+  needs_data: 'Needs data',
+  attention: 'Attention',
+  ready: 'Ready',
+};
+
+const coverageLabels: Record<keyof AiGovernanceReadiness['coverage'], string> = {
+  inventory: 'Inventory',
+  classification: 'Classification',
+  owners: 'Accountable owners',
+  vendors: 'Vendor evidence',
+  highRiskGovernance: 'High-risk governance',
+  incidentRegister: 'Incident register',
+  policyPack: 'Policy pack',
+};
 
 const roleOptions = ['provider', 'deployer', 'importer', 'distributor', 'other'] as const;
 const statusOptions = ['planned', 'pilot', 'production', 'retired'] as const;
@@ -339,19 +356,19 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
               <p className="text-sm font-medium text-muted-foreground">{rt.score}</p>
               <div className="mt-3 flex items-end gap-3">
                 <p className="text-5xl font-semibold tracking-tight">{readiness.score === null ? '—' : `${readiness.score}%`}</p>
-                <Badge variant="outline" className="mb-1 rounded-full">{readiness.score === null ? rt.notAssessed : readiness.status}</Badge>
+                <Badge variant="outline" className="mb-1 rounded-full">{readiness.score === null ? rt.notAssessed : readinessStatusLabels[readiness.status]}</Badge>
               </div>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">{readiness.boardSummary}</p>
-              <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                <Button asChild className="rounded-full"><Link href={localizedRoute(locale, '/ai-questionnaire')}>{rt.questionnaire}</Link></Button>
-                <Button asChild variant="outline" className="rounded-full"><Link href={localizedRoute(locale, '/policy-pack')}>{rt.policy}</Link></Button>
-                <Button asChild variant="outline" className="rounded-full"><Link href={localizedRoute(locale, '/document-generator')}>{rt.documents}</Link></Button>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button asChild className="h-auto min-h-10 flex-1 basis-[12rem] rounded-xl px-4 py-2 text-center leading-5 whitespace-normal"><Link href={localizedRoute(locale, '/ai-questionnaire')}>{rt.questionnaire}</Link></Button>
+                <Button asChild variant="outline" className="h-auto min-h-10 flex-1 basis-[12rem] rounded-xl px-4 py-2 text-center leading-5 whitespace-normal"><Link href={localizedRoute(locale, '/policy-pack')}>{rt.policy}</Link></Button>
+                <Button asChild variant="outline" className="h-auto min-h-10 flex-1 basis-[12rem] rounded-xl px-4 py-2 text-center leading-5 whitespace-normal"><Link href={localizedRoute(locale, '/document-generator')}>{rt.documents}</Link></Button>
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {Object.entries(readiness.coverage).map(([key, value]) => (
                 <div key={key} className="rounded-2xl border bg-muted/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{key.replace(/([A-Z])/g, ' $1')}</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{coverageLabels[key as keyof AiGovernanceReadiness['coverage']] ?? key.replace(/([A-Z])/g, ' $1')}</p>
                   <p className="mt-2 text-2xl font-semibold">{value}%</p>
                 </div>
               ))}

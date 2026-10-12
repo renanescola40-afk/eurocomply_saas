@@ -47,6 +47,43 @@ test.describe('authenticated responsive and accessibility acceptance', () => {
     });
   }
 
+  test('AI systems readiness actions stay readable without CTA collisions', async ({ page }) => {
+    await page.setViewportSize({ width: 1640, height: 920 });
+    await page.goto('/en/ai-systems', { waitUntil: 'domcontentloaded' });
+    await expectNoRuntimeError(page, 'AI systems readiness actions');
+
+    const actions = [
+      page.getByRole('link', { name: 'Usage questionnaire', exact: true }),
+      page.getByRole('link', { name: 'Policy pack', exact: true }),
+      page.getByRole('link', { name: 'Document generator', exact: true }),
+    ];
+
+    const boxes = [];
+    for (const action of actions) {
+      await expect(action).toBeVisible();
+      const metrics = await action.evaluate((element) => ({
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        scrollHeight: element.scrollHeight,
+        clientHeight: element.clientHeight,
+      }));
+      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+      expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+      const box = await action.boundingBox();
+      expect(box).not.toBeNull();
+      boxes.push(box!);
+    }
+
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i];
+        const b = boxes[j];
+        const overlaps = a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+        expect(overlaps, `AI systems readiness actions ${i + 1} and ${j + 1} should not overlap`).toBe(false);
+      }
+    }
+  });
+
   test('keyboard can reach and operate the task creation form without pointer input', async ({ page }) => {
     await page.goto('/en/dashboard/organizations/tasks', { waitUntil: 'domcontentloaded' });
     await expectNoRuntimeError(page, 'keyboard tasks');
