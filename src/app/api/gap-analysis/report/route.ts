@@ -127,23 +127,10 @@ function articleScores(answers: AssessmentAnswer[]) {
   }));
 }
 
-function deterministicSummary(score: number, answers: AssessmentAnswer[], locale: string) {
+function deterministicSummary(score: number, answers: AssessmentAnswer[]) {
   const critical = answers.filter((item) => item.score === 0);
   const medium = answers.filter((item) => item.score === 50);
   const criticalDomain = critical[0]?.category;
-  if (false) {
-    const base = score >= 80
-      ? 'A avaliação atual indica prontidão elevada nos controlos avaliados do EU AI Act.'
-      : score >= 50
-        ? 'A avaliação atual indica prontidão parcial nos controlos avaliados do EU AI Act.'
-        : 'A avaliação atual indica lacunas relevantes nos controlos avaliados do EU AI Act.';
-    const priority = criticalDomain
-      ? ` A prioridade imediata é reforçar ${criticalDomain.toLowerCase()} e reunir evidências de suporte.`
-      : medium.length
-        ? ' Recomenda-se concluir as ações de melhoria pendentes e validar as evidências associadas.'
-        : ' Recomenda-se manter as evidências atualizadas e rever periodicamente os controlos.';
-    return base + priority;
-  }
   const base = score >= 80
     ? 'The current assessment indicates high readiness across the evaluated EU AI Act controls.'
     : score >= 50
@@ -156,7 +143,6 @@ function deterministicSummary(score: number, answers: AssessmentAnswer[], locale
       : ' Supporting evidence should remain current and controls should be reviewed periodically.';
   return base + priority;
 }
-
 function pageStream(lines: PdfLine[], pageNumber: number, totalPages: number, cover = false) {
   const commands: string[] = [];
   if (cover) {
@@ -245,90 +231,89 @@ function buildCorporatePdf(input: {
   actions: Array<{ article: string; title: string; status: string; priority: string; due_date: string | null }>;
   generatedAt: Date;
 }) {
-  const pt = false;
-  const date = formatDate(input.generatedAt, input.locale);
-  const status = scoreStatus(input.score, input.locale);
+  const date = formatDate(input.generatedAt);
+  const status = scoreStatus(input.score);
   const scores = articleScores(input.answers);
   const critical = input.answers.filter((item) => item.score === 0).length;
   const medium = input.answers.filter((item) => item.score === 50).length;
   const openActions = input.actions.filter((item) => item.status !== 'completed' && item.status !== 'closed').length;
-  const summary = deterministicSummary(input.score, input.answers, input.locale);
+  const summary = deterministicSummary(input.score, input.answers);
   const pages: string[] = [];
 
   pages.push(pageStream([
     { text: 'RISCK COMPLY', bold: true, size: 18, gap: 0 },
     { text: 'EU AI ACT', bold: true, size: 30, gap: 95 },
-    { text: pt ? 'RELATÓRIO DE GAP ANALYSIS' : 'GAP ANALYSIS REPORT', bold: true, size: 24, gap: 34 },
+    { text: 'GAP ANALYSIS REPORT', bold: true, size: 24, gap: 34 },
     { text: 'AI Governance & Compliance Readiness Assessment', size: 12, gap: 28 },
     { text: input.organizationName, bold: true, size: 14, gap: 72 },
-    { text: `${pt ? 'Data do relatório' : 'Report date'}: ${date}`, size: 10.5 },
-    { text: `${pt ? 'Versão' : 'Version'}: 1.0`, size: 10.5 },
-    { text: `${pt ? 'Score geral de prontidão' : 'Overall readiness score'}: ${input.score}%`, bold: true, size: 18, gap: 34 },
-    { text: `${pt ? 'Estado' : 'Status'}: ${status}`, bold: true, size: 12 },
+    { text: `Report date: ${date}`, size: 10.5 },
+    { text: 'Version: 1.0', size: 10.5 },
+    { text: `Overall readiness score: ${input.score}%`, bold: true, size: 18, gap: 34 },
+    { text: `Status: ${status}`, bold: true, size: 12 },
     { text: 'CONFIDENTIAL', bold: true, size: 10, gap: 72 },
-    { text: pt ? 'Preparado com RISCK COMPLY' : 'Prepared with RISCK COMPLY', size: 9 },
+    { text: 'Prepared with RISCK COMPLY', size: 9 },
   ], 1, 7, true));
 
   const execLines: PdfLine[] = [
-    { text: pt ? 'Resumo executivo' : 'Executive summary', bold: true, size: 22, gap: 0 },
-    { text: `${pt ? 'Score geral' : 'Overall score'}: ${input.score}% - ${status}`, bold: true, size: 14, gap: 34 },
-    { text: `${pt ? 'Perguntas respondidas' : 'Answered questions'}: ${input.answers.length}/7` },
-    { text: `${pt ? 'Lacunas críticas' : 'Critical gaps'}: ${critical}` },
-    { text: `${pt ? 'Riscos médios' : 'Medium risks'}: ${medium}` },
-    { text: `${pt ? 'Ações abertas' : 'Open actions'}: ${openActions}` },
-    { text: pt ? 'Síntese determinística' : 'Deterministic summary', bold: true, size: 12, gap: 30 },
+    { text: 'Executive summary', bold: true, size: 22, gap: 0 },
+    { text: `Overall score: ${input.score}% - ${status}`, bold: true, size: 14, gap: 34 },
+    { text: `Answered questions: ${input.answers.length}/7` },
+    { text: `Critical gaps: ${critical}` },
+    { text: `Medium risks: ${medium}` },
+    { text: `Open actions: ${openActions}` },
+    { text: 'Deterministic summary', bold: true, size: 12, gap: 30 },
     ...wrap(summary, 82).map((text) => ({ text, size: 10.5, gap: 15 })),
   ];
   pages.push(pageStream(execLines, 2, 7));
 
   const scoreLines: PdfLine[] = [
-    { text: pt ? 'Scorecard por artigo' : 'Scorecard by article', bold: true, size: 22, gap: 0 },
-    { text: pt ? 'Artigo | Domínio | Score | Estado' : 'Article | Domain | Score | Status', bold: true, size: 10, gap: 34 },
+    { text: 'Scorecard by article', bold: true, size: 22, gap: 0 },
+    { text: 'Article | Domain | Score | Status', bold: true, size: 10, gap: 34 },
   ];
   for (const item of scores) {
     const domain = input.answers.find((answer) => answer.article === item.article)?.category ?? '-';
-    scoreLines.push({ text: `${item.article} | ${domain} | ${item.score}% | ${scoreStatus(item.score, input.locale)}`, gap: 24 });
+    scoreLines.push({ text: `${item.article} | ${domain} | ${item.score}% | ${scoreStatus(item.score)}`, gap: 24 });
   }
   pages.push(pageStream(scoreLines, 3, 7));
 
   const findingLines: PdfLine[] = [
-    { text: pt ? 'Achados' : 'Findings', bold: true, size: 22, gap: 0 },
+    { text: 'Findings', bold: true, size: 22, gap: 0 },
   ];
   for (const answer of input.answers) {
     findingLines.push({ text: `${answer.article} - ${answer.category}`, bold: true, size: 11, gap: 24 });
-    const question = QUESTIONS[answer.question_id]?.[pt ? 'pt' : 'en'] ?? answer.question_id;
+    const question = QUESTIONS[answer.question_id]?.en ?? answer.question_id;
     for (const text of wrap(question, 82)) findingLines.push({ text, gap: 14 });
-    findingLines.push({ text: `${pt ? 'Resposta' : 'Answer'}: ${answerLabel(answer.answer, input.locale)} | ${pt ? 'Severidade' : 'Severity'}: ${severityLabel(answer.score, input.locale)}`, gap: 14 });
-    for (const text of wrap(answer.recommendation || (pt ? 'Sem ação recomendada.' : 'No recommended action.'), 82)) {
-      findingLines.push({ text: `${pt ? 'Ação' : 'Action'}: ${text}`, gap: 14 });
+    findingLines.push({ text: `Answer: ${answerLabel(answer.answer)} | Severity: ${severityLabel(answer.score)}`, gap: 14 });
+    for (const text of wrap(answer.recommendation || 'No recommended action.', 82)) {
+      findingLines.push({ text: `Action: ${text}`, gap: 14 });
     }
   }
   pages.push(pageStream(findingLines.slice(0, 34), 4, 7));
 
-  const actionLines: PdfLine[] = [{ text: pt ? 'Plano de ação' : 'Action plan', bold: true, size: 22, gap: 0 }];
-  if (!input.actions.length) actionLines.push({ text: pt ? 'Nenhuma ação aberta associada a esta avaliação.' : 'No open actions are associated with this assessment.', gap: 34 });
+  const actionLines: PdfLine[] = [{ text: 'Action plan', bold: true, size: 22, gap: 0 }];
+  if (!input.actions.length) actionLines.push({ text: 'No open actions are associated with this assessment.', gap: 34 });
   for (const [index, action] of input.actions.entries()) {
     actionLines.push({ text: `${index + 1}. ${action.article} | ${action.priority} | ${action.status}`, bold: true, size: 10.5, gap: 24 });
     for (const text of wrap(action.title, 78)) actionLines.push({ text, gap: 14 });
-    actionLines.push({ text: `${pt ? 'Responsável' : 'Owner'}: ${pt ? 'Não atribuído' : 'Not assigned'} | ${pt ? 'Prazo' : 'Due date'}: ${action.due_date || (pt ? 'Não atribuído' : 'Not assigned')}`, gap: 14 });
+    actionLines.push({ text: `Owner: Not assigned | Due date: ${action.due_date || 'Not assigned'}`, gap: 14 });
   }
   pages.push(pageStream(actionLines.slice(0, 35), 5, 7));
 
   pages.push(pageStream([
-    { text: pt ? 'Resumo de risco' : 'Risk summary', bold: true, size: 22, gap: 0 },
-    { text: `${pt ? 'Lacunas críticas' : 'Critical gaps'}: ${critical}`, bold: true, size: 13, gap: 38 },
-    { text: `${pt ? 'Riscos médios' : 'Medium risks'}: ${medium}`, bold: true, size: 13 },
-    { text: `${pt ? 'Ações abertas' : 'Open actions'}: ${openActions}`, bold: true, size: 13 },
-    { text: pt ? 'A matriz de risco não é inferida quando não existem dados suficientes no produto.' : 'A risk matrix is not inferred when the product does not hold sufficient supporting data.', gap: 34 },
+    { text: 'Risk summary', bold: true, size: 22, gap: 0 },
+    { text: `Critical gaps: ${critical}`, bold: true, size: 13, gap: 38 },
+    { text: `Medium risks: ${medium}`, bold: true, size: 13 },
+    { text: `Open actions: ${openActions}`, bold: true, size: 13 },
+    { text: 'A risk matrix is not inferred when the product does not hold sufficient supporting data.', gap: 34 },
   ], 6, 7));
 
   pages.push(pageStream([
-    { text: pt ? 'Metodologia' : 'Methodology', bold: true, size: 22, gap: 0 },
-    { text: pt ? 'A avaliação baseia-se nas respostas fornecidas pelo utilizador.' : 'The assessment is based on user-supplied responses.', gap: 38 },
-    { text: pt ? 'O score representa prontidão e análise de lacunas; não é uma certificação.' : 'The score represents readiness and gap analysis; it is not a certification.' },
-    { text: pt ? 'O relatório não substitui aconselhamento jurídico.' : 'This report does not replace legal advice.' },
-    { text: pt ? 'Os resultados devem ser revistos juntamente com as evidências de suporte.' : 'Results should be reviewed together with supporting evidence.' },
-    { text: pt ? 'Referências avaliadas: Artigos 9, 10, 12, 13, 14 e 15 do EU AI Act.' : 'Evaluated references: EU AI Act Articles 9, 10, 12, 13, 14 and 15.', gap: 28 },
+    { text: 'Methodology', bold: true, size: 22, gap: 0 },
+    { text: 'The assessment is based on user-supplied responses.', gap: 38 },
+    { text: 'The score represents readiness and gap analysis; it is not a certification.' },
+    { text: 'This report does not replace legal advice.' },
+    { text: 'Results should be reviewed together with supporting evidence.' },
+    { text: 'Evaluated references: EU AI Act Articles 9, 10, 12, 13, 14 and 15.', gap: 28 },
   ], 7, 7));
 
   return buildPdf(pages, input.generatedAt);
