@@ -7,5 +7,5 @@
 -- remote statement SHA-256: a984d66947fe8c0a913907f1460100e612ebcbd68f551f5efa85bf5eb8896100
 -- reviewed by: owner-authorized-security-review
 -- reviewed at: 2026-10-12
--- schema evidence reference: docs/security/evidence/runtime/supabase-migration-ledger-alias-review-2026-10-12.json
+-- schema evidence reference: docs/security/evidence/database/supabase-migration-ledger-alias-review-2026-10-12.json
 -- No DDL. No migration-history repair.
