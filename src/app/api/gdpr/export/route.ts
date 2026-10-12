@@ -172,7 +172,7 @@ export async function GET(request: Request) {
   };
 
   const fileName = sanitizeDocumentDownloadFileName(
-    `eurocomply-gdpr-export-${organization.slug ?? organization.id}.json`,
+    `risck-comply-gdpr-export-${organization.slug ?? organization.id}.json`,
   );
 
   return noStoreDownload(JSON.stringify(body, null, 2), {
