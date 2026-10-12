@@ -126,8 +126,8 @@ const legalLinkLabels: Record<Locale, { cookies: string; acceptableUse: string; 
   de: { cookies: 'Cookie-Richtlinie', acceptableUse: 'Zulässige Nutzung', transfers: 'Internationale Datentransfers' },
 };
 
-function getActiveLocale(locale: string): Locale {
-  return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+function getActiveLocale(_locale: string): Locale {
+  return 'en';
 }
 
 function localizeHref(locale: Locale, href: string) {
