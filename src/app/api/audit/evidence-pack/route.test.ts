@@ -134,7 +134,7 @@ describe('audit evidence pack export', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Disposition')).toContain('eurocomply-audit-evidence-pack-acme');
+    expect(response.headers.get('Content-Disposition')).toContain('risck-comply-audit-evidence-pack-acme');
     expect(body.integrity).toEqual(expect.objectContaining({ signed: true, signature: 'signature' }));
     expect(body.stepUp).toEqual({ verified: true });
     expect(mocks.buildAuditRequestContextFromRequest).toHaveBeenCalledWith(request);
