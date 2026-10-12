@@ -202,7 +202,7 @@ function inferKind(error: ProviderErrorLike): ProviderFailureKind {
 }
 
 function inferProviderCode(error: ProviderErrorLike, kind: ProviderFailureKind) {
-  const candidate = error.code ?? error.raw?.code ?? error.param ?? error.raw?.param ?? error.type ?? error.raw?.type ?? error.name;
+  const candidate = error.raw?.code ?? error.param ?? error.raw?.param ?? error.code ?? error.type ?? error.raw?.type ?? error.name;
   return normalizeToken(candidate, kind);
 }
 
