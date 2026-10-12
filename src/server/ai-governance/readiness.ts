@@ -355,7 +355,7 @@ export function buildAiGovernanceReadiness(input: {
       id: 'owner-inventory',
       ownerRole: 'owner',
       title: 'Approve AI inventory scope',
-      description: 'Confirm every active, pilot and planned AI system is captured in the current workspace.'
+      description: 'Confirm every active, pilot and planned AI system is captured in the current workspace.',
       route: '/ai-systems',
     },
     {
