@@ -87,14 +87,14 @@ function wrap(text: string, width = 86) {
 }
 
 function formatDate(date: Date, locale: string) {
-  if (false) {
+  if (locale === 'pt') {
     return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
   }
   return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 }
 
 function scoreStatus(score: number, locale: string) {
-  if (false) {
+  if (locale === 'pt') {
     if (score >= 80) return 'Prontidão elevada';
     if (score >= 50) return 'Precisa de atenção';
     return 'Lacuna crítica';
@@ -105,7 +105,7 @@ function scoreStatus(score: number, locale: string) {
 }
 
 function answerLabel(answer: AssessmentAnswer['answer'], locale: string) {
-  if (false) return answer === 'yes' ? 'Sim' : answer === 'partial' ? 'Parcial' : 'Não';
+  if (locale === 'pt') return answer === 'yes' ? 'Sim' : answer === 'partial' ? 'Parcial' : 'Não';
   return answer === 'yes' ? 'Yes' : answer === 'partial' ? 'Partial' : 'No';
 }
 
