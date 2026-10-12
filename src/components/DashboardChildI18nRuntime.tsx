@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 type Locale = 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de';
 type Map = Record<string, string>;
@@ -215,12 +215,10 @@ function replaceAttributes(root: ParentNode, locale: Locale) {
 
 export default function DashboardChildI18nRuntime() {
   const pathname = usePathname();
-  const params = useParams();
-  const locale = ((params.locale as Locale) || 'en') as Locale;
+  const locale: Locale = 'en';
 
   useEffect(() => {
     if (!pathname.includes('/dashboard/')) return;
-    if (locale === 'pt') return;
 
     const apply = () => {
       replaceText(document.body, locale);

@@ -4,7 +4,7 @@ import { ArrowRight, ClipboardList, FileCheck2, ShieldCheck, Workflow } from 'lu
 type Props = { locale: string };
 
 export function EnterpriseProductJourney({ locale }: Props) {
-  const pt = locale === 'pt';
+  const pt = false;
   const steps = pt ? [
     { number: '01', title: 'Conheça o seu universo de IA', body: 'Registe sistemas, responsáveis e informações do ciclo de vida num inventário estruturado.' },
     { number: '02', title: 'Transforme riscos em trabalho claro', body: 'Organize avaliações, justificações e ações para revisão pelas equipas responsáveis.' },

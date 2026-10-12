@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 type Locale = 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de';
 
@@ -59,12 +59,10 @@ function replaceInventoryDates(root: ParentNode, locale: Locale) {
 
 export default function InventoryDateI18nRuntime() {
   const pathname = usePathname();
-  const params = useParams();
-  const locale = ((params.locale as Locale) || 'en') as Locale;
+  const locale: Locale = 'en';
 
   useEffect(() => {
     if (!pathname.includes('/dashboard/inventario')) return;
-    if (locale === 'pt') return;
 
     const apply = () => replaceInventoryDates(document.body, locale);
     apply();

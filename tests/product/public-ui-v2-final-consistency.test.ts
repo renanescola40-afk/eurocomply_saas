@@ -178,12 +178,12 @@ describe('RISCK COMPLY UI V2 final public consistency', () => {
     expect(source).toContain("fetch('/api/prelaunch'");
     expect(source).toContain('resolveWaitlistSubmitFeedback');
     expect(source).toContain('const [consentToContact, setConsentToContact] = useState(false)');
-    expect(source).toContain('body: JSON.stringify({ companyName, email, role, website, locale: activeLocale, consentToContact })');
+    expect(source).toContain("body: JSON.stringify({ companyName, email, role, website, locale: 'en', consentToContact })");
     expect(source).not.toContain('consentToContact: true');
     expect(source).toContain('name="consentToContact"');
     expect(source).toContain('required');
     expect(source).toContain('checked={consentToContact}');
-    expect(source).toContain("pt: 'Autorizo o contacto sobre o lançamento do RISCK COMPLY.'");
+    expect(source).toContain('<span>{consentLabels.en}</span>');
     expect(source).toContain("status === 'success'");
     expect(source).toContain("status === 'warning'");
     expect(source).toContain("status === 'error'");

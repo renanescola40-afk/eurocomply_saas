@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { locales, type Locale } from '@/lib/i18n/routing';
+import { type Locale } from '@/lib/i18n/routing';
 import { getFeaturePages } from '@/lib/seo/feature-pages';
 import { getLocalizedTrustCenterPages } from '@/lib/trust-center/localized-content';
 
@@ -126,8 +126,8 @@ const legalLinkLabels: Record<Locale, { cookies: string; acceptableUse: string; 
   de: { cookies: 'Cookie-Richtlinie', acceptableUse: 'Zulässige Nutzung', transfers: 'Internationale Datentransfers' },
 };
 
-function getActiveLocale(locale: string): Locale {
-  return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+function getActiveLocale(_locale: string): Locale {
+  return 'en';
 }
 
 function localizeHref(locale: Locale, href: string) {
@@ -136,11 +136,6 @@ function localizeHref(locale: Locale, href: string) {
 }
 
 function localizeFeatureLabel(locale: Locale, label: string) {
-  if (locale === 'pt') {
-    return label
-      .replace(/^Workflows de governança$/i, 'Fluxos de governação')
-      .replace(/^Documentação de compliance$/i, 'Documentação de conformidade');
-  }
   return label;
 }
 

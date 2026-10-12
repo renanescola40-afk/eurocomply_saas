@@ -33,7 +33,7 @@ describe('gap analysis corporate PDF export', () => {
 
   it('contains corporate readiness disclaimers and PDF metadata', () => {
     expect(route).toContain('not a certification');
-    expect(route).toContain('não é uma certificação');
+    expect(route).not.toContain('não é uma certificação');
     expect(route).toContain('/Title (RISCK COMPLY - EU AI Act Gap Analysis Report)');
     expect(route).toContain('/Author (RISCK COMPLY)');
   });

@@ -20,7 +20,7 @@ describe('public landing illustrative badge normalization', () => {
     expect(home).toContain('PublicLandingSampleBadgeNormalizer');
     expect(home).toContain('data-public-sample-preview="true"');
     expect(normalizer).toContain("span.textContent?.trim() !== 'Live'");
-    expect(normalizer).toContain("locale === 'pt' ? 'Amostra' : 'Sample'");
+    expect(normalizer).toContain("false ? 'Amostra' : 'Sample'");
     expect(normalizer).toContain("data-sample-preview-badge");
     expect(normalizer).toContain('Illustrative demo data');
     expect(normalizer).toContain('Dados ilustrativos de demonstração');

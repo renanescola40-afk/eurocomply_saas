@@ -42,7 +42,7 @@ function statusClass(status: string) {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale: rawLocale } = await params;
   const locale = getSafeLocale(rawLocale);
-  const active = locale === 'pt' ? copy.pt : copy.en;
+  const active = copy.en;
   return makePublicMetadata({ locale, path: '/trust/security-questionnaire', title: `${active.eyebrow} - RISCK COMPLY`, description: active.subtitle });
 }
 
@@ -51,7 +51,7 @@ export default async function SecurityQuestionnairePage({ params }: PageProps) {
   if (!isSupportedLocale(rawLocale)) notFound();
 
   const locale = rawLocale;
-  const active = locale === 'pt' ? copy.pt : copy.en;
+  const active = copy.en;
   const pack = getSecurityQuestionnairePack();
 
   return (

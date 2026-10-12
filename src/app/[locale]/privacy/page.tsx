@@ -318,7 +318,7 @@ const copy: Record<Locale, PrivacyCopy> = {
 export default async function PrivacyPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
   const locale: Locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
-  const page = copy[locale];
+  const page = copy.en;
 
   return (
     <PublicLegalReviewPage

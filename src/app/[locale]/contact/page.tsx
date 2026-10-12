@@ -23,7 +23,7 @@ function first(value: string | string[] | undefined) {
 
 function copyFor(locale: Locale, intent?: string) {
   const demoIntent = intent === 'demo';
-  if (locale === 'pt') {
+  if (false) {
     return {
       eyebrow: demoIntent ? 'Marcar demo' : 'Falar com vendas',
       title: demoIntent ? 'Veja como o RISCK COMPLY organiza AI Act readiness.' : 'Fale connosco sobre rollout enterprise.',

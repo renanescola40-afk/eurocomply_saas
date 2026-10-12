@@ -11,11 +11,11 @@ describe('public footer locale authority', () => {
     expect(footer).not.toContain('getTrustCenterPages(activeLocale)');
   });
 
-  it('does not expose the known Portuguese mixed-language procurement labels', () => {
-    expect(footer).toContain("tagline: 'Governação de IA, fluxos de risco");
-    expect(footer).toContain("'Fluxos de governação'");
-    expect(footer).toContain("'Documentação de conformidade'");
-    expect(footer).not.toContain("tagline: 'Governança de IA, workflows de risco");
+  it('forces the public footer runtime to canonical English', () => {
+    expect(footer).toContain("function getActiveLocale(_locale: string): Locale");
+    expect(footer).toContain("return 'en';");
+    expect(footer).toContain("tagline: 'AI governance, risk workflows and evidence preparation");
+    expect(footer).toContain("assuranceNote: 'Built for governance operations and evidence preparation.");
   });
 
   it('preserves visible keyboard focus across footer navigation with the V2 cobalt system', () => {

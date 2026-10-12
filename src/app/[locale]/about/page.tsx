@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: AboutPageProps): Promise<Meta
 export default async function AboutPage({ params }: AboutPageProps) {
   const { locale: requestedLocale } = await params;
   const locale = getSafeLocale(requestedLocale);
-  const pt = locale === 'pt';
+  const pt = false;
 
   const principles = pt
     ? [

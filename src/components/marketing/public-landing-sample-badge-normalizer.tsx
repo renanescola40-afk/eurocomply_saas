@@ -7,7 +7,7 @@ export function PublicLandingSampleBadgeNormalizer({ locale }: { locale: string 
     const root = document.querySelector<HTMLElement>('[data-public-sample-preview="true"]');
     if (!root) return;
 
-    const sampleLabel = locale === 'pt' ? 'Amostra' : 'Sample';
+    const sampleLabel = false ? 'Amostra' : 'Sample';
 
     const normalizeSampleBadges = () => {
       for (const span of Array.from(root.querySelectorAll<HTMLSpanElement>('span'))) {
@@ -17,7 +17,7 @@ export function PublicLandingSampleBadgeNormalizer({ locale }: { locale: string 
         span.setAttribute('data-sample-preview-badge', 'true');
         span.setAttribute(
           'aria-label',
-          locale === 'pt' ? 'Dados ilustrativos de demonstração' : 'Illustrative demo data',
+          false ? 'Dados ilustrativos de demonstração' : 'Illustrative demo data',
         );
       }
     };

@@ -42,7 +42,7 @@ function formatRemaining(joinedAt: string, launchAt: string, locale: string) {
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
-  return locale === 'pt' ? `${days} dias, ${hours} horas e ${minutes} minutos` : `${days} days, ${hours} hours and ${minutes} minutes`;
+  return `${days} days, ${hours} hours and ${minutes} minutes`;
 }
 
 function premiumEmailShell(title: string, preview: string, body: string) {
@@ -67,52 +67,52 @@ function premiumEmailShell(title: string, preview: string, body: string) {
 }
 
 export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
-  const isPt = input.locale === 'pt';
-  const joinedAt = formatJoinedAt(input.joinedAt, input.locale);
-  const launchLabel = isPt ? '1 de agosto de 2026, 07:00 Europe/Lisbon' : '1 August 2026, 07:00 Europe/Lisbon';
-  const remaining = formatRemaining(input.joinedAt, input.launchAt, input.locale);
-  const title = isPt ? 'Você está na lista enterprise da Risck Comply' : 'You are on the Risck Comply enterprise waitlist';
-  const preview = isPt ? 'O seu lugar prioritário foi confirmado.' : 'Your priority place has been confirmed.';
-  const cta = isPt ? 'Ver página de lançamento' : 'View launch page';
-  const intro = isPt
-    ? 'O seu lugar prioritário foi confirmado. Você está entre os contactos que queremos ouvir primeiro antes da abertura oficial.'
-    : 'Your priority place has been confirmed. You are one of the contacts we want to hear from first before the official opening.';
-  const valueItems = isPt
-    ? ['Inventário de IA para mapear sistemas, fornecedores e owners.', 'Classificação inicial de risco alinhada ao EU AI Act.', 'Documentos e evidence packs para compradores, auditorias e governança.', 'Workflows para equipas, tarefas, políticas internas e audit trail.']
-    : ['AI inventory to map systems, vendors and owners.', 'Initial EU AI Act readiness and risk classification.', 'Documents and evidence packs for buyers, audits and governance.', 'Team workflows for tasks, internal policies and audit trail.'];
+  const joinedAt = formatJoinedAt(input.joinedAt, 'en');
+  const launchLabel = '1 August 2026, 07:00 Europe/Lisbon';
+  const remaining = formatRemaining(input.joinedAt, input.launchAt, 'en');
+  const title = 'You are on the Risck Comply enterprise waitlist';
+  const preview = 'Your priority place has been confirmed.';
+  const cta = 'View launch page';
+  const intro = 'Your priority place has been confirmed. You are one of the contacts we want to hear from first before the official opening.';
+  const valueItems = [
+    'AI inventory to map systems, vendors and owners.',
+    'Initial EU AI Act readiness and risk classification.',
+    'Documents and evidence packs for buyers, audits and governance.',
+    'Team workflows for tasks, internal policies and audit trail.',
+  ];
 
   const body = `
     <div style="padding:28px 30px;">
       <p style="margin:0;color:#e2e8f0;font-size:16px;line-height:1.75;">${escapeHtml(intro)}</p>
       <div style="margin-top:22px;border:1px solid rgba(125,211,252,.22);border-radius:20px;background:rgba(8,47,73,.28);padding:18px;">
-        <div style="color:#67e8f9;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;">${isPt ? 'Detalhes da inscrição' : 'Registration details'}</div>
+        <div style="color:#67e8f9;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;">Registration details</div>
         <p style="margin:12px 0 0;color:#f8fafc;line-height:1.8;font-size:14px;">
-          <strong>${isPt ? 'Empresa' : 'Company'}:</strong> ${escapeHtml(input.companyName)}<br />
-          <strong>${isPt ? 'Cargo' : 'Role'}:</strong> ${escapeHtml(input.role)}<br />
-          <strong>${isPt ? 'Inscrição' : 'Joined'}:</strong> ${escapeHtml(joinedAt)}<br />
-          <strong>${isPt ? 'Abertura' : 'Launch'}:</strong> ${escapeHtml(launchLabel)}<br />
-          <strong>${isPt ? 'Tempo restante' : 'Time remaining'}:</strong> ${escapeHtml(remaining)}
+          <strong>Company:</strong> ${escapeHtml(input.companyName)}<br />
+          <strong>Role:</strong> ${escapeHtml(input.role)}<br />
+          <strong>Joined:</strong> ${escapeHtml(joinedAt)}<br />
+          <strong>Launch:</strong> ${escapeHtml(launchLabel)}<br />
+          <strong>Time remaining:</strong> ${escapeHtml(remaining)}
         </p>
       </div>
       <div style="margin-top:22px;">
-        <div style="color:#ffffff;font-size:16px;font-weight:800;">${isPt ? 'O que a Risck Comply vai oferecer' : 'What Risck Comply will offer'}</div>
+        <div style="color:#ffffff;font-size:16px;font-weight:800;">What Risck Comply will offer</div>
         <ul style="margin:12px 0 0;padding-left:20px;color:#cbd5e1;font-size:14px;line-height:1.8;">
           ${valueItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
         </ul>
       </div>
       <a href="${escapeHtml(input.waitlistUrl)}" style="display:inline-block;margin-top:24px;background:#ffffff;color:#020617;text-decoration:none;padding:13px 18px;border-radius:14px;font-weight:800;font-size:14px;">${escapeHtml(cta)}</a>
-      <p style="margin:22px 0 0;color:#94a3b8;font-size:13px;line-height:1.7;">${isPt ? 'Se tiver dúvidas, responda este email ou fale connosco pelo contacto comercial abaixo.' : 'If you have questions, reply to this email or contact our commercial team below.'}</p>
+      <p style="margin:22px 0 0;color:#94a3b8;font-size:13px;line-height:1.7;">If you have questions, reply to this email or contact our commercial team below.</p>
     </div>`;
 
   const text = [
     title,
     intro,
-    `${isPt ? 'Empresa' : 'Company'}: ${input.companyName}`,
-    `${isPt ? 'Cargo' : 'Role'}: ${input.role}`,
-    `${isPt ? 'Inscrição' : 'Joined'}: ${joinedAt}`,
-    `${isPt ? 'Abertura' : 'Launch'}: ${launchLabel}`,
-    `${isPt ? 'Tempo restante' : 'Time remaining'}: ${remaining}`,
-    isPt ? 'O que vamos oferecer:' : 'What we will offer:',
+    `Company: ${input.companyName}`,
+    `Role: ${input.role}`,
+    `Joined: ${joinedAt}`,
+    `Launch: ${launchLabel}`,
+    `Time remaining: ${remaining}`,
+    'What we will offer:',
     ...valueItems.map((item) => `- ${item}`),
     input.waitlistUrl,
     'comercial@risckcomply.com',
@@ -121,15 +121,14 @@ export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
   return sendEmail({
     to: input.to,
     from: WAITLIST_COMMERCIAL_FROM,
-    subject: isPt ? 'O seu acesso prioritário à Risck Comply foi confirmado' : 'Your Risck Comply priority access is confirmed',
+    subject: 'Your Risck Comply priority access is confirmed',
     html: premiumEmailShell(title, preview, body),
     text,
     template: 'welcome_onboarding',
     idempotencyKey: `prelaunch-waitlist:${input.to.toLowerCase()}`,
-    metadata: { source: 'prelaunch_waitlist', locale: input.locale },
+    metadata: { source: 'prelaunch_waitlist', locale: 'en' },
   });
 }
-
 export async function sendInternalWaitlistNotification(input: InternalWaitlistNotificationInput) {
   const recipient = input.notifyTo || INTERNAL_WAITLIST_NOTIFY_EMAIL;
   const joinedAt = formatJoinedAt(input.joinedAt, 'pt');

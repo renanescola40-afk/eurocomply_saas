@@ -33,7 +33,7 @@ export function AiSystemsReadonlyView({
   organizationName?: string | null;
   readiness: { score: number | null };
 }) {
-  const t = copy[locale] ?? copy.en;
+  const t = copy.en;
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" aria-labelledby="ai-readonly-inventory-title">
