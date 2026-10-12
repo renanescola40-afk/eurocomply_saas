@@ -110,7 +110,7 @@ function answerLabel(answer: AssessmentAnswer['answer'], locale: string) {
 }
 
 function severityLabel(score: number, locale: string) {
-  if (false) return score === 0 ? 'Crítica' : score === 50 ? 'Média' : 'Baixa';
+  if (locale === 'pt') return score === 0 ? 'Crítica' : score === 50 ? 'Média' : 'Baixa';
   return score === 0 ? 'Critical' : score === 50 ? 'Medium' : 'Low';
 }
 
