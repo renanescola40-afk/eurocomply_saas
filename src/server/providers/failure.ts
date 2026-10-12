@@ -54,7 +54,9 @@ type ProviderErrorLike = {
   status?: unknown;
   statusCode?: unknown;
   response?: { status?: unknown } | null;
-  raw?: { code?: unknown; type?: unknown; statusCode?: unknown } | null;
+  param?: unknown;
+  requestId?: unknown;
+  raw?: { code?: unknown; type?: unknown; statusCode?: unknown; param?: unknown; requestId?: unknown } | null;
 };
 
 const SAFE_TOKEN = /[^a-z0-9_.-]+/g;
@@ -200,7 +202,7 @@ function inferKind(error: ProviderErrorLike): ProviderFailureKind {
 }
 
 function inferProviderCode(error: ProviderErrorLike, kind: ProviderFailureKind) {
-  const candidate = error.code ?? error.raw?.code ?? error.type ?? error.raw?.type ?? error.name;
+  const candidate = error.code ?? error.raw?.code ?? error.param ?? error.raw?.param ?? error.type ?? error.raw?.type ?? error.name;
   return normalizeToken(candidate, kind);
 }
 
