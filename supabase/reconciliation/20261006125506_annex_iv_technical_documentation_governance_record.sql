@@ -1,0 +1,6 @@
+-- RECONCILIATION RECORD ONLY — DO NOT EXECUTE.
+-- version: 20261006125506
+-- canonical source version: 20260721180000
+-- local source: supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql
+-- local source SHA-256: 652786fda5b8b9e78ca40bb02272693987afa2a711eacc32e395d38726fa2c4b
+-- Provider ledger version maps to the canonical repository migration above.
