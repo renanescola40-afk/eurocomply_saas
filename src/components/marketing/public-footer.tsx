@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { locales, type Locale } from '@/lib/i18n/routing';
+import { type Locale } from '@/lib/i18n/routing';
 import { getFeaturePages } from '@/lib/seo/feature-pages';
 import { getLocalizedTrustCenterPages } from '@/lib/trust-center/localized-content';
 
