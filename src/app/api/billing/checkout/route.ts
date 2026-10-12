@@ -30,6 +30,7 @@ import {
   classifyProviderFailure,
   providerFailureContext,
 } from '@/server/providers/failure';
+import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
 import {
@@ -230,7 +231,14 @@ async function expireCheckoutSessionSafely(stripe: Stripe, sessionId: string, or
 export async function POST(request: Request) {
   try {
     const user = await requireApiUser();
-    const organization = await getCurrentOrganizationForUser(user.id);
+    const validationOrganizationOverride = process.env.RISCK_COMPLY_BILLING_VALIDATION_ORGANIZATION_ID?.trim();
+    let organization = await getCurrentOrganizationForUser(user.id);
+
+    if (process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED !== 'true' && validationOrganizationOverride) {
+      const memberships = await getUserOrganizationMemberships(user.id);
+      const validationMembership = memberships.find((membership) => membership.organization_id === validationOrganizationOverride);
+      if (validationMembership) organization = validationMembership.organization;
+    }
 
     if (!organization?.id) {
       return noStoreJson({ error: 'organization_required' }, { status: 403 });
