@@ -6,6 +6,10 @@ import path from 'node:path';
 
 const args = process.argv.slice(2);
 const requireDeployable = args.includes('--require-deployable');
+const remoteEvidenceArgument = args.find((argument) => argument.startsWith('--remote-evidence='));
+const remoteEvidencePath = remoteEvidenceArgument
+  ? remoteEvidenceArgument.slice('--remote-evidence='.length)
+  : null;
 const positional = args.filter((argument) => !argument.startsWith('--'));
 const migrationsDir = positional[0] ?? 'supabase/migrations';
 const remoteListPath = positional[1] ?? 'migration-state-remote.txt';
@@ -62,6 +66,11 @@ function parseRecordOnlyMetadata(text) {
   const canonicalSourceVersion = text.match(/^--\s+canonical source version:\s*(\d{14})\s*$/m)?.[1] ?? null;
   const localSource = text.match(/^--\s+local source:\s*(supabase\/migrations\/[^\s]+\.sql)\s*$/m)?.[1] ?? null;
   const localSourceSha256 = text.match(/^--\s+local source SHA-256:\s*([a-f0-9]{64})\s*$/m)?.[1] ?? null;
+  const remoteLedgerName = text.match(/^--\s+remote ledger name:\s*(.+?)\s*$/m)?.[1] ?? null;
+  const remoteStatementSha256 = text.match(/^--\s+remote statement SHA-256:\s*([a-f0-9]{64})\s*$/m)?.[1] ?? null;
+  const reviewedBy = text.match(/^--\s+reviewed by:\s*(.+?)\s*$/m)?.[1] ?? null;
+  const reviewedAt = text.match(/^--\s+reviewed at:\s*(\d{4}-\d{2}-\d{2})\s*$/m)?.[1] ?? null;
+  const schemaEvidenceReference = text.match(/^--\s+schema evidence reference:\s*(.+?)\s*$/m)?.[1] ?? null;
 
   return {
     markerPresent,
@@ -70,6 +79,11 @@ function parseRecordOnlyMetadata(text) {
     canonicalSourceVersion,
     localSource,
     localSourceSha256,
+    remoteLedgerName,
+    remoteStatementSha256,
+    reviewedBy,
+    reviewedAt,
+    schemaEvidenceReference,
   };
 }
 
@@ -86,6 +100,23 @@ function parseRemoteList(text) {
     if (/^\d{8,14}$/.test(remote)) versions.add(remote);
   }
   return versions;
+}
+
+async function readRemoteLedgerEvidence(file) {
+  if (!file) return new Map();
+  const parsed = JSON.parse(await readFile(file, 'utf8'));
+  if (!Array.isArray(parsed)) throw new Error('remote ledger evidence must be a JSON array');
+  const entries = new Map();
+  for (const item of parsed) {
+    const version = String(item?.version ?? '');
+    const name = String(item?.name ?? '');
+    const statementSha256 = String(item?.statement_sha256 ?? '');
+    if (!/^\d{8,14}$/.test(version)) throw new Error('remote ledger evidence contains invalid version');
+    if (!/^[a-f0-9]{64}$/.test(statementSha256)) throw new Error(`remote ledger evidence contains invalid statement digest for ${version}`);
+    if (entries.has(version)) throw new Error(`remote ledger evidence contains duplicate version ${version}`);
+    entries.set(version, { version, name, statementSha256 });
+  }
+  return entries;
 }
 
 async function readSqlDirectory(directory) {
@@ -105,6 +136,11 @@ async function readSqlDirectory(directory) {
         recordCanonicalSourceVersion: recordMetadata.canonicalSourceVersion,
         recordLocalSource: recordMetadata.localSource,
         recordLocalSourceSha256: recordMetadata.localSourceSha256,
+        recordRemoteLedgerName: recordMetadata.remoteLedgerName,
+        recordRemoteStatementSha256: recordMetadata.remoteStatementSha256,
+        recordReviewedBy: recordMetadata.reviewedBy,
+        recordReviewedAt: recordMetadata.reviewedAt,
+        recordSchemaEvidenceReference: recordMetadata.schemaEvidenceReference,
       };
     }));
   } catch (error) {
@@ -113,7 +149,7 @@ async function readSqlDirectory(directory) {
   }
 }
 
-function validateRecordOnlyReconciliation(entry, localByFilename) {
+function validateRecordOnlyReconciliation(entry, localByFilename, remoteEvidenceByVersion = new Map()) {
   const failures = [];
   if (!entry.recordOnly) failures.push('missing_record_only_markers');
   if (!entry.recordCommentOnly) failures.push('record_contains_non_comment_content');
@@ -146,6 +182,25 @@ function validateRecordOnlyReconciliation(entry, localByFilename) {
     failures.push('local_source_sha256_mismatch');
   }
 
+  const remoteEvidence = entry.version ? remoteEvidenceByVersion.get(entry.version) : null;
+  if (entry.recordRemoteStatementSha256) {
+    if (!remoteEvidence) failures.push('missing_live_remote_statement_evidence');
+    if (remoteEvidence && entry.recordRemoteStatementSha256 !== remoteEvidence.statementSha256) {
+      failures.push('remote_statement_sha256_mismatch');
+    }
+    if (!entry.recordRemoteLedgerName) failures.push('missing_remote_ledger_name');
+    if (
+      remoteEvidence
+      && entry.recordRemoteLedgerName
+      && entry.recordRemoteLedgerName !== remoteEvidence.name
+    ) {
+      failures.push('remote_ledger_name_mismatch');
+    }
+    if (!entry.recordReviewedBy) failures.push('missing_reviewer');
+    if (!entry.recordReviewedAt) failures.push('missing_reviewed_at');
+    if (!entry.recordSchemaEvidenceReference) failures.push('missing_schema_evidence_reference');
+  }
+
   return {
     valid: failures.length === 0,
     failures,
@@ -156,6 +211,16 @@ function validateRecordOnlyReconciliation(entry, localByFilename) {
       sourceEntry
       && entry.recordLocalSourceSha256
       && entry.recordLocalSourceSha256 === sourceEntry.sha256,
+    ),
+    remoteStatementSha256Matches: Boolean(
+      entry.recordRemoteStatementSha256
+      && remoteEvidence
+      && entry.recordRemoteStatementSha256 === remoteEvidence.statementSha256
+    ),
+    remoteLedgerNameMatches: Boolean(
+      entry.recordRemoteLedgerName
+      && remoteEvidence
+      && entry.recordRemoteLedgerName === remoteEvidence.name
     ),
   };
 }
@@ -178,12 +243,13 @@ function markdownList(items, formatter) {
 const local = await readSqlDirectory(migrationsDir);
 const localByFilename = new Map(local.map((entry) => [entry.filename, entry]));
 const rawReconciliations = await readSqlDirectory(reconciliationDir);
-const reconciliations = rawReconciliations.map((entry) => ({
-  ...entry,
-  recordValidation: validateRecordOnlyReconciliation(entry, localByFilename),
-}));
 const remoteText = await readFile(remoteListPath, 'utf8');
 const remoteVersions = parseRemoteList(remoteText);
+const remoteEvidenceByVersion = await readRemoteLedgerEvidence(remoteEvidencePath);
+const reconciliations = rawReconciliations.map((entry) => ({
+  ...entry,
+  recordValidation: validateRecordOnlyReconciliation(entry, localByFilename, remoteEvidenceByVersion),
+}));
 
 const byVersion = new Map();
 for (const migration of local) {
