@@ -524,6 +524,30 @@ export async function POST(request: Request) {
           { idempotencyKey: deriveStripeIdempotencyKey(idempotency.context, `checkout-session:${attemptToken}`) },
         );
       } catch (error) {
+        try {
+          await stripe.prices.retrieve(priceId);
+        } catch {
+          throw new ProviderFailureError({
+            provider: 'stripe',
+            kind: 'invalid_request',
+            providerCode: 'checkout_price_unreachable',
+            operation: 'checkout_session_create',
+            cause: error,
+          });
+        }
+
+        try {
+          await stripe.customers.retrieve(customer.id);
+        } catch {
+          throw new ProviderFailureError({
+            provider: 'stripe',
+            kind: 'invalid_request',
+            providerCode: 'checkout_customer_unreachable',
+            operation: 'checkout_session_create',
+            cause: error,
+          });
+        }
+
         throw classifyProviderFailure('stripe', 'checkout_session_create', error);
       }
 
