@@ -142,7 +142,7 @@ const pageCopy: Record<string, Omit<TrustPage, 'slug' | 'updated'>> = {
     sections: [
       { title: 'Data categories', body: 'The platform may process user identity data, organization data, membership and role data, AI system descriptions, risk classification inputs, generated document metadata, audit events, billing references and support records.' },
       { title: 'Data minimization', body: 'Customers should provide only the information required to operate the readiness workflow. Sensitive personal data should not be entered unless necessary and contractually permitted.' },
-      { title: 'Access and segregation', body: 'Customer records are designed around organization_id and authenticated access. Administrative access should be limited, logged where possible and used only for operational needs.' },
+      { title: 'Access and segregation', body: 'Customer records are designed around organization-scoped tenant boundaries and authenticated access. Administrative access should be limited, logged where possible and used only for operational needs.' },
     ],
   },
   [disclosureSlug]: {
