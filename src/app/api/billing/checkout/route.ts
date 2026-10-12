@@ -28,6 +28,7 @@ import {
 import { mutateSubscriptionLifecycle } from '@/server/billing/subscription-lifecycle';
 import {
   classifyProviderFailure,
+  ProviderFailureError,
   providerFailureContext,
 } from '@/server/providers/failure';
 import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
