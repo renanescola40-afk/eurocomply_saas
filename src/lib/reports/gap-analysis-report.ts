@@ -386,7 +386,7 @@ function buildReportHtml(input: GapAnalysisPdfReportInput) {
 
     <footer class="footer">
       ${escapeHtml(input.labels.scope)}<br />
-      EuroComply SaaS · ${escapeHtml(input.labels.generatedAt)} ${escapeHtml(generatedAt)}
+      RISCK COMPLY · ${escapeHtml(input.labels.generatedAt)} ${escapeHtml(generatedAt)}
     </footer>
   </main>
   <script>
@@ -407,7 +407,7 @@ export function openGapAnalysisPdfReport(input: GapAnalysisPdfReportInput) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `eurocomply-eu-ai-act-gap-analysis-${slugDate(input.generatedAt)}.html`;
+    link.download = `risck-comply-eu-ai-act-gap-analysis-${slugDate(input.generatedAt)}.html`;
     link.click();
     URL.revokeObjectURL(url);
     return;
