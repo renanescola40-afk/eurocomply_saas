@@ -99,8 +99,14 @@ test('production provider workflow binds the strict Supabase resilience proof to
   assert.doesNotMatch(workflow, /SUPABASE_ACCESS_TOKEN:[^\n]*vars\./);
 });
 
-test('strict Supabase provider posture remains observable without blocking internal runtime authority', () => {
-  assert.match(workflow, /- name: Execute strict Supabase provider resilience proof\n\s+if: always\(\)\n\s+continue-on-error: true/);
+test('strict Supabase provider posture remains observable without weakening workflow policy', () => {
+  assert.match(workflow, /- name: Execute strict Supabase provider resilience proof/);
+  assert.doesNotMatch(workflow, /continue-on-error\s*:\s*true/);
+  assert.match(workflow, /strict_rc=\$\?/);
+  assert.match(workflow, /evidence\?\.status === 'Open'/);
+  assert.match(workflow, /evidence\?\.outcome === 'blocked'/);
+  assert.match(workflow, /evidence\?\.targetSha === process\.env\.TARGET_SHA/);
+  assert.match(workflow, /blockers\.length > 0/);
   assert.match(workflow, /- name: Execute broad live provider proof\n\s+if: always\(\)\n\s+run: node scripts\/security\/run-production-provider-runtime-proof\.mjs/);
 });
 
