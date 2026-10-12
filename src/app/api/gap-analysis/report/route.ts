@@ -86,31 +86,21 @@ function wrap(text: string, width = 86) {
   return lines;
 }
 
-function formatDate(date: Date, locale: string) {
-  if (locale === 'pt') {
-    return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
-  }
+function formatDate(date: Date) {
   return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 }
 
-function scoreStatus(score: number, locale: string) {
-  if (locale === 'pt') {
-    if (score >= 80) return 'Prontidão elevada';
-    if (score >= 50) return 'Precisa de atenção';
-    return 'Lacuna crítica';
-  }
+function scoreStatus(score: number) {
   if (score >= 80) return 'High readiness';
   if (score >= 50) return 'Needs attention';
   return 'Critical gap';
 }
 
-function answerLabel(answer: AssessmentAnswer['answer'], locale: string) {
-  if (locale === 'pt') return answer === 'yes' ? 'Sim' : answer === 'partial' ? 'Parcial' : 'Não';
+function answerLabel(answer: AssessmentAnswer['answer']) {
   return answer === 'yes' ? 'Yes' : answer === 'partial' ? 'Partial' : 'No';
 }
 
-function severityLabel(score: number, locale: string) {
-  if (locale === 'pt') return score === 0 ? 'Crítica' : score === 50 ? 'Média' : 'Baixa';
+function severityLabel(score: number) {
   return score === 0 ? 'Critical' : score === 50 ? 'Medium' : 'Low';
 }
 
