@@ -183,12 +183,22 @@ function validateRecordOnlyReconciliation(entry, localByFilename, remoteEvidence
   }
 
   const remoteEvidence = entry.version ? remoteEvidenceByVersion.get(entry.version) : null;
-  if (entry.recordRemoteStatementSha256) {
+  const liveRemoteEvidenceRequired = remoteEvidenceByVersion.size > 0 && Boolean(entry.version);
+
+  if (liveRemoteEvidenceRequired) {
+    if (!entry.recordRemoteStatementSha256) failures.push('missing_remote_statement_sha256');
+    if (!entry.recordRemoteLedgerName) failures.push('missing_remote_ledger_name');
+    if (!entry.recordReviewedBy) failures.push('missing_reviewer');
+    if (!entry.recordReviewedAt) failures.push('missing_reviewed_at');
+    if (!entry.recordSchemaEvidenceReference) failures.push('missing_schema_evidence_reference');
     if (!remoteEvidence) failures.push('missing_live_remote_statement_evidence');
-    if (remoteEvidence && entry.recordRemoteStatementSha256 !== remoteEvidence.statementSha256) {
+    if (
+      remoteEvidence
+      && entry.recordRemoteStatementSha256
+      && entry.recordRemoteStatementSha256 !== remoteEvidence.statementSha256
+    ) {
       failures.push('remote_statement_sha256_mismatch');
     }
-    if (!entry.recordRemoteLedgerName) failures.push('missing_remote_ledger_name');
     if (
       remoteEvidence
       && entry.recordRemoteLedgerName
@@ -196,6 +206,10 @@ function validateRecordOnlyReconciliation(entry, localByFilename, remoteEvidence
     ) {
       failures.push('remote_ledger_name_mismatch');
     }
+  } else if (entry.recordRemoteStatementSha256) {
+    // Repository-only validation can inspect the metadata shape, but cannot
+    // promote it as live evidence without the protected ledger snapshot.
+    if (!entry.recordRemoteLedgerName) failures.push('missing_remote_ledger_name');
     if (!entry.recordReviewedBy) failures.push('missing_reviewer');
     if (!entry.recordReviewedAt) failures.push('missing_reviewed_at');
     if (!entry.recordSchemaEvidenceReference) failures.push('missing_schema_evidence_reference');
