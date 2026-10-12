@@ -7,6 +7,7 @@ import { buildSafeReadinessDiagnostics } from './production-readiness-diagnostic
 
 const OUTPUT = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
 const CANONICAL_HOST = 'www.risckcomply.com';
+const CANONICAL_LOCALE = 'en';
 const configuredBaseUrl = String(
   process.env.RELEASE_PRODUCTION_URL
   || process.env.RELEASE_DEPLOYMENT_URL
@@ -65,14 +66,14 @@ async function request(path, options = {}) {
   }
 }
 
-const landing = await request('/pt');
+const landing = await request(`/${CANONICAL_LOCALE}`);
 const health = await request('/api/health', { accept: 'application/json' });
 const readyAnonymous = await request('/api/ready', { accept: 'application/json' });
 const readyAuthenticated = token
   ? await request('/api/ready', { accept: 'application/json', headers: { Authorization: `Bearer ${token}` } })
   : { response: null, body: null };
-const dashboard = await request('/pt/dashboard');
-const organizationDashboard = await request('/pt/dashboard/organizations');
+const dashboard = await request(`/${CANONICAL_LOCALE}/dashboard`);
+const organizationDashboard = await request(`/${CANONICAL_LOCALE}/dashboard/organizations`);
 const observabilityAnonymous = await request('/api/observability/smoke', { accept: 'application/json' });
 
 const headerState = Object.fromEntries(requiredHeaders.map(([name]) => [name, landing.response?.headers.get(name) ? 'present' : 'missing']));
@@ -80,7 +81,7 @@ const securityHeadersPresent = Boolean(landing.response) && requiredHeaders.ever
   const value = landing.response.headers.get(name) || '';
   return value && validator(value);
 });
-const redirectToLogin = (result) => Boolean(result.response && [301, 302, 303, 307, 308].includes(result.response.status) && (result.response.headers.get('location') || '').includes('/pt/login'));
+const redirectToLogin = (result) => Boolean(result.response && [301, 302, 303, 307, 308].includes(result.response.status) && (result.response.headers.get('location') || '').includes(`/${CANONICAL_LOCALE}/login`));
 const privateRoutesNoStore = [dashboard, organizationDashboard].every((result) => result.response && noStore(result.response));
 const sensitiveApisNoStore = [health, readyAnonymous, readyAuthenticated, observabilityAnonymous].every((result) => result.response && noStore(result.response));
 const protectedReadinessDiagnostics = buildSafeReadinessDiagnostics(readyAuthenticated.body);
