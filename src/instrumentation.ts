@@ -34,7 +34,6 @@ export async function register() {
     release: isEdge
       ? process.env.NEXT_PUBLIC_SENTRY_RELEASE ?? process.env.VERCEL_GIT_COMMIT_SHA
       : process.env.SENTRY_RELEASE ?? process.env.VERCEL_GIT_COMMIT_SHA,
-    sendDefaultPii: false,
     tracesSampleRate: getTraceSampleRate(
       isEdge ? process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE : process.env.SENTRY_TRACES_SAMPLE_RATE,
       process.env.NODE_ENV === 'production' ? DEFAULT_PRODUCTION_TRACE_SAMPLE_RATE : 1.0,
