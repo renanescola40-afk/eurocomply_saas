@@ -28,3 +28,16 @@ test('offline asset inventory refuses non-tmp output and does not hash secret pa
   assert.equal(data.summary.legal_title_verified,false);
   assert.equal(data.summary.transfer_approved,false);
 });
+
+test('exact-SHA manifest refuses tracked worktree modifications', () => {
+  const repo=mkdtempSync(join(tmpdir(),'risck-ma-dirty-'));
+  execFileSync('git',['init','-q'],{cwd:repo});
+  writeFileSync(join(repo,'asset.txt'),'initial content\n');
+  execFileSync('git',['add','asset.txt'],{cwd:repo});
+  execFileSync('git',['-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','initial'],{cwd:repo});
+  writeFileSync(join(repo,'asset.txt'),'changed without commit\n');
+  const out=mkdtempSync(join(tmpdir(),'risck-ma-dirty-output-'));
+  const result=spawnSync(process.execPath,[script,out],{cwd:repo,encoding:'utf8'});
+  assert.notEqual(result.status,0);
+  assert.match(result.stderr,/uncommitted changes/);
+});
