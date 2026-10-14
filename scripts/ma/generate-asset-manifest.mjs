@@ -12,6 +12,9 @@ import { resolve, join } from 'node:path';
 
 const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+// A worktree hash cannot safely be represented as the commit's exact-SHA evidence.
+const dirty = execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { cwd: root, encoding: 'utf8' });
+if (dirty.trim()) throw new Error('Refusing exact-SHA manifest: tracked worktree or index has uncommitted changes.');
 const out = resolve(process.argv[2] || '/tmp/risck-ma-asset-manifest');
 if (!out.startsWith('/tmp/') || out === '/tmp') {
   throw new Error('Safety guard: choose an output directory under /tmp. Do not commit generated manifests without review.');
