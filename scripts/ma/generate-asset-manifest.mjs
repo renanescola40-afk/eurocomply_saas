@@ -7,7 +7,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, fstatSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
@@ -35,12 +35,28 @@ const rows = [];
 for (const p of paths) {
   if (sensitive(p)) { rows.push({path:p,category:'RESTRICTED_REVIEW',size:null,sha256:null,transfer:'EXCLUDE_PENDING_SECURITY_REVIEW'}); continue; }
   const full=join(root,p);
-  if (!existsSync(full)) continue;
-  const s=lstatSync(full);
-  if (s.isSymbolicLink()) { rows.push({path:p,category:'SYMLINK_REVIEW',size:null,sha256:null,transfer:'EXCLUDE_PENDING_SECURITY_REVIEW'}); continue; }
-  if (!s.isFile()) continue;
-  const hash=createHash('sha256').update(readFileSync(full)).digest('hex');
-  rows.push({path:p,category:classify(p),size:s.size,sha256:hash,transfer:'UNREVIEWED_LEGAL_TITLE_AND_LICENSE'});
+  let fd;
+  try {
+    fd=openSync(full, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'ENOENT') continue;
+      if (error.code === 'ELOOP') {
+        rows.push({path:p,category:'SYMLINK_REVIEW',size:null,sha256:null,transfer:'EXCLUDE_PENDING_SECURITY_REVIEW'});
+        continue;
+      }
+    }
+    throw error;
+  }
+
+  try {
+    const s=fstatSync(fd);
+    if (!s.isFile()) continue;
+    const hash=createHash('sha256').update(readFileSync(fd)).digest('hex');
+    rows.push({path:p,category:classify(p),size:s.size,sha256:hash,transfer:'UNREVIEWED_LEGAL_TITLE_AND_LICENSE'});
+  } finally {
+    closeSync(fd);
+  }
 }
 const summary={schema:'risck-ma-manifest-v1',git_sha:sha,tracked_paths:paths.length,files_recorded:rows.length,restricted_paths:rows.filter(x=>['RESTRICTED_REVIEW','SYMLINK_REVIEW'].includes(x.category)).length,legal_title_verified:false,transfer_approved:false,generated_at:new Date().toISOString()};
 mkdirSync(out,{recursive:true});
