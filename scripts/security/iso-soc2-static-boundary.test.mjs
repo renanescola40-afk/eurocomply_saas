@@ -5,36 +5,59 @@ import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-function source(path) { return readFileSync(resolve(root,path),'utf8'); }
+const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
-// This suite statically guards authorization boundaries; it is NOT a runtime
-// tenancy test, SOC 2 opinion, certification or substitute for threat modeling.
-test('role-management API requires user, permission, step-up and trusted mutation', () => {
-  const body=source('src/app/api/team/members/role/route.ts');
-  for(const guard of ['requireApiUser(', 'requireTrustedMutation(', 'requirePermission(', 'requireStepUpForRequest('])
-    assert.ok(body.includes(guard), 'Expected guard missing: '+guard);
-  assert.match(body,/permission:\s*['"]manage_team['"]/);
+// Static tripwires only. These tests are not executable tenant-isolation proofs.
+test('role-management route has explicit guards before privileged RPC', () => {
+  const body = read('src/app/api/team/members/role/route.ts');
+  const start = body.indexOf('export async function POST(');
+  assert.ok(start >= 0);
+  const part = body.slice(start);
+  for (const token of ['requireApiUser(', 'requireTrustedMutation(', 'requirePermission(', 'requireStepUpForRequest(']) {
+    const i = part.indexOf(token);
+    assert.ok(i >= 0, 'Missing guard: ' + token);
+  }
+  assert.match(part, /permission:\s*['"]manage_team['"]/);
+  const call = part.indexOf('.rpc(');
+  assert.ok(call > part.indexOf('requirePermission('), 'RPC must follow permission verification');
+  assert.ok(call > part.indexOf('requireStepUpForRequest('), 'RPC must follow step-up verification');
 });
 
-test('organization creation requires user validation before privileged RPC',()=>{
-  const body=source('src/server/actions/organizations.ts');
-  for(const text of ['requireCurrentUser(', 'createOrganizationSchema.safeParse(', 'checkDistributedRateLimit('])
-    assert.ok(body.includes(text),'Expected guard missing: '+text);
-  const guard=body.indexOf('requireCurrentUser(',body.indexOf('export async function createOrganization'));
-  const rpc=body.indexOf('.rpc(',guard);
-  assert.ok(guard>=0 && rpc>guard,'Guard must appear before RPC call');
+test('organization creation validates authenticated identity before RPC', () => {
+  const body = read('src/server/actions/organizations.ts');
+  const start = body.indexOf('export async function createOrganization(');
+  assert.ok(start >= 0);
+  const part = body.slice(start);
+  const user = part.indexOf('requireCurrentUser(');
+  const validation = part.indexOf('createOrganizationSchema.safeParse(');
+  const limit = part.indexOf('checkDistributedRateLimit(');
+  const rpc = part.indexOf('.rpc(');
+  assert.ok(user >= 0 && validation > user && limit > validation && rpc > limit);
+  assert.ok(body.includes('sendEmail('), 'Onboarding email side effect must stay visible in review');
 });
 
-test('evidence pack route exposes authentication and organization permission guard',()=>{
-  const body=source('src/app/api/ai-systems/route.ts');
-  for(const guard of ['assertTrustedOrigin(', 'requireApiUser(', 'assertOrganizationPermission(', "create_enterprise_evidence_pack_atomic"])
-    assert.ok(body.includes(guard), 'Expected marker missing: '+guard);
-  // This does not validate the authorization flow to the specific RPC.
+test('evidence-pack POST authorizes requested workflow before privileged call', () => {
+  const body = read('src/app/api/ai-systems/route.ts');
+  const start = body.indexOf('export async function POST(');
+  assert.ok(start >= 0);
+  const post = body.slice(start);
+  const origin = post.indexOf('assertTrustedOrigin(');
+  const user = post.indexOf('requireApiUser(');
+  const org = post.indexOf('getCurrentOrganizationForUser(');
+  const permission = post.indexOf('assertOrganizationPermission(');
+  const rate = post.indexOf('checkDistributedRateLimit(');
+  const branch = post.indexOf("if (workflow === 'evidence_pack')");
+  const call = post.indexOf('createEvidencePackWorkflow(', branch);
+  assert.ok(origin >= 0 && user > origin && org > user && permission > org && rate > permission && branch > rate && call > branch,
+    'Evidence-pack call must follow trusted origin, identity, organization, permission and rate limit checks');
+  assert.match(post.slice(permission,branch), /permission:\s*getWorkflowPermission\(workflow\)/);
+  assert.match(post.slice(branch,call+400), /actorUserId:\s*user\.id/);
+  assert.match(post.slice(branch,call+400), /organizationId:\s*organization\.id/);
 });
 
-test('security docs prohibit unsupported ISO and SOC 2 claims',()=>{
-  const body=source('SECURITY.md');
-  assert.match(body,/SOC 2/);
-  assert.match(body,/ISO 27001/);
-  assert.match(body,/unless approved evidence exists/);
+test('security policy forbids unsupported ISO and SOC 2 claims', () => {
+  const body = read('SECURITY.md');
+  assert.match(body, /SOC 2/);
+  assert.match(body, /ISO 27001/);
+  assert.match(body, /unless approved evidence exists/);
 });
