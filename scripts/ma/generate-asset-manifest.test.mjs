@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 const script = resolve('scripts/ma/generate-asset-manifest.mjs');
