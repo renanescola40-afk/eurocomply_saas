@@ -7,13 +7,13 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 const out = resolve(process.argv[2] || '/tmp/risck-ma-asset-manifest');
-if (!out.startsWith('/tmp/') && out !== '/tmp') {
+if (!out.startsWith('/tmp/') || out === '/tmp') {
   throw new Error('Safety guard: choose an output directory under /tmp. Do not commit generated manifests without review.');
 }
 const paths = execFileSync('git', ['ls-files', '-z'], { cwd: root }).toString('utf8').split('\0').filter(Boolean);
@@ -36,12 +36,13 @@ for (const p of paths) {
   if (sensitive(p)) { rows.push({path:p,category:'RESTRICTED_REVIEW',size:null,sha256:null,transfer:'EXCLUDE_PENDING_SECURITY_REVIEW'}); continue; }
   const full=join(root,p);
   if (!existsSync(full)) continue;
-  const s=statSync(full);
+  const s=lstatSync(full);
+  if (s.isSymbolicLink()) { rows.push({path:p,category:'SYMLINK_REVIEW',size:null,sha256:null,transfer:'EXCLUDE_PENDING_SECURITY_REVIEW'}); continue; }
   if (!s.isFile()) continue;
   const hash=createHash('sha256').update(readFileSync(full)).digest('hex');
   rows.push({path:p,category:classify(p),size:s.size,sha256:hash,transfer:'UNREVIEWED_LEGAL_TITLE_AND_LICENSE'});
 }
-const summary={schema:'risck-ma-manifest-v1',git_sha:sha,tracked_paths:paths.length,files_recorded:rows.length,restricted_paths:rows.filter(x=>x.category==='RESTRICTED_REVIEW').length,legal_title_verified:false,transfer_approved:false,generated_at:new Date().toISOString()};
+const summary={schema:'risck-ma-manifest-v1',git_sha:sha,tracked_paths:paths.length,files_recorded:rows.length,restricted_paths:rows.filter(x=>['RESTRICTED_REVIEW','SYMLINK_REVIEW'].includes(x.category)).length,legal_title_verified:false,transfer_approved:false,generated_at:new Date().toISOString()};
 mkdirSync(out,{recursive:true});
 writeFileSync(join(out,'manifest.json'), JSON.stringify({summary,assets:rows},null,2)+'\n',{mode:0o600});
 console.log(JSON.stringify({output:join(out,'manifest.json'),summary},null,2));
