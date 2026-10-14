@@ -14,7 +14,7 @@ test('offline asset inventory refuses non-tmp output and does not hash secret pa
   writeFileSync(join(repo,'.env.production'),'DO_NOT_EXPOSE=true\n');
   symlinkSync(join(repo,'.env.production'),join(repo,'src','env-link'));
   execFileSync('git',['add','.'],{cwd:repo});
-  const out = join(repo,'manifest'); // must be rejected: writing inside repository unsafe
+  const out = '/var/tmp/risck-ma-rejected'; // must be rejected: outside /tmp allowlist
   const rejected=spawnSync(process.execPath,[script,out],{cwd:repo,encoding:'utf8'});
   assert.notEqual(rejected.status,0);
   const safe = mkdtempSync(join(tmpdir(),'risck-ma-output-'));
