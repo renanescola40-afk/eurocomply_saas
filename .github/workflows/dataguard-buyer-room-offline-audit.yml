@@ -1,0 +1,27 @@
+name: DataGuard Buyer Room Offline Audit
+on:
+  pull_request:
+    paths:
+      - 'DATAGUARD_DATA_ROOM/**'
+      - 'scripts/ma/audit-buyer-room*'
+      - '.github/workflows/dataguard-buyer-room-offline-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  data-room-static-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Read-only checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline scanner regression tests
+        run: node --test scripts/ma/audit-buyer-room.test.mjs
+      - name: Offline source inventory and data-room screening
+        run: node scripts/ma/audit-buyer-room.mjs
