@@ -35,3 +35,16 @@ Distinct factual state vocabulary:
 - BUYER_ACCEPTED: affirmative recorded acceptance from the authorized buyer.
 
 **Acceptance blockers:** owner approval not recorded, disclosure pack not screened comprehensively, asset/title legal proof absent, terminal pentest not buyer accepted, current production parity unproven, external accounting/tax and provider/transaction consents outstanding.
+
+
+## V5 controlled Stage A candidate — scoped internal acceptance addendum (2026-10-15)
+
+The original V2 score of **8/10 = 80%** above is preserved as a historical checkpoint. A material internal gap has since been addressed without granting any external release:
+
+- New [self-contained Stage A sanitized draft](../00_EXECUTIVE_INDEX/STAGE_A_CONTROLLED_BUYER_BRIEF_EN_2026-10-15.md), linked from the existing [sharing index](../00_EXECUTIVE_INDEX/BUYER_CONTROLLED_SHARING_PACK_V2_2026-10-15.md).
+- Exact proposed-branch file blob at this review: `6e7ffd49be606ef5df17c0b3d4cc7b21cf6fb306`; six explicit source file references all present, zero missing Markdown links, zero observed email addresses and zero high-confidence credential patterns **within the new candidate**. Manual content review confirmed no named buyer contact, confidential correspondence, raw security report, token or personal record was introduced in the drafted brief.
+- This passes **internal draft preparation only for initial controlled Stage A**. Detailed Stage B/C and independent legal/privacy certification are explicitly not part of this acceptance, and owner-specific release remains HOLD.
+
+**Revised scoped internal deliverable accounting after proposed V5 documents are committed and checked:** `INTERNAL_VERIFIED=9/10=90%`; `INTERNAL_PARTIAL=1/10=10%` (item 3, exhaustive current evidence/claim-level reconciliation). Item 9 is `INTERNAL_VERIFIED_STAGE_A_ONLY`, not `EXTERNALLY_APPROVED` or `BUYER_ACCEPTED`.
+
+`ACQUISITION_EVIDENCE=NOT_MEASURABLE` for an updated global calculation; preserve the dated `37.0/98=37.76%` (2026-10-08) only as history. `BUYER_RELEASE=HOLD`, `LEGAL_EXECUTED=NOT_CREDITED`, `BUYER_ACCEPTED=NOT_CREDITED`, `DEMO_STATUS=NOT_VERIFIED` by this document. Exact-head CI on this new PR remains an independent gate and must not be called PASS prematurely.
