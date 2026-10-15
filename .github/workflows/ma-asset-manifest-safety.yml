@@ -1,0 +1,22 @@
+name: M&A Asset Manifest Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/ma/**'
+      - '.github/workflows/ma-asset-manifest-safety.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-manifest-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify manifest safety regressions
+        run: node --test scripts/ma/generate-asset-manifest.test.mjs
