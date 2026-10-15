@@ -18,7 +18,7 @@ permissions:
 # A newer commit supersedes an in-flight CodeQL run for the same PR/main ref.
 # Keep all PR, push and scheduled security triggers enabled.
 concurrency:
-  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  group: codeql-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
