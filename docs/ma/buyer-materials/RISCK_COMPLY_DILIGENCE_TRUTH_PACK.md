@@ -26,8 +26,8 @@ Purpose: buyer-safe status map. Green status is never inferred from intent or do
 | Procurement | PASS_INTERNAL | Procurement/trust packs are internally ready; buyer acceptance is external. |
 | Provider transfer | PARTIAL | Provider-specific handoff/transfer paths exist; no provider is represented as fully transferred. |
 | Main = production SHA | FAIL | Current main and latest READY production SHA are not equal. |
-| Vercel production recreation | EXTERNALLY_BLOCKED | Latest exact-main deployment attempt was blocked by overdue-balance/payment action; no billing mutation was performed. |
-| Repository confidentiality | OPEN_RISK | Authenticated GitHub evidence on 2026-10-07 reported repository visibility as public. Buyer-contact correspondence was removed from the current tree, but prior merged commits remain reachable in public Git history; do not call the repository/history confidential or repository-safe until history is appropriately remediated or access/visibility strategy is formally resolved. |
+| Vercel production recreation | HISTORICAL_PAYMENT_BLOCKER / CURRENT_RECHECK_REQUIRED | Earlier exact-main release/resource actions reported an overdue billing condition. Later authenticated Vercel evidence confirms at least one production deployment READY on 2026-10-15; that does not prove account balance, new-resource entitlements or source parity. |
+| Repository confidentiality | CURRENT_REPOSITORY_PRIVATE / HISTORICAL_EXPOSURE_OPEN | Authenticated GitHub repository metadata confirms visibility **private** as of 2026-10-15. Historical publicly reachable commits may still exist in forks, external clones and caches. Repository privacy is not evidence of complete historical purge. No blanket source-share permission. |
 
 ## Current production / release boundary
 
@@ -35,7 +35,7 @@ Canonical M&A control-tower evidence records:
 - current main SHA identified;
 - latest READY Vercel production deployment identified;
 - exact SHA equality currently fails;
-- Vercel resource creation is blocked by an overdue balance requiring owner payment action.
+- a prior Vercel resource-creation/billing block is documented; its **current** status has not been revalidated against provider billing and must not be stated as an active universal block. Vercel READY production was subsequently observed, without proving source parity.
 
 These facts prevent a buyer-safe claim that the latest main is the currently promoted production build.
 
@@ -47,7 +47,7 @@ Buyer materials may describe implemented security architecture and evidence. The
 - zero vulnerabilities;
 - complete provider transfer;
 - perfect enterprise readiness;
-- confidentiality of source history while the repository is publicly visible.
+- complete confidentiality of historical material merely because the repository is currently private; public forks, caches and prior clones have not been cleared.
 
 ## Diligence conclusion
 
@@ -56,15 +56,25 @@ The product is suitable to enter technical diligence with disclosed gaps. This i
 
 ## Public Git history confidentiality incident
 
-A buyer-material commit previously introduced named buyer contacts, private request details and unsent reply drafts into a repository that is currently public.
+A buyer-material commit previously introduced named buyer contacts, private request details and unsent reply drafts into a repository that was **historically public**. Authenticated GitHub metadata on 2026-10-15 shows the canonical repository is now **private**.
 
-The current tree no longer contains those details. However, ordinary follow-up commits do not erase reachable Git history. Historical commits containing the material remain recoverable while that history remains publicly reachable.
+Prior reviews reported removal from the current tree. Ordinary follow-up commits do not erase historical Git objects. Private visibility reduces access to the canonical repository but does not establish that affected public forks, cached views or third-party clones have been purged. Present-day public reachability has NOT been exhaustively verified.
 
 Current classification:
 - CURRENT_TREE_PRIVATE_CORRESPONDENCE_REMOVED=YES
-- REACHABLE_GIT_HISTORY_EXPOSURE=OPEN
-- HISTORY_PURGE_EXECUTED=NO
-- REPOSITORY_PRIVATE_MIGRATION_EXECUTED=NO
+- HISTORICAL_PUBLIC_EXPOSURE_REMEDIATION=OPEN
+- HISTORY_PURGE_EXECUTED=NOT_EVIDENCED
+- REPOSITORY_VISIBILITY=PRIVATE_VERIFIED_2026_10_15
+- VISIBILITY_CHANGE_TIME=NOT_VERIFIED
+- FORKS_CACHES_AND_PRIOR_CLONES=NOT_CLEARED
 - CONFIDENTIALITY_CLOSED=NO
 
 No force-push/history rewrite or repository-visibility mutation is performed by this documentation change.
+
+
+## Dated 2026-10-15 evidence reconciliation
+
+- **Canonical GitHub repository visibility:** `private`, from authenticated repository metadata on 2026-10-15. This statement supersedes the 2026-10-07 visibility snapshot only; it does not erase exposure while public.
+- **Production linkage:** a read-only Vercel lookup on 2026-10-15 found READY deployment `dpl_G46QK2En1purZiDjnDMamBjcWrEB` linked to source `3310757dc82c2f5b07a5763b2e4b6e9fc5b4bfc5`. At that check, `main` was 24 commits ahead. Because `main` changes, no permanent commit-drift number or deployed feature claim follows from that snapshot.
+- **Confidentiality:** current private visibility `VERIFIED`; public-fork/cache/history purge `NOT_VERIFIED`; full confidentiality closure `NO`. Source access remains restricted.
+- **Buyer status:** no external buyer disclosure, offer, signed chain of title, completed independent terminal security assurance, provider transfer or buyer acceptance is inferred.
