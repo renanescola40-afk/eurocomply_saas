@@ -71,3 +71,12 @@ No emails or external transmissions, no paid resources, no main merge, no deploy
 **Unchanged external evidence/closing gates:** (1) executed creator-to-seller IP title, (2) official company/authority materials, (3) complete accounting/financial originals, (4) tax and statutory official records, (5) provider transfer rights, (6) terminal independent security acceptance, (7) buyer-specific NDA/sale contracts/release/acceptance. These are seven risk **clusters**, not seven documents or a percentage of the transaction.
 
 **Final release discipline:** NO_EMAIL_SENT, NO_BUYER_ACCESS_GRANTED, NO_DEMO_MODIFICATION, NO_PRODUCTION_DEPLOY, NO_UNAUTHENTICATED_ASSURANCE_CLAIM. `BUYER_RELEASE=HOLD`; `BUYER_ACCEPTED=0/10` in the original authorisation ledger; `ACQUISITION_EVIDENCE=NOT_MEASURABLE` for a fresh weighted valuation/closing score. The 2026-10-08 `37/98` score is historical only. `FINAL_STATUS=PARTIAL_UNTIL_V6_CI` for scoped document execution and `TRANSACTION_STATUS=OPEN_EXTERNAL` regardless of internal completion.
+
+## V7 latest execution summary — verified after V6 merge
+
+- Frozen merged `main@178bb279ef6c9ebbe5547bf9d78545f3958aaf10`: read all **80/80** scoped Markdown documents directly, matched **80/80 exact Git blob IDs**, confirmed **182/182 recognized inline source paths** are tracked.
+- Document-pattern triage: zero high-confidence credential candidates in those 80 files; a single matched address is a recognized RISCK COMPLY business-role contact in the existing internal Stripe provider reconciliation. This is not a general PII, privilege or buyer release clearance.
+- CI: V4 **10/10 PASS** verified in attributable run `38805676055`. V6 run `38809558493` remains **QUEUED**, not PASS. V5 `38807479280` likewise QUEUED. The V6 documentation is merged, but verification is not the same as merging.
+- **Internal scoped completion:** `PREPARED=100%`, `VERIFIED=90%`, `REMAINING_VERIFICATION=10%`. The remaining 10% is narrowly the exact-head V6 automated coverage/claim checker acceptance; no further duplicated manuals are required.
+- **Transaction:** 7 external evidence dependency clusters stay open; no invented external completion percentage. Buyer acceptance, production-release gate, executed IP/title and financial/tax/assessor records remain NOT_CREDITED. `BUYER_RELEASE=HOLD`, `TRANSACTION_CLOSED=NO`.
+- The software's production deployment and DataGuard demo were not modified. No emails, messages, recipient access grants or invitations were sent.
