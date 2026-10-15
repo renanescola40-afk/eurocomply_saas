@@ -174,7 +174,7 @@ jobs:
           fi
 
       - name: Download exact migration inventory artifact
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: supabase-production-migration-dry-run-${{ inputs.release_sha }}
           path: source-artifact
@@ -183,7 +183,7 @@ jobs:
 
       - name: Download exact bounded forward dry-run artifact
         if: env.BOUNDED_FORWARD == 'true'
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: supabase-forward-reconciliation-dry-run-${{ inputs.release_sha }}
           path: forward-source-artifact
