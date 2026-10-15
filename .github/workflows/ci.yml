@@ -90,6 +90,13 @@ jobs:
       - name: ISO 27001 Annex A register structural validation
         run: node scripts/security/iso-soc2-register-audit.mjs
 
+      # 11-gate completion percentage is register-only, not ISO/SOC 2 certification.
+      - name: ISO 27001 SOC 2 progress calculator contract tests
+        run: node --test scripts/security/iso-soc2-gate-progress.test.mjs
+
+      - name: ISO 27001 SOC 2 current gate status
+        run: node scripts/security/iso-soc2-gate-progress.mjs
+
       - name: Upload unit test diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
