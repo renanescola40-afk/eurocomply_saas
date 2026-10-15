@@ -13,6 +13,13 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+
+# Cancel stale attempts for the same pull request or repeated manual main run;
+# preserve separate PR and main groups so buyer evidence is never conflated.
+concurrency:
+  group: dataguard-room-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   data-room-static-evidence:
     runs-on: ubuntu-latest
