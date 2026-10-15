@@ -189,23 +189,9 @@ export async function getOrganizationMembership(userId: string, organizationId: 
   let membership = statusAware.data as unknown as MembershipRow | null;
   let membershipError = statusAware.error as MembershipQueryError | null;
 
-  // Production is being migrated forward to the canonical status column. Only
-  // the exact missing-column SQLSTATE may use the temporary legacy projection;
-  // every other provider/query failure remains fail-closed.
-  if (membershipError?.code === '42703') {
-    const legacy = await supabase
-      .from('organization_members')
-      .select('organization_id, role')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    membership = legacy.data
-      ? { ...(legacy.data as unknown as Omit<MembershipRow, 'status'>), status: 'active' }
-      : null;
-    membershipError = legacy.error as MembershipQueryError | null;
-  }
-
+  // Fail closed if the canonical membership status cannot be read.
+  // Never infer 'active' from a legacy projection: this could reinstate
+  // a revoked member when schema/runtime assumptions diverge.
   if (membershipError) {
     return { membership: null, error: membershipError };
   }
