@@ -126,5 +126,6 @@ export function auditDataRoom(root,{support=true}={}){
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const output=auditDataRoom(resolve(process.argv[2]||process.cwd()));
  process.stdout.write(JSON.stringify(output,null,2)+'\n');
- if(output.outcome==='FAIL')process.exitCode=1;
+ // CI must never interpret an unresolved human-review gate as an accepted PASS.
+ if(output.outcome!=='PASS_SCOPED_AUTOMATED_CHECKS')process.exitCode=1;
 }
