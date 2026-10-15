@@ -118,13 +118,14 @@ export async function executeReadProof(env = process.env, fetcher = fetch) {
   for (const actor of actors) {
     const other = actors.find(x => x.label !== actor.label);
     const ownMembership = new URLSearchParams({
-      select: 'id,organization_id', organization_id: 'eq.' + actor.orgId,
+      select: 'id,organization_id,status', organization_id: 'eq.' + actor.orgId,
       user_id: 'eq.' + actor.userId,
     });
     const membership = await read('organization_members', ownMembership, actor.token);
     if (membership.status !== 200 || !Array.isArray(membership.rows) ||
         membership.rows.length !== 1 ||
-        membership.rows[0]?.organization_id !== actor.orgId) {
+        membership.rows[0]?.organization_id !== actor.orgId ||
+        membership.rows[0]?.status !== 'active') {
       throw new Error(actor.label + ': own active-membership fixture not visible');
     }
     checks.push(actor.label + ': own membership visible');
