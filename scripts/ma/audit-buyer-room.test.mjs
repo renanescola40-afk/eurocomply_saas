@@ -87,3 +87,17 @@ test('supporting document suspected secrets are flagged for review, not copied',
   assert.equal(JSON.stringify(r).includes(fake),false);
  });
 });
+
+test('known corporate role mailbox is classified but never authorizes buyer disclosure',()=>{
+ const known='comercial'+'@'+'risckcomply.com';
+ fixture({
+  'DATAGUARD_DATA_ROOM/index.md':'# internal room',
+  'docs/ma-diligence/contact.md':'Internal corporate contact: '+known
+ },root=>{
+  const result=auditDataRoom(root);
+  assert.equal(result.outcome,'PASS_SCOPED_AUTOMATED_CHECKS');
+  assert.equal(result.classifiedPublicCorporateRoleMailboxes,1);
+  assert.equal(result.potentialEmailCountInSupportingDocuments,0);
+  assert.equal(JSON.stringify(result).includes(known),false);
+ });
+});
