@@ -3,6 +3,10 @@ on:
   pull_request:
     paths:
       - 'DATAGUARD_DATA_ROOM/**'
+      - 'docs/due-diligence/**'
+      - 'docs/ma-diligence/**'
+      - 'docs/ma/buyer-materials/**'
+      - 'docs/security/dataguard/**'
       - 'scripts/ma/audit-buyer-room*'
       - '.github/workflows/dataguard-buyer-room-offline-audit.yml'
   workflow_dispatch:
