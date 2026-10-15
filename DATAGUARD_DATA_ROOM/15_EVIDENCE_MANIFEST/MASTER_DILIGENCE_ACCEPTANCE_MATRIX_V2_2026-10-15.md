@@ -48,3 +48,24 @@ The original V2 score of **8/10 = 80%** above is preserved as a historical check
 **Revised scoped internal deliverable accounting after proposed V5 documents are committed and checked:** `INTERNAL_VERIFIED=9/10=90%`; `INTERNAL_PARTIAL=1/10=10%` (item 3, exhaustive current evidence/claim-level reconciliation). Item 9 is `INTERNAL_VERIFIED_STAGE_A_ONLY`, not `EXTERNALLY_APPROVED` or `BUYER_ACCEPTED`.
 
 `ACQUISITION_EVIDENCE=NOT_MEASURABLE` for an updated global calculation; preserve the dated `37.0/98=37.76%` (2026-10-08) only as history. `BUYER_RELEASE=HOLD`, `LEGAL_EXECUTED=NOT_CREDITED`, `BUYER_ACCEPTED=NOT_CREDITED`, `DEMO_STATUS=NOT_VERIFIED` by this document. Exact-head CI on this new PR remains an independent gate and must not be called PASS prematurely.
+
+
+## V6 item 3 documentary-coverage closeout — scoped evidence, conditional CI
+
+The historical V2 and V5 scores above remain snapshots. In this V6 working branch, the sole internally partial category (#3, **verified evidence manifest/source reconciliation**) is now **PREPARED_FOR_VERIFICATION** with:
+
+- **80/80 current Markdown source identities** (31 canonical room + 49 technical/M&A support docs in exactly five named directories) pinned by immutable Git tree SHA/blob in the existing provenance register. The whole repository includes more files and is not claimed comprehensively accepted.
+- **16/16 DataGuard evidence sections** assigned bounded claim and outstanding proof classes. These are explicit eligibility/qualification records, not blind PASSes.
+- **12/12 material Stage A initial buyer claims** crosswalked to primary internal source documents or dated provider records in the V5 section of provenance. Legal, financial, title, provider and independent runtime/assurance unknowns remain OPEN.
+- Existing V4 offline audit **SUCCESS, 10/10 tests**, at its **separately identified** GitHub PR checkout; V6 adds a dedicated fail-closed test/check for all frozen source paths, sections and Stage A source references. V6 code/files must pass their **own exact PR checkout** before internal item 3 is credited as VERIFIED.
+- The Stage A sanitized draft is internal-only. No Stage B/C disclosure authorization, legal data-minimization signoff, buyer acceptance or terminal third-party assurance is inferred.
+
+**Scoped accounting at this working-branch checkpoint:**
+- `INTERNAL_DOCUMENTARY_PREPARED=10/10=100%` (all ten defined deliverables have a completed reviewable source artifact).
+- `INTERNAL_DOCUMENTARY_VERIFIED=9/10=90%` **until** V6 source-inventory+claim tests and offline screen pass at the actual checked PR SHA.
+- `REMAINING_INTERNAL_VERIFICATION=1/10=10%` (the final CI-verified item 3).
+- After accepted V6 exact-head green execution, item 3 may be marked `INTERNAL_VERIFIED_SOURCE_SCOPE` and the **ten-document internal denominator becomes 10/10=100%**, without any automatic buyer-release status change.
+- `ACQUISITION_EVIDENCE=NOT_MEASURABLE` for a newly recomputed global score; the older 37/98 = 37.76% remains dated 2026-10-08 only.
+- `BUYER_RELEASE=HOLD`; `EXTERNAL_ASSURANCE=OPEN`; `LEGAL_EXECUTED=NOT_CREDITED`; `BUYER_ACCEPTED=0/10` under the original recorded approval matrix.
+
+Any data-room/source additions or changes after the V6 source snapshot must be reconciled before relying on its frozen 80/80 count. A clean offline scan does **not** certify privilege, personal-data completeness or external confidentiality.
