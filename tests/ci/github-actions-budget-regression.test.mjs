@@ -18,7 +18,69 @@ test('CodeQL push, PR, schedule, all security analysis steps survive',()=>{
   const s=workflow('codeql.yml');
   for(const marker of ['  push:', '  pull_request:', '  schedule:', 'Initialize CodeQL', 'Autobuild',
    'Perform CodeQL Analysis', 'github/codeql-action/analyze@', 'github/codeql-action/init@',
-   'group: codeql-' + '$' + '{{ github.event.pull_request.number || github.ref }}',
+   'group: codeql-' + ',
+   'cancel-in-progress: true','  security-events: write']) has(s,marker);
+  schedule(s,'23 3 * * 1');
+});
+test('PR classifier keeps immediate pull_request_target and manual dispatch',()=>{
+  const s=workflow('pr-autopilot.yml');
+  for(const marker of ['pull_request_target:', 'opened, reopened, synchronize, ready_for_review, labeled, unlabeled',
+  '  workflow_dispatch:', 'automaticMerge !== false', 'administratorBypass !== false']) has(s,marker);
+  schedule(s,'17 */6 * * *');
+  assert.ok(!s.includes("cron: '17 * * * *'"));
+});
+test('enterprise closeout keeps event-driven and manual coverage',()=>{
+  const s=workflow('enterprise-closeout-watchdog.yml');
+  for(const marker of ['  workflow_run:', 'types: [completed]', '  workflow_dispatch:', 'Enterprise Runtime Closeout',
+  'Enterprise Safe Runtime Bootstrap', 'CLOSEOUT_WATCHDOG_STRICT']) has(s,marker);
+  schedule(s,'17 */6 * * *');
+});
+test('full senior-agent regression remains available manually and daily',()=>{
+  const s=workflow('senior-agent-watchdog.yml');
+  for(const marker of ['  workflow_dispatch:', '  schedule:', 'Audit main quality and security gates',
+   'run_gate install npm ci']) has(s,marker);
+  schedule(s,'17 6 * * *');
+});
+test('mandatory security workflows remain event-driven and enabled',()=>{
+  for(const name of ['gitleaks.yml','secret-scanning.yml','semgrep.yml','security-ci.yml']) {
+    const s=workflow(name);
+    has(s,'  pull_request:');
+    has(s,'  push:');
+    has(s,'  workflow_dispatch:');
+  }
+});
+ + '{{ github.event_name }}-' + ',
+   'cancel-in-progress: true','  security-events: write']) has(s,marker);
+  schedule(s,'23 3 * * 1');
+});
+test('PR classifier keeps immediate pull_request_target and manual dispatch',()=>{
+  const s=workflow('pr-autopilot.yml');
+  for(const marker of ['pull_request_target:', 'opened, reopened, synchronize, ready_for_review, labeled, unlabeled',
+  '  workflow_dispatch:', 'automaticMerge !== false', 'administratorBypass !== false']) has(s,marker);
+  schedule(s,'17 */6 * * *');
+  assert.ok(!s.includes("cron: '17 * * * *'"));
+});
+test('enterprise closeout keeps event-driven and manual coverage',()=>{
+  const s=workflow('enterprise-closeout-watchdog.yml');
+  for(const marker of ['  workflow_run:', 'types: [completed]', '  workflow_dispatch:', 'Enterprise Runtime Closeout',
+  'Enterprise Safe Runtime Bootstrap', 'CLOSEOUT_WATCHDOG_STRICT']) has(s,marker);
+  schedule(s,'17 */6 * * *');
+});
+test('full senior-agent regression remains available manually and daily',()=>{
+  const s=workflow('senior-agent-watchdog.yml');
+  for(const marker of ['  workflow_dispatch:', '  schedule:', 'Audit main quality and security gates',
+   'run_gate install npm ci']) has(s,marker);
+  schedule(s,'17 6 * * *');
+});
+test('mandatory security workflows remain event-driven and enabled',()=>{
+  for(const name of ['gitleaks.yml','secret-scanning.yml','semgrep.yml','security-ci.yml']) {
+    const s=workflow(name);
+    has(s,'  pull_request:');
+    has(s,'  push:');
+    has(s,'  workflow_dispatch:');
+  }
+});
+ + '{{ github.event.pull_request.number || github.ref }}',
    'cancel-in-progress: true','  security-events: write']) has(s,marker);
   schedule(s,'23 3 * * 1');
 });
