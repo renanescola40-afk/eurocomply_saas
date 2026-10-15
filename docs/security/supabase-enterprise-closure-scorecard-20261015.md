@@ -24,7 +24,7 @@ A checked catalog/metadata task is **not** an effective security proof. Do not t
 | 9 | API/service-role horizontal isolation, RBAC and negative tests | OPEN | Independently prove caller-bound organization checks for server routes and RPC paths |
 | 10 | Supabase Auth breached-password protection | OPEN | Security advisor WARN: disabled; Supabase docs list native leaked-password protection as Pro+; owner needs approved supported remediation or formal exception |
 | 11 | CI/CodeQL and security suite fully green | OPEN | Recent builds had failures and cancelled/queued checks; CodeQL previously couldn't upload because code scanning was not enabled |
-| 12 | Production main/deployment/Supabase evidence reconciliation and approval | OPEN | Vercel www.risckcomply.com observed at SHA 3310757dc82c2f5b07a5763b2e4b6e9fc5b4bfc5, behind GitHub main; do not disrupt DataGuard demo |
+| 12 | Production main/deployment/Supabase evidence reconciliation and approval | OPEN | Vercel www.risckcomply.com observed at SHA 3310757dc82c2f5b07a5763b2e4b6e9fc5b4bfc5, behind GitHub main; do not disrupt DataGuard demo; separate Legal Assurance runtime schema check returned NO_GO_SCHEMA_MISSING (0/4 required tables, absent private bucket and guards) |
 
 ## Operational decisions
 
@@ -32,3 +32,11 @@ A checked catalog/metadata task is **not** an effective security proof. Do not t
 - Do not send emails, leak secrets, create unapproved expense or label mock/unit tests as live proofs.
 - CI unit tests, static SQL metadata results and deployment READY are not replacements for negative tenant-isolation tests.
 - Recalculate the 5/12 score only as each explicitly named gate produces complete evidence; preserve failures as OPEN.
+
+## Additional runtime drift evidence (2026-10-15)
+
+- The feature-flagged Legal Assurance server code and source migrations exist, but the production catalog lacks four required public relations (`legal_review_artifacts`, `legal_review_decisions`, `legal_review_requests`, `counsel_profiles`), the private `legal-assurance-artifacts` bucket, the artifact decision guard function/trigger and all four direct-deny policies.
+- The exact `scripts/security/audit-legal-assurance-production-schema.sql` query returned `NO_GO_SCHEMA_MISSING` on production, without writes. The source migration `20260901005000_legal_assurance_private_artifacts.sql` declares those relations as prerequisites and cannot be applied alone.
+- Migration dependency chain begins at `20260901002000_legal_assurance_enterprise_v1.sql`, followed by additional legal assurance gates and atomic operations. Only stage and verify on an isolated database first; review migration ordering and product flag binding before production promotion.
+- Treat this as a missing optional subsystem/runtime readiness issue, **not** evidence of an active data exposure or a reason to force-enable the feature.
+- Do not count this audit as a newly completed gate; the score remains 5/12, with 58.3% of defined gates unverified.
