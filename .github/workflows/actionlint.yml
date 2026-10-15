@@ -39,6 +39,9 @@ jobs:
           set -o pipefail
           actionlint 2>&1 | tee actionlint.log
 
+      - name: Assert GitHub Actions free-tier changes preserve security and manual triggers
+        run: node --test tests/ci/github-actions-budget-regression.test.mjs
+
       - name: Upload actionlint diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
