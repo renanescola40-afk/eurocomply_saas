@@ -43,7 +43,7 @@ returns table (
 )
 language sql
 security definer
-set search_path = public
+set search_path = pg_catalog
 as $$
   select
     snapshot.outcome,
