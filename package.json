@@ -78,6 +78,7 @@
     "quality:routes:e2e": "node scripts/quality/run-route-health-e2e.mjs",
     "security:rls": "node scripts/security/check-rls.mjs && node scripts/security/audit-supabase-tenant-isolation.mjs && node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/run-supabase-live-ai-assessments-rls.mjs && node scripts/security/check-p0-supabase-rls-evidence.mjs",
     "security:rls:advisory": "node scripts/security/check-rls.mjs && node scripts/security/audit-supabase-tenant-isolation.mjs && node scripts/security/run-supabase-live-tenant-isolation.mjs --advisory && node scripts/security/run-supabase-live-ai-assessments-rls.mjs --advisory",
+    "security:legal-assurance-source": "node --test tests/security/legal-assurance-chain.test.mjs && node scripts/security/check-legal-assurance-chain.mjs",
     "security:rls:live": "node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/run-supabase-live-ai-assessments-rls.mjs && node scripts/security/check-p0-supabase-rls-evidence.mjs",
     "security:rls:ai-assessments": "node scripts/security/run-supabase-live-ai-assessments-rls.mjs",
     "security:api-guards": "node scripts/security/check-api-guards.mjs",
