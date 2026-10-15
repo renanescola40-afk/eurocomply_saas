@@ -21,6 +21,17 @@ Replace superficial documentation or inventory percentages with closure criteria
 | G10 | SOC 2 Type II period | Real operating evidence over auditor-agreed period and exception tracking | NOT_VERIFIED |
 | G11 | External assurance | Accredited ISO 27001 certification audit and independent SOC 2 examination, separately contracted | NOT_STARTED |
 
+## 2026-10-15 scoped evidence update (proposed; PR review pending)
+
+The G04 and G05 gate statuses above **remain open**. This is scoped technical evidence, not completion of whole audit criteria.
+
+- **G04 — direct unprivileged grants:** Production read-only inventory observed 115/115 public tables with RLS and FORCE RLS, 33 public tables lacking explicit policies with **0 direct anon/authenticated grants across 264 table-role-operation combinations**, and 126 public SECURITY DEFINER functions with **0 direct EXECUTE grants across 252 function-role combinations**. Bypassing roles, service-role call sites, view exposure and synthetic A/B runtime authorization are outside this scoped result. [Evidence](g04-production-privilege-snapshot-2026-10-15.md).
+- **G04 — Auth configuration:** Supabase advisor reported leaked-password protection disabled (WARN). Configuration remediation and real sign-in behavior remain open.
+- **G05 — Annex A integrity gate:** Existing Node suite has 12 tests and had a local **12/12 PASS**; `npm test` is Vitest and did not automatically run it. The pending PR integrates the Node suite and register validator into both existing CI workflows. This is **CODE_ADDED, CI_NOT_VERIFIED**, not an operating development control PASS.
+- **G05 — runner issue:** GitHub Actions jobs on the examined SHAs repeatedly failed before runner allocation (`runner_id=0`, no steps). No root cause or cost change established. Do not disable required checks or treat workflows as passed to force a release.
+
+These findings do not change the overall `NOT_YET_MEASURABLE` ISO / SOC 2 audit-readiness state.
+
 ## Progress computation policy
 - Gate discovery/inventory status must never count as closure.
 - Overall readiness percentage is NOT_YET_MEASURABLE until the scope and population of applicable requirements is approved.
