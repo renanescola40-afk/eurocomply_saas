@@ -7,7 +7,14 @@ select n.nspname as schema_name,
        p.prosecdef as security_definer,
        has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute,
        has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
-       has_function_privilege('PUBLIC',p.oid,'EXECUTE') as public_can_execute,
+       -- PUBLIC is a PostgreSQL ACL pseudo-role (grantee OID 0), not a pg_roles login.
+       -- The effective default EXECUTE grant must also be accounted for when proacl is NULL.
+       exists (
+         select 1
+         from aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) as grants
+         where grants.grantee = 0
+           and grants.privilege_type = 'EXECUTE'
+       ) as public_can_execute,
        p.proconfig as settings
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
