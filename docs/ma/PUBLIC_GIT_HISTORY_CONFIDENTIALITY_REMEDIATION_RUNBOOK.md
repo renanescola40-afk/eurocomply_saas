@@ -3,13 +3,29 @@
 Date: 2026-10-07
 Scope: historical exposure of private buyer correspondence in previously merged public Git history.
 
+
+## Latest repository-visibility reconciliation — 2026-10-15
+
+Authenticated GitHub repository metadata returned `visibility=private` for `renanescola40-afk/eurocomply_saas`. **The old statements below describing the repository as currently public are historical 2026-10-07 evidence, not current status.** The exact time and mechanism of the visibility change were not established in this review.
+
+| Item | Verified status |
+|---|---|
+| Canonical GitHub repository | **PRIVATE**, observed 2026-10-15 |
+| Default source access | Private repository; do not grant buyer access without explicit authorization |
+| Historical public exposure | HISTORICAL_FACT, not erased by current privacy |
+| Reachable old forks, external clones, caches, issue/PR refs | NOT_EXHAUSTIVELY_VERIFIED |
+| Git-history purge | NOT_EVIDENCED; do not infer from private visibility |
+| Confidentiality closure | OPEN until history/forks/recipients are reconciled |
+
+Private-first containment has a verified **current visibility state**, but historical-reachability proof and third-party cleanup remain separate diligence requirements. Do not initiate a destructive history rewrite or modify repository visibility merely to close a percentage. Confirm current branch protection/rulesets rather than assuming the 2026-10-07 protection baseline still applies.
+
 ## Objective
 
 Remove or materially restrict public reachability of the affected historical content without silently rewriting protected history or breaking production/integrations.
 
 This runbook is preparation only. No history rewrite, force push, repository visibility change or GitHub Support purge has been executed by this document.
 
-## Current verified state
+## Historical state recorded on 2026-10-07 (visibility now superseded)
 
 - current default-branch tree does not contain the previously exposed buyer-contact names;
 - private correspondence was removed from the current tree;
@@ -165,7 +181,7 @@ Do not mark confidentiality CLOSED until all applicable checks pass:
 
 ## Closure statuses
 
-Current:
+Historical 2026-10-07 state (not a current visibility assertion):
 
 ```text
 CURRENT_TREE_SANITIZED=PASS
@@ -196,3 +212,18 @@ CONFIDENTIALITY_CLOSED=PASS
 ## Approval boundary
 
 Executing a history rewrite, force-push/force-with-lease, temporary branch-protection exception, or repository visibility change is a high-impact repository operation. It must not be represented as complete until actually performed and verified. If the approved remediation path uses private-only containment and no ref rewrite occurs, per-ref expected-value leases are correctly recorded as NOT_APPLICABLE rather than PASS.
+
+
+## Current control status at the 2026-10-15 checkpoint
+
+```text
+REPOSITORY_VISIBILITY=PRIVATE_VERIFIED
+VISIBILITY_CHANGE_TIMESTAMP=NOT_VERIFIED
+HISTORICAL_PUBLIC_EXPOSURE=DOCUMENTED
+PUBLIC_FORKS_CACHES_AND_CLONES=CLEARANCE_NOT_VERIFIED
+REACHABLE_HISTORY_PURGE=NOT_VERIFIED
+CONFIDENTIALITY_CLOSED=NO
+PRODUCTION_AND_DATAGUARD_DEMO=NOT_TOUCHED_BY_THIS_RECONCILIATION
+```
+
+This dated update is documentary only, does not disclose historical private correspondence, and does not certify absolute confidentiality.
