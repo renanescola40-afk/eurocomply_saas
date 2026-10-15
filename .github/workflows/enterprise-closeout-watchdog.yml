@@ -20,7 +20,8 @@ on:
         default: false
         type: boolean
   schedule:
-    - cron: '17 * * * *'
+    # workflow_run triggers still check completed releases immediately; 6h is fallback only.
+    - cron: '17 */6 * * *'
 
 permissions:
   contents: read
