@@ -54,7 +54,7 @@ function hasUseClientDirective(source) {
   }
 
   // A commented-out directive or a string following an import is not a directive.
-  return /^(['"])use client\1(?=\s*;|\s*(?:\r?\n|$))/.test(source.slice(cursor));
+  return /^(['"])use client\1(?=\s*(?:;|\/\/|\/\*|\r?\n|$))/.test(source.slice(cursor));
 }
 
 function isClientNamedFile(path) {
