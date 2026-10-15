@@ -25,7 +25,7 @@ function response(status,content) {
   return {ok:status>=200&&status<300,status,async json(){return content;}};
 }
 
-function mockFetch({exposeOther=false,hideOwn=false}={}) {
+function mockFetch({exposeOther=false,hideOwn=false,inactiveA=false}={}) {
   return async (u,options) => {
     const url=new URL(u);
     assert.equal(url.origin,'http://127.0.0.1:54321');
@@ -42,7 +42,7 @@ function mockFetch({exposeOther=false,hideOwn=false}={}) {
     if(url.pathname.endsWith('/organization_members')) {
       const matching=(org===a&&user===au)||(org===b&&user===bu);
       const visible=(token==='token-A'&&org===a)||(token==='token-B'&&org===b);
-      return response(200,matching&&(visible||exposeOther)?[{id:ad,organization_id:org}]:[]);
+      return response(200,matching&&(visible||exposeOther)?[{id:ad,organization_id:org,status:inactiveA&&org===a?'inactive':'active'}]:[]);
     }
     if(url.pathname.endsWith('/documents')) {
       const owner=id===ad?'A':id===bd?'B':null;
@@ -94,4 +94,8 @@ test('simulated own-document missing blocks proof',async()=>{
 });
 test('network failure cannot be reported as PASS',async()=>{
   await assert.rejects(executeReadProof(env,async()=>{throw new Error('offline');}),/no cloud fallback/);
+});
+
+test('inactive membership is not accepted as valid own access',async()=>{
+  await assert.rejects(executeReadProof(env,mockFetch({inactiveA:true})),/active-membership fixture not visible/);
 });
