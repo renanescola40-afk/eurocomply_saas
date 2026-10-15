@@ -33,7 +33,7 @@ function checkMutation(fn, expected) {
   const f=fixture();try { fn(f);const result=checkLegalAssuranceSourceChain(f.dir);assert.equal(result.status,'NO_GO_SOURCE');assert.ok(result.failures.some(x=>x.includes(expected)),result.failures.join('; ')); } finally { f.cleanup(); }
 }
 
-test('offline happy-path checks source only, never runtime readiness',()=>{const f=fixture();try{const result=checkLegalAsssuranceSourceChain(f.dir);assert.equal(result.status,'PASS_SOURCE_ONLY');assert.equal(result.runtimeSchemaVerified,false);assert.equal(result.migrations,5)}finally{f.cleanup()}});
+test('offline happy-path checks source only, never runtime readiness',()=>{const f=fixture();try{const result=checkLegalAssuranceSourceChain(f.dir);assert.equal(result.status,'PASS_SOURCE_ONLY');assert.equal(result.runtimeSchemaVerified,false);assert.equal(result.migrations,5)}finally{f.cleanup()}});
 test('missing migration is fail closed',()=>checkMutation(f=>rmSync(join(f.migrationDir,LEGAL_ASSURANCE_MIGRATIONS[2])),'missing_migration'));
 test('missing base table is fail closed',()=>checkMutation(f=>{const p=join(f.migrationDir,LEGAL_ASSURANCE_MIGRATIONS[0]);writeFileSync(p,readFileSync(p,'utf8').replace('create table if not exists public.counsel_profiles','-- removed counsel_profiles');},'base_table_definition_missing:counsel_profiles'));
 test('nontransactional migration is fail closed',()=>checkMutation(f=>writeFileSync(join(f.migrationDir,LEGAL_ASSURANCE_MIGRATIONS[1]),'select 1;'),'nontransactional'));
