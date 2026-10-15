@@ -262,3 +262,10 @@ AUDITABLE_MA_EVIDENCE_CLOSURE=37.76%
 AUDITABLE_MA_EVIDENCE_REMAINING=62.24%
 REQUIREMENT_88=CLOSED_WITH_BUYER_CYCLE_SCOPE_BOUNDARY
 ```
+
+
+## 2026-10-15 source-control visibility reconciliation (non-scoring)
+
+The 2026-10-07 `visibility=public` observation above is **historical**, not the current repository visibility. Authenticated GitHub repository metadata on 2026-10-15 reports the canonical repository **PRIVATE**. The time of the visibility change and any previously public forks, mirrors, caches, external clones or historical commit purge are not independently established. No buyer access right or complete confidentiality claim follows from this fact.
+
+The M&A scoring baseline `37.0/98 = 37.76%` remains the documented **2026-10-08** snapshot, not a newly certified acquisition readiness measure. A current private repository status does not justify changing the original requirements' numerator, legal chain-of-title, provider transfers, financial/tax closure or external assurance scores. `CONFIDENTIALITY_CLOSED=NO` pending relevant historical-exposure reconciliation.
