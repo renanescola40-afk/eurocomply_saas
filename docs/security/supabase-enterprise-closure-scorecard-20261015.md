@@ -40,3 +40,13 @@ A checked catalog/metadata task is **not** an effective security proof. Do not t
 - Migration dependency chain begins at `20260901002000_legal_assurance_enterprise_v1.sql`, followed by additional legal assurance gates and atomic operations. Only stage and verify on an isolated database first; review migration ordering and product flag binding before production promotion.
 - Treat this as a missing optional subsystem/runtime readiness issue, **not** evidence of an active data exposure or a reason to force-enable the feature.
 - Do not count this audit as a newly completed gate; the score remains 5/12, with 58.3% of defined gates unverified.
+
+## Authenticated per-operation commercial RLS audit (2026-10-15)
+
+- Exact read-only query: `scripts/security/audit-commercial-rls-per-command-acls.sql`.
+- 39 commercial-gated tables x 4 SQL operations = **156 operation/table rows**.
+- 109 operation/table pairs had no direct `authenticated` table grant.
+- Of the 47 directly granted pairs: 43 had a permissive policy containing a named membership helper; 3 SELECT pairs (`compliance_findings`, `gap_answers`, `gap_assessments`) had a restrictive membership policy; 1 INSERT pair (`compliance_tasks`) had matching permissive and restrictive personal-row predicates requiring NULL organization/workspace and caller-owned fields.
+- **0 rows classified as `REVIEW_POLICY_COMPOSITION` by these narrow static heuristics.** A named helper inside a predicate does not by itself establish complete tenant safety; OR branches, RPCs, service-role paths, runtime JWT behavior and each `WITH CHECK` still require functional proof.
+- The new audit helps identify future regressions **without** closing the standalone API/service-role or live tenant-isolation gate. Progress remains **5/12 checked and 7/12 OPEN (58.3% outstanding)**.
+- CI on PR #2490 was observed failing; job-step summaries were empty and remote logs returned BlobNotFound. Treat causes as unverified until new diagnostic evidence is available.
