@@ -26,3 +26,16 @@ Purpose: staged acquisition diligence. This package is **not** a disclosure auth
 - Auditable M&A evidence: 37/98 = 37.76% per 2026-10-08 requirement matrix; 62.24% remains on that *separate* score.
 - Do not blend documentary completeness with close-readiness, certification, production readiness or buyer acceptance.
 - This V1 controller tracks **10 required deliverable categories**; source-date qualification and independently verified source/runtime remain mandatory. Its own completion cannot be declared 100% merely from file presence.
+
+
+## V2 canonical routing (2026-10-15; frozen source SHA `8a759f883365c2c9652ff12e98099db77dd4c59d`)
+The original header/branch above is a **historical V1 origin** and does not describe the current `main` branch. V2 does not supersede the primary files; it supplies verified provenance and outstanding acceptance gates:
+
+- [Frozen evidence and provenance register](../15_EVIDENCE_MANIFEST/PROVENANCE_REGISTER_V2_2026-10-15.md)
+- [Master documentary acceptance matrix](../15_EVIDENCE_MANIFEST/MASTER_DILIGENCE_ACCEPTANCE_MATRIX_V2_2026-10-15.md)
+- [Cross-executor handover register](../15_EVIDENCE_MANIFEST/CROSS_EXECUTOR_HANDOVER_REGISTER_V2_2026-10-15.md)
+- [Controlled sharing pack — not released](BUYER_CONTROLLED_SHARING_PACK_V2_2026-10-15.md)
+- [Final internal closure report](../15_EVIDENCE_MANIFEST/FINAL_INTERNAL_CLOSURE_REPORT_V2_2026-10-15.md)
+- [Frozen baseline link validation](../15_EVIDENCE_MANIFEST/FROZEN_BASELINE_LINK_VALIDATION_V2_2026-10-15.md)
+
+**Binding priority:** V2 records later evidence and corrects outdated pointers where materially newer; historical dated scores must remain historical. No owner approval for sharing, legal execution, independent terminal security acceptance, current production SHA parity or buyer acceptance has been established.

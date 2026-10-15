@@ -19,3 +19,15 @@ Scope: specific repository files inspected or cited, **not** full legal/operatio
 | Handover steps | DATAGUARD_DATA_ROOM/13_HANDOVER_PLAN/TECHNICAL_HANDOVER_INDEX.md | PARTIAL: draft pending operational approval | RESTRICTED_LATE_STAGE |
 
 Classification VERIFIED_COMPLETE here applies only to specified **documentary existence/content**, never proof of transaction closing or certification. No data room link is buyer-disclosed by creation alone.
+
+
+## V2 audit addendum — 2026-10-15
+| Material needed | Canonical source | Evidence state | Disclosure decision |
+|---|---|---|---|
+| Frozen source provenance | `DATAGUARD_DATA_ROOM/15_EVIDENCE_MANIFEST/PROVENANCE_REGISTER_V2_2026-10-15.md` | Exact baseline and selected blob IDs verified; external title NOT proved | INTERNAL / HOLD |
+| Technical/assurance handoff | `DATAGUARD_DATA_ROOM/15_EVIDENCE_MANIFEST/CROSS_EXECUTOR_HANDOVER_REGISTER_V2_2026-10-15.md` | Source docs present; externally accepted proof OPEN | INTERNAL / HOLD |
+| Runtime exact-SHA parity | `docs/assurance/iso27001-soc2/exact-sha-production-drift-2026-10-15.md` | Dated snapshot documents 108-commit divergence; no new live proof | RESTRICTED_LATE_STAGE / HOLD |
+| Independent security retest | `docs/security/dataguard/EXTERNAL_ASSURANCE_RECONCILIATION_V1_4.md` | Historical limited external assessment; terminal clean report unaccepted | RESTRICTED_LATE_STAGE / HOLD |
+| Controlled buyer sharing | `DATAGUARD_DATA_ROOM/00_EXECUTIVE_INDEX/BUYER_CONTROLLED_SHARING_PACK_V2_2026-10-15.md` | Candidate list only; never released | INTERNAL / HOLD |
+
+These rows update documentation cross-references, not the 2026-10-08 M&A evidence numerator or buyer release status.
