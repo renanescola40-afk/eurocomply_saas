@@ -35,7 +35,7 @@ function checkMutation(fn, expected) {
 
 test('offline happy-path checks source only, never runtime readiness',()=>{const f=fixture();try{const result=checkLegalAssuranceSourceChain(f.dir);assert.equal(result.status,'PASS_SOURCE_ONLY');assert.equal(result.runtimeSchemaVerified,false);assert.equal(result.migrations,5)}finally{f.cleanup()}});
 test('missing migration is fail closed',()=>checkMutation(f=>rmSync(join(f.migrationDir,LEGAL_ASSURANCE_MIGRATIONS[2])),'missing_migration'));
-test('missing base table is fail closed',()=>checkMutation(f=>{const p=join(f.migrationDir,LEGAL_ASSURANCE_MIGRATIONS[0]);writeFileSync(p,readFileSync(p,'utf8').replace('create table if not exists public.counsel_profiles','-- removed counsel_profiles');},'base_table_definition_missing:counsel_profiles'));
+test('missing base table is fail closed',()=>checkMutation(f=>{const p=join(f.migrationDir,LEGAL_ASSURANCE_MIGRATIONS[0]);writeFileSync(p,readFileSync(p,'utf8').replace('create table if not exists public.counsel_profiles','-- removed counsel_profiles'));},'base_table_definition_missing:counsel_profiles'));
 test('nontransactional migration is fail closed',()=>checkMutation(f=>writeFileSync(join(f.migrationDir,LEGAL_ASSURANCE_MIGRATIONS[1]),'select 1;'),'nontransactional'));
 test('missing storage deny predicate is fail closed',()=>checkMutation(f=>writeFileSync(f.artifactPath,readFileSync(f.artifactPath,'utf8').replaceAll(' and false',' and true')),'browser_storage_deny_predicate_missing'));
 test('missing legal trigger guard is fail closed',()=>checkMutation(f=>writeFileSync(f.artifactPath,readFileSync(f.artifactPath,'utf8').replaceAll('legal_review_decision_artifact_reference_guard','missing_name')),'artifact_reference_trigger_guard_missing'));
