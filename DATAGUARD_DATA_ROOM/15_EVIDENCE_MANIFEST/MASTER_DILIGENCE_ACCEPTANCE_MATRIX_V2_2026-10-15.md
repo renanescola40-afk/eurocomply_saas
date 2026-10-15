@@ -1,0 +1,37 @@
+# Master Buyer Diligence Acceptance Matrix — V2
+
+**Version:** V2 (2026-10-15)  
+**Source baseline:** `main@8a759f883365c2c9652ff12e98099db77dd4c59d`  
+**Maintainer:** RISCK COMPLY internal buyer-diligence controller  
+**Classification:** INTERNAL — NO BUYER RELEASE  
+**Status:** documentary source-level review; no runtime, legal or third-party acceptance implied.
+
+Acceptance is a **documentary gate**; buyer acceptance and legal execution are different gates. Score 10 categories separately. Statuses `INTERNAL_VERIFIED`, `INTERNAL_PARTIAL`, `BUYER_HOLD` are document workflow states, **not** RUNTIME_PROVEN / EXTERNALLY_ASSURED / LEGAL_EXECUTED / BUYER_ACCEPTED.
+
+| # | Required deliverable / canonical path | Internal document criterion and review result | Buyer release |
+|---|---|---|---|
+| 1 | Canonical index — `00_EXECUTIVE_INDEX/MASTER_BUYER_DATA_ROOM_INDEX.md` | INTERNAL_VERIFIED: frozen baseline and V2 cross-links identified | HOLD |
+| 2 | Availability matrix — `00_EXECUTIVE_INDEX/BUYER_DOCUMENT_AVAILABILITY_MATRIX.md` | INTERNAL_VERIFIED: statuses, disclosure tiers and primary source paths identified | HOLD |
+| 3 | Verified evidence manifest — `15_EVIDENCE_MANIFEST/CONSOLIDATED_EVIDENCE_MANIFEST.md`, plus V2 provenance register | INTERNAL_PARTIAL: sampled source/blob/link proof; not exhaustive all claims and repositories | HOLD |
+| 4 | Provenance register — `15_EVIDENCE_MANIFEST/PROVENANCE_REGISTER_V2_2026-10-15.md` | INTERNAL_VERIFIED: frozen source SHA, date, scope, blobs for primary reviewed sources; ownership gaps explicitly separated | HOLD |
+| 5 | Risks register — `11_KNOWN_RISKS_AND_GAPS/KNOWN_GAPS_REGISTER.md` | INTERNAL_VERIFIED: risk categories and newly known drift/open PR traced | HOLD |
+| 6 | Disclosure classification — `09_LEGAL_PRIVACY/CONTROLLED_DISCLOSURE_POLICY.md` | INTERNAL_VERIFIED: four tiers and default restrictions exist; not a disclosure decision | HOLD |
+| 7 | Master acceptance matrix — this document | INTERNAL_VERIFIED: per-deliverable gate, source and honest partials present | HOLD |
+| 8 | Cross-executor handover — `15_EVIDENCE_MANIFEST/CROSS_EXECUTOR_HANDOVER_REGISTER_V2_2026-10-15.md` | INTERNAL_VERIFIED: technical/security/IP/runtime dependencies have explicit handoff owners and evidence status | HOLD |
+| 9 | Controlled sharing pack — `00_EXECUTIVE_INDEX/BUYER_CONTROLLED_SHARING_PACK_V2_2026-10-15.md` | INTERNAL_PARTIAL: controlled selection drafted; no comprehensive PII/secrets/privilege redaction or buyer authorization recorded | HOLD |
+| 10 | Closure report — `15_EVIDENCE_MANIFEST/FINAL_INTERNAL_CLOSURE_REPORT_V2_2026-10-15.md` | INTERNAL_VERIFIED: scope, denominator, gaps and next actions documented; final commit-based audit pending PR validation | HOLD |
+
+**Internal verified = 8/10 = 80%** after this V2 branch is committed and checked; **remaining internal = 2/10 = 20%**: (3) full evidence breadth and (9) full approved-source confidentiality/redaction screen. These are conservative dossier-document checks, NOT product, software, procurement or legal readiness. If branch validation fails, recompute and do not claim 80%.
+
+**Acquisition evidence current score = NOT_MEASURABLE.** Historical dated scoring only: 37/98 = 37.76% (2026-10-08); do not promote that score without new authenticated external or primary evidence.
+
+Distinct factual state vocabulary:
+- IMPLEMENTED: code/control is present; no runtime implication.
+- TESTED: attributable test result, exact code SHA and environment.
+- DEPLOYED: provider-linked deployment SHA and time.
+- RUNTIME_PROVEN: accepted behavior evidence for an identified deployed SHA/environment.
+- EXTERNALLY_ASSURED: attributable independent assessment covering precisely its accepted scope.
+- LEGAL_EXECUTED: identifiable signed/effective agreement or official filing.
+- BUYER_ACCEPTED: affirmative recorded acceptance from the authorized buyer.
+
+**Acceptance blockers:** owner approval not recorded, disclosure pack not screened comprehensively, asset/title legal proof absent, terminal pentest not buyer accepted, current production parity unproven, external accounting/tax and provider/transaction consents outstanding.

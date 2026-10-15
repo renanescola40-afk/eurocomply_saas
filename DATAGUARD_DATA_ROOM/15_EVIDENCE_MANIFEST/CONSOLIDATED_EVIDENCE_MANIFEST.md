@@ -14,3 +14,7 @@ Date inspected: 2026-10-14 | Ref: main | Scope: selected canonical source docume
 Source label semantics: VERIFIED_COMPLETE applies only to existence and readable content of identified artifacts; it does not verify external facts, current deploy or executed legal documents. All referenced source files reviewed from main, but exact HEAD commit at reading time was not obtained; do not infer a current release SHA from historical file headers.
 
 Cross-executor reconciliation: technical diligence, security, IP and demo-safe runtime executors are NOT independently evidenced as completed in this pass; pending approved outputs.
+
+
+## V2 addendum — verified 2026-10-15 baseline
+The authoritative **frozen source/blob provenance subset** and scoped validation are in `DATAGUARD_DATA_ROOM/15_EVIDENCE_MANIFEST/PROVENANCE_REGISTER_V2_2026-10-15.md`. Source baseline: `8a759f883365c2c9652ff12e98099db77dd4c59d` (does **not** prove production deployed SHA). 16/16 data-room folders and six of six detected relative Markdown links exist; 24/24 existing DataGuard Markdown files were read in this check. These checks are structural only. Date-qualified external/runtime/transaction claims and source-ownership remain OPEN. Historic 37.76% figure remains a 2026-10-08 M&A scoring record, not refreshed.
