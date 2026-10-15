@@ -28,8 +28,18 @@ export async function register() {
 
   Sentry.init({
     dsn,
-    // Do not attach the requester's IP address or other default PII.
-    sendDefaultPii: false,
+    // Sentry SDK v11: explicitly disable sensitive data collection beyond error-event scrubbing.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      genAI: { inputs: false, outputs: false },
+      databaseQueryData: false,
+      queues: false,
+      graphQL: { document: false, variables: false },
+    },
     environment: isEdge
       ? process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.VERCEL_ENV ?? process.env.NODE_ENV
       : process.env.SENTRY_ENVIRONMENT ?? process.env.VERCEL_ENV ?? process.env.NODE_ENV,

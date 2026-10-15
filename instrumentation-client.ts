@@ -12,7 +12,18 @@ function getTraceSampleRate(value: string | undefined, fallback: number) {
 if (dsn) {
   Sentry.init({
     dsn,
-    sendDefaultPii: false,
+    // Sentry SDK v11: opt out of privacy-sensitive defaults.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      genAI: { inputs: false, outputs: false },
+      databaseQueryData: false,
+      queues: false,
+      graphQL: { document: false, variables: false },
+    },
     environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV,
     release: process.env.NEXT_PUBLIC_SENTRY_RELEASE ?? process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA,
     tracesSampleRate: getTraceSampleRate(
