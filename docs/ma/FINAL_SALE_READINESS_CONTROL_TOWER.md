@@ -1,5 +1,12 @@
 # RISCK COMPLY — Final Sale Readiness Control Tower
 
+## 2026-10-15 authority override — repository confidentiality
+
+Authenticated GitHub repository metadata confirms the canonical source repository is **PRIVATE** at this checkpoint, superseding the **2026-10-07** `visibility=public` statements retained later in this document as dated history. Neither the date of conversion nor clearance of previously public forks, caches, old clones and sensitive historical objects was independently established. Therefore: `REPOSITORY_VISIBILITY=PRIVATE_VERIFIED`; `HISTORICAL_PUBLIC_EXPOSURE=OPEN`; `CONFIDENTIALITY_CLOSED=NO`. A private canonical repository is not buyer access approval and is not evidence of complete history purge.
+
+Historical internal readiness percentages below do not become new buyer-release, signing or closing PASS results. Current production SHA status must be refreshed separately; never infer it from GitHub private visibility. No email, source grant, history rewrite, visibility change or production action was performed by this reconciliation.
+
+
 Date: 2026-10-07  
 Product: RISCK COMPLY  
 Seller: SAMUEL CERQUEIRA, UNIPESSOAL LDA  

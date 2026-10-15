@@ -10,6 +10,13 @@
 **Owner release decision:** HOLD (see `OWNER_RELEASE_DECISION.md`).  
 **No files, emails, invitations, GitHub access grants, credentials or messages sent.**
 
+
+## New Stage A sanitized candidate — 2026-10-15
+
+**Prepared internal artifact:** [Controlled Initial Buyer Brief (English)](STAGE_A_CONTROLLED_BUYER_BRIEF_EN_2026-10-15.md). This is a standalone, minimized draft drawing on existing approved-for-internal-use source documentation. It contains no email address, buyer-specific correspondence, secrets, raw security details or customer data by authoring intent; this must still be confirmed by exact-head validation and reviewer screening.
+
+**Documentary preparation:** PREPARED_FOR_INTERNAL_REVIEW. **Buyer release:** HOLD. This new candidate does **not** grant sharing rights or make the pre-existing raw source index part of a sanitized export. The staged original document list below remains an internal selection table.
+
 ## Stage A — candidate minimum package (only after per-item owner approval)
 | Candidate | Source | Tier | Conditions | This review |
 |---|---|---|---|---|

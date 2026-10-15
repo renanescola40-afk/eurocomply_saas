@@ -37,3 +37,18 @@ See `MASTER_DILIGENCE_ACCEPTANCE_MATRIX_V2_2026-10-15.md`.
 5. Update historical M&A requirements *per item* only on genuine evidence and obtain buyer/owner release acceptance separately.
 
 No emails or external transmissions, no paid resources, no main merge, no deployment, no demo modification.
+
+
+## V5 documentary continuation — 2026-10-15 (subsequent to the V2 snapshot)
+
+**New verifiable delivery:** `DATAGUARD_DATA_ROOM/00_EXECUTIVE_INDEX/STAGE_A_CONTROLLED_BUYER_BRIEF_EN_2026-10-15.md`; source file identity and six referenced source paths checked at the proposed V5 branch. Candidate authoring/inspection found no email address, exposed credential pattern, named buyer correspondence, customer personal record or raw security findings. The draft remains **INTERNAL**, not an approved/sent buyer release.
+
+**Updated denominator:** 10 eligible internal documentary deliverables. Stage A controlled candidate now prepared and source-inspected: **9/10 verified = 90%; 1/10 partial = 10%**, the unresolved category being exhaustive current evidence/claim reconciliation. This is a *new V5 check*, not retroactive alteration of the V2 80% figure. Approval for actual Stage A distribution and all Stage B/C buyer-specific releases remains a separate owner/legal gate, not internal document drafting.
+
+**Source-control reconciliation:** authenticated GitHub reports repository **private** on 2026-10-15; earlier 2026-10-07 public status is historical, and clearance of externally copied history/forks/caches is unverified. No code/history purge or access/visibility mutation was performed.
+
+**Production / CI:** dated Vercel read-only observation linked READY production to `3310757dc82c2f5b07a5763b2e4b6e9fc5b4bfc5`; a comparison at that checkpoint found then-main 24 commits ahead. Neither that number nor exact deployed parity is presumed current after later merges. V3 offline dossier CI on PR #2482 passed 5/5 tests and screened 30 room + 49 supporting Markdown files (scoped PASS). V4 amended checks and this V5 source state must receive their own exact-head validations; queued checks are not success.
+
+**Unchanged external limits:** executed IP/title, corporate authority, full financial/tax originals, provider transfer permissions, independent terminal security assurance, buyer-specific acceptance and negotiated transaction documents. Seven external dependency categories remain in the risk cluster register; they are not claimed permanently closed. `ACQUISITION_EVIDENCE=NOT_MEASURABLE` for a refreshed global metric (dated M&A matrix 37/98 = 37.76% retained as history), `BUYER_RELEASE=HOLD`, `DEMO_STATUS=NOT_VERIFIED`, `FINAL_STATUS=PARTIAL`.
+
+**Communication control:** no emails, external messages, access grants, invitations or files were sent to DataGuard, B3 or another recipient.

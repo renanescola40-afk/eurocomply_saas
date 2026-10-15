@@ -11,7 +11,7 @@ Product: RISCK COMPLY
 - No revenue, customer, certification, pentest, ownership, title, offer, LOI, signature or closing fact may be upgraded beyond evidence.
 - Stripe-only zero activity must never be generalized into verified total revenue/MRR/ARR without complete source-record reconciliation.
 - Source code, credentials and raw secrets are never share-now materials.
-- Private buyer correspondence and named-contact details must remain outside the current repository tree. Historical exposure in reachable public Git history remains an explicit open confidentiality risk until separately remediated.
+- Private buyer correspondence and named-contact details must remain outside the current repository tree. Historical public exposure remains an explicit risk until forks, caches, prior clones and Git history have been independently reconciled; current canonical repository visibility is private (2026-10-15).
 - Buyer-specific sharing remains staged and transaction-controlled.
 
 | Material | Purpose | Canonical file | Buyer stage | Status | Factual gaps | Buyer-specific input required | External dependency | Action | Final status |
@@ -23,7 +23,7 @@ Product: RISCK COMPLY
 | Buyer M&A FAQ | Handle common objections consistently | docs/ma/buyer-materials/RISCK_COMPLY_BUYER_MA_QA.md | Initial interest / NDA | READY | Some answers remain buyer/counsel/accounting dependent | Buyer-specific questions | Buyer / counsel / accountant | Consolidated | PASS |
 | Transaction perimeter | Define what can be sold and transfer method | docs/ma/buyer-materials/RISCK_COMPLY_TRANSACTION_PERIMETER.md | NDA / diligence | READY_WITH_OPEN_TITLE_ITEMS | IP/domain/provider title/transfer evidence not fully closed | Structure and buyer target accounts | Counsel / providers / owner | Preserve explicit open gaps | PASS |
 | Diligence truth pack | Prevent overstatement of technical/security state | docs/ma/buyer-materials/RISCK_COMPLY_DILIGENCE_TRUTH_PACK.md | NDA / diligence | READY | Main-production SHA mismatch; clean independent terminal retest not credited | Buyer diligence requests | Vercel payment / external assurance | Evidence-bound status map | PASS |
-| Buyer response readiness | Company-level pipeline readiness without publishing private correspondence in the current tree | docs/ma/buyer-materials/RISCK_COMPLY_BUYER_SPECIFIC_RESPONSE_PACKS.md | Initial interest | READY_WITH_HISTORY_RISK | Exact correspondence is removed from the current tree, but prior public Git history remains reachable | Buyer follow-up questions | Repository history/visibility decision | Keep current tree sanitized; track history exposure explicitly | PARTIAL |
+| Buyer response readiness | Company-level pipeline readiness without publishing private correspondence in the current tree | docs/ma/buyer-materials/RISCK_COMPLY_BUYER_SPECIFIC_RESPONSE_PACKS.md | Initial interest | READY_WITH_HISTORY_RISK | Historical public exposure is documented; current independent public fork/cache/clone reachability remains unverified despite the canonical repository now being private | Buyer follow-up questions | Repository history/visibility decision | Keep current tree sanitized; track history exposure explicitly | PARTIAL |
 | Existing transaction document set | NDA/LOI/term sheet/SPA/APA/disclosure/TSA/closing | docs/ma/FINAL_SALE_READINESS_CONTROL_TOWER.md and docs/ma/MA_TRANSACTION_MASTER_INDEX.md | NDA through closing | INTERNALLY_READY | Signatures, buyer economics, counsel/tax inputs not executed | Yes | Buyer/counsel/accountant | Reference, do not duplicate | PASS_INTERNAL |
 | Data-room staged index | Control what is shared when | docs/trust/BUYER_DATA_ROOM_100_MASTER_INVENTORY_2026-09-28.md | All stages | INTERNALLY_READY | External evidence still open | Transaction stage | External dependencies | Reference | PASS_INTERNAL |
 | Security / architecture pack | Technical diligence | docs/trust/SECURITY_OVERVIEW.md; docs/trust/ARCHITECTURE_OVERVIEW.md; docs/security/* | NDA / diligence | INTERNALLY_READY | Terminal independent assurance open | Buyer questionnaire scope | External pentest/retest | Reference | PASS_INTERNAL |
@@ -49,7 +49,7 @@ Repository-safe company-level classification:
 - ServiceNow: TIER_1_ROUTED
 - B3: TIER_1_ROUTED
 
-Private contact identities, exact correspondence and unsent drafts are absent from the current tree. Historical commits containing prior correspondence remain reachable in public Git history and are tracked as an open confidentiality risk.
+Private contact identities, exact correspondence and unsent drafts are absent from the current tree. Historical commits containing prior correspondence were publicly reachable at the earlier snapshot; current public fork/cache/clone reachability has not been cleared, and remains an open confidentiality risk.
 
 No NDA, diligence process, offer, LOI, signing or closing is credited solely from these responses.
 
@@ -69,7 +69,7 @@ Current score:
 
 BUYER_MATERIALS_INTERNAL_CLOSURE_PERCENT=95.83%
 
-This means the buyer-facing document set is materially complete, but the buyer-response-readiness row is only PARTIAL because prior merged commits containing private buyer correspondence remain reachable in public Git history. Current-tree sanitization is complete; history/visibility remediation is not. It does not mean TRANSACTION_100_PERCENT.
+This means the buyer-facing document set is materially complete, but the buyer-response-readiness row is only PARTIAL because prior merged commits containing private buyer correspondence were historically public and may remain available in external copies; their present external reachability is unverified. Current-tree sanitization is complete; history/visibility remediation is not. It does not mean TRANSACTION_100_PERCENT.
 
 
 ## 2026-10-08 buyer-state delta
@@ -77,3 +77,10 @@ This means the buyer-facing document set is materially complete, but the buyer-r
 - Banyan Software moved from substantive human interest to `CLOSED_LOST_NOT_FIT` after Corporate Development reviewed the supplied business picture and declined the opportunity at the current stage.
 - Twilio remains `TIER_2_HUMAN_INTEREST / MATERIALS_REQUESTED`; requested summary materials were supplied, but no NDA, diligence acceptance, offer or LOI is credited.
 - This changes current buyer-state classification, not transaction-signing readiness.
+
+
+## 2026-10-15 repository visibility and release correction
+
+The canonical GitHub repository is **PRIVATE** according to authenticated GitHub metadata on 2026-10-15, superseding the 2026-10-07 public-visibility observation. Public forks, cached historical objects and third-party clones were not exhaustively verified; `HISTORICAL_EXPOSURE_REMEDIATION=OPEN` and `CONFIDENTIALITY_CLOSED=NO` remain accurate. Historical source-control exposure must not be stated as freshly verified public accessibility.
+
+The prior **11.5/12 = 95.83%** buyer-material **internal** score is a dated documentary estimate, not a source-security audit or buyer release approval. **No score uplift** is credited from private visibility alone. For every actual disclosure, apply the DataGuard staged disclosure policy, selected-file review, exact-source revision, redaction and specific owner authorization. `BUYER_ACCEPTED` and `LEGAL_EXECUTED` remain separate uncredited states.
