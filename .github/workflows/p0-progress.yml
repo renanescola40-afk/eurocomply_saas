@@ -17,9 +17,11 @@ permissions:
   contents: read
   actions: read
 
+# Coalesce repeated triggers evaluating the same exact SHA. Keep event kinds
+# separate, and do not cancel an already running authoritative evidence check.
 concurrency:
-  group: p0-progress-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
+  group: p0-progress-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   classify-source:
