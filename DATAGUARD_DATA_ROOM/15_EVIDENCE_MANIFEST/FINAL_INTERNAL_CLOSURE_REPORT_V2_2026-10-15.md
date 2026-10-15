@@ -80,3 +80,9 @@ No emails or external transmissions, no paid resources, no main merge, no deploy
 - **Internal scoped completion:** `PREPARED=100%`, `VERIFIED=90%`, `REMAINING_VERIFICATION=10%`. The remaining 10% is narrowly the exact-head V6 automated coverage/claim checker acceptance; no further duplicated manuals are required.
 - **Transaction:** 7 external evidence dependency clusters stay open; no invented external completion percentage. Buyer acceptance, production-release gate, executed IP/title and financial/tax/assessor records remain NOT_CREDITED. `BUYER_RELEASE=HOLD`, `TRANSACTION_CLOSED=NO`.
 - The software's production deployment and DataGuard demo were not modified. No emails, messages, recipient access grants or invitations were sent.
+
+## V7 subsequently completed automated check — 2026-10-15
+
+GitHub Actions **V5** DataGuard Buyer Room Offline Audit run `38807479280` / job `116671960551` completed `SUCCESS` at 2026-10-15 21:31 UTC. Its captured checkout ref `adcaeea80e641cfeb3083173183665e3b7c48482` executed **10/10 regression tests successfully** and the offline scanner recorded **31 primary + 49 supporting Markdown files**, zero broken supporting links, zero missing inline tracked path references and zero high-confidence token candidates, with one classified corporate role mailbox. A passing V5 source scan does not execute the **V6-specific** source/claim coverage checker and cannot replace its exact-head status.
+
+**Updated gates:** V5 = TESTED_SCOPED_PASS; full 80-document source identities = DIRECTLY_VERIFIED; V6 SOURCE/CLAIM_COVERAGE_CI = STILL_PENDING unless a separately identified completed result is verified. Internal prepared 100%, formal verified 90%, remaining 10%. Buyer release HOLD; external acceptance and independent security/legal diligence not credited. This section supersedes the earlier V5 QUEUED checkpoint, but does not erase that dated observation.
