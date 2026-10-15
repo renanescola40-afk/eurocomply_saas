@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const migrationPath = 'supabase/migrations/20260809135000_enterprise_core_runtime_schema_reconciliation.sql';
 const migration = readFileSync(migrationPath, 'utf8');
 const instrumentation = readFileSync('src/instrumentation.ts', 'utf8');
+const browserInstrumentation = readFileSync('instrumentation-client.ts', 'utf8');
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8')) as {
   engines?: { node?: string };
 };
@@ -70,6 +71,12 @@ describe('enterprise core production schema reconciliation', () => {
 });
 
 describe('Sentry instrumentation hardening', () => {
+  it('disables default PII collection in browser Sentry events', () => {
+    expect(browserInstrumentation).toContain('sendDefaultPii: false');
+    expect(browserInstrumentation).toContain('event.request = undefined');
+    expect(browserInstrumentation).toContain('event.user = undefined');
+  });
+
   it('initializes Sentry from the active edge-safe src instrumentation entrypoint', () => {
     expect(instrumentation).toContain("import * as Sentry from '@sentry/nextjs'");
     expect(instrumentation).toContain('sendDefaultPii: false');

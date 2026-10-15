@@ -28,7 +28,7 @@ export async function register() {
 
   Sentry.init({
     dsn,
-    // Never include request/user PII in default Sentry event capture.
+    // Do not attach the requester's IP address or other default PII.
     sendDefaultPii: false,
     environment: isEdge
       ? process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.VERCEL_ENV ?? process.env.NODE_ENV
