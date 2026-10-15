@@ -28,7 +28,7 @@ function response(status,content) {
   return {ok:status>=200&&status<300,status,async json(){return content;}};
 }
 
-function mockFetch({exposeOther=false,hideOwn=false,inactiveA=false}={}) {
+function mockFetch({exposeOtherMember=false,exposeOtherDocument=false,exposeAnonDocument=false,hideOwn=false,inactiveA=false}={}) {
   return async (u,options) => {
     const url=new URL(u);
     assert.equal(url.origin,'http://127.0.0.1:54321');
@@ -45,7 +45,7 @@ function mockFetch({exposeOther=false,hideOwn=false,inactiveA=false}={}) {
     if(url.pathname.endsWith('/organization_members')) {
       const matching=(org===a&&user===au)||(org===b&&user===bu);
       const visible=(token==='token-A'&&org===a)||(token==='token-B'&&org===b);
-      return response(200,matching&&(visible||exposeOther)?[{id:ad,organization_id:org,status:inactiveA&&org===a?'inactive':'active'}]:[]);
+      return response(200,matching&&(visible||exposeOtherMember)?[{id:ad,organization_id:org,status:inactiveA&&org===a?'inactive':'active'}]:[]);
     }
     if(url.pathname.endsWith('/documents')) {
       const owner=id===ad?'A':id===bd?'B':null;
@@ -89,8 +89,16 @@ test('simulated tenant A/B isolation passes ten checks',async()=>{
   assert.equal(result.checksPassed,10);
   assert.equal(result.scope,'LOCAL_SYNTHETIC_READ_ONLY');
 });
-test('simulated cross-tenant document leak blocks proof',async()=>{
-  await assert.rejects(executeReadProof(env,mockFetch({exposeOther:true})),/exposed/);
+test('simulated cross-tenant membership leak independently blocks proof',async()=>{
+  await assert.rejects(executeReadProof(env,mockFetch({exposeOtherMember:true})),/other membership.*exposed/);
+});
+
+test('simulated cross-tenant document leak independently blocks proof',async()=>{
+  await assert.rejects(executeReadProof(env,mockFetch({exposeOtherDocument:true})),/document.*exposed/);
+});
+
+test('simulated anonymous document leak independently blocks proof',async()=>{
+  await assert.rejects(executeReadProof(env,mockFetch({exposeAnonDocument:true})),/anon:.*document.*exposed/);
 });
 test('simulated own-document missing blocks proof',async()=>{
   await assert.rejects(executeReadProof(env,mockFetch({hideOwn:true})),/visibility not proven/);
