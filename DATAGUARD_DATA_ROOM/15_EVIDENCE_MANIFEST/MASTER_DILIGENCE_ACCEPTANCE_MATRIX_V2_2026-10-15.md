@@ -69,3 +69,11 @@ The historical V2 and V5 scores above remain snapshots. In this V6 working branc
 - `BUYER_RELEASE=HOLD`; `EXTERNAL_ASSURANCE=OPEN`; `LEGAL_EXECUTED=NOT_CREDITED`; `BUYER_ACCEPTED=0/10` under the original recorded approval matrix.
 
 Any data-room/source additions or changes after the V6 source snapshot must be reconciled before relying on its frozen 80/80 count. A clean offline scan does **not** certify privilege, personal-data completeness or external confidentiality.
+
+## V7 merged-main reviewer evidence — latest checkpoint
+
+The source-identity/readability half of internal item #3 has now been **directly verified at merged `main@178bb279ef6c9ebbe5547bf9d78545f3958aaf10`**: 80/80 scoped Markdown documents returned matching Git tree blobs, 182/182 explicit tracked path references resolve, 0 high-confidence credential-pattern hits, 0 unclassified individual email candidates. The one contact signal is an internal corporate role mailbox in a restricted finance dossier document. See V7 checkpoint in the existing provenance register for per-batch counts, immutable baseline and limitations.
+
+**No score is artificially advanced:** ten documentary deliverables have been prepared (100% preparation); nine are accepted within the current *internal* acceptance criterion (90% formally verified); the remaining one (10%) now specifically awaits successful **exact-head V6 check execution**, not creation of additional evidence files. At this checkpoint V6 PR #2489 has merged, but GitHub Actions run `38809558493` and its V5 predecessor `38807479280` had not completed. If these fail, perform bounded repairs and rerun at the appropriate fresh SHA; if they remain queued, retain `9/10` rather than marking green.
+
+This is separate from human privacy/legal release, scope-specific buyer acceptance, production parity and closing. `BUYER_RELEASE=HOLD`; `BUYER_ACCEPTED=0/10` under the original documentary acceptance gate. No external delivery was authorized or performed.
