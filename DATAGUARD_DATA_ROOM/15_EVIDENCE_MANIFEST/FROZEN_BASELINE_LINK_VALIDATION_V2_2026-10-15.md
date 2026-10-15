@@ -6,7 +6,7 @@
 **Classification:** INTERNAL — NO BUYER RELEASE  
 **Status:** documentary source-level review; no runtime, legal or third-party acceptance implied.
 
-**Method:** authenticated GitHub read-only full recursive tree at the frozen `main` SHA (`truncated=false`); 24 DataGuard Markdown file reads at that same commit; relative Markdown `[caption](target)` links resolved against the containing directory and compared to tracked paths.
+**Method:** authenticated GitHub read-only full recursive tree at the frozen `main` SHA (`truncated=false`); 24 DataGuard Markdown file reads at that same commit; relative Markdown links (label plus target URL) resolved against the containing directory and compared to tracked paths.
 
 | Test | Result | Precision |
 |---|---|---|
