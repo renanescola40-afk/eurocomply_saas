@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { checkLegalAssuranceSourceChain } from './security/check-legal-assurance-chain.mjs';
 
 const env = (...parts) => parts.join('_');
 const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
@@ -230,6 +231,15 @@ const auditChainEvidence = readAuditChainRuntimeEvidence();
 
 console.log('RISCK COMPLY production preflight');
 console.log('----------------------------------');
+
+const legalAssuranceSourceGate = checkLegalAssuranceSourceChain();
+if (legalAssuranceSourceGate.status !== 'PASS_SOURCE_ONLY') {
+  console.error('Legal Assurance source/migration preflight blocked:');
+  for (const reason of legalAssuranceSourceGate.failures) console.error(`- ${reason}`);
+  process.exitCode = 1;
+} else {
+  console.log('Legal Assurance source migration chain: PASS_SOURCE_ONLY (runtime schema not verified)');
+}
 
 if (missingRequired.length > 0) {
   console.error('Missing required environment variables:');
