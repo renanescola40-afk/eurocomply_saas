@@ -13,8 +13,8 @@ function fixture() {
   const base = ['begin;', ...[
     'law_firms', 'counsel_profiles', 'legal_review_requests',
     'legal_review_packages', 'legal_review_decisions', 'legal_review_artifacts',
-  ].map(x => create table if not exists public.${x} (id uuid);`),
-  ...['organizations', 'organization_members', 'ai_systems'].map(x => select to_regclass('public.${x}');`), 'commit;'].join('\n');
+  ].map(x => `create table if not exists public.${x} (id uuid);`),
+  ...['organizations', 'organization_members', 'ai_systems'].map(x => `select to_regclass('public.${x}');`), 'commit;'].join('\n');
   for (const name of LEGAL_ASSURANCE_MIGRATIONS) writeFileSync(join(migrationDir, name), name === LEGAL_ASSURANCE_MIGRATIONS[0] ? base : 'begin;\ncommit;');
   const path = join(migrationDir, LEGAL_ASSURANCE_MIGRATIONS[4]);
   writeFileSync(path, ['begin;',
@@ -26,7 +26,7 @@ function fixture() {
     'commit;'].join('\n'));
   const core = join(dir, 'src/server/legal-assurance/core.ts');
   writeFileSync(core, "const LEGAL_ASSURANCE_ENV_KEY = 'LEGAL_ASSURANCE_ENABLED';\nfunction isLegalAssuranceEnabled(env: Environment = process.env) { return env[LEGAL_ASSURANCE_ENV_KEY]?.trim().toLowerCase() === 'true'; }");
-  return {dir,migrationDir,artifactPath:path,cor,cleanup(){rmSync(dir,{recursive:true,force:true})}};
+  return {dir,migrationDir,artifactPath:path,core,cleanup(){rmSync(dir,{recursive:true,force:true})}};
 }
 
 function checkMutation(fn, expected) {
