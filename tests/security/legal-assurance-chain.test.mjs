@@ -20,7 +20,13 @@ function fixture() {
   writeFileSync(path, ['begin;',
     ...['legal_review_artifacts', 'legal_review_decisions', 'legal_review_requests', 'counsel_profiles'].map(x=>`select to_regclass('public.${x}');`),
     "insert into storage.buckets (id) values ('legal-assurance-artifacts');", 'public = false',
-    ...['reads', 'uploads', 'updates', 'deletes'].map(x=>`create policy "No direct legal assurance artifact ${x}" on storage.objects using (bucket_id = 'legal-assurance-artifacts' and false);`),
+    ...['reads', 'uploads', 'updates', 'deletes'].map((x, i) => {
+      const operation = ['select', 'insert', 'update', 'delete'][i];
+      const deny = "(bucket_id = 'legal-assurance-artifacts' and false)";
+      const condition = operation === 'insert' ? `with check ${deny}`
+        : operation === 'update' ? `using ${deny} with check ${deny}` : `using ${deny}`;
+      return `create policy "No direct legal assurance artifact ${x}" on storage.objects for ${operation} to authenticated ${condition};`;
+    }),
     'revoke all on function app_private.enforce_legal_decision_artifact_reference() from public;',
     'create trigger legal_review_decision_artifact_reference_guard before insert on public.legal_review_decisions execute function app_private.enforce_legal_decision_artifact_reference();',
     'commit;'].join('\n'));
@@ -40,3 +46,16 @@ test('nontransactional migration is fail closed',()=>checkMutation(f=>writeFileS
 test('missing storage deny predicate is fail closed',()=>checkMutation(f=>writeFileSync(f.artifactPath,readFileSync(f.artifactPath,'utf8').replaceAll(' and false',' and true')),'browser_storage_deny_predicate_missing'));
 test('missing legal trigger guard is fail closed',()=>checkMutation(f=>writeFileSync(f.artifactPath,readFileSync(f.artifactPath,'utf8').replaceAll('legal_review_decision_artifact_reference_guard','missing_name')),'artifact_reference_trigger_guard_missing'));
 test('feature flag default-off contract is fail closed',()=>checkMutation(f=>writeFileSync(f.core,"export const LEGAL_ASSURANCE_ENABLED = true;"),'legal_feature_flag_default_off_not_proven'));
+test('one permissive legal Storage read policy must fail even when other policies deny', () => checkMutation(f => {
+  const sql = readFileSync(f.artifactPath, 'utf8');
+  const broken = sql.replace(/(create policy "No direct legal assurance artifact reads"[^;]*?)and false/i, '$1and true');
+  assert.notEqual(broken, sql);
+  writeFileSync(f.artifactPath, broken);
+}, 'browser_storage_deny_predicate_missing'));
+
+test('commenting out the policy cannot count as a real browser deny', () => checkMutation(f => {
+  const sql = readFileSync(f.artifactPath, 'utf8');
+  const broken = sql.replace(/(create policy "No direct legal assurance artifact uploads"[^;]*?;)/i, '/* $1 */');
+  assert.notEqual(broken, sql);
+  writeFileSync(f.artifactPath, broken);
+}, 'missing_browser_deny_policy:No direct legal assurance artifact uploads'));
