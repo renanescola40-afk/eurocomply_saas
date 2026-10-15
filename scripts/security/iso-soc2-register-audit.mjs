@@ -43,6 +43,25 @@ export function auditRegister(content) {
     const id = record.control_id;
     if (byId.has(id)) throw new Error('Duplicate control: ' + id);
     if (!record.applicability || !record.status || !record.evidence_status || !record.owner) throw new Error('Incomplete required fields: ' + id);
+    if (!['NOT_ASSESSED', 'APPLICABLE', 'NOT_APPLICABLE'].includes(record.applicability)) {
+      throw new Error('Unrecognized applicability decision for ' + id);
+    }
+    // This inventory has no reviewer/evidence identity columns. Never silently accept a
+    // VERIFIED/IMPLEMENTED claim until a separately reviewed evidence schema exists.
+    if (!['NOT_ASSESSED', 'PLANNED', 'PARTIAL', 'NOT_APPLICABLE'].includes(record.status)) {
+      throw new Error('Unsubstantiated implementation status for ' + id);
+    }
+    if (record.applicability === 'NOT_ASSESSED' && record.status !== 'NOT_ASSESSED') {
+      throw new Error('Implementation status requires an applicability decision for ' + id);
+    }
+    if (record.applicability !== 'NOT_ASSESSED') {
+      if (record.owner === 'UNASSIGNED' || !record.risk_reference || !record.notes) {
+        throw new Error('Assessment requires a named owner, risk reference and justification for ' + id);
+      }
+      if ((record.applicability === 'NOT_APPLICABLE') !== (record.status === 'NOT_APPLICABLE')) {
+        throw new Error('Not-applicable status and applicability must agree for ' + id);
+      }
+    }
     if (!['NOT_VERIFIED', 'NOT_ASSESSED'].includes(record.evidence_status)) {
       throw new Error('Evidence claim on ' + id + ' cannot be proved by current schema; add immutable evidence pointer, reviewer and timestamp first');
     }
