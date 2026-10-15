@@ -65,11 +65,34 @@ export function checkLegalAssuranceSourceChain(root = process.cwd()) {
       !/public\s*=\s*false/i.test(artifacts)) {
     fail('private_legal_artifact_bucket_missing');
   }
-  for (const name of expectedBrowserDenyPolicies) {
-    if (!artifacts.includes(`create policy "${name}"`)) fail(`missing_browser_deny_policy:${name}`);
-  }
-  if (!/bucket_id\s*=\s*'legal-assurance-artifacts'\s+and\s+false/i.test(artifacts)) {
-    fail('browser_storage_deny_predicate_missing');
+  // Assess each required statement separately. A single denying policy cannot
+  // compensate for another permissive policy: RLS permissive policies OR together.
+  // SQL comments are not executable policy definitions.
+  const activeArtifactSql = artifacts
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/^\s*--[^\n]*$/gm, ' ');
+  const legalStoragePolicies = [
+    { name: expectedBrowserDenyPolicies[0], operation: 'select', checks: ['using'] },
+    { name: expectedBrowserDenyPolicies[1], operation: 'insert', checks: ['with\\s+check'] },
+    { name: expectedBrowserDenyPolicies[2], operation: 'update', checks: ['using', 'with\\s+check'] },
+    { name: expectedBrowserDenyPolicies[3], operation: 'delete', checks: ['using'] },
+  ];
+  for (const { name, operation, checks } of legalStoragePolicies) {
+    const statement = new RegExp(
+      `\\bcreate\\s+policy\\s+"${name}"\\s+on\\s+storage\\.objects\\s+for\\s+${operation}\\s+to\\s+authenticated\\b([\\s\\S]*?);`,
+      'i',
+    ).exec(activeArtifactSql);
+    if (!statement) {
+      fail(`missing_browser_deny_policy:${name}`);
+      continue;
+    }
+    for (const clause of checks) {
+      const deny = new RegExp(
+        `${clause}\\s*\\(\\s*bucket_id\\s*=\\s*'legal-assurance-artifacts'\\s+and\\s+false\\s*\\)`,
+        'i',
+      );
+      if (!deny.test(statement[1])) fail(`browser_storage_deny_predicate_missing:${name}:${clause}`);
+    }
   }
   if (!artifacts.includes('app_private.enforce_legal_decision_artifact_reference()') ||
       !artifacts.includes('legal_review_decision_artifact_reference_guard')) {
