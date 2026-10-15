@@ -60,8 +60,8 @@ export function auditDataRoom(root,{support=true}={}){
  const paths=sourceFiles(root),pathSet=new Set(paths);
  const room=paths.filter(p=>p.startsWith(ROOM)),adjacent=support?paths.filter(p=>SUPPORT.some(s=>p.startsWith(s))):[];
  const subject=new Set([...room,...adjacent]);
- const manifest=[],missingRoom=[],missingSupport=[],suspectedSecrets=[],exclusions=[];
- let screened=0,roomMd=0,supportMd=0,links=0,emails=0;
+ const manifest=[],missingRoom=[],missingSupport=[],missingCodeReferences=[],suspectedSecrets=[],suspectedSupportingSecrets=[],exclusions=[];
+ let screened=0,roomMd=0,supportMd=0,links=0,emails=0,supportEmails=0,codeReferencesChecked=0;
  for(const p of paths){
   const full=join(root,p);
   if(!existsSync(full)){if(subject.has(p))exclusions.push({path:p,reason:'missing_file'});continue;}
@@ -76,11 +76,20 @@ export function auditDataRoom(root,{support=true}={}){
   }
   const text=data.toString('utf8'),isRoom=p.startsWith(ROOM);
   screened++;
-  if(isRoom){
-   for(const [kind,regexp] of SECRET){const count=[...text.matchAll(new RegExp(regexp.source,regexp.flags))].length;if(count)suspectedSecrets.push({path:p,kind,count});}
-   emails+=[...text.matchAll(EMAIL)].length;
+  for(const [kind,regexp] of SECRET){
+   const count=[...text.matchAll(new RegExp(regexp.source,regexp.flags))].length;
+   if(count)(isRoom?suspectedSecrets:suspectedSupportingSecrets).push({path:p,kind,count});
   }
+  const emailMatches=[...text.matchAll(EMAIL)].length;
+  if(isRoom)emails+=emailMatches;else supportEmails+=emailMatches;
   if(!p.endsWith('.md'))continue;
+  // Check exact file paths inside inline backticks; a branch name without an
+  // extension is not a file reference. Do not confuse a historical ref for
+  // an existing path or claim this is a complete plain-text reference parser.
+  for(const q of text.matchAll(/\x60((?:DATAGUARD_DATA_ROOM|docs|scripts|config|evidence)\/[A-Za-z0-9_./-]+\.(?:md|json|yml|yaml|mjs|ts|tsx|sql|csv))\x60/g)){
+   const target=q[1];codeReferencesChecked++;
+   if(!pathSet.has(target))missingCodeReferences.push({source:p,target});
+  }
   if(isRoom)roomMd++;else supportMd++;
   for(const url of markdownLinks(text)){
    const result=targetPath(root,p,url);if(!result)continue;
@@ -93,8 +102,9 @@ export function auditDataRoom(root,{support=true}={}){
  }
  let gitHead='fixture';
  try{gitHead=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();}catch{}
- const outcome=missingRoom.length||suspectedSecrets.length||roomMd!==room.filter(p=>p.endsWith('.md')).length
-  ?'FAIL':emails||exclusions.some(x=>x.path.startsWith(ROOM))
+ const roomReferenceFailures=missingCodeReferences.filter(x=>x.source.startsWith(ROOM));
+ const outcome=missingRoom.length||missingSupport.length||roomReferenceFailures.length||suspectedSecrets.length||roomMd!==room.filter(p=>p.endsWith('.md')).length
+  ?'FAIL':emails||supportEmails||suspectedSupportingSecrets.length||exclusions.length
    ?'REQUIRES_HUMAN_REVIEW':'PASS_SCOPED_AUTOMATED_CHECKS';
  return {
   schema:'buyer-room-offline-v1',gitHead,trackedFiles:paths.length,
@@ -102,11 +112,15 @@ export function auditDataRoom(root,{support=true}={}){
   dataRoomTrackedFiles:room.length,dataRoomMarkdown:roomMd,
   dataRoomMarkdownExpected:room.filter(p=>p.endsWith('.md')).length,
   supportingMarkdown:supportMd,filesContentScreened:screened,localLinksChecked:links,
-  brokenRoomLinks:missingRoom,advisorySupportingLinkCount:missingSupport.length,
-  suspectedSecrets,potentialEmailCountInDataRoom:emails,
+  brokenRoomLinks:missingRoom,brokenSupportingLinks:missingSupport,
+  codeReferencesChecked,missingCodeReferences,
+  suspectedSecrets,suspectedSupportingSecrets,
+  potentialEmailCountInDataRoom:emails,
+  potentialEmailCountInSupportingDocuments:supportEmails,
   dataRoomUnscanned:exclusions.filter(x=>x.path.startsWith(ROOM)),
+  supportingFilesUnscanned:exclusions.filter(x=>!x.path.startsWith(ROOM)),
   outcome,
-  limits:'Static source pre-screen, not complete PII/counsel/privilege screening, legal title, production parity, third-party assurance or buyer approval.'
+  limits:'Static scoped source pre-screen. Regex negative results cannot prove absence of secrets or personal data. Human privacy/privilege review, legal title, production parity, independent assurance and buyer approval are not included.'
  };
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
