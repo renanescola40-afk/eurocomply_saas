@@ -3,7 +3,8 @@ name: Senior Agent Watchdog
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 */6 * * *'
+    # Full security audit remains available on demand; daily scheduled regression backup.
+    - cron: '17 6 * * *'
 
 permissions:
   contents: read
