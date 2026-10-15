@@ -40,3 +40,13 @@ test('rejects duplicate frozen source identity',()=>{
  const out=evaluateBuyerCoverage(corrupted,x.brief,x.paths,{expected:2});
  assert.equal(out.status,'FAIL');assert.equal(out.duplicateBaselinePaths.length,1);
 });
+
+test('passes on complete scoped frozen paths, claim classes and six tracked sources',()=>{
+ const x=sample();
+ const additional=['docs/trust/product.md','docs/trust/architecture.md','docs/trust/evidence.md','docs/trust/scope.md'];
+ const brief=x.brief+' '+additional.map(x=>m+x+m).join(' ');
+ const out=evaluateBuyerCoverage(x.p,brief,[...x.paths,...additional],{expected:2});
+ assert.equal(out.status,'PASS_SCOPED_BASELINE_AND_INITIAL_CLAIMS');
+ assert.equal(out.stageASourcePathCount,6);
+ assert.equal(out.initialBuyerClaimsPresent,12);
+});
