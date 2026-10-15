@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validatedFixture, assertReadProofResponse, executeReadProof,
+  validatedFixture, assertReadProofResponse, executeReadProof, assertNonPrivilegedAnonKey,
 } from '../../scripts/security/local-tenant-read-proof.mjs';
 
 const a='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -11,10 +11,13 @@ const bd='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const au='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 const bu='ffffffff-ffff-4fff-8fff-ffffffffffff';
 
+const anonJwt = ['eyJhbGciOiJIUzI1NiJ9', Buffer.from(JSON.stringify({ role: 'anon' })).toString('base64url'), 'local-synthetic-signature'].join('.');
+const privilegedJwt = ['eyJhbGciOiJIUzI1NiJ9', Buffer.from(JSON.stringify({ role: 'service_role' })).toString('base64url'), 'local-synthetic-signature'].join('.');
+
 const env = {
   RISCK_LOCAL_TEST_CONFIRMATION:'LOCAL_SYNTHETIC_ONLY',
   NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:54321',
-  LOCAL_RLS_ANON_KEY:'test-anon',
+  LOCAL_RLS_ANON_KEY:anonJwt,
   LOCAL_RLS_A_EMAIL:'a@example.test',LOCAL_RLS_A_PASSWORD:'a-password',
   LOCAL_RLS_B_EMAIL:'b@example.test',LOCAL_RLS_B_PASSWORD:'b-password',
   LOCAL_RLS_A_ORG_ID:a,LOCAL_RLS_B_ORG_ID:b,
@@ -46,7 +49,7 @@ function mockFetch({exposeOther=false,hideOwn=false,inactiveA=false}={}) {
     }
     if(url.pathname.endsWith('/documents')) {
       const owner=id===ad?'A':id===bd?'B':null;
-      const visible=owner&&(token==='token-'+owner&&!hideOwn || exposeOther&&token!=='test-anon');
+      const visible=owner&&(token==='token-'+owner&&!hideOwn || exposeOther&&token!==anonJwt);
       return response(200,visible?[{id,organization_id:owner==='A'?a:b}]:[]);
     }
     throw new Error('Unexpected request');
@@ -98,4 +101,16 @@ test('network failure cannot be reported as PASS',async()=>{
 
 test('inactive membership is not accepted as valid own access',async()=>{
   await assert.rejects(executeReadProof(env,mockFetch({inactiveA:true})),/active-membership fixture not visible/);
+});
+
+test('rejects a service_role JWT passed via LOCAL_RLS_ANON_KEY',()=>{
+  assert.throws(()=>validatedFixture({...env,LOCAL_RLS_ANON_KEY:privilegedJwt}),/privileged key rejected/);
+});
+test('rejects secret API keys and arbitrary unknown key formats',()=>{
+  assert.throws(()=>assertNonPrivilegedAnonKey('sb_secret_example'),/anon-role JWT/);
+  assert.throws(()=>assertNonPrivilegedAnonKey('test-anon'),/anon-role JWT/);
+});
+test('accepts an anon-role JWT or a publishable key',()=>{
+  assert.equal(assertNonPrivilegedAnonKey(anonJwt),anonJwt);
+  assert.equal(assertNonPrivilegedAnonKey('sb_publishable_local_test'), 'sb_publishable_local_test');
 });
