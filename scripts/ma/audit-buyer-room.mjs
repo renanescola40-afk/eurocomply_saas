@@ -15,6 +15,9 @@ const SECRET=[
  ['private_key',/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g]
 ];
 const EMAIL=/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+// Named corporate role mailboxes are public business contact routes, not
+// personal addresses. This is an internal classification, NEVER buyer-release approval.
+const PUBLIC_ROLE_MAILBOX=/^(?:comercial|commercial|sales|info|support|contact|security|privacy|legal)@risckcomply\.com$/i;
 const BINARY=/\.(?:png|jpe?g|webp|gif|ico|pdf|woff2?|ttf|otf|zip|gz|mp4|mov|mp3|wav|lockb|map)$/i;
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const norm=value=>value.replace(/\\/g,'/');
@@ -61,7 +64,7 @@ export function auditDataRoom(root,{support=true}={}){
  const room=paths.filter(p=>p.startsWith(ROOM)),adjacent=support?paths.filter(p=>SUPPORT.some(s=>p.startsWith(s))):[];
  const subject=new Set([...room,...adjacent]);
  const manifest=[],missingRoom=[],missingSupport=[],missingCodeReferences=[],suspectedSecrets=[],suspectedSupportingSecrets=[],exclusions=[];
- let screened=0,roomMd=0,supportMd=0,links=0,emails=0,supportEmails=0,codeReferencesChecked=0;
+ let screened=0,roomMd=0,supportMd=0,links=0,emails=0,supportEmails=0,publicRoleMailboxes=0,codeReferencesChecked=0;
  for(const p of paths){
   const full=join(root,p);
   if(!existsSync(full)){if(subject.has(p))exclusions.push({path:p,reason:'missing_file'});continue;}
@@ -80,8 +83,10 @@ export function auditDataRoom(root,{support=true}={}){
    const count=[...text.matchAll(new RegExp(regexp.source,regexp.flags))].length;
    if(count)(isRoom?suspectedSecrets:suspectedSupportingSecrets).push({path:p,kind,count});
   }
-  const emailMatches=[...text.matchAll(EMAIL)].length;
-  if(isRoom)emails+=emailMatches;else supportEmails+=emailMatches;
+  const emailMatches=[...text.matchAll(EMAIL)].map(m=>m[0]);
+  publicRoleMailboxes+=emailMatches.filter(e=>PUBLIC_ROLE_MAILBOX.test(e)).length;
+  const unreviewedEmailCandidates=emailMatches.filter(e=>!PUBLIC_ROLE_MAILBOX.test(e)).length;
+  if(isRoom)emails+=unreviewedEmailCandidates;else supportEmails+=unreviewedEmailCandidates;
   if(!p.endsWith('.md'))continue;
   // Check exact file paths inside inline backticks; a branch name without an
   // extension is not a file reference. Do not confuse a historical ref for
@@ -117,6 +122,7 @@ export function auditDataRoom(root,{support=true}={}){
   suspectedSecrets,suspectedSupportingSecrets,
   potentialEmailCountInDataRoom:emails,
   potentialEmailCountInSupportingDocuments:supportEmails,
+  classifiedPublicCorporateRoleMailboxes:publicRoleMailboxes,
   dataRoomUnscanned:exclusions.filter(x=>x.path.startsWith(ROOM)),
   supportingFilesUnscanned:exclusions.filter(x=>!x.path.startsWith(ROOM)),
   outcome,
