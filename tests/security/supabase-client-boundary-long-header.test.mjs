@@ -66,3 +66,15 @@ test('client named module still cannot import admin despite no directive', () =>
   assert.equal(result.status, 1);
   assert.match(result.output, /client boundary imports or references a Supabase admin/);
 });
+
+test('client directive followed by line comment remains detected', () => {
+  const result = scanFixture("'use client' // navigation component\nimport { createAdminClient } from '@/lib/supabase/admin';\n");
+  assert.equal(result.status, 1);
+  assert.match(result.output, /client boundary imports or references a Supabase admin/);
+});
+
+test('client directive followed by block comment remains detected', () => {
+  const result = scanFixture('"use client" /* banner */;\nconst key = process.env.SUPABASE_SERVICE_ROLE_KEY;\n');
+  assert.equal(result.status, 1);
+  assert.match(result.output, /client boundary references a Supabase service role secret/);
+});
