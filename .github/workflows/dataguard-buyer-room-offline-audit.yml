@@ -8,6 +8,7 @@ on:
       - 'docs/ma/buyer-materials/**'
       - 'docs/security/dataguard/**'
       - 'scripts/ma/audit-buyer-room*'
+      - 'scripts/ma/check-buyer-coverage*'
       - '.github/workflows/dataguard-buyer-room-offline-audit.yml'
   workflow_dispatch:
 permissions:
@@ -26,6 +27,8 @@ jobs:
         with:
           node-version: '22'
       - name: Offline scanner regression tests
-        run: node --test scripts/ma/audit-buyer-room.test.mjs
+        run: node --test scripts/ma/audit-buyer-room.test.mjs scripts/ma/check-buyer-coverage.test.mjs
       - name: Offline source inventory and data-room screening
         run: node scripts/ma/audit-buyer-room.mjs
+      - name: Exact tracked source-inventory and initial-claim crosswalk check
+        run: node scripts/ma/check-buyer-coverage.mjs

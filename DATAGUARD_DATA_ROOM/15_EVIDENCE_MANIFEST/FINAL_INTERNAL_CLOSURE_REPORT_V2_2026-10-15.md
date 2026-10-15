@@ -52,3 +52,22 @@ No emails or external transmissions, no paid resources, no main merge, no deploy
 **Unchanged external limits:** executed IP/title, corporate authority, full financial/tax originals, provider transfer permissions, independent terminal security assurance, buyer-specific acceptance and negotiated transaction documents. Seven external dependency categories remain in the risk cluster register; they are not claimed permanently closed. `ACQUISITION_EVIDENCE=NOT_MEASURABLE` for a refreshed global metric (dated M&A matrix 37/98 = 37.76% retained as history), `BUYER_RELEASE=HOLD`, `DEMO_STATUS=NOT_VERIFIED`, `FINAL_STATUS=PARTIAL`.
 
 **Communication control:** no emails, external messages, access grants, invitations or files were sent to DataGuard, B3 or another recipient.
+
+
+## V6 final document-source reconciliation — 2026-10-15
+
+**Frozen source inspection anchor:** `main@57f74e107dc2c51cfb0219f5e5dcdc44064c6907` (before this V6 branch). An untruncated Git tree enumerated 4,929 source blobs. Within five strictly scoped data-room/M&A-support directories the current Markdown set comprised **80 distinct tracked files** (31 DataGuard + 49 supporting files). The canonical provenance document now contains all **80 path + baseline Git blob pairs** and a **16-section factual/authority boundary matrix**. The Stage A record additionally covers **12/12 material claim categories** with provenance or express non-claim.
+
+**Independent controller CI evidence available:**
+- V3 GitHub offline dossier job: PR #2482, run `38803703288`, job `116658993572`: SUCCESS 5/5 tests, 30 room + 49 adjacent documents in that earlier checkout.
+- V4 GitHub offline dossier job: run `38805676055`, job `116665764551`: SUCCESS **10/10 unit tests** and static checks in its own pull-request checkout at Git HEAD `699a59f13a300ce0eaa4db9958ac839d10b1dbb6`. Report: 79 eligible Markdown files, 12 local links, no missing supporting links, missing tracked code references, detected strong-pattern secrets or unresolved individual-email candidates; one classified corporate business-role contact. This is a *scoped negative signal only*, not human legal/PII approval.
+- V5 runner `38807479280`: at the original review, QUEUED; do not assume an eventual PASS.
+- New V6 `scripts/ma/check-buyer-coverage.mjs` with six regression tests plus CI coverage step: newly authored; external runner result is NOT_CREDITED until the V6 PR exact head/checkout completes.
+
+**Read-only current provider comparison:** Vercel `www.risckcomply.com` READY deployment `dpl_G46QK2En1purZiDjnDMamBjcWrEB`, Git SHA `3310757dc82c2f5b07a5763b2e4b6e9fc5b4bfc5`. Compared with frozen `main@57f74e107dc2c51cfb0219f5e5dcdc44064c6907`, **69 commits ahead**, none behind. Main/deployment SHA parity is OPEN, not a reason to alter the DataGuard demo during documentary closure. Security PR #2477 is merged, but source/CI != runtime production proof.
+
+**Internally prepared 10/10 documentary deliverables; verified score remains 9/10 (90%), remaining 1/10 (10%) until V6 CI and source/claim crosswalk checks pass.** Do not use this statement to represent signing readiness. Once the scoped Git tree, changed documents, missing links, sensitive pattern checks and all crosswalk coverage PASS at attributable V6 test SHA, only the **internal documentary 10/10** denominator may be closed; Stage A release permissions, privacy/legal review and buyer/procurement acceptance remain separate.
+
+**Unchanged external evidence/closing gates:** (1) executed creator-to-seller IP title, (2) official company/authority materials, (3) complete accounting/financial originals, (4) tax and statutory official records, (5) provider transfer rights, (6) terminal independent security acceptance, (7) buyer-specific NDA/sale contracts/release/acceptance. These are seven risk **clusters**, not seven documents or a percentage of the transaction.
+
+**Final release discipline:** NO_EMAIL_SENT, NO_BUYER_ACCESS_GRANTED, NO_DEMO_MODIFICATION, NO_PRODUCTION_DEPLOY, NO_UNAUTHENTICATED_ASSURANCE_CLAIM. `BUYER_RELEASE=HOLD`; `BUYER_ACCEPTED=0/10` in the original authorisation ledger; `ACQUISITION_EVIDENCE=NOT_MEASURABLE` for a fresh weighted valuation/closing score. The 2026-10-08 `37/98` score is historical only. `FINAL_STATUS=PARTIAL_UNTIL_V6_CI` for scoped document execution and `TRANSACTION_STATUS=OPEN_EXTERNAL` regardless of internal completion.
