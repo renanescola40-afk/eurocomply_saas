@@ -72,14 +72,22 @@ describe('enterprise core production schema reconciliation', () => {
 
 describe('Sentry instrumentation hardening', () => {
   it('disables default PII collection in browser Sentry events', () => {
-    expect(browserInstrumentation).toContain('sendDefaultPii: false');
+    expect(browserInstrumentation).toContain('dataCollection: {');
+    expect(browserInstrumentation).toContain('userInfo: false');
+    expect(browserInstrumentation).toContain('cookies: false');
+    expect(browserInstrumentation).toContain('httpHeaders: false');
+    expect(browserInstrumentation).toContain('httpBodies: []');
     expect(browserInstrumentation).toContain('event.request = undefined');
     expect(browserInstrumentation).toContain('event.user = undefined');
   });
 
   it('initializes Sentry from the active edge-safe src instrumentation entrypoint', () => {
     expect(instrumentation).toContain("import * as Sentry from '@sentry/nextjs'");
-    expect(instrumentation).toContain('sendDefaultPii: false');
+    expect(instrumentation).toContain('dataCollection: {');
+    expect(instrumentation).toContain('userInfo: false');
+    expect(instrumentation).toContain('cookies: false');
+    expect(instrumentation).toContain('httpHeaders: false');
+    expect(instrumentation).toContain('httpBodies: []');
     expect(instrumentation).toContain('event.request = undefined');
     expect(instrumentation).toContain('event.user = undefined');
     expect(instrumentation).toContain('export const onRequestError = Sentry.captureRequestError');
