@@ -184,3 +184,35 @@ Each class identifies the *type of claim* and whether a buyer may rely on it; it
 
 **Provisional internal documentary category #3:** source identity inventory COMPLETE for the defined 80-file Markdown dossier; source acceptance review STAGED and validated by existing V4 plus the pending current-head CI. Global transaction/evidence closure remains UNMEASURABLE from this inventory alone. Buyer release remains HOLD.
 
+
+
+## V7 current-main direct document review — 2026-10-15
+
+This is a **second, independent, connector-authenticated source read** following the merge of V6, not a claim that a CI runner has completed V6 tests.
+
+**Read-only immutable baseline:** `main@178bb279ef6c9ebbe5547bf9d78545f3958aaf10`, Git tree untruncated, **4,932** tracked blobs. Five explicitly scoped directories in this register contain **80 Markdown files**, of which **80/80 were fetched by path from the immutable ref, and 80/80 returned blob SHA-1 exactly matched the Git tree**.
+
+| Review batch | Source documents read | Matching Git blob SHA | Exact inline file references inspected | High-confidence secret-pattern signals | Email address signals |
+|---|---:|---:|---:|---:|---:|
+| 0 — canonical sections 00–09 | 14 | 14 | 33 | 0 | 0 |
+| 1 — canonical sections 10–15 | 14 | 14 | 14 | 0 | 0 |
+| 2 — remaining canonical + supporting | 14 | 14 | 110 | 0 | 0 |
+| 3 — supporting M&A records | 14 | 14 | 0 | 0 | 0 |
+| 4 — supporting M&A and buyer files | 14 | 14 | 14 | 0 | 1 |
+| 5 — buyer/security support files | 10 | 10 | 11 | 0 | 0 |
+| **Total** | **80** | **80** | **182** | **0** | **1** |
+
+All 182 explicit backtick-wrapped local document/source path references, as recognized by the stated bounded checker, resolved to tracked paths in the frozen complete Git tree; **0 missing path targets**. This is a check of specific reference syntax, not all plain-text claims, URLs, Markdown anchors, screenshots, media, filesystem permissions or external originals.
+
+The **sole email signal** was classified via an independent second read as a corporate business-role mailbox in `docs/ma-diligence/STRIPE_LIVE_ACCOUNT_RECONCILIATION_2026-10-06.md`; this document does not reproduce that address. **Unresolved individual email candidates: 0** under that classification. A role mailbox is not permission to distribute the underlying financial document. The high-confidence pattern screen is not a full secret/PII/privilege audit and does not certify absence of all sensitive information.
+
+**Other independently attributable evidence:** V4 GitHub Actions workflow `38805676055` completed SUCCESS and its `data-room-static-evidence` job `116665764551` passed ten of ten unit tests, with a separate 79-document checkout. V6 PR #2489 **MERGED** to main at `178bb279ef6c9ebbe5547bf9d78545f3958aaf10`. Its exact-head GitHub Actions run `38809558493` remained QUEUED when checked. A completed merge is not a successful CI execution. The earlier V5 run `38807479280` also remained QUEUED.
+
+**Evidence status:**
+- `SOURCE_IDENTITY_CURRENT_MAIN=PASS_80_OF_80` for these specifically scoped documents.
+- `TRACKED_EXPLICIT_PATH_REFERENCES=PASS_182_OF_182` under documented parser limitations.
+- `DOCUMENTARY_PREPARATION=10_OF_10` eligible internal deliverables.
+- `DOCUMENTARY_FORMAL_VERIFICATION=9_OF_10` while V6 exact-head CI is not successful.
+- `BUYER_RELEASE=HOLD`; `LEGAL_EXECUTED=NOT_CREDITED`; `BUYER_ACCEPTED=NOT_CREDITED`.
+
+**No documents, email, messages or account invites were sent.** No production deploy, migration, DataGuard demo operation, destructive repository rewrite or provider mutation was conducted by this review.

@@ -69,3 +69,17 @@ The historical V2 and V5 scores above remain snapshots. In this V6 working branc
 - `BUYER_RELEASE=HOLD`; `EXTERNAL_ASSURANCE=OPEN`; `LEGAL_EXECUTED=NOT_CREDITED`; `BUYER_ACCEPTED=0/10` under the original recorded approval matrix.
 
 Any data-room/source additions or changes after the V6 source snapshot must be reconciled before relying on its frozen 80/80 count. A clean offline scan does **not** certify privilege, personal-data completeness or external confidentiality.
+
+## V7 merged-main reviewer evidence — latest checkpoint
+
+The source-identity/readability half of internal item #3 has now been **directly verified at merged `main@178bb279ef6c9ebbe5547bf9d78545f3958aaf10`**: 80/80 scoped Markdown documents returned matching Git tree blobs, 182/182 explicit tracked path references resolve, 0 high-confidence credential-pattern hits, 0 unclassified individual email candidates. The one contact signal is an internal corporate role mailbox in a restricted finance dossier document. See V7 checkpoint in the existing provenance register for per-batch counts, immutable baseline and limitations.
+
+**No score is artificially advanced:** ten documentary deliverables have been prepared (100% preparation); nine are accepted within the current *internal* acceptance criterion (90% formally verified); the remaining one (10%) now specifically awaits successful **exact-head V6 check execution**, not creation of additional evidence files. At this checkpoint V6 PR #2489 has merged, but GitHub Actions run `38809558493` and its V5 predecessor `38807479280` had not completed. If these fail, perform bounded repairs and rerun at the appropriate fresh SHA; if they remain queued, retain `9/10` rather than marking green.
+
+This is separate from human privacy/legal release, scope-specific buyer acceptance, production parity and closing. `BUYER_RELEASE=HOLD`; `BUYER_ACCEPTED=0/10` under the original documentary acceptance gate. No external delivery was authorized or performed.
+
+## V7 subsequently completed automated check — 2026-10-15
+
+GitHub Actions **V5** DataGuard Buyer Room Offline Audit run `38807479280` / job `116671960551` completed `SUCCESS` at 2026-10-15 21:31 UTC. Its captured checkout ref `adcaeea80e641cfeb3083173183665e3b7c48482` executed **10/10 regression tests successfully** and the offline scanner recorded **31 primary + 49 supporting Markdown files**, zero broken supporting links, zero missing inline tracked path references and zero high-confidence token candidates, with one classified corporate role mailbox. A passing V5 source scan does not execute the **V6-specific** source/claim coverage checker and cannot replace its exact-head status.
+
+**Updated gates:** V5 = TESTED_SCOPED_PASS; full 80-document source identities = DIRECTLY_VERIFIED; V6 SOURCE/CLAIM_COVERAGE_CI = STILL_PENDING unless a separately identified completed result is verified. Internal prepared 100%, formal verified 90%, remaining 10%. Buyer release HOLD; external acceptance and independent security/legal diligence not credited. This section supersedes the earlier V5 QUEUED checkpoint, but does not erase that dated observation.
