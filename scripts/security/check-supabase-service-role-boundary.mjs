@@ -30,12 +30,31 @@ function normalizePath(path) {
 }
 
 function hasUseClientDirective(source) {
-  const firstStatements = source
-    .split('\n')
-    .slice(0, 8)
-    .map((line) => line.trim().replace(/;$/, ''));
+  // The 'use client' directive can follow an arbitrary-length comment banner.
+  // Inspect the first executable statement rather than an arbitrary line count.
+  let cursor = source.charCodeAt(0) === 0xfeff ? 1 : 0;
 
-  return firstStatements.includes("'use client'") || firstStatements.includes('"use client"');
+  while (cursor < source.length) {
+    while (cursor < source.length && /\s/.test(source[cursor])) cursor += 1;
+
+    if (source.startsWith('//', cursor)) {
+      const newline = source.indexOf('\n', cursor + 2);
+      if (newline < 0) return false;
+      cursor = newline + 1;
+      continue;
+    }
+
+    if (source.startsWith('/*', cursor)) {
+      const close = source.indexOf('*/', cursor + 2);
+      if (close < 0) return false;
+      cursor = close + 2;
+      continue;
+    }
+    break;
+  }
+
+  // A commented-out directive or a string following an import is not a directive.
+  return /^(['"])use client\1(?=\s*;|\s*(?:\r?\n|$))/.test(source.slice(cursor));
 }
 
 function isClientNamedFile(path) {
