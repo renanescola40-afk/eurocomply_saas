@@ -86,6 +86,17 @@ PROVIDER_SCORE_CHANGE=0
 This is stronger account-specific operational evidence but does not close provider requirement 91 because billing/legal owner reconciliation, buyer-specific transfer and closing execution remain incomplete.
 
 
+## GitHub current visibility correction — 2026-10-15
+
+Authenticated GitHub repository metadata now confirms `visibility=private` for the canonical `renanescola40-afk/eurocomply_saas` repository. The dated **2026-10-07** public status below is historical and is **not** the current visibility. When/why the setting changed, fork/cache status, historical source-copy exposure and any purging are not evidenced by the current visibility response. Provider transfer/legal title remains PARTIAL and the scoring numerator is not increased from this metadata alone.
+
+```text
+GITHUB_REPOSITORY_VISIBILITY_AS_OF_2026_10_15=PRIVATE_VERIFIED
+HISTORICAL_PUBLIC_EXPOSURE_REMEDIATION=OPEN
+REPOSITORY_HISTORY_CONFIDENTIALITY=NOT_VERIFIED
+PROVIDER_SCORE_CHANGE=0
+```
+
 ## GitHub source-control confidentiality reconciliation — 2026-10-07
 
 Authenticated GitHub repository metadata currently reports the primary repository as public (`visibility=public`, `private=false`). Operational repository control remains verified, but public visibility means confidentiality must not be assumed for historic source code already exposed through the repository.
