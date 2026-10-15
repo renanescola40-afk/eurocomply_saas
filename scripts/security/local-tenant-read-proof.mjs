@@ -7,6 +7,25 @@ import { assertLocalSupabaseTarget } from './assert-local-supabase-target.mjs';
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fixtureEmailPattern = /^[a-z0-9._+-]+@example\.(?:com|test)$/i;
 
+export function assertNonPrivilegedAnonKey(key) {
+  const value = String(key || '').trim();
+  if (value.startsWith('sb_publishable_') && value.length > 'sb_publishable_'.length) return value;
+  const parts = value.split('.');
+  if (parts.length !== 3 || !parts.every(Boolean)) {
+    throw new Error('Local key must be an anon-role JWT or a publishable API key');
+  }
+  let claims;
+  try {
+    claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+  } catch {
+    throw new Error('Local anon key has an invalid JWT payload');
+  }
+  if (claims?.role !== 'anon') {
+    throw new Error('Local key must contain anon role; privileged key rejected');
+  }
+  return value;
+}
+
 export function validatedFixture(env) {
   const { target } = assertLocalSupabaseTarget(env);
   for (const name of ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'SUPABASE_ACCESS_TOKEN']) {
@@ -20,6 +39,7 @@ export function validatedFixture(env) {
   for (const name of mandatory) {
     if (!String(env[name] || '').trim()) throw new Error('Missing local synthetic fixture field: ' + name);
   }
+  assertNonPrivilegedAnonKey(env.LOCAL_RLS_ANON_KEY);
   for (const letter of ['A', 'B']) {
     if (!fixtureEmailPattern.test(env['LOCAL_RLS_' + letter + '_EMAIL'])) {
       throw new Error('Non-synthetic fixture email: ' + letter);
