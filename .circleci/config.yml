@@ -6,7 +6,9 @@ jobs:
   validar-risck:
     docker:
       - image: cimg/node:22.16.0
-    resource_class: medium
+    # 8 GB RAM: prior 4 GB build exited with SIGKILL/137 after compilation.
+    # Included in CircleCI Free credits; no production credentials or deploy.
+    resource_class: large
     working_directory: ~/project
     environment:
       STRICT_PUBLIC_SECRET_SCAN: "1"
