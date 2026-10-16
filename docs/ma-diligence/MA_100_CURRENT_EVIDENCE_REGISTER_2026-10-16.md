@@ -1,17 +1,24 @@
-# RISCK COMPLY — M&A 98 Requirement Evidence Reconciliation
+# RISCK COMPLY — M&A 98-Requirement Evidence Reconciliation
 
-Date: 2026-10-16
-Source: `docs/ma-diligence/M_AND_A_REQUIREMENT_STATUS_MATRIX.md` on observed `main@2be90295d9791938315da7c25ed25e9429597e52`.
-Classification: INTERNAL; NOT APPROVED FOR BUYER DISCLOSURE.
+Snapshot: 2026-10-16. Main SHA observed: `2be90295d9791938315da7c25ed25e9429597e52`. Source: `docs/ma-diligence/M_AND_A_REQUIREMENT_STATUS_MATRIX.md` on `main`. Classification: INTERNAL; NO BUYER RELEASE.
 
-## Evidence truth
-This file transcribes the current canonical 98-requirement *documented* status. It is not a new independent legal/accounting/provider audit. The source file's last complete scoring checkpoint is 2026-10-08. Prior source entries must not become fresher merely through this reconciliation. `CLOSED` is limited to the source's stated diligence stage and need not mean LEGAL_EXECUTED or BUYER_ACCEPTED.
+## Material score discrepancy — DO NOT ASSERT CURRENT 37/98 AS RECONCILED
 
-Documented score: **34/79 = 43.04%**; uncredited **56.96%**. Raw item counts: 23 CLOSED, 22 PARTIAL, 34 OPEN. The score counts partial items at 0.5.
+The document states **37.0/98 = 37.76%** (2026-10-08 authority). A mechanical sum of its **98 actual scored requirement rows** currently returns **37.5/98 = 38.27%**, with **61.73%** uncredited. The difference is in IP: IP requirement row scores add to **14.5/20**, but the written IP subtotal states **14.0/20**. All other domain subtotals match the row totals. This must be investigated with source provenance before changing the canonical scoring authority or reporting any increase. **Neither figure is a newly independent verification of legal/accountant/buyer evidence.**
 
-## Reconciled requirement register
+| Domain | Row sum | Written canonical subtotal |
+|---|---:|---:|
+| Corporate | 5/17 | 5/17 |
+| IP ownership | 14.5/20 | 14/20 — MISMATCH |
+| Financial | 7/26 | 7/26 |
+| Tax | 0/12 | 0/12 |
+| Commercial | 7/15 | 7/15 |
+| Providers | 4/8 | 4/8 |
+| **Total** | **37.5/98** | **37/98 — MISMATCH** |
 
-| ID | Domain | Requirement | Documented state | Score | Evidence/limitation |
+## Complete source-row transcription
+
+| ID | Domain | Requirement | Documented status | Row credit | Source limitation |
 |---:|---|---|---|---:|---|
 | 1 | Corporate | Legal entity fact sheet | CLOSED | 1.0 | Seller/operator decision and fact sheet documented. |
 | 2 | Corporate | Current legal name | CLOSED | 1.0 | Owner-designated seller name is independently corroborated by the authenticated Stripe LIVE company profile; authoritative registry extract remains separately tracked in requirement 15. |
@@ -76,6 +83,18 @@ Documented score: **34/79 = 43.04%**; uncredited **56.96%**. Raw item counts: 23
 | 61 | Financial | Cash flow requirement | OPEN | 0.0 | Statements not credited. |
 | 62 | Financial | Bank statement requirement | OPEN | 0.0 | Statements not credited. |
 | 63 | Financial | Management accounts requirement | OPEN | 0.0 | Accounts not credited. |
+| 64 | Tax | VAT position | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 65 | Tax | VIES status | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 66 | Tax | Corporate tax status | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 67 | Tax | Outstanding taxes | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 68 | Tax | Withholding issues | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 69 | Tax | Cross-border sale tax questions | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 70 | Tax | Capital gain/asset sale questions | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 71 | Tax | Share sale tax questions | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 72 | Tax | IP transfer tax questions | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 73 | Tax | Brazil buyer payment/FX/tax | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 74 | Tax | US buyer payment/FX/tax | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
+| 75 | Tax | EU buyer payment/VAT/tax | OPEN | 0.0 | No expanded basis in row; consult section narrative and original evidence. |
 | 76 | Commercial | Current pricing | CLOSED | 1.0 | Canonical commercial catalog exists. |
 | 77 | Commercial | Contracted revenue | OPEN | 0.0 | Not claimed. |
 | 78 | Commercial | Active customers | OPEN | 0.0 | Not claimed. |
@@ -91,18 +110,21 @@ Documented score: **34/79 = 43.04%**; uncredited **56.96%**. Raw item counts: 23
 | 88 | Commercial | Sales cycle | CLOSED | 1.0 | Attributable mailbox timestamps now provide a bounded strategic-buyer response/outcome dataset across routed, active-interest and closed-lost cycles. Scope is buyer-cycle evidence only; it does not claim customer conversion or revenue. |
 | 89 | Commercial | GTM model | CLOSED | 1.0 | Sales/GTM playbooks exist. |
 | 90 | Commercial | Addressable market claims | CLOSED | 1.0 | Official Eurostat enterprise-base data and EU AI Act scope are reconciled in ADDRESSABLE_MARKET_CLAIMS_SUBSTANTIATION_2026-10-06.md with explicit TAM/SAM/SOM truth boundaries. |
-| 93 | Provider | Stripe | PARTIAL | 0.5 | Authenticated LIVE account control, company-name field, charges/payouts and payout-account presence are verified; legal/business identity reconciliation and buyer-specific transfer remain open. |
+| 91 | Providers | Vercel | PARTIAL | 0.5 | No expanded basis in row; consult section narrative and original evidence. |
+| 92 | Providers | Supabase | PARTIAL | 0.5 | No expanded basis in row; consult section narrative and original evidence. |
+| 93 | Providers | Stripe | PARTIAL | 0.5 | Authenticated LIVE account control, company-name field, charges/payouts and payout-account presence are verified; legal/business identity reconciliation and buyer-specific transfer remain open. |
+| 94 | Providers | Google | PARTIAL | 0.5 | No expanded basis in row; consult section narrative and original evidence. |
+| 95 | Providers | Sentry | PARTIAL | 0.5 | No expanded basis in row; consult section narrative and original evidence. |
+| 96 | Providers | Redis/Upstash | PARTIAL | 0.5 | No expanded basis in row; consult section narrative and original evidence. |
+| 97 | Providers | Resend | PARTIAL | 0.5 | No expanded basis in row; consult section narrative and original evidence. |
+| 98 | Providers | Other live providers | PARTIAL | 0.5 | No expanded basis in row; consult section narrative and original evidence. |
 
-## Evidence promotion rule
-A requirement's score changes only with new attributable primary evidence, supporting path/document identifier, verification date, scope, acceptance criterion and reviewer. Every unsupported replacement must fail closed. Historical credit is not a current attestation.
+## Independent non-score gates
 
-## Separate non-scored gates
-- Creator-to-seller executed IP title: NOT PROVEN in the source documents.
-- Official company authority and registry, tax and full accountant pack: OPEN in source documentation.
-- Independent ISO 27001 certification or issued SOC 2 report: NOT CLAIMED.
-- Buyer authorisation and executed transaction agreement: NOT CREDITED.
-- DataGuard controlled buyer release: HOLD; latest data-room V7 source snapshot records 90% formal internal verification on a separate 10-deliverable scope.
-- Production SHA parity: REVALIDATION REQUIRED; do not quote historical divergence as current.
-- Repository visibility: PRIVATE confirmed from linked GitHub repository metadata 2026-10-16; historic exposure investigation stays OPEN.
+- Executed creator-to-seller chain of title is NOT CREDITED, regardless of internal documentation completeness.
+- Registry, articles, RCBE, CAE, legally valid seller signing power, official tax and accountant-backed company records remain externally dependent per source documentation.
+- Source control is PRIVATE according to authenticated 2026-10-16 metadata, but historical public exposure has not been cleared.
+- DataGuard internal documentary scope was previously prepared 100%, verified 90%, buyer release HOLD; this is not an M&A evidence numerator.
+- Production/main SHA parity, independent pentest, ISO and SOC 2 reports are not independently re-proven by this register.
 
-No emails, deployments, payments, data migrations, signatures or production changes are authorised by this document.
+Promotion requires timestamped attributable primary evidence, exact issue scope and a reviewer. No templates, emails, prices, signatures, deployment or provider transfers were executed by this reconciliation. Keep underlying documents and confidential originals in controlled storage, not the source tree.
