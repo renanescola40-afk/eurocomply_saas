@@ -23,11 +23,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Checkout trusted routing policy
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
       - name: Build and publish work packet
         uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;
+            const { selectSpecialists } = require('./scripts/agents/select-specialists.cjs');
             const issueNumber = Number('${{ inputs.issue_number }}');
             if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
               core.setFailed('A valid issue number is required.');
@@ -63,6 +70,14 @@ jobs:
               return;
             }
 
+            let assignment;
+            try {
+              assignment = selectSpecialists(issue);
+            } catch (error) {
+              core.setFailed(`Specialist selection is blocked: ${error.message}`);
+              return;
+            }
+
             const { data: branch } = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
             const baseSha = branch.commit.sha;
             const { data: openPulls } = await github.rest.pulls.list({
@@ -93,11 +108,15 @@ jobs:
               `**Issue:** #${issueNumber} — ${issue.title}`,
               `**Authorized base:** \`main@${baseSha}\``,
               `**Expected branch:** \`${branchName}\``,
-              `**Agent profile:** \`.github/agents/enterprise-go.agent.md\``,
+              `**Coordinator:** \`.github/agents/master-cto.agent.md\``,
+              `**Selected specialist:** \`${assignment.lead}\` (route: \`${assignment.source}\`)`,
+              `**Agent profile:** \`${assignment.profile}\``,
+              `**Independent review candidates:** ${assignment.reviewers.map((role) => `\`.github/agents/${role}.agent.md\``).join(', ') || 'none'}`,
+              `**Model execution:** \`NOT STARTED\` (work packet only; requires separately connected coding runtime)`,
               '',
               '## Required first actions',
               '',
-              '1. Read `AGENTS.md`, `docs/ENGINEERING_CONSTITUTION.md`, `.github/senior-agent.yml`, and the Enterprise GO agent/runbook files.',
+              `1. Read \`AGENTS.md\`, \`docs/ENGINEERING_CONSTITUTION.md\`, \`.github/senior-agent.yml\`, \`${assignment.profile}\`, and \`docs/agents/SPECIALIST_DISPATCH.md\`.`,
               '2. Re-fetch the current `main` SHA before editing; the authorized base above is dispatch-time evidence, not permission to ignore newer commits.',
               '3. Inspect all open PRs for overlap and duplication.',
               '4. Reproduce or verify the issue from code, checks, logs, or evidence files.',
@@ -110,7 +129,9 @@ jobs:
               '',
               '## Delivery contract',
               '',
-              '- Create a focused branch from current `main` using the expected naming pattern.',
+              '- The work packet does NOT launch a model or certify a second specialist review.',
+              '- Release Manager is a review-only role: prepare GO/NO-GO advice; do not implement code or authorize a release.',
+              '- Create a focused branch from current `main` using the expected naming pattern for an implementation task.',
               '- Implement a coherent fix; do not create route-by-route duplication when a safe shared primitive is justified.',
               '- Run targeted checks and every applicable required gate.',
               '- Open a **draft** PR using `.github/pull_request_template.md`.',
