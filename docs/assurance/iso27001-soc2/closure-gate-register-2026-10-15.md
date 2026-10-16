@@ -13,7 +13,7 @@ Replace superficial documentation or inventory percentages with closure criteria
 | G02 | ISO clauses 4–10 | Approved context, leadership, objectives, risk methodology, risk treatment, SoA, competence, operations, internal audit, review and corrective actions | NOT_VERIFIED |
 | G03 | Annex A | 93 control applicability decisions with SoA justifications, named owners and evidence for applicable controls | NOT_VERIFIED |
 | G04 | Identity, access and tenancy | Role/permission inventory, negative tenant tests, production configuration evidence, privileged call-site validation | PARTIAL_METADATA |
-| G05 | Secure development | Branch protections, PR review evidence, CI runs, dependency scanning, change approval and release evidence | NOT_VERIFIED |
+| G05 | Secure development | Branch protections, PR review evidence, CI runs, dependency scanning, change approval and release evidence | PARTIAL_REPOSITORY_EVIDENCE |
 | G06 | Monitoring and incident response | Logs, incident drills, incident ownership, retention and reviewed alerts | NOT_VERIFIED |
 | G07 | Business continuity | Approved BIA, RTO/RPO, restore test, recovery exercise and vendor dependencies | NOT_VERIFIED |
 | G08 | Vendor and data governance | Vendor inventory, contractual responsibilities, processors, data flows, retention and assessments | NOT_VERIFIED |
@@ -31,6 +31,13 @@ The G04 and G05 gate statuses above **remain open**. This is scoped technical ev
 - **G05 — runner issue:** GitHub Actions jobs on the examined SHAs repeatedly failed before runner allocation (`runner_id=0`, no steps). No root cause or cost change established. Do not disable required checks or treat workflows as passed to force a release.
 
 These findings do not change the overall `NOT_YET_MEASURABLE` ISO / SOC 2 audit-readiness state.
+
+## 2026-10-15 progress reconciliation (pending independent review)
+
+- **G04: PARTIAL_METADATA**, supported by read-only production evidence in [G04 production privilege snapshot](g04-production-privilege-snapshot-2026-10-15.md) and [G04 definer search-path evidence](g04-security-definer-searchpath-evidence-2026-10-15.md): 126/126 public SECURITY DEFINER functions have an explicit search_path; 54 contain `public` and need deeper source/runtime review. No direct CREATE schema grants for anon, authenticated or service_role were observed in the sampled public-schema metadata.
+- **G05: PARTIAL_REPOSITORY_EVIDENCE**, because PRs #2495 and #2498 integrated Annex A structural validators, Node tests and mandatory workflow stages; actual GitHub Actions execution remains blocked before runner allocation, and exact deployed-SHA release evidence is not accepted.
+- The source register is a truthful inventory, NOT a certification scorecard. No gate is marked CLOSED or AUDIT_ACCEPTED.
+- For reproducible scoped completion reporting run: `node --test scripts/security/iso-soc2-gate-progress.test.mjs` and `node scripts/security/iso-soc2-gate-progress.mjs`. The reported 0/11 and 100% remaining refer solely to strict whole-gate closures, not the volume of engineering delivered.
 
 ## Progress computation policy
 - Gate discovery/inventory status must never count as closure.
