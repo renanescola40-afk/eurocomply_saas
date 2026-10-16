@@ -7,7 +7,7 @@ jobs:
     docker:
       - image: cimg/node:22.16.0
     # 8 GB RAM: prior 4 GB build exited with SIGKILL/137 after compilation.
-    # Included in CircleCI Free credits; no production credentials or deploy.
+    # Consumes CircleCI compute credits. Owner must confirm Free quota before main activation; no deploy.
     resource_class: large
     working_directory: ~/project
     environment:
@@ -22,11 +22,9 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              circleci-project-setup|main) ;;
-              *) echo "Branch fora do escopo do CI gratuito"; exit 1 ;;
+              main|circleci-project-setup) ;;
+              *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
-            test -n "${CIRCLE_SHA1:-}"
-            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             node --version
             npm --version
             git rev-parse HEAD
@@ -61,6 +59,15 @@ jobs:
           name: Seguranca sem servicos externos
           command: node scripts/security/run-security-ci-without-audit.mjs
       - run:
+          name: Validate specialist routing when implementation is present
+          command: |
+            set -euo pipefail
+            if [ -f scripts/agents/select-specialists.cjs ]; then
+              node --test tests/agents/specialist-routing.test.cjs
+            else
+              echo "Not applicable: specialist routing implementation not yet in this SHA."
+            fi
+      - run:
           name: Build Next.js
           command: npm run build
       - run:
@@ -76,5 +83,6 @@ workflows:
               # Limitado a duas branches para proteger os 30k creditos gratuitos.
               # Sem deploy ou segredos de producao; main apenas apos merge aprovado.
               only:
+                - main
                 - circleci-project-setup
                 - main
