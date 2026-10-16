@@ -18,7 +18,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Confirmar branch e Node 22
+          name: Confirmar branch permitida, SHA exato e Node 22
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
@@ -35,6 +35,9 @@ jobs:
           name: Verificar package-lock
           command: npm run security:package-lock
       - run:
+          name: Validar contrato dos checks GitHub (offline)
+          command: node scripts/security/check-ci-required-checks-validation.mjs
+      - run:
           name: Lint
           command: npm run lint
       - run:
@@ -49,6 +52,9 @@ jobs:
             node --test scripts/security/iso-soc2-register-audit.test.mjs
             node --test scripts/security/iso-soc2-gate-progress.test.mjs
             node --test scripts/security/iso-soc2-common-criteria-check.test.mjs
+            node scripts/security/iso-soc2-register-audit.mjs
+            node scripts/security/iso-soc2-gate-progress.mjs
+            node scripts/security/iso-soc2-common-criteria-check.mjs
       - run:
           name: Seguranca sem servicos externos
           command: node scripts/security/run-security-ci-without-audit.mjs
@@ -74,6 +80,9 @@ workflows:
       - validar-risck:
           filters:
             branches:
+              # Limitado a duas branches para proteger os 30k creditos gratuitos.
+              # Sem deploy ou segredos de producao; main apenas apos merge aprovado.
               only:
                 - main
                 - circleci-project-setup
+                - main
