@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { verifySoc2Matrix } from './iso-soc2-common-criteria-check.mjs';
+const header='criteria_group,topic,evidence_needed,related_gates,candidate_source,evidence_review_status,control_owner,reviewed_at,notes';
+const rows=Array.from({length:9},(_,i)=>['CC'+(i+1),'Topic','Need','G01','source.md','NOT_VERIFIED','UNASSIGNED','','Pending'].join(','));
+const sample=()=>[header,...rows].join('\n')+'\n';
+test('all 9 groups are catalogued but no SOC 2 report follows',()=>{const r=verifySoc2Matrix(sample());assert.equal(r.common_criteria_groups_present,9);assert.equal(r.group_rows_not_reviewed,9);assert.equal(r.overall_soc2_readiness_percentage,null)});
+test('missing CC fails',()=>assert.throws(()=>verifySoc2Matrix([header,...rows.slice(0,-1)].join('\n')),/Missing SOC 2/));
+test('duplicate CC fails',()=>assert.throws(()=>verifySoc2Matrix([header,...rows.slice(0,-1),rows[0]].join('\n')),/Duplicate/));
+test('overclaimed evidence status without owner and review date fails',()=>assert.throws(()=>verifySoc2Matrix(sample().replace('NOT_VERIFIED,UNASSIGNED,,Pending','EVIDENCE_REVIEWED,UNASSIGNED,,Pending')),/missing named reviewer/));
+test('unrecognized status fails',()=>assert.throws(()=>verifySoc2Matrix(sample().replace('NOT_VERIFIED','CERTIFIED')),/Unrecognized evidence status/));
+test('reviewed row is still not a SOC 2 report',()=>{const r=verifySoc2Matrix(sample().replace('NOT_VERIFIED,UNASSIGNED,,Pending','EVIDENCE_REVIEWED,reviewer,2026-10-16,Pending'));assert.equal(r.group_rows_marked_reviewed,1);assert.equal(r.independent_soc2_report_issued_by_this_check,false)});
