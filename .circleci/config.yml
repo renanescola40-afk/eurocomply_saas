@@ -21,7 +21,10 @@ jobs:
           name: Confirmar branch e Node 22
           command: |
             set -euo pipefail
-            test "$CIRCLE_BRANCH" = "circleci-project-setup"
+            case "${CIRCLE_BRANCH:-}" in
+              main|circleci-project-setup) ;;
+              *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
+            esac
             node --version
             npm --version
             git rev-parse HEAD
@@ -50,6 +53,15 @@ jobs:
           name: Seguranca sem servicos externos
           command: node scripts/security/run-security-ci-without-audit.mjs
       - run:
+          name: Validate specialist routing when implementation is present
+          command: |
+            set -euo pipefail
+            if [ -f scripts/agents/select-specialists.cjs ]; then
+              node --test tests/agents/specialist-routing.test.cjs
+            else
+              echo "Not applicable: specialist routing implementation not yet in this SHA."
+            fi
+      - run:
           name: Build Next.js
           command: npm run build
       - run:
@@ -63,4 +75,5 @@ workflows:
           filters:
             branches:
               only:
+                - main
                 - circleci-project-setup
