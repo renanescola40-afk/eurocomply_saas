@@ -7,6 +7,7 @@ export const SECURITY_CI_CHECKS = Object.freeze([
   'security:ci-cd',
   'security:rls:advisory',
   'security:legal-assurance-source',
+  'security:enterprise-membership-mfa-contract',
   'security:step-up',
   'security:client-boundaries',
   'security:auth-tokens',
