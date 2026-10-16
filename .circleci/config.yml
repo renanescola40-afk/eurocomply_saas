@@ -22,7 +22,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|circleci-project-setup) ;;
+              main|ci/verify-*) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -86,8 +86,10 @@ workflows:
       - validar-risck:
           filters:
             branches:
-              # Limitado a duas branches para proteger os 30k creditos gratuitos.
-              # Sem deploy ou segredos de producao; main apenas apos merge aprovado.
+              # Apenas main e branches ci/verify-* controladas pelo owner.
+              # CircleCI usa creditos incluidos; nenhum deploy/segredo de producao.
+              # Branches ci/verify-* sao intencionalmente restritas para testes
+              # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - circleci-project-setup
+                - /ci\\/verify-.*/
