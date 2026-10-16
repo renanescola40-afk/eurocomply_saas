@@ -1,0 +1,10 @@
+criteria_group,topic,evidence_needed,related_gates,candidate_source,evidence_review_status,control_owner,reviewed_at,notes
+CC1,Control environment,Executive security governance and assigned responsibilities,G01;G02,docs/assurance/iso27001-soc2/management-scope-decision-template-2026-10-15.md,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
+CC2,Communication and information,Policies and stakeholder communication,G02;G06,docs/trust/ISO27001_SOC2_READINESS.md,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
+CC3,Risk assessment,Documented risk assessment and approved treatment,G02;G03,docs/assurance/iso27001-soc2/annex-a-control-register.csv,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
+CC4,Monitoring activities,Control monitoring and internal review,G02;G06,docs/assurance/iso27001-soc2/closure-gate-register-2026-10-15.md,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
+CC5,Control activities,Approval and evidence of operational controls,G02;G05,docs/assurance/iso27001-soc2/closure-gate-register-2026-10-15.md,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
+CC6,Logical and physical access,Tenant isolation and privileged access validation,G03;G04,docs/assurance/iso27001-soc2/g04-production-privilege-snapshot-2026-10-15.md,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
+CC7,System operations,Incident response and operations monitoring,G06;G07,docs/assurance/iso27001-soc2/closure-gate-register-2026-10-15.md,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
+CC8,Change management,CI review deployment and rollback evidence,G05,docs/assurance/iso27001-soc2/ci-runner-prestart-blocker-2026-10-15.md,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
+CC9,Risk mitigation,Vendor risks and business continuity,G07;G08,docs/assurance/iso27001-soc2/closure-gate-register-2026-10-15.md,NOT_VERIFIED,UNASSIGNED,,Draft mapping not evidence of operating effectiveness
