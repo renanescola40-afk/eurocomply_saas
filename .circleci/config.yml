@@ -35,6 +35,16 @@ jobs:
             npm --version
             printf 'Validated source SHA: %s\n' "$checked_out_sha"
       - run:
+          name: Recusar credenciais privilegiadas neste CI isolado
+          command: |
+            set -euo pipefail
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              if [ -n "${!key:-}" ]; then
+                echo "Privileged provider variable must not be present in this source-only CI: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
           name: Instalar dependencias sem scripts externos
           command: npm ci --ignore-scripts --no-audit --no-fund
       - run:
