@@ -25,9 +25,15 @@ jobs:
               main|circleci-project-setup) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
+            test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
+            checked_out_sha="$(git rev-parse HEAD)"
+            test "$checked_out_sha" = "$CIRCLE_SHA1" || {
+              echo "CircleCI checkout SHA does not match pipeline SHA" >&2
+              exit 1
+            }
             node --version
             npm --version
-            git rev-parse HEAD
+            printf 'Validated source SHA: %s\n' "$checked_out_sha"
       - run:
           name: Instalar dependencias sem scripts externos
           command: npm ci --ignore-scripts --no-audit --no-fund
@@ -85,4 +91,3 @@ workflows:
               only:
                 - main
                 - circleci-project-setup
-                - main
