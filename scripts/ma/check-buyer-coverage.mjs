@@ -33,11 +33,20 @@ export function evaluateBuyerCoverage(provenance,brief,trackedPaths,{expected=80
  const claims=[...claimPart.matchAll(/^\|\s*(0[1-9]|1[0-2])\.\s/gm)].map(m=>m[1]);
  const expectedClaims=Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'));
  const missingClaims=expectedClaims.filter(x=>!claims.includes(x));
+ // Counting numbered claim rows is insufficient: each must identify source
+ // evidence, and any cited repository file must actually be tracked.
+ const claimRows=[...claimPart.matchAll(/^\|\s*(0[1-9]|1[0-2])\.\s*[^|\n]*\|\s*([^|\n]*)\|/gm)]
+  .map(x=>({id:x[1],source:x[2].trim()}));
+ const attributableSource=/\x60(?:docs|DATAGUARD_DATA_ROOM)\/[A-Za-z0-9_.\/-]+\.(?:md|json|yml|yaml)\x60|\x60dpl_[A-Za-z0-9]+\x60|GitHub Actions offline dossier/;
+ const unsupportedClaimSources=claimRows.filter(x=>!attributableSource.test(x.source)).map(x=>x.id);
+ const referencedClaimFiles=stableUnique(claimRows.flatMap(x=>[...x.source.matchAll(/\x60((?:docs|DATAGUARD_DATA_ROOM)\/[A-Za-z0-9_.\/-]+\.(?:md|json|yml|yaml))\x60/g)].map(m=>m[1])));
+ const missingClaimSourceFiles=referencedClaimFiles.filter(x=>!trackedPaths.includes(x));
  const sourceReferences=stableUnique([...brief.matchAll(/\x60((?:docs|DATAGUARD_DATA_ROOM)\/[A-Za-z0-9_./-]+\.(?:md|json|yml|yaml))\x60/g)].map(x=>x[1]));
  const missingBriefReferences=sourceReferences.filter(x=>!trackedPaths.includes(x));
  const passed=rows.length===expected&&expectedPaths.length===expectedSet.size&&currentPaths.length===expected&&
   !missing.length&&!extra.length&&!duplicated.length&&!invalidOrdinal&&classes.length===16&&
-  !missingClasses.length&&claims.length===12&&!missingClaims.length&&
+  !missingClasses.length&&claims.length===12&&!missingClaims.length&&claimRows.length===12&&
+  !unsupportedClaimSources.length&&!missingClaimSourceFiles.length&&
   sourceReferences.length>=6&&!missingBriefReferences.length;
  return {
   status:passed?'PASS_SCOPED_BASELINE_AND_INITIAL_CLAIMS':'FAIL',
@@ -46,6 +55,7 @@ export function evaluateBuyerCoverage(provenance,brief,trackedPaths,{expected=80
   missingTrackedBaselinePaths:missing,unindexedCurrentPaths:extra,duplicateBaselinePaths:duplicated,invalidOrdinalCount:invalidOrdinal,
   sectionClassesPresent:classes.length,missingSectionClasses:missingClasses,
   initialBuyerClaimsPresent:claims.length,missingInitialClaims:missingClaims,
+  claimRowsWithEvidence:claimRows.length,unsupportedClaimSources,claimSourceFileCount:referencedClaimFiles.length,missingClaimSourceFiles,
   stageASourcePathCount:sourceReferences.length,missingStageASources:missingBriefReferences,
   buyerRelease:'HOLD',
   disclaimer:'An inventory of known source identities and claim provenance cannot authenticate external facts, eliminate historical sensitive exposure, approve legal title or grant buyer access.'

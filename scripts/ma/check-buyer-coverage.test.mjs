@@ -4,7 +4,7 @@ import {evaluateBuyerCoverage} from './check-buyer-coverage.mjs';
 const m=String.fromCharCode(96);
 function sample(){
  let p='## V5 controlled Stage A claim-to-source traceability\n';
- p+=Array.from({length:12},(_,i)=>'| '+String(i+1).padStart(2,'0')+'. example |').join('\n');
+ p+=Array.from({length:12},(_,i)=>'| '+String(i+1).padStart(2,'0')+'. example | '+m+'docs/ma-diligence/proof.md'+m+' source | REVIEW |').join('\n');
  p+='\n## V6 exhaustive source-identity baseline\n';
  p+='| 1 | '+m+'DATAGUARD_DATA_ROOM/index.md'+m+' | '+m+'a'.repeat(40)+m+' | TRACKED_IN_UNTRUNCATED_TREE |\n';
  p+='| 2 | '+m+'docs/ma-diligence/proof.md'+m+' | '+m+'b'.repeat(40)+m+' | TRACKED_IN_UNTRUNCATED_TREE |\n';
@@ -49,4 +49,17 @@ test('passes on complete scoped frozen paths, claim classes and six tracked sour
  assert.equal(out.status,'PASS_SCOPED_BASELINE_AND_INITIAL_CLAIMS');
  assert.equal(out.stageASourcePathCount,6);
  assert.equal(out.initialBuyerClaimsPresent,12);
+});
+
+test('rejects numbered claim without attributable evidence',()=>{
+ const x=sample();
+ const changed=x.p.replace('| 01. example | '+m+'docs/ma-diligence/proof.md'+m+' source |','| 01. example | unsupported narrative |');
+ const out=evaluateBuyerCoverage(changed,x.brief,x.paths,{expected:2});
+ assert.equal(out.status,'FAIL');assert.equal(out.unsupportedClaimSources.includes('01'),true);
+});
+test('rejects referenced claim source not tracked in repository',()=>{
+ const x=sample();
+ const changed=x.p.replace('| 01. example | '+m+'docs/ma-diligence/proof.md'+m+' source |','| 01. example | '+m+'docs/ma-diligence/absent.md'+m+' source |');
+ const out=evaluateBuyerCoverage(changed,x.brief,x.paths,{expected:2});
+ assert.equal(out.status,'FAIL');assert.equal(out.missingClaimSourceFiles.includes('docs/ma-diligence/absent.md'),true);
 });
