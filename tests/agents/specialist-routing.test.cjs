@@ -22,7 +22,7 @@ test('defaults are deterministic and do not imply model execution',()=>{
 });
 
 test('authorized issue body can select a domain lead',()=>{
-  assert.equal(selectSpecialists({body:'Goal: reconcile RLS\\nAgent: database',labels:['agent:ready']}).lead,'database');
+  assert.equal(selectSpecialists({body:['Goal: reconcile RLS','Agent: database'].join(String.fromCharCode(10)),labels:['agent:ready']}).lead,'database');
   assert.equal(selectSpecialists({body:'Agent Profile: compliance'}).lead,'compliance');
 });
 
