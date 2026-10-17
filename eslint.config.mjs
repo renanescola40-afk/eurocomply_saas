@@ -31,6 +31,14 @@ const eslintConfig = [
       "@typescript-eslint/ban-ts-comment": "off",
     },
   },
+  // This Node.js test file is intentionally CommonJS because it exercises a
+  // CommonJS specialist-routing module. Keep the rule enabled everywhere else.
+  {
+    files: ["tests/agents/specialist-routing.test.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
