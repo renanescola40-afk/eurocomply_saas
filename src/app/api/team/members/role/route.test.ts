@@ -10,10 +10,9 @@ const mocks = vi.hoisted(() => ({
   requirePermission: vi.fn(),
   requireTrustedMutation: vi.fn(),
   getCurrentOrganizationForUser: vi.fn(),
-  createAuditEvent: vi.fn(),
+  auditedAtomic: vi.fn(),
   createAdminClient: vi.fn(),
   memberMaybeSingle: vi.fn(),
-  rpc: vi.fn(),
   requireStepUpForRequest: vi.fn(),
   publicStepUpSummary: vi.fn(),
 }));
@@ -22,7 +21,9 @@ vi.mock('@/lib/security/validate', () => ({
   readBoundedJsonRequest: async (request: Request) => JSON.parse(await request.text()),
 }));
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: mocks.createAdminClient }));
-vi.mock('@/server/queries/audit-events', () => ({ createAuditEvent: mocks.createAuditEvent }));
+vi.mock('@/server/queries/audit-events', () => ({
+  changeMemberRoleWithChainedAuditAtomic: mocks.auditedAtomic,
+}));
 vi.mock('@/server/queries/organizations', () => ({
   getCurrentOrganizationForUser: mocks.getCurrentOrganizationForUser,
 }));
@@ -61,26 +62,24 @@ function member(role: string | null = 'member') {
   return { id: MEMBER_B, organization_id: ORGANIZATION_A, user_id: USER_B, role };
 }
 
-function rpcResult(
-  outcome: 'changed' | 'last_owner' | 'state_changed',
-  previousRole: string,
-  appliedRole: string | null,
+function auditedResult(
+  outcome: 'changed' | 'last_owner' | 'state_changed' | 'permission_denied',
+  previousRole = 'member',
+  appliedRole: string | null = 'admin',
 ) {
   return {
-    data: [
-      {
-        outcome,
-        affected_member_id: MEMBER_B,
-        affected_user_id: USER_B,
-        previous_role: previousRole,
-        applied_role: appliedRole,
-      },
-    ],
+    row: {
+      outcome,
+      affected_member_id: MEMBER_B,
+      affected_user_id: USER_B,
+      previous_role: previousRole,
+      applied_role: appliedRole,
+    },
     error: null,
   };
 }
 
-describe('atomic team member role transition API', () => {
+describe('single-transaction audited team member role API (mocked, not PostgreSQL integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.requireApiUser.mockResolvedValue({ id: USER_ADMIN });
@@ -92,8 +91,8 @@ describe('atomic team member role transition API', () => {
       assessment: { required: true, verifiedAt: '2026-07-15T11:00:00.000Z' },
     });
     mocks.publicStepUpSummary.mockReturnValue({ required: true, verified: true });
-    mocks.createAuditEvent.mockResolvedValue({ persisted: true });
     mocks.memberMaybeSingle.mockResolvedValue({ data: member(), error: null });
+    mocks.auditedAtomic.mockResolvedValue(auditedResult('changed'));
 
     const memberQuery = {
       eq: vi.fn(() => memberQuery),
@@ -101,83 +100,100 @@ describe('atomic team member role transition API', () => {
     };
     mocks.createAdminClient.mockReturnValue({
       from: vi.fn(() => ({ select: vi.fn(() => memberQuery) })),
-      rpc: mocks.rpc,
     });
   });
 
-  it('rejects malformed member IDs before creating a Supabase client', async () => {
+  it('rejects malformed member IDs before constructing a database client or audit', async () => {
     const response = await POST(buildRequest('admin', 'not-a-uuid'));
-
     expect(response.status).toBe(400);
     expect(response.headers.get('cache-control')).toContain('no-store');
     expect(await response.json()).toEqual({ error: 'invalid_team_role_payload' });
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
-    expect(mocks.rpc).not.toHaveBeenCalled();
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
   });
 
-  it('writes success audit evidence only after the atomic RPC changes the role', async () => {
-    mocks.rpc.mockResolvedValue(rpcResult('changed', 'member', 'admin'));
-
-    const response = await POST(buildRequest('admin'));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(mocks.rpc).toHaveBeenCalledWith('change_organization_member_role_atomic', {
-      p_organization_id: ORGANIZATION_A,
-      p_member_id: MEMBER_B,
-      p_expected_role: 'member',
-      p_next_role: 'admin',
+  it('requires Step-Up before any membership lookup or mutation', async () => {
+    mocks.requireStepUpForRequest.mockResolvedValue({
+      ok: false,
+      response: new Response(JSON.stringify({ error: 'step_up_required' }), { status: 403 }),
     });
-    expect(mocks.createAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        organizationId: ORGANIZATION_A,
-        actorUserId: USER_ADMIN,
-        action: 'team_member_role_changed',
-        entityId: MEMBER_B,
-        metadata: expect.objectContaining({
-          changedUserId: USER_B,
-          previousRole: 'member',
-          nextRole: 'admin',
-        }),
-      }),
-    );
-    expect(body).toMatchObject({ changed: true, role: 'admin', auditPersisted: true });
+    const response = await POST(buildRequest('admin'));
+    expect(response.status).toBe(403);
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
   });
 
-  it('blocks atomic demotion of the final owner without success audit evidence', async () => {
-    mocks.memberMaybeSingle.mockResolvedValue({ data: member('owner'), error: null });
-    mocks.rpc.mockResolvedValue(rpcResult('last_owner', 'owner', null));
+  it('does not change a role for a member outside the selected organization', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: null, error: null });
+    const response = await POST(buildRequest('admin'));
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'team_member_not_found' });
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
 
+  it('returns success only for the signed audited-atomic changed outcome', async () => {
+    const response = await POST(buildRequest('admin'));
+    expect(response.status).toBe(200);
+    expect(mocks.auditedAtomic).toHaveBeenCalledOnce();
+    expect(mocks.auditedAtomic).toHaveBeenCalledWith({
+      organizationId: ORGANIZATION_A,
+      memberId: MEMBER_B,
+      expectedUserId: USER_B,
+      expectedRole: 'member',
+      nextRole: 'admin',
+      actorUserId: USER_ADMIN,
+      metadata: {
+        changedUserId: USER_B,
+        previousRole: 'member',
+        nextRole: 'admin',
+        actorRole: 'owner',
+        stepUpAction: 'manage_team',
+      },
+    });
+    expect(await response.json()).toMatchObject({ changed: true, role: 'admin', auditPersisted: true });
+  });
+
+  it('blocks demotion of the final owner without reporting success', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: member('owner'), error: null });
+    mocks.auditedAtomic.mockResolvedValue(auditedResult('last_owner', 'owner', null));
     const response = await POST(buildRequest('admin'));
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: 'last_owner_role_change_blocked' });
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+    expect(mocks.auditedAtomic).toHaveBeenCalledOnce();
   });
 
-  it('returns a stale-state conflict without success audit evidence', async () => {
-    mocks.rpc.mockResolvedValue(rpcResult('state_changed', 'viewer', null));
-
+  it('returns a conflict when target role changed between lookup and audited update', async () => {
+    mocks.auditedAtomic.mockResolvedValue(auditedResult('state_changed', 'viewer', null));
     const response = await POST(buildRequest('admin'));
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({ error: 'team_member_state_changed' });
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
   });
 
-  it('does not invoke the RPC for a same-role no-op', async () => {
+  it('honors a same-role no-op without requiring a new signed audit', async () => {
     const response = await POST(buildRequest('member'));
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ changed: false, role: 'member' });
-    expect(mocks.rpc).not.toHaveBeenCalled();
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
   });
 
-  it('fails closed when the atomic RPC is unavailable', async () => {
-    mocks.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } });
-
+  it('fails closed when audit persistence or its RPC is unavailable', async () => {
+    mocks.auditedAtomic.mockResolvedValue({ row: null, error: 'atomic_audit_or_member_role_change_failed' });
     const response = await POST(buildRequest('admin'));
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: 'team_role_change_failed' });
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ error: 'team_role_change_audit_unavailable' });
+  });
+
+  it('returns forbidden when the audited transaction rejects actor authority', async () => {
+    mocks.auditedAtomic.mockResolvedValue(auditedResult('permission_denied', 'member', null));
+    const response = await POST(buildRequest('admin'));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'team_role_change_forbidden' });
+  });
+
+  it('does not let an administrator assign owner access', async () => {
+    mocks.requirePermission.mockResolvedValue({ role: 'admin' });
+    const response = await POST(buildRequest('owner'));
+    expect(response.status).toBe(403);
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
   });
 });
