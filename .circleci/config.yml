@@ -98,6 +98,38 @@ jobs:
           name: Verificar rotas
           command: npm run quality:routes
 
+  # Native PG service is disposable and contains ONLY synthetic fixtures.
+  # Free-plan included quota verified 2026-10-18 before activation.
+  p0-postgres-synthetic:
+    docker:
+      - image: cimg/node:22.16.0
+      - image: postgres:17.6
+        environment:
+          POSTGRES_DB: risck_synthetic
+          POSTGRES_USER: risck_synthetic
+          POSTGRES_PASSWORD: synthetic-local-only
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact source SHA and production-secret exclusion
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI SHA}"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              test -z "${!key:-}" || { echo "Production credential forbidden in synthetic PG job: $key" >&2; exit 1; }
+            done
+      - run:
+          name: Install locked test-only PostgreSQL client without lifecycle scripts
+          command: npm ci --prefix tests/fixtures/p0-postgres-runtime --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Native PG17 membership, MFA, rollback and multi-session concurrency
+          command: timeout 120s node scripts/security/verify-p0-postgres-isolated.mjs
+      - store_artifacts:
+          path: artifacts/p0-postgres
+          destination: p0-postgres-synthetic
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -108,6 +140,12 @@ workflows:
               # CircleCI usa creditos incluidos; nenhum deploy/segredo de producao.
               # Branches ci/verify-* sao intencionalmente restritas para testes
               # antes de abrir PRs que possam criar preview no Supabase.
+              only:
+                - main
+                - /ci\/verify-.*/
+      - p0-postgres-synthetic:
+          filters:
+            branches:
               only:
                 - main
                 - /ci\/verify-.*/
