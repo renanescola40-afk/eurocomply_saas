@@ -20,9 +20,7 @@ jobs:
       PGCONNECT_TIMEOUT: '8'
       PGSSLMODE: verify-full
       PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
-      PGDATABASE: postgres
       PGOPTIONS: '-c statement_timeout=10000'
-      PGPASSFILE: /dev/null
     steps:
       - name: Check required secret without printing it
         shell: bash
@@ -50,16 +48,16 @@ jobs:
           set -euo pipefail
           set +x
           # The connection string is never echoed or written to an artifact.
-          # Use an appropriately scoped, TLS-verified read-only credential.
+          # The connection URL must use a least-privilege read-only role and sslmode=verify-full.
+          # Do not pass a privileged postgres/service role URL.
           result="$(docker run --rm --network host \
             -e RISCK_BACKUP_DATABASE_URL \
             -e PGCONNECT_TIMEOUT=8 \
             -e PGSSLMODE=verify-full \
-            -e PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt \
-            postgres:17 sh -c 'psql "$RISCK_BACKUP_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select current_setting('\''server_version_num'\'')::int >= 170000"')"
-          if [[ "$result" != "t" ]]; then
+            postgres:17 sh -c 'psql "$RISCK_BACKUP_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "show server_version_num"')"
+          if [[ ! "$result" =~ ^[0-9]+$ ]] || (( result < 170000 )); then
             echo "::error::Expected PostgreSQL 17 or newer."
             exit 1
           fi
-          echo "TLS-verified PostgreSQL 17+ read-only connection: PASS"
+          echo "PostgreSQL 17+ connection: PASS (TLS verification depends on the URL sslmode and CA settings)"
           echo "No backup was taken. No data was exported."
