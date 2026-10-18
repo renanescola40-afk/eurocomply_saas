@@ -36,6 +36,33 @@ test('P0 admission compares member, seat and admin counters and catches missing 
   assert.match(sql,/count\(\*\) filter\s*\(where/i);
 });
 
+test('P0 admission requires manual legacy cutover and audited-only caller ACL', () => {
+  for (const name of [
+    'legacy_removal_retired', 'legacy_role_retired',
+    'audited_removal_service_only', 'audited_role_service_only',
+  ]) {
+    assert.ok(sql.includes(`x.${name}`), `Missing fail-closed admission check: ${name}`);
+  }
+  assert.match(sql, /rpc_id_gate\s+as\s*\(/i);
+  assert.match(sql, /rpc_cutover_gate\s+as\s*\(/i);
+  assert.match(sql, /not has_function_privilege\('service_role', legacy_removal, 'EXECUTE'\)/);
+  assert.match(sql, /not has_function_privilege\('service_role', legacy_role, 'EXECUTE'\)/);
+  assert.match(sql, /has_function_privilege\('service_role', audited_removal, 'EXECUTE'\)/);
+  assert.match(sql, /has_function_privilege\('service_role', audited_role, 'EXECUTE'\)/);
+  for (const role of ['anon', 'authenticated']) {
+    for (const rpc of ['audited_removal', 'audited_role']) {
+      assert.ok(sql.includes(`not has_function_privilege('${role}', ${rpc}, 'EXECUTE')`));
+    }
+  }
+  assert.match(sql, /cross join rpc_cutover_gate x/i);
+  for (const name of [
+    'legacy_removal_retired', 'legacy_role_retired',
+    'audited_removal_service_only', 'audited_role_service_only',
+  ]) {
+    assert.match(sql, new RegExp(`\\band x\\.${name}\\b`));
+  }
+});
+
 test('Admission cannot claim production release permission', () => {
   assert.ok(sql.includes('SCHEMA_CANDIDATE_REQUIRES_RUNTIME_ACCEPTANCE'));
   assert.ok(sql.includes('BLOCKED_SOURCE_DB_DRIFT'));

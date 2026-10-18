@@ -56,6 +56,36 @@ with
         ) > 0, false
       ) as owner_suspension
   ),
+  -- Direct service_role access to legacy membership mutations must be
+  -- retired AFTER the audited entrypoints are deployed and exercised.
+  -- The six migrations alone do not prove this manual cutover happened.
+  rpc_id_gate as (
+    select
+      to_regprocedure('public.remove_organization_member_atomic(uuid,uuid,uuid,text)') as legacy_removal,
+      to_regprocedure('public.change_organization_member_role_atomic(uuid,uuid,text,text)') as legacy_role,
+      to_regprocedure('public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)') as audited_removal,
+      to_regprocedure('public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)') as audited_role
+  ),
+  rpc_cutover_gate as (
+    select
+      coalesce(legacy_removal is not null
+        and not has_function_privilege('service_role', legacy_removal, 'EXECUTE'),false)
+        as legacy_removal_retired,
+      coalesce(legacy_role is not null
+        and not has_function_privilege('service_role', legacy_role, 'EXECUTE'),false)
+        as legacy_role_retired,
+      coalesce(audited_removal is not null
+        and has_function_privilege('service_role', audited_removal, 'EXECUTE')
+        and not has_function_privilege('anon', audited_removal, 'EXECUTE')
+        and not has_function_privilege('authenticated', audited_removal, 'EXECUTE'),false)
+        as audited_removal_service_only,
+      coalesce(audited_role is not null
+        and has_function_privilege('service_role', audited_role, 'EXECUTE')
+        and not has_function_privilege('anon', audited_role, 'EXECUTE')
+        and not has_function_privilege('authenticated', audited_role, 'EXECUTE'),false)
+        as audited_role_service_only
+    from rpc_id_gate
+  ),
   membership_totals as (
     select organization_id,
       count(*) filter (where status = 'active')::integer as active_members,
@@ -104,6 +134,8 @@ select m.applied_count,
   f.mfa_read, f.mfa_manage, f.owner_removal,
   f.removal_audited, f.role_audited, f.removal_usage_reconciled, f.role_usage_reconciled,
   f.owner_suspension,
+  x.legacy_removal_retired, x.legacy_role_retired,
+  x.audited_removal_service_only, x.audited_role_service_only,
   u.usage_organizations_checked, u.drifted_usage_organizations, u.organizations_missing_usage,
   r.public_tables, r.public_rls_force,
   a.public_definer_exposed,
@@ -112,6 +144,8 @@ select m.applied_count,
     and f.removal_audited and f.role_audited
     and f.removal_usage_reconciled and f.role_usage_reconciled
     and f.owner_suspension
+    and x.legacy_removal_retired and x.legacy_role_retired
+    and x.audited_removal_service_only and x.audited_role_service_only
     and u.drifted_usage_organizations=0
     and u.organizations_missing_usage=0
     and r.public_tables = r.public_rls_force
@@ -119,4 +153,4 @@ select m.applied_count,
   then 'SCHEMA_CANDIDATE_REQUIRES_RUNTIME_ACCEPTANCE'
   else 'BLOCKED_SOURCE_DB_DRIFT'
   end as schema_admission
-from migration_gate m cross join function_gate f cross join usage_gate u cross join rls_gate r cross join acl_gate a;
+from migration_gate m cross join function_gate f cross join rpc_cutover_gate x cross join usage_gate u cross join rls_gate r cross join acl_gate a;
