@@ -76,6 +76,7 @@ test('CircleCI executes the native Node P0 contracts excluded by Vitest TS-only 
   for (const path of [
     'tests/security/membership-usage-counter-drift.test.mjs',
     'tests/security/p0f-manual-counter-reconciliation.test.mjs',
+    'tests/security/enterprise-private-membership-mfa-contract.test.mjs',
   ]) {
     assert.ok(ci.includes(path), `Native Node CI missing contract: ${path}`);
   }
