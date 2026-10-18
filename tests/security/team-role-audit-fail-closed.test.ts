@@ -35,6 +35,12 @@ describe('team role change audited atomic source contract', () => {
     expect(route).toContain("transition.outcome === 'last_owner'");
     expect(route).toContain('limit: RATE_LIMIT_MAX_ATTEMPTS');
     expect(migration).toContain("m.status = 'active'");
+    const tenantLockIndex = migration.indexOf('from public.organization_members as m\\n  where m.organization_id = p_organization_id\\n  order by m.id\\n  for update;');
+    const actorLookupIndex = migration.indexOf('select m.role into v_actor_role');
+    const targetLookupIndex = migration.indexOf('select m.role, m.user_id into v_target_role');
+    expect(tenantLockIndex).toBeGreaterThan(-1);
+    expect(actorLookupIndex).toBeGreaterThan(tenantLockIndex);
+    expect(targetLookupIndex).toBeGreaterThan(actorLookupIndex);
     expect(migration).toContain("v_target_user_id is distinct from p_expected_user_id");
     expect(migration).toContain("lower(v_actor_role) <> 'owner'");
     expect(migration).toContain('set search_path = pg_catalog');

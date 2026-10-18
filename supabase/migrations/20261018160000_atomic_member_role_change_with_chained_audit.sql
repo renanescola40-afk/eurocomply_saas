@@ -65,12 +65,21 @@ begin
     return;
   end if;
 
-  -- Use the legacy atomic role transition lock order: usage first, then member.
-  -- This serializes role changes with the existing entitlement/owner-count checks.
+  -- Existing role changes serialize on usage before membership. Preserve that
+  -- order, THEN acquire every tenant membership row in a deterministic ID order.
+  -- P0-B/P0-C removal acquires those same member locks in ID order. Without
+  -- this shared order, locking actor first and target second may deadlock when
+  -- a concurrent removal holds the target first and waits for the actor.
   insert into public.organization_usage (organization_id)
   values (p_organization_id) on conflict (organization_id) do nothing;
   perform 1 from public.organization_usage as u
    where u.organization_id = p_organization_id for update;
+
+  perform 1
+  from public.organization_members as m
+  where m.organization_id = p_organization_id
+  order by m.id
+  for update;
 
   select m.role into v_actor_role
   from public.organization_members as m
