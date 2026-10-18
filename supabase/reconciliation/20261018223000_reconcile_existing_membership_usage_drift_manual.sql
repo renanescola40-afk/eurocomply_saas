@@ -53,6 +53,23 @@ begin
        'public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)'::regprocedure,'EXECUTE') then
     raise exception 'P0-F audited writer cutover was not accepted';
   end if;
+
+  -- The migration ledger alone is not proof that the CURRENT RPC bodies
+  -- actually reconcile usage; require the reviewed implementation signature.
+  if position('last_reconciled_at' in pg_get_functiondef(
+       'public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)'::regprocedure)) = 0
+    or position('last_reconciled_at' in pg_get_functiondef(
+       'public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)'::regprocedure)) = 0
+    or has_function_privilege('anon',
+       'public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)'::regprocedure,'EXECUTE')
+    or has_function_privilege('authenticated',
+       'public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)'::regprocedure,'EXECUTE')
+    or has_function_privilege('anon',
+       'public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)'::regprocedure,'EXECUTE')
+    or has_function_privilege('authenticated',
+       'public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)'::regprocedure,'EXECUTE') then
+    raise exception 'P0-F audited writer implementation or ACL failed verified preflight';
+  end if;
 end $p0f_preflight$;
 
 -- Lock BOTH relations against all DML for a strictly bounded maintenance
