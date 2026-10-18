@@ -5,7 +5,9 @@
 ## Safety prerequisites
 - Trusted executor with PostgreSQL 17 client utilities, Docker, age, sha256sum, and adequate private storage.
 - PostgreSQL source URL from a secure secret manager, scoped for read-only logical export; verify its permissions are sufficient to export the intended objects. No secret in chat, PR, logs or workflow inputs.
-- `PGSSLMODE=verify-full` and `PGSSLROOTCERT` referencing a trusted CA file.
+- Use a `postgresql://` or `postgres://` URL naming one explicit TCP host, with **no query string or fragment**. Remove all URI options, including `sslmode=verify-full`; percent-encoded credentials remain supported. Unix-socket and multi-host URLs are deliberately unsupported.
+- `PGSSLMODE=verify-full` and `PGSSLROOTCERT` referencing a trusted CA file. Leave `PGSERVICE` unset: service-file settings and URI options can override environment defaults. The script rejects these inputs before invoking external tools.
+- This fail-closed input policy replaces the unsafe substring check from PR #2539, which accepted conflicting duplicate `sslmode` parameters. It does not constitute proof of a real TLS connection or backup.
 - `RISCK_AGE_RECIPIENT` (public recipient), `RISCK_AGE_IDENTITY_FILE` (private identity file), `RISCK_RESTORE_PASSWORD` (isolated disposable database), and `RISCK_RECOVERY_OUTPUT_DIR` (private directory). Do not commit any of these secrets.
 - Ensure the executor is authorized to handle sensitive data. The encrypted dump contains customer data even if its contents are not human-readable.
 - A host with local PostgreSQL client tools and Docker is required. This script cannot run natively on an iPhone.
@@ -23,3 +25,6 @@ The script creates an encrypted logical dump, a SHA-256 checksum and a minimal r
 - The age private key must remain available outside the executor and must never be uploaded to the repo or artifacts.
 - No automated production migration or deployment is permitted based solely on this prototype.
 - Production backup acceptance requires independently reviewed test evidence and recovery perimeter sign-off.
+
+## Offline guard regression
+Run `bash tests/recovery/isolated-logical-restore-tls.test.sh`. Synthetic inputs exercise the real entry script with an empty executable search path. Accepted inputs stop at the missing-client prerequisite; rejected inputs stop at the input guard. No database, Docker container, export or recovery is attempted. Revert the recovery change as one unit if necessary; do not execute the older permissive guard.
