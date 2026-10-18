@@ -45,7 +45,10 @@ async function identity(i,aal='aal1'){await q("select set_config('request.jwt.cl
 try {
  report.postgresVersion = await scalar('select version()');
  const fixtureIdentity=(await q('select current_database() db,current_user usr,inet_server_addr()::text host'))[0];
- assert.equal(fixtureIdentity.db,'risck_synthetic');assert.equal(fixtureIdentity.usr,'risck_synthetic');assert.ok(['127.0.0.1','::1'].includes(fixtureIdentity.host));
+ assert.equal(fixtureIdentity.db,'risck_synthetic');assert.equal(fixtureIdentity.usr,'risck_synthetic');const serverAddress=fixtureIdentity.host?.replace(/^::ffff:/,'');
+ const localContainer=process.env.CIRCLECI==='true' && /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(serverAddress || '');
+ assert.ok(['127.0.0.1','::1'].includes(serverAddress)||localContainer,'Expected loopback or CircleCI private-container server address');
+ report.syntheticServerAddress=fixtureIdentity.host;
  assert.equal(await scalar("select count(*)::int from pg_tables where schemaname='public'"),0,'Fixture database must be empty');
  assert.match(report.postgresVersion,/PostgreSQL 17\./);
  await db.exec(readFileSync('tests/fixtures/p0-postgres/schema.sql','utf8'));
