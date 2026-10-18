@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
-import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createAuditEvent } from '@/server/queries/audit-events';
+import { removeMemberWithChainedAuditAtomic } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, requirePermission, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
@@ -13,17 +12,9 @@ const removeMemberSchema = z.object({
   memberId: z.string().trim().uuid(),
 });
 
-type TeamMemberRemovalResult = {
-  outcome: 'removed' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input';
-  affected_member_id: string | null;
-  affected_user_id: string | null;
-  previous_role: string | null;
-};
-
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const TEAM_ACTION_JSON_MAX_BYTES = 4 * 1024;
-const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic';
 
 function getClientIp(request: Request) {
   return (
@@ -31,13 +22,6 @@ function getClientIp(request: Request) {
     request.headers.get('x-real-ip') ||
     'unknown'
   );
-}
-
-function firstRemovalResult(value: unknown): TeamMemberRemovalResult | null {
-  if (!Array.isArray(value) || value.length === 0) return null;
-  const candidate = value[0];
-  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
-  return candidate as TeamMemberRemovalResult;
 }
 
 export async function POST(request: Request) {
@@ -111,22 +95,32 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: removalData, error: removalError } = await supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC, {
-      p_organization_id: organization.id,
-      p_member_id: parsed.data.memberId,
-      p_expected_user_id: member.user_id,
-      p_expected_role: member.role,
+    if (!member.user_id) {
+      return noStoreJson({ error: 'clerk_only_removal_requires_review' }, { status: 409 });
+    }
+    if (String(member.role ?? '').toLowerCase() === 'owner' && permission.role !== 'owner') {
+      return noStoreJson({ error: 'owner_removal_requires_owner' }, { status: 403 });
+    }
+
+    const { row: removal, error: removalError } = await removeMemberWithChainedAuditAtomic({
+      organizationId: organization.id,
+      memberId: parsed.data.memberId,
+      expectedUserId: member.user_id,
+      expectedRole: member.role,
+      actorUserId: user.id,
+      metadata: {
+        removedUserId: member.user_id,
+        role: member.role,
+        actorRole: permission.role,
+        stepUpAction: 'manage_team',
+      },
     });
-
-    if (removalError) {
-      return noStoreJson({ error: 'team_member_remove_failed' }, { status: 503 });
+    if (removalError || !removal) {
+      return noStoreJson({ error: 'team_member_atomic_audit_unavailable' }, { status: 503 });
     }
-
-    const removal = firstRemovalResult(removalData);
-    if (!removal) {
-      return noStoreJson({ error: 'team_member_removal_unavailable' }, { status: 503 });
+    if (removal.outcome === 'permission_denied') {
+      return noStoreJson({ error: 'team_member_removal_forbidden' }, { status: 403 });
     }
-
     if (removal.outcome === 'not_found') {
       return noStoreJson({ error: 'team_member_not_found' }, { status: 404 });
     }
@@ -148,40 +142,6 @@ export async function POST(request: Request) {
 
     if (removal.outcome !== 'removed') {
       return noStoreJson({ error: 'team_member_removal_unavailable' }, { status: 503 });
-    }
-
-    const audit = await createAuditEvent({
-      organizationId: organization.id,
-      actorUserId: user.id,
-      action: 'team_member_removed',
-      entityType: 'organization_member',
-      entityId: removal.affected_member_id ?? parsed.data.memberId,
-      metadata: {
-        removedUserId: removal.affected_user_id ?? member.user_id,
-        role: removal.previous_role ?? member.role,
-        actorRole: permission.role,
-        stepUpAction: 'manage_team',
-      },
-    });
-
-    if (!audit.persisted) {
-      const { error: rollbackError } = await supabase.from('organization_members').insert({
-        id: removal.affected_member_id ?? member.id,
-        organization_id: organization.id,
-        user_id: removal.affected_user_id ?? member.user_id,
-        role: removal.previous_role ?? member.role,
-      });
-
-      if (rollbackError) {
-        reportError(new Error('Team member removal audit rollback failed'), {
-          area: 'team_member_removal_audit_rollback',
-          organizationId: organization.id,
-          userId: user.id,
-          code: rollbackError.code ?? 'unknown',
-        });
-      }
-
-      return noStoreJson({ error: 'team_member_removal_audit_unavailable' }, { status: 503 });
     }
 
     return noStoreJson({
