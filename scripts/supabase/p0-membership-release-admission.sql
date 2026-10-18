@@ -1,5 +1,6 @@
--- RISCK COMPLY: P0 membership release admission, metadata-only.
+-- RISCK COMPLY: P0 membership release admission, read-only schema and aggregate integrity.
 -- Execute read-only in the target database. This is not a migration.
+-- No tenant IDs or member rows are selected into the output.
 -- A SCHEMA_CANDIDATE result is NOT permission to deploy or skip runtime tests.
 with
   migration_gate as (
@@ -10,7 +11,8 @@ with
       '20261018023000', -- P0-B last owner removal
       '20261018113000', -- P0-C signed removal
       '20261018160000', -- P0-D signed role change
-      '20261018183000'  -- P0-E seat suspension
+      '20261018183000', -- P0-E seat suspension
+      '20261018190000'  -- P0-F atomic usage reconciliation
     )
   ),
   function_gate as (
@@ -33,12 +35,55 @@ with
       to_regprocedure('public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)') is not null as removal_audited,
       to_regprocedure('public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)') is not null as role_audited,
       coalesce(
+        position('public.organization_usage' in
+          pg_get_functiondef(to_regprocedure('public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)'))
+        ) > 0 and position('last_reconciled_at' in
+          pg_get_functiondef(to_regprocedure('public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)'))
+        ) > 0, false
+      ) as removal_usage_reconciled,
+      coalesce(
+        position('public.organization_usage' in
+          pg_get_functiondef(to_regprocedure('public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)'))
+        ) > 0 and position('last_reconciled_at' in
+          pg_get_functiondef(to_regprocedure('public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)'))
+        ) > 0, false
+      ) as role_usage_reconciled,
+      coalesce(
         position('v_active_owner_count' in
           pg_get_functiondef(to_regprocedure('public.release_organization_seat_atomic(uuid,uuid,uuid,text,text)'))
         ) > 0 and position('last_owner' in
           pg_get_functiondef(to_regprocedure('public.release_organization_seat_atomic(uuid,uuid,uuid,text,text)'))
         ) > 0, false
       ) as owner_suspension
+  ),
+  membership_totals as (
+    select organization_id,
+      count(*) filter (where status = 'active')::integer as active_members,
+      count(*) filter (where status = 'active' and seat_type = 'full')::integer as full_users,
+      count(*) filter (where status = 'active' and seat_type = 'participant')::integer as participants,
+      count(*) filter (where status = 'active' and seat_type = 'viewer')::integer as viewers,
+      count(*) filter (where status = 'active' and lower(coalesce(role, '')) in ('owner','admin'))::integer as active_admins
+    from public.organization_members
+    group by organization_id
+  ),
+  usage_gate as (
+    select count(*)::integer as usage_organizations_checked,
+      count(*) filter (where
+        usage.active_members is distinct from coalesce(actual.active_members,0)
+        or usage.full_users is distinct from coalesce(actual.full_users,0)
+        or usage.participants is distinct from coalesce(actual.participants,0)
+        or usage.viewers is distinct from coalesce(actual.viewers,0)
+        or usage.active_admins is distinct from coalesce(actual.active_admins,0)
+      )::integer as drifted_usage_organizations,
+      (select count(*)::integer
+       from membership_totals as missing
+       left join public.organization_usage as existing
+         on existing.organization_id = missing.organization_id
+       where existing.organization_id is null
+      ) as organizations_missing_usage
+    from public.organization_usage as usage
+    left join membership_totals as actual
+      on actual.organization_id = usage.organization_id
   ),
   rls_gate as (
     select count(*)::integer as public_tables,
@@ -55,17 +100,23 @@ with
     where n.nspname='public' and p.prosecdef
   )
 select m.applied_count,
-  5 as required_migration_count,
+  6 as required_migration_count,
   f.mfa_read, f.mfa_manage, f.owner_removal,
-  f.removal_audited, f.role_audited, f.owner_suspension,
+  f.removal_audited, f.role_audited, f.removal_usage_reconciled, f.role_usage_reconciled,
+  f.owner_suspension,
+  u.usage_organizations_checked, u.drifted_usage_organizations, u.organizations_missing_usage,
   r.public_tables, r.public_rls_force,
   a.public_definer_exposed,
-  case when m.applied_count=5
+  case when m.applied_count=6
     and f.mfa_read and f.mfa_manage and f.owner_removal
-    and f.removal_audited and f.role_audited and f.owner_suspension
+    and f.removal_audited and f.role_audited
+    and f.removal_usage_reconciled and f.role_usage_reconciled
+    and f.owner_suspension
+    and u.drifted_usage_organizations=0
+    and u.organizations_missing_usage=0
     and r.public_tables = r.public_rls_force
     and a.public_definer_exposed = 0
   then 'SCHEMA_CANDIDATE_REQUIRES_RUNTIME_ACCEPTANCE'
   else 'BLOCKED_SOURCE_DB_DRIFT'
   end as schema_admission
-from migration_gate m cross join function_gate f cross join rls_gate r cross join acl_gate a;
+from migration_gate m cross join function_gate f cross join usage_gate u cross join rls_gate r cross join acl_gate a;
