@@ -41,122 +41,18 @@ vi.mock('@/server/queries/auth', () => ({
 
 import { removeOrganizationMember } from './members';
 
-const organizationId = '11111111-1111-4111-8111-111111111111';
-const actorUserId = '22222222-2222-4222-8222-222222222222';
-const memberId = '33333333-3333-4333-8333-333333333333';
-const removedUserId = '44444444-4444-4444-8444-444444444444';
+const organizationId='11111111-1111-4111-8111-111111111111';
+const memberId='33333333-3333-4333-8333-333333333333';
 
-function installSupabaseMock() {
-  const lookupChain = {
-    select: vi.fn(() => lookupChain),
-    eq: vi.fn(() => lookupChain),
-    maybeSingle: vi.fn(async () => ({
-      data: {
-        id: memberId,
-        user_id: removedUserId,
-        role: 'member',
-        organization_id: organizationId,
-      },
-      error: null,
-    })),
-  };
-
-  const rpc = vi.fn(async () => ({
-    data: [
-      {
-        outcome: mocks.removalOutcome,
-        affected_member_id: memberId,
-        affected_user_id: removedUserId,
-        previous_role: 'member',
-      },
-    ],
-    error: mocks.rpcError,
-  }));
-
-  mocks.createAdminClient.mockReturnValue({
-    from: vi.fn((table: string) => {
-      if (table !== 'organization_members') throw new Error(`Unexpected table ${table}`);
-      return {
-        select: lookupChain.select,
-      };
-    }),
-    rpc,
+describe('legacy Server Action removal is disabled (mocked)',()=>{
+  beforeEach(()=>{vi.clearAllMocks();});
+  it('always fails closed before accessing the Supabase admin client',async()=>{
+    await expect(removeOrganizationMember({organizationId,memberId})).rejects.toThrow('Member removal requires the step-up protected API route.');
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
   });
-
-  return { rpc };
-}
-
-describe('member removal state transition', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.removalOutcome = 'removed';
-    mocks.rpcError = null;
-    mocks.requireCurrentUser.mockResolvedValue({ id: actorUserId });
-    mocks.assertCurrentUserCan.mockResolvedValue(undefined);
-    mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
-    mocks.logAuditEvent.mockResolvedValue({ persisted: true });
-    installSupabaseMock();
-  });
-
-  it('delegates removal to the atomic RPC with the expected member state', async () => {
-    const { rpc } = installSupabaseMock();
-
-    await removeOrganizationMember({ organizationId, memberId });
-
-    expect(mocks.assertCurrentUserCan).toHaveBeenCalledWith(organizationId, actorUserId, 'team:remove');
-    expect(mocks.checkDistributedRateLimit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        organizationId,
-        userId: actorUserId,
-        policy: 'team-management',
-        failureMode: 'fail-closed',
-      }),
-    );
-    expect(rpc).toHaveBeenCalledWith('remove_organization_member_atomic', {
-      p_organization_id: organizationId,
-      p_member_id: memberId,
-      p_expected_user_id: removedUserId,
-      p_expected_role: 'member',
-    });
-    expect(mocks.logAuditEvent).toHaveBeenCalledWith({
-      organizationId,
-      actorUserId,
-      action: 'team.member_removed',
-      entityType: 'organization_member',
-      entityId: memberId,
-      metadata: { removedUserId, role: 'member' },
-    });
-  });
-
-  it('rejects a stale concurrent removal and does not write false success evidence', async () => {
-    mocks.removalOutcome = 'state_changed';
-
-    await expect(removeOrganizationMember({ organizationId, memberId })).rejects.toThrow(
-      'Member state changed before removal completed',
-    );
-
+  it('never performs an audit compensation or a member deletion',async()=>{
+    await expect(removeOrganizationMember({organizationId,memberId})).rejects.toThrow();
     expect(mocks.logAuditEvent).not.toHaveBeenCalled();
-  });
-
-  it('blocks atomic removal of the final owner without success audit evidence', async () => {
-    mocks.removalOutcome = 'last_owner';
-
-    await expect(removeOrganizationMember({ organizationId, memberId })).rejects.toThrow(
-      'Cannot remove the last organization owner',
-    );
-
-    expect(mocks.logAuditEvent).not.toHaveBeenCalled();
-  });
-
-  it('sanitizes provider errors and reports the internal failure', async () => {
-    mocks.rpcError = new Error('provider detail');
-
-    await expect(removeOrganizationMember({ organizationId, memberId })).rejects.toThrow('Unable to remove member.');
-
-    expect(mocks.reportError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'provider detail' }),
-      expect.objectContaining({ area: 'team_remove_member', organizationId, memberId }),
-    );
-    expect(mocks.logAuditEvent).not.toHaveBeenCalled();
+    expect(mocks.checkDistributedRateLimit).not.toHaveBeenCalled();
   });
 });
