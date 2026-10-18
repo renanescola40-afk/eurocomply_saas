@@ -137,7 +137,7 @@ const criticalApiContracts: ApiRouteContract[] = [
       'requireTrustedMutation',
       'requireStepUpForRequest',
       ".eq('organization_id', organization.id)",
-      'team_member_role_changed',
+      'changeMemberRoleWithChainedAuditAtomic',
       'secureApiError',
       'noStoreJson',
     ],
@@ -175,6 +175,21 @@ describe('enterprise API security contracts', () => {
     }
 
     expect(missing).toEqual([]);
+  });
+
+  it('binds the role-change audit action to the signed atomic writer, not a split API append', () => {
+    const route = readRepoFile('src/app/api/team/members/role/route.ts');
+    const adapter = readRepoFile('src/server/queries/audit-events.ts');
+    const migration = readRepoFile('supabase/migrations/20261018160000_atomic_member_role_change_with_chained_audit.sql');
+
+    expect(route).toContain('changeMemberRoleWithChainedAuditAtomic({');
+    expect(route).not.toContain('createAuditEvent(');
+    expect(adapter).toContain("action: 'team_member_role_changed'");
+    expect(adapter).toContain("admin.rpc('change_organization_member_role_audited_atomic'");
+    expect(adapter).toContain('if (!payload.chain.signature)');
+    expect(migration).toContain("'team_member_role_changed'");
+    expect(migration).toContain('perform public.append_audit_event_chained(');
+    expect(migration).toContain('insert into public.audit_logs');
   });
 
   it('requires trusted-origin protection on every critical mutating route', () => {
