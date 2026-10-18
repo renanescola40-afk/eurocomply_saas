@@ -68,3 +68,15 @@ test('Admission cannot claim production release permission', () => {
   assert.ok(sql.includes('BLOCKED_SOURCE_DB_DRIFT'));
   assert.doesNotMatch(sql, /\bENTERPRISE_100\s*=\s*PASS\b/i);
 });
+
+test('CircleCI executes the native Node P0 contracts excluded by Vitest TS-only discovery', () => {
+  const ci = readFileSync('.circleci/config.yml', 'utf8');
+  assert.match(ci, /command: npm run test/);
+  assert.match(ci, /node --test tests\/security\/p0-membership-release-admission\.test\.mjs/);
+  for (const path of [
+    'tests/security/membership-usage-counter-drift.test.mjs',
+    'tests/security/p0f-manual-counter-reconciliation.test.mjs',
+  ]) {
+    assert.ok(ci.includes(path), `Native Node CI missing contract: ${path}`);
+  }
+});
