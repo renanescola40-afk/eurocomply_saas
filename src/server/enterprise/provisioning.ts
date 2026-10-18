@@ -17,7 +17,7 @@ export type EnterpriseIdentityProvisioningInput = {
 };
 
 export type EnterpriseSeatReleaseResult = {
-  outcome: 'released' | 'already_released' | 'duplicate' | 'not_found' | 'invalid_input' | 'invalid_source' | 'unknown';
+  outcome: 'released' | 'already_released' | 'duplicate' | 'not_found' | 'invalid_input' | 'invalid_source' | 'last_owner' | 'permission_denied' | 'unknown';
   membershipId: string | null;
   releasedSeatType: EnterpriseSeatType | null;
   activeMembers: number;
@@ -102,6 +102,8 @@ export async function deprovisionEnterpriseIdentity(input: {
     'not_found',
     'invalid_input',
     'invalid_source',
+    'last_owner',
+    'permission_denied',
   ]);
 
   return {
