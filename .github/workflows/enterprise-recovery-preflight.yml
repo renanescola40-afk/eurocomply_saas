@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           set +x
-          # The connection string is never echoed or written to an artifact.
+          # The connection string is never echoed, passed in argv, or written to an artifact.
           # Reject connection URLs that disable TLS certificate verification.
           # This is a connectivity check only, never a backup operation.
           if [[ "$RISCK_BACKUP_DATABASE_URL" == *"sslmode=disable"* || "$RISCK_BACKUP_DATABASE_URL" == *"sslmode=require"* || "$RISCK_BACKUP_DATABASE_URL" == *"sslmode=prefer"* || "$RISCK_BACKUP_DATABASE_URL" == *"sslmode=allow"* ]]; then
@@ -60,7 +60,7 @@ jobs:
             -e RISCK_BACKUP_DATABASE_URL \
             -e PGCONNECT_TIMEOUT=8 \
             -e PGSSLMODE=verify-full \
-            postgres:17 sh -c 'psql "$RISCK_BACKUP_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "show server_version_num"')"
+            postgres:17 sh -c 'export PGDATABASE="$RISCK_BACKUP_DATABASE_URL"; unset RISCK_BACKUP_DATABASE_URL; exec psql -X -qAt -v ON_ERROR_STOP=1 -c "show server_version_num"')"
           if [[ ! "$result" =~ ^[0-9]+$ ]] || (( result < 170000 )); then
             echo "::error::Expected PostgreSQL 17 or newer."
             exit 1
