@@ -138,6 +138,10 @@ export async function POST(request: Request) {
       );
     }
 
+    if (String(member.role ?? '').toLowerCase() === 'owner' && permission.role !== 'owner') {
+      return noStoreJson({ error: 'owner_seat_change_requires_owner' }, { status: 403 });
+    }
+
     const currentSeatType = member.seat_type === 'participant' || member.seat_type === 'viewer'
       ? member.seat_type
       : 'full';
@@ -166,6 +170,12 @@ export async function POST(request: Request) {
         return noStoreJson({ error: 'invalid_member_seat_payload' }, { status: 400 });
       }
 
+      if (result.outcome === 'last_owner') {
+        return noStoreJson({ error: 'last_active_owner_suspension_blocked' }, { status: 409 });
+      }
+      if (result.outcome === 'permission_denied') {
+        return noStoreJson({ error: 'owner_seat_change_requires_owner' }, { status: 403 });
+      }
       if (result.outcome === 'unknown') {
         return noStoreJson({ error: 'member_seat_suspension_unavailable' }, { status: 503 });
       }

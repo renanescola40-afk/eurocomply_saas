@@ -397,6 +397,12 @@ export async function deactivateScimUser(
     source: 'scim',
     idempotencyKey: operationKey('scim-deactivate', `${identity.id}:${identity.updatedAt}`),
   });
+  if (release.outcome === 'last_owner') {
+    throw new ScimError('scim_last_active_owner_blocked', 409);
+  }
+  if (release.outcome === 'permission_denied') {
+    throw new ScimError('scim_owner_suspension_forbidden', 403);
+  }
   if (!['released', 'already_released', 'duplicate'].includes(release.outcome)) {
     throw new ScimError(`scim_${release.outcome}`, release.outcome === 'not_found' ? 404 : 503);
   }
