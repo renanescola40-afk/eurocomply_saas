@@ -35,15 +35,13 @@ jobs:
             exit 1
           fi
           echo "Secret presence: PASS"
-      - name: Install PostgreSQL 17 client
+      - name: Verify PostgreSQL 17 client image
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-17
-          pg_dump --version
-          pg_restore --version
-          psql --version
+          docker pull postgres:17
+          docker run --rm postgres:17 pg_dump --version
+          docker run --rm postgres:17 pg_restore --version
       - name: Read-only connection check
         shell: bash
         env:
@@ -53,7 +51,12 @@ jobs:
           set +x
           # The connection string is never echoed or written to an artifact.
           # Use an appropriately scoped, TLS-verified read-only credential.
-          result="$(psql "${RISCK_BACKUP_DATABASE_URL}" -X -qAt -v ON_ERROR_STOP=1 -c 'select current_setting(''server_version_num'')::int >= 170000')"
+          result="$(docker run --rm --network host \
+            -e RISCK_BACKUP_DATABASE_URL \
+            -e PGCONNECT_TIMEOUT=8 \
+            -e PGSSLMODE=verify-full \
+            -e PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt \
+            postgres:17 sh -c 'psql "$RISCK_BACKUP_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select current_setting('\''server_version_num'\'')::int >= 170000"')"
           if [[ "$result" != "t" ]]; then
             echo "::error::Expected PostgreSQL 17 or newer."
             exit 1
