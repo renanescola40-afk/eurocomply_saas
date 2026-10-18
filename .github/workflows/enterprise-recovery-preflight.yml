@@ -15,6 +15,7 @@ jobs:
   preflight:
     if: ${{ inputs.confirm == 'PREFLIGHT_ONLY' }}
     runs-on: ubuntu-24.04
+    environment: enterprise-recovery
     timeout-minutes: 8
     env:
       PGCONNECT_TIMEOUT: '8'
@@ -54,6 +55,7 @@ jobs:
             exit 1
           fi
           # Use a dedicated read-only database role, never service_role/postgres.
+          # GitHub environment enterprise-recovery should require owner approval.
           result="$(docker run --rm --network host \
             -e RISCK_BACKUP_DATABASE_URL \
             -e PGCONNECT_TIMEOUT=8 \
