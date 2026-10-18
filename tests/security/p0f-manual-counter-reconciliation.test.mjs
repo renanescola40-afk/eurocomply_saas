@@ -19,6 +19,10 @@ test('Repair fails closed until all six migrations and audited RPC cutovers exis
   }
   assert.match(sql, /has_function_privilege\('service_role'/);
   assert.match(sql, /audited writer cutover was not accepted/);
+  assert.match(sql, /audited writer implementation or ACL failed verified preflight/);
+  assert.match(sql, /last_reconciled_at' in pg_get_functiondef/);
+  assert.match(sql, /has_function_privilege\('anon'/);
+  assert.match(sql, /has_function_privilege\('authenticated'/);
 });
 test('Repair takes bounded locks in compatible writer order', () => {
   assert.match(sql, /set local lock_timeout = '5s'/i);
