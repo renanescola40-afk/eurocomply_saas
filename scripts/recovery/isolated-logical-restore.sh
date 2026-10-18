@@ -9,7 +9,10 @@ done
 : "${RISCK_SOURCE_DATABASE_URL:?Set via a secure local secret manager}"
 : "${RISCK_AGE_RECIPIENT:?Set age public recipient}"
 : "${RISCK_RESTORE_PASSWORD:?Set isolated local password}"
-[[ "$RISCK_SOURCE_DATABASE_URL" != *"sslmode=disable"* ]] || { echo "TLS disabled" >&2; exit 2; }
+# URL parameters override PGSSLMODE; reject any explicit TLS downgrade.
+if [[ "$RISCK_SOURCE_DATABASE_URL" == *"sslmode="* && "$RISCK_SOURCE_DATABASE_URL" != *"sslmode=verify-full"* ]]; then
+  echo "Source URL must use sslmode=verify-full" >&2; exit 2
+fi
 [[ "${PGSSLMODE:-}" == "verify-full" ]] || { echo "PGSSLMODE must be verify-full" >&2; exit 2; }
 [[ "${PGSSLROOTCERT:-}" != "" ]] || { echo "Set PGSSLROOTCERT to a trusted CA bundle" >&2; exit 2; }
 [[ "${RISCK_RESTORE_PASSWORD}" != *":"* ]] || { echo "Password cannot contain colon" >&2; exit 2; }
