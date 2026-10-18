@@ -6,31 +6,10 @@ import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { restoreOrganizationInvite } from '@/server/queries/invites';
 
-const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic';
-
 const INVITATION_CANCELLATION_RATE_LIMIT = {
   limit: 20,
   windowMs: 60 * 1000,
 } as const;
-
-const MEMBER_REMOVAL_RATE_LIMIT = {
-  limit: 10,
-  windowMs: 60 * 1000,
-} as const;
-
-type MemberRemovalResult = {
-  outcome: 'removed' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input';
-  affected_member_id: string | null;
-  affected_user_id: string | null;
-  previous_role: string | null;
-};
-
-function firstRemovalResult(data: unknown): MemberRemovalResult | null {
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const candidate = data[0];
-  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
-  return candidate as MemberRemovalResult;
-}
 
 function actionError(message: string) {
   return new Error(message);
@@ -56,24 +35,6 @@ async function enforceInvitationCancellationRateLimit(input: { organizationId: s
 
   if (!rateLimit.allowed) {
     throw actionError('Too many invitation cancellation attempts. Please try again later.');
-  }
-}
-
-async function enforceMemberRemovalRateLimit(input: { organizationId: string; userId: string }) {
-  const rateLimit = await checkDistributedRateLimit({
-    key: `team.member_remove:${input.organizationId}:${input.userId}`,
-    policy: 'team-management',
-    userId: input.userId,
-    organizationId: input.organizationId,
-    route: 'server-action:team.member_remove',
-    action: 'team_member_remove',
-    limit: MEMBER_REMOVAL_RATE_LIMIT.limit,
-    windowMs: MEMBER_REMOVAL_RATE_LIMIT.windowMs,
-    failureMode: 'fail-closed',
-  });
-
-  if (!rateLimit.allowed) {
-    throw actionError('Too many member removal attempts. Please try again later.');
   }
 }
 
@@ -144,86 +105,9 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
   }
 }
 
-export async function removeOrganizationMember(input: { organizationId: string; memberId: string }) {
-  const user = await requireCurrentUser();
-  await assertCurrentUserCan(input.organizationId, user.id, 'team:remove');
-  await enforceMemberRemovalRateLimit({ organizationId: input.organizationId, userId: user.id });
-
-  const supabase = createAdminClient();
-  const { data: member, error: memberError } = await supabase
-    .from('organization_members')
-    .select('*')
-    .eq('id', input.memberId)
-    .eq('organization_id', input.organizationId)
-    .maybeSingle();
-
-  if (memberError) {
-    failMemberAction(memberError, { area: 'team_remove_member_lookup', organizationId: input.organizationId, memberId: input.memberId }, 'Unable to load member.');
-  }
-
-  if (!member) {
-    throw actionError('Member not found');
-  }
-
-  if (member.user_id === user.id) {
-    throw actionError('You cannot remove your own access from here');
-  }
-
-  const { data: removalData, error } = await supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC, {
-    p_organization_id: input.organizationId,
-    p_member_id: input.memberId,
-    p_expected_user_id: member.user_id,
-    p_expected_role: member.role,
-  });
-
-  if (error) {
-    failMemberAction(error, { area: 'team_remove_member', organizationId: input.organizationId, memberId: input.memberId }, 'Unable to remove member.');
-  }
-
-  const removal = firstRemovalResult(removalData);
-  if (!removal) {
-    throw actionError('Unable to remove member.');
-  }
-
-  if (removal.outcome === 'not_found') {
-    throw actionError('Member not found');
-  }
-
-  if (removal.outcome === 'last_owner') {
-    throw actionError('Cannot remove the last organization owner');
-  }
-
-  if (removal.outcome === 'state_changed') {
-    throw actionError('Member state changed before removal completed');
-  }
-
-  if (removal.outcome !== 'removed') {
-    throw actionError('Unable to remove member.');
-  }
-
-  const audit = await logAuditEvent({
-    organizationId: input.organizationId,
-    actorUserId: user.id,
-    action: 'team.member_removed',
-    entityType: 'organization_member',
-    entityId: removal.affected_member_id ?? input.memberId,
-    metadata: {
-      removedUserId: removal.affected_user_id ?? member.user_id ?? null,
-      role: removal.previous_role ?? member.role,
-    },
-  });
-
-  if (!audit.persisted) {
-    const { error: rollbackError } = await supabase.from('organization_members').insert(member);
-
-    if (rollbackError) {
-      reportError(rollbackError, {
-        area: 'team_remove_member_audit_rollback',
-        organizationId: input.organizationId,
-        memberId: input.memberId,
-      });
-    }
-
-    throw actionError('Unable to remove member.');
-  }
+// Legacy Server Action is intentionally disabled: it cannot prove Step-Up
+// nor atomically persist signed removal audit and FK effects. Use the
+// /api/team/members/remove route with verified Step-Up instead.
+export async function removeOrganizationMember(_input: { organizationId: string; memberId: string }) {
+  throw actionError('Member removal requires the step-up protected API route.');
 }
