@@ -44,8 +44,9 @@ async function seat(i=1,actor=0,source='admin',key=randomUUID(),tenant=A){return
 async function identity(i,aal='aal1'){await q("select set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)",[i===null?'':users[i],JSON.stringify({aal})]);}
 try {
  report.postgresVersion = await scalar('select version()');
- const fixtureIdentity=(await q('select current_database() db,current_user usr,inet_server_addr()::text host'))[0];
- assert.equal(fixtureIdentity.db,'risck_synthetic');assert.equal(fixtureIdentity.usr,'risck_synthetic');const serverAddress=fixtureIdentity.host?.replace(/^::ffff:/,'');
+ const fixtureIdentity=(await q('select current_database() db,current_user usr,host(inet_server_addr()) host'))[0];
+ assert.equal(fixtureIdentity.db,'risck_synthetic');assert.equal(fixtureIdentity.usr,'risck_synthetic');report.syntheticServerAddress=fixtureIdentity.host;
+ const serverAddress=fixtureIdentity.host?.replace(/^::ffff:/,'');
  const localContainer=process.env.CIRCLECI==='true' && /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(serverAddress || '');
  assert.ok(['127.0.0.1','::1'].includes(serverAddress)||localContainer,'Expected loopback or CircleCI private-container server address');
  report.syntheticServerAddress=fixtureIdentity.host;
