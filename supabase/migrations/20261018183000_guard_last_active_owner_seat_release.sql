@@ -16,6 +16,15 @@ begin
   end if;
   select pg_get_functiondef('public.release_organization_seat_atomic(uuid,uuid,uuid,text,text)'::regprocedure)
     into v_def;
+  -- Fail closed if the live implementation has changed since the reviewed
+  -- 2026-10-18 Production snapshot. An unexpected body must not be silently
+  -- overwritten by the migration's full CREATE OR REPLACE definition.
+  -- Snapshot identity: md5(pg_get_functiondef(...)) observed read-only LIVE.
+  -- Isolated PG replay must recreate the approved baseline or explicitly
+  -- review and update this fingerprint before the migration can apply.
+  if pg_catalog.md5(v_def) <> 'e0ce571735e2f003c8bbc51f5edfa97d' then
+    raise exception 'P0-E seat release implementation drift: manual review required';
+  end if;
   if v_def not ilike '%enterprise.seat_released%'
      or v_def not ilike '%pg_advisory_xact_lock%'
      or v_def not ilike '%organization_usage%' then
