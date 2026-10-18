@@ -31,6 +31,8 @@ describe('P0-E: suspend/deprovision ACTIVE owner guard (source only)', () => {
   });
 
   it('retains existing usage, idempotency and legacy audit behavior, and service-only execution', () => {
+    expect(sql).toContain("pg_catalog.md5(v_def) <> 'e0ce571735e2f003c8bbc51f5edfa97d'");
+    expect(sql).toContain('P0-E seat release implementation drift: manual review required');
     expect(sql).toContain('enterprise_seat_operations');
     expect(sql).toContain('organization_usage');
     expect(sql).toContain("'enterprise.seat_released'");
