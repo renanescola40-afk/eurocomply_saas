@@ -59,6 +59,7 @@ describe('team member role route security contract', () => {
     expect(stateChangedGuard).toBeGreaterThan(lastOwnerGuard);
     expect(unchangedGuard).toBeGreaterThan(stateChangedGuard);
     expect(routeSource).toContain("error: 'last_owner_role_change_blocked'");
+    expect(routeSource).toContain("error: 'team_role_change_forbidden'");
     expect(routeSource).toContain("error: 'team_member_state_changed'");
     expect(auditWrite).toBeGreaterThan(-1);
     expect(routeSource.indexOf('changed: true')).toBeGreaterThan(unchangedGuard);

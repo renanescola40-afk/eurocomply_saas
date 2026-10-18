@@ -138,6 +138,10 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'team_role_change_audit_unavailable' }, { status: 503 });
     }
 
+    if (transition.outcome === 'permission_denied') {
+      return noStoreJson({ error: 'team_role_change_forbidden' }, { status: 403 });
+    }
+
     if (transition.outcome === 'not_found') {
       return noStoreJson({ error: 'team_member_not_found' }, { status: 404 });
     }
