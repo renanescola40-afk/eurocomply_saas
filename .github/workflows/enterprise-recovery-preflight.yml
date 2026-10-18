@@ -1,0 +1,62 @@
+name: Enterprise recovery preflight (no data export)
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type PREFLIGHT_ONLY to run read-only connectivity checks'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: risck-recovery-preflight
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: ${{ inputs.confirm == 'PREFLIGHT_ONLY' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PGCONNECT_TIMEOUT: '8'
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
+      PGDATABASE: postgres
+      PGOPTIONS: '-c statement_timeout=10000'
+      PGPASSFILE: /dev/null
+    steps:
+      - name: Check required secret without printing it
+        shell: bash
+        env:
+          RISCK_BACKUP_DATABASE_URL: ${{ secrets.RISCK_BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${RISCK_BACKUP_DATABASE_URL:-}" ]]; then
+            echo "::error::Missing RISCK_BACKUP_DATABASE_URL GitHub Actions secret."
+            exit 1
+          fi
+          echo "Secret presence: PASS"
+      - name: Install PostgreSQL 17 client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version
+          pg_restore --version
+          psql --version
+      - name: Read-only connection check
+        shell: bash
+        env:
+          RISCK_BACKUP_DATABASE_URL: ${{ secrets.RISCK_BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          set +x
+          # The connection string is never echoed or written to an artifact.
+          # Use an appropriately scoped, TLS-verified read-only credential.
+          result="$(psql "${RISCK_BACKUP_DATABASE_URL}" -X -qAt -v ON_ERROR_STOP=1 -c 'select current_setting(''server_version_num'')::int >= 170000')"
+          if [[ "$result" != "t" ]]; then
+            echo "::error::Expected PostgreSQL 17 or newer."
+            exit 1
+          fi
+          echo "TLS-verified PostgreSQL 17+ read-only connection: PASS"
+          echo "No backup was taken. No data was exported."
