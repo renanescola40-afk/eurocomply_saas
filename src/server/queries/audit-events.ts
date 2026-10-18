@@ -523,6 +523,79 @@ export async function removeMemberWithChainedAuditAtomic(input: {
   return { row: null, error: 'audit_retry_exhausted' };
 }
 
+
+type AuditedRoleRow = {
+  outcome: 'changed' | 'unchanged' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input' |
+    'invalid_role' | 'admin_limit_reached' | 'contract_not_active' | 'entitlements_missing' | 'permission_denied';
+  affected_member_id: string | null;
+  affected_user_id: string | null;
+  previous_role: string | null;
+  applied_role: string | null;
+};
+
+/**
+ * Fail-closed role mutation and tamper-evident audit in one database transaction.
+ * Source readiness is NOT proof of PostgreSQL concurrency, deployment or runtime.
+ */
+export async function changeMemberRoleWithChainedAuditAtomic(input: {
+  organizationId: string;
+  memberId: string;
+  expectedUserId: string;
+  expectedRole: string;
+  nextRole: string;
+  actorUserId: string;
+  metadata: Record<string, unknown>;
+}): Promise<{ row: AuditedRoleRow | null; error: string | null }> {
+  if (!input.expectedUserId || !input.actorUserId || !input.memberId || !input.expectedRole || !input.nextRole) {
+    return { row: null, error: 'unsupported_or_missing_identity' };
+  }
+
+  const normalized = normalizeAuditEventInput({
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId,
+    action: 'team_member_role_changed',
+    entityType: 'organization_member',
+    entityId: input.memberId,
+    metadata: input.metadata,
+  });
+  if (!normalized) return { row: null, error: 'invalid_audit_payload' };
+  const admin = tryCreateAdminClient();
+  if (!admin) return { row: null, error: 'admin_unavailable' };
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const head = await getPreviousAuditHash(admin, input.organizationId);
+    if (head.error) return { row: null, error: 'audit_head_unavailable' };
+    const payload = buildChainedPayload(normalized, head.hash);
+    if (!payload.chain.signature) return { row: null, error: 'audit_signing_unavailable' };
+
+    const { data, error } = await admin.rpc('change_organization_member_role_audited_atomic', {
+      p_organization_id: input.organizationId,
+      p_member_id: input.memberId,
+      p_expected_user_id: input.expectedUserId,
+      p_expected_role: input.expectedRole,
+      p_next_role: input.nextRole,
+      p_actor_user_id: input.actorUserId,
+      p_audit_id: payload.id,
+      p_audit_created_at: payload.createdAt,
+      p_audit_previous_hash: payload.chain.previousHash,
+      p_audit_event_hash: payload.chain.eventHash,
+      p_audit_hash_signature: payload.chain.signature,
+      p_audit_metadata: normalized.metadata,
+    });
+
+    if (!error) {
+      const row = (Array.isArray(data) ? data[0] : data) as AuditedRoleRow | null;
+      return row ? { row, error: null } : { row: null, error: 'empty_rpc_result' };
+    }
+    if (isPreviousHashMismatch(error) && attempt < 3) {
+      await waitForAuditChainRetry(attempt);
+      continue;
+    }
+    return { row: null, error: 'atomic_audit_or_member_role_change_failed' };
+  }
+  return { row: null, error: 'audit_retry_exhausted' };
+}
+
 const AUDIT_EXPORT_PAGE_SIZE = 500;
 
 type AuditExportCursor = {

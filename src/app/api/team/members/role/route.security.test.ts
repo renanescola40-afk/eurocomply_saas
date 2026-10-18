@@ -38,29 +38,30 @@ describe('team member role route security contract', () => {
     expect(lookupSource).toContain(".eq('organization_id', organization.id)");
   });
 
-  it('delegates the mutation to the atomic backend-only RPC with expected state', () => {
-    expect(routeSource).toContain("const ATOMIC_ROLE_TRANSITION_RPC = 'change_organization_member_role_atomic'");
-    expect(routeSource).toContain('supabase.rpc(ATOMIC_ROLE_TRANSITION_RPC');
-    expect(routeSource).toContain('p_organization_id: organization.id');
-    expect(routeSource).toContain('p_member_id: parsed.data.memberId');
-    expect(routeSource).toContain('p_expected_role: member.role');
-    expect(routeSource).toContain('p_next_role: nextRole');
+  it('delegates the transition and audit to one backend-only transaction using expected identity', () => {
+    expect(routeSource).toContain('changeMemberRoleWithChainedAuditAtomic({');
+    expect(routeSource).toContain('organizationId: organization.id');
+    expect(routeSource).toContain('memberId: parsed.data.memberId');
+    expect(routeSource).toContain('expectedUserId: member.user_id');
+    expect(routeSource).toContain("expectedRole: member.role ?? ''");
+    expect(routeSource).toContain('nextRole,');
     expect(routeSource).not.toContain(".update({ role: nextRole })");
-    expect(routeSource).not.toContain(".select('id', { count: 'exact', head: true })");
+    expect(routeSource).not.toContain("createAuditEvent(");
   });
 
   it('maps no-op, last-owner, stale-state, and invalid outcomes before success evidence', () => {
     const lastOwnerGuard = routeSource.indexOf("transition.outcome === 'last_owner'");
     const stateChangedGuard = routeSource.indexOf("transition.outcome === 'state_changed'");
     const unchangedGuard = routeSource.indexOf("transition.outcome === 'unchanged'");
-    const auditWrite = routeSource.indexOf('const audit = await createAuditEvent');
+    const auditWrite = routeSource.indexOf('changeMemberRoleWithChainedAuditAtomic({');
 
     expect(lastOwnerGuard).toBeGreaterThan(-1);
     expect(stateChangedGuard).toBeGreaterThan(lastOwnerGuard);
     expect(unchangedGuard).toBeGreaterThan(stateChangedGuard);
     expect(routeSource).toContain("error: 'last_owner_role_change_blocked'");
     expect(routeSource).toContain("error: 'team_member_state_changed'");
-    expect(auditWrite).toBeGreaterThan(unchangedGuard);
+    expect(auditWrite).toBeGreaterThan(-1);
+    expect(routeSource.indexOf('changed: true')).toBeGreaterThan(unchangedGuard);
   });
 });
 
