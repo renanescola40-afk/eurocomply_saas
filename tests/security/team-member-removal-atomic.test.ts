@@ -1,79 +1,47 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
-const routeSource = readFileSync(join(process.cwd(), 'src/app/api/team/members/remove/route.ts'), 'utf8');
-const actionSource = readFileSync(join(process.cwd(), 'src/server/actions/members.ts'), 'utf8');
-const migrationSource = readFileSync(
-  join(process.cwd(), 'supabase/migrations/20260715124500_atomic_team_member_removal.sql'),
-  'utf8',
-);
+const routeSource = readFileSync(join(process.cwd(),'src/app/api/team/members/remove/route.ts'),'utf8');
+const actionSource = readFileSync(join(process.cwd(),'src/server/actions/members.ts'),'utf8');
+const adapterSource = readFileSync(join(process.cwd(),'src/server/queries/audit-events.ts'),'utf8');
+const auditedMigration = readFileSync(join(process.cwd(),'supabase/migrations/20261018113000_atomic_member_removal_with_chained_audit.sql'),'utf8');
+const migrationSource = readFileSync(join(process.cwd(),'supabase/migrations/20260715124500_atomic_team_member_removal.sql'),'utf8');
 
-describe('team member removal route security contract', () => {
-  it('preserves identity, permission, trusted mutation, step-up, tenant lookup, and no-store controls', () => {
-    expect(routeSource).toContain('requireApiUser');
-    expect(routeSource).toContain('requirePermission');
-    expect(routeSource).toContain('requireTrustedMutation');
-    expect(routeSource).toContain('requireStepUpForRequest');
-    expect(routeSource).toContain('noStoreJson');
-    expect(routeSource).toContain(".eq('organization_id', organization.id)");
+describe('audited atomic member removal source contract',()=>{
+  it('preserves identity, trusted origin, step-up, tenant-scoped lookup and no-store response',()=>{
+    for(const x of ['requireApiUser','requirePermission','requireTrustedMutation','requireStepUpForRequest','noStoreJson',".eq('organization_id', organization.id)"])expect(routeSource).toContain(x);
   });
-
-  it('rejects malformed member IDs before constructing the Supabase client', () => {
-    const uuidValidation = routeSource.indexOf('memberId: z.string().trim().uuid()');
-    const parseGuard = routeSource.indexOf('if (!parsed.success)');
-    const clientCreation = routeSource.indexOf('const supabase = createAdminClient()');
-
-    expect(uuidValidation).toBeGreaterThan(-1);
-    expect(parseGuard).toBeGreaterThan(uuidValidation);
-    expect(clientCreation).toBeGreaterThan(parseGuard);
-    expect(routeSource).toContain("error: 'invalid_team_member_payload'");
+  it('checks payload UUID before the Supabase client',()=>{
+    expect(routeSource.indexOf('memberId: z.string().trim().uuid()')).toBeGreaterThan(-1);
+    expect(routeSource.indexOf('if (!parsed.success)')).toBeLessThan(routeSource.indexOf('const supabase = createAdminClient()'));
   });
-
-  it('delegates deletion to the backend-only atomic RPC with expected state', () => {
-    expect(routeSource).toContain("const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic'");
-    expect(routeSource).toContain('supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC');
-    expect(routeSource).toContain('p_organization_id: organization.id');
-    expect(routeSource).toContain('p_member_id: parsed.data.memberId');
-    expect(routeSource).toContain('p_expected_user_id: member.user_id');
-    expect(routeSource).toContain('p_expected_role: member.role');
-    expect(routeSource).not.toContain(".from('organization_members')\n      .delete()");
-    expect(routeSource).not.toContain(".select('id', { count: 'exact', head: true })");
+  it('uses only the signed single-transaction writer, never inserts a client-side compensation row',()=>{
+    expect(routeSource).toContain('removeMemberWithChainedAuditAtomic');
+    expect(routeSource).not.toContain('createAuditEvent(');
+    expect(routeSource).not.toContain('rollbackError');
+    expect(adapterSource).toContain("admin.rpc('remove_organization_member_audited_atomic'");
+    expect(adapterSource).toContain("if (!payload.chain.signature)");
   });
-
-  it('maps last-owner and stale-state outcomes before writing success audit evidence', () => {
-    const lastOwnerGuard = routeSource.indexOf("removal.outcome === 'last_owner'");
-    const stateChangedGuard = routeSource.indexOf("removal.outcome === 'state_changed'");
-    const auditWrite = routeSource.indexOf('const audit = await createAuditEvent');
-
-    expect(lastOwnerGuard).toBeGreaterThan(-1);
-    expect(stateChangedGuard).toBeGreaterThan(lastOwnerGuard);
-    expect(routeSource).toContain("error: 'last_owner_removal_blocked'");
-    expect(routeSource).toContain("error: 'team_member_state_changed'");
-    expect(auditWrite).toBeGreaterThan(stateChangedGuard);
+  it('denies ordinary admins removing owners and refuses unaudited Clerk-only removals',()=>{
+    expect(routeSource).toContain("error: 'owner_removal_requires_owner'");
+    expect(routeSource).toContain("error: 'clerk_only_removal_requires_review'");
+    expect(routeSource).toContain("error: 'self_removal_blocked'");
   });
-});
-
-describe('team member removal action security contract', () => {
-  it('uses the same atomic removal boundary as the API route', () => {
-    expect(actionSource).toContain("const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic'");
-    expect(actionSource).toContain('supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC');
-    expect(actionSource).toContain('p_organization_id: input.organizationId');
-    expect(actionSource).toContain('p_expected_user_id: member.user_id');
-    expect(actionSource).toContain('p_expected_role: member.role');
-    expect(actionSource).not.toContain(".select('id', { count: 'exact', head: true })");
-    expect(actionSource).not.toContain(".from('organization_members')\n    .delete()");
+  it('disables the alternative unstepped Server Action entry point',()=>{
+    const removal=actionSource.slice(actionSource.indexOf('export async function removeOrganizationMember('));
+    expect(removal).toContain("throw actionError('Member removal requires the step-up protected API route.')");
+    expect(removal).not.toContain('supabase.rpc(');
   });
-
-  it('handles concurrency outcomes before recording successful audit evidence', () => {
-    const lastOwnerGuard = actionSource.indexOf("removal.outcome === 'last_owner'");
-    const stateChangedGuard = actionSource.indexOf("removal.outcome === 'state_changed'");
-    const auditWrite = actionSource.lastIndexOf('await logAuditEvent');
-
-    expect(lastOwnerGuard).toBeGreaterThan(-1);
-    expect(stateChangedGuard).toBeGreaterThan(lastOwnerGuard);
-    expect(auditWrite).toBeGreaterThan(stateChangedGuard);
+  it('migrates after P0-B and appends both audit records atomically',()=>{
+    expect(auditedMigration).toContain('remove_organization_member_audited_atomic');
+    expect(auditedMigration).toContain('public.remove_organization_member_atomic(');
+    expect(auditedMigration).toContain('public.append_audit_event_chained(');
+    expect(auditedMigration).toContain('insert into public.audit_logs');
+    expect(auditedMigration).toContain("p_audit_hash_signature !~ '^[a-f0-9]{64}$'");
+    expect(auditedMigration).toContain("status = 'active'");
+    expect(auditedMigration).toContain('order by om.id for update');
+    expect(auditedMigration).toContain('to service_role');
   });
 });
 
