@@ -63,6 +63,13 @@ jobs:
           name: Testes unitarios
           command: npm run test
       - run:
+          name: Contratos P0 PostgreSQL source-only (Node .test.mjs)
+          command: |
+            set -euo pipefail
+            node --test tests/security/p0-membership-release-admission.test.mjs \
+              tests/security/membership-usage-counter-drift.test.mjs \
+              tests/security/p0f-manual-counter-reconciliation.test.mjs
+      - run:
           name: Integridade ISO e SOC2
           command: |
             node --test scripts/security/iso-soc2-register-audit.test.mjs
