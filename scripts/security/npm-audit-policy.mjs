@@ -18,7 +18,7 @@ export const NPM_AUDIT_EXCEPTIONS = [
     version: '3.0.3',
     integrity: 'sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==',
     devOnly: true,
-    expiresAt: '2026-10-17T23:59:59.000Z',
+    expiresAt: '2026-10-21T23:59:59.000Z',
     reason: 'Unpatched upstream advisory in eslint-config-next lint tooling; exact locked artifact is dev-only and not shipped in the production dependency set.',
   },
 ];

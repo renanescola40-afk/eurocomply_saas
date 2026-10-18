@@ -50,7 +50,7 @@ test('has only the narrow temporary braces dev-only exception', () => {
       packageName: 'braces',
       version: '3.0.3',
       devOnly: true,
-      expiresAt: '2026-10-17T23:59:59.000Z',
+      expiresAt: '2026-10-21T23:59:59.000Z',
     },
   );
 });
@@ -172,4 +172,17 @@ test('accepts the exact temporary braces advisory only when the locked artifact 
   });
   assert.equal(rejected.ok, false);
   assert.match(rejected.failures.join('\n'), /not dev-only/);
+});
+
+test('the exact dev-only exception expires and never silently rolls forward', () => {
+  const exception=NPM_AUDIT_EXCEPTIONS[0];
+  const evidence={
+    audit:{vulnerabilities:{braces:{severity:'high',via:[{name:'braces',url:`https://github.com/advisories/${exception.id}`}],nodes:['node_modules/braces']}}},
+    lockfile:{packages:{'node_modules/braces':{version:exception.version,integrity:exception.integrity,dev:true}}},
+    now:new Date(Date.parse(exception.expiresAt)+1),
+  };
+  const result=evaluateNpmAudit(evidence);
+  assert.equal(result.ok,false);
+  assert.match(result.failures.join(' '),/expired/);
+  assert.deepEqual(result.appliedExceptions,[]);
 });
