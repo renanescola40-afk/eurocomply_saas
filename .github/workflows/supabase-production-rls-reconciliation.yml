@@ -108,6 +108,13 @@ jobs:
             *) echo 'Unsupported reconciliation package' >&2; exit 1 ;;
           esac
 
+          # P0 security: legacy membership hotfix overwrites the last-ACTIVE-
+          # owner fix. Verification remains allowed; old apply is retired.
+          if [[ "$PACKAGE" == 'team_membership_rpcs' && "$MODE" == 'apply' ]]; then
+            echo 'Legacy team membership hotfix is retired: it overwrites the last-active-owner guard' >&2
+            exit 1
+          fi
+
           case "$MODE" in
             verify_only) ;;
             apply)

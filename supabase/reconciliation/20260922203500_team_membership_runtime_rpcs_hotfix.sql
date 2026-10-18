@@ -4,6 +4,25 @@
 
 begin;
 
+-- Fail closed if either P0-B or P0-C has already been installed. The historical
+-- hotfix would otherwise overwrite a newer security fix and regrant old access.
+do $retired_hotfix$
+declare
+  v_legacy oid := to_regprocedure('public.remove_organization_member_atomic(uuid,uuid,uuid,text)');
+begin
+  if to_regprocedure(
+    'public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)'
+  ) is not null then
+    raise exception 'Retired team membership hotfix cannot overwrite audited atomic member removal';
+  end if;
+
+  if v_legacy is not null
+     and pg_get_functiondef(v_legacy) ilike '%v_active_owner_count%' then
+    raise exception 'Retired team membership hotfix cannot overwrite last-active-owner guard';
+  end if;
+end
+$retired_hotfix$;
+
 create or replace function public.change_organization_member_role_atomic(
   p_organization_id uuid,
   p_member_id uuid,
