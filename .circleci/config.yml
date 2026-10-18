@@ -83,6 +83,11 @@ jobs:
           name: Seguranca sem servicos externos
           command: node scripts/security/run-security-ci-without-audit.mjs
       - run:
+          name: Strict exact-lockfile dependency policy
+          command: |
+            node --test scripts/security/npm-audit-policy.test.mjs
+            npm run security:npm-audit:all
+      - run:
           name: Validate specialist routing when implementation is present
           command: |
             set -euo pipefail
