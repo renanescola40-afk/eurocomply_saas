@@ -1,0 +1,69 @@
+name: Enterprise recovery preflight (no data export)
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type PREFLIGHT_ONLY to run read-only connectivity checks'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: risck-recovery-preflight
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: ${{ inputs.confirm == 'PREFLIGHT_ONLY' }}
+    runs-on: ubuntu-24.04
+    environment: enterprise-recovery
+    timeout-minutes: 8
+    env:
+      PGCONNECT_TIMEOUT: '8'
+      PGSSLMODE: verify-full
+      PGOPTIONS: '-c statement_timeout=10000'
+    steps:
+      - name: Check required secret without printing it
+        shell: bash
+        env:
+          RISCK_BACKUP_DATABASE_URL: ${{ secrets.RISCK_BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${RISCK_BACKUP_DATABASE_URL:-}" ]]; then
+            echo "::error::Missing RISCK_BACKUP_DATABASE_URL GitHub Actions secret."
+            exit 1
+          fi
+          echo "Secret presence: PASS"
+      - name: Verify PostgreSQL 17 client image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull postgres:17
+          docker run --rm postgres:17 pg_dump --version
+          docker run --rm postgres:17 pg_restore --version
+      - name: Read-only connection check
+        shell: bash
+        env:
+          RISCK_BACKUP_DATABASE_URL: ${{ secrets.RISCK_BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          set +x
+          # The connection string is never echoed or written to an artifact.
+          # Reject connection URLs that disable TLS certificate verification.
+          # This is a connectivity check only, never a backup operation.
+          if [[ "$RISCK_BACKUP_DATABASE_URL" == *"sslmode=disable"* || "$RISCK_BACKUP_DATABASE_URL" == *"sslmode=require"* || "$RISCK_BACKUP_DATABASE_URL" == *"sslmode=prefer"* || "$RISCK_BACKUP_DATABASE_URL" == *"sslmode=allow"* ]]; then
+            echo "::error::Connection URL must not weaken TLS verification."
+            exit 1
+          fi
+          # Use a dedicated read-only database role, never service_role/postgres.
+          # GitHub environment enterprise-recovery should require owner approval.
+          result="$(docker run --rm --network host \
+            -e RISCK_BACKUP_DATABASE_URL \
+            -e PGCONNECT_TIMEOUT=8 \
+            -e PGSSLMODE=verify-full \
+            postgres:17 sh -c 'psql "$RISCK_BACKUP_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "show server_version_num"')"
+          if [[ ! "$result" =~ ^[0-9]+$ ]] || (( result < 170000 )); then
+            echo "::error::Expected PostgreSQL 17 or newer."
+            exit 1
+          fi
+          echo "PostgreSQL 17+ connection: PASS"
+          echo "No backup was taken. No data was exported."
