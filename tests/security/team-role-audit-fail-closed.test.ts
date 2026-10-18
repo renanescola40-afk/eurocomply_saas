@@ -23,6 +23,7 @@ describe('team role change audited atomic source contract', () => {
     expect(adapter).toContain("error: 'audit_signing_unavailable'");
     expect(adapter).toContain("error: 'atomic_audit_or_member_role_change_failed'");
     expect(migration).toContain('public.change_organization_member_role_atomic(');
+    expect(migration).toContain("to_regprocedure('public.remove_organization_member_audited_atomic(");
     expect(migration).toContain('perform public.append_audit_event_chained(');
     expect(migration).toContain('insert into public.audit_logs');
   });
@@ -33,6 +34,8 @@ describe('team role change audited atomic source contract', () => {
     expect(route).toContain('requireStepUpForRequest({');
     expect(route).toContain(".eq('organization_id', organization.id)");
     expect(route).toContain("transition.outcome === 'last_owner'");
+    expect(route).toContain("transition.outcome === 'permission_denied'");
+    expect(route).toContain("error: 'team_role_change_forbidden'");
     expect(route).toContain('limit: RATE_LIMIT_MAX_ATTEMPTS');
     expect(migration).toContain("m.status = 'active'");
     const tenantLockIndex = migration.indexOf('from public.organization_members as m\n  where m.organization_id = p_organization_id\n  order by m.id\n  for update;');

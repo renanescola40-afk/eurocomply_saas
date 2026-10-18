@@ -5,13 +5,14 @@ begin;
 
 do $preflight$
 begin
-  if to_regprocedure('public.change_organization_member_role_atomic(uuid,uuid,text,text)') is null
+  if to_regprocedure('public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)') is null
+     or to_regprocedure('public.change_organization_member_role_atomic(uuid,uuid,text,text)') is null
      or to_regprocedure('public.append_audit_event_chained(uuid,uuid,uuid,text,text,text,jsonb,timestamptz,text,text,text,text)') is null
      or to_regclass('public.organization_members') is null
      or to_regclass('public.organization_usage') is null
      or to_regclass('public.audit_events') is null
      or to_regclass('public.audit_logs') is null then
-    raise exception 'P0-D required membership transition, usage or audit dependencies are missing';
+    raise exception 'P0-D requires deployed P0-C audited removal and role/usage/audit dependencies';
   end if;
 end $preflight$;
 
