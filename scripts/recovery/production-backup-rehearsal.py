@@ -56,7 +56,7 @@ AND (NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass A
  OR c.oid IN (SELECT unnest(extconfig) FROM pg_extension WHERE extconfig IS NOT NULL))"""
 
 CATALOG_SQL = """SELECT json_build_object(
-'extensions',(SELECT json_agg(json_build_array(extname,extversion) ORDER BY extname) FROM pg_extension),
+'extensions',(SELECT json_agg(json_build_array(e.extname,e.extversion,n.nspname,pg_get_userbyid(e.extowner)) ORDER BY e.extname) FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace),
 'schemas',(SELECT json_agg(json_build_array(nspname,pg_get_userbyid(nspowner),
  (SELECT array_agg(a::text ORDER BY a::text) FROM unnest(nspacl) a)) ORDER BY nspname)
  FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname<>'information_schema'),
@@ -64,7 +64,7 @@ CATALOG_SQL = """SELECT json_build_object(
  c.relrowsecurity,c.relforcerowsecurity,(SELECT array_agg(a::text ORDER BY a::text) FROM unnest(c.relacl) a)) ORDER BY n.nspname,c.relname)
  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT LIKE 'pg_%'
  AND n.nspname<>'information_schema' AND c.relkind IN ('r','p','S','v','m','f')),
-'columns',(SELECT json_agg(json_build_array(n.nspname,c.relname,a.attnum,a.attname,
+'columns',(SELECT json_agg(json_build_array(n.nspname,c.relname,(SELECT count(*) FROM pg_attribute prior WHERE prior.attrelid=a.attrelid AND prior.attnum>0 AND prior.attnum<=a.attnum AND NOT prior.attisdropped),a.attname,
  format_type(a.atttypid,a.atttypmod),a.attnotnull,a.attidentity,a.attgenerated,
  pg_get_expr(d.adbin,d.adrelid)) ORDER BY n.nspname,c.relname,a.attnum)
  FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -122,8 +122,8 @@ def catalog_difference_summary(before, after):
     keys={"extensions":1,"schemas":1,"relations":2,"columns":4,"constraints":3,"policies":3,"functions":3,"triggers":3,"event_triggers":1,"default_acls":3}
     result={}
     for section,size in keys.items():
-        left={canonical(row[:size]):row for row in (before.get(section) or [])}
-        right={canonical(row[:size]):row for row in (after.get(section) or [])}
+        left={canonical([row[0],row[1],row[3]] if section=="columns" else row[:size]):row for row in (before.get(section) or [])}
+        right={canonical([row[0],row[1],row[3]] if section=="columns" else row[:size]):row for row in (after.get(section) or [])}
         fields={}
         for key in left.keys() & right.keys():
             for i,(a,b) in enumerate(zip(left[key],right[key])):
@@ -189,7 +189,7 @@ def main():
             snapshot=SNAPSHOT_PROCESS.stdout.readline().strip()
         if not re.fullmatch("[0-9A-Fa-f]+-[0-9A-Fa-f]+-[0-9]+",snapshot):raise RuntimeError("SNAPSHOT_NOT_ACCEPTED")
         def src(query):
-            statement="BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET TRANSACTION SNAPSHOT '"+snapshot+"'; SET LOCAL timezone='UTC'; "+query+"; COMMIT;"
+            statement="BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET TRANSACTION SNAPSHOT '"+snapshot+"'; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;"
             return json.loads(run(source+psql+["-c",statement],text=True))
         eligibility=src("SELECT json_build_object('read_only',current_setting('transaction_read_only')='on','server_major',current_setting('server_version_num')::int/10000,'roles',(SELECT json_agg(rolname ORDER BY rolname) FROM pg_roles WHERE rolname NOT LIKE 'pg_%'))")
         if eligibility.get("read_only") is not True or eligibility.get("server_major")!=17:raise RuntimeError("SOURCE_READONLY_OR_MAJOR_FAILED")

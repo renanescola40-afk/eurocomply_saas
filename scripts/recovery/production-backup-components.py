@@ -63,6 +63,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions VERSION '1.3';
 RESET ROLE;
 CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
 CREATE EXTENSION IF NOT EXISTS wrappers WITH SCHEMA extensions VERSION '0.6.1';
+ALTER SCHEMA public OWNER TO postgres;
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO anon,authenticated;
 CREATE TABLE auth.synthetic_users(id uuid PRIMARY KEY);
 CREATE TABLE public.synthetic_items(id integer PRIMARY KEY, obsolete text, user_id uuid NOT NULL REFERENCES auth.synthetic_users(id));
 INSERT INTO auth.synthetic_users VALUES ('00000000-0000-0000-0000-000000000001');
@@ -86,7 +89,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         snapshot=snapshot_process.stdout.readline().strip()
     if not re.fullmatch("[0-9A-Fa-f]+-[0-9A-Fa-f]+-[0-9]+",snapshot):raise RuntimeError("SYNTHETIC_SNAPSHOT_FAILED")
     def src_query(query):
-        return json.loads(sql(source,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET TRANSACTION SNAPSHOT '"+snapshot+"'; SET LOCAL timezone='UTC'; "+query+"; COMMIT;","recovery_source"))
+        return json.loads(sql(source,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET TRANSACTION SNAPSHOT '"+snapshot+"'; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;","recovery_source"))
     before_rows=scope["fingerprints"](src_query)
     before_catalog=src_query(scope["CATALOG_SQL"])
     sql(source,"INSERT INTO public.synthetic_items VALUES(2,'00000000-0000-0000-0000-000000000001')","recovery_source")
@@ -175,6 +178,15 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     evidence["catalog_difference_summary"]=scope["catalog_difference_summary"](before_catalog,after_catalog)
     evidence["concurrent_insert_excluded_from_snapshot"]=json.loads(sql(dest,"SELECT json_build_object('ok',count(*)=1) FROM public.synthetic_items","recovery_destination"))["ok"]
     if not all(evidence[k] for k in ("snapshot_row_integrity_matches","catalog_owner_acl_rls_matches","concurrent_insert_excluded_from_snapshot")):raise RuntimeError("PRODUCTION_COMPONENT_COMPARISON_FAILED")
+
+    stage="negative_catalog_security_checks"
+    negative_checks={}
+    for label,change in (("grant", "GRANT INSERT ON public.synthetic_items TO anon;"),("owner","ALTER TABLE public.synthetic_items OWNER TO supabase_admin;"),("rls","ALTER TABLE public.synthetic_items NO FORCE ROW LEVEL SECURITY;")):
+        changed=json.loads(sql(dest,"BEGIN; "+change+" SET LOCAL search_path=pg_catalog; "+scope["CATALOG_SQL"]+"; ROLLBACK;","recovery_destination"))
+        negative_checks[label]=changed!=before_catalog
+    evidence["security_catalog_changes_rejected"]=negative_checks
+    if not all(negative_checks.values()):raise RuntimeError("SECURITY_CATALOG_NEGATIVE_CHECK_FAILED")
+
     stage="verify_restore"
     result=json.loads(sql(dest,'''SELECT json_build_object(
 'row_counts',(SELECT count(*)=1 FROM public.synthetic_items) AND (SELECT count(*)=1 FROM auth.synthetic_users),
