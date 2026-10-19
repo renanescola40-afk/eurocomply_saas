@@ -377,6 +377,72 @@ begin
 end
 $verify$;
 
+-- V44 POST-REHEARSAL / POST-PROMOTION P0 membership invariants.
+-- Read-only catalog proof; intentionally does NOT require a remote migration
+-- ledger entry during the isolated Management API rehearsal, and does NOT
+-- require retiring legacy service_role ACLs or repairing historical counter
+-- drift before the new exact-SHA API is deployed and accepted.
+do $p0_v44$
+declare
+  v_mfa_read oid := to_regprocedure('app_private.enterprise_member_can_read(uuid)');
+  v_mfa_manage oid := to_regprocedure('app_private.enterprise_member_can_manage(uuid)');
+  v_remove oid := to_regprocedure('public.remove_organization_member_atomic(uuid,uuid,uuid,text)');
+  v_seat oid := to_regprocedure('public.release_organization_seat_atomic(uuid,uuid,uuid,text,text)');
+  v_audited_remove oid := to_regprocedure(
+    'public.remove_organization_member_audited_atomic(uuid,uuid,uuid,text,uuid,uuid,timestamptz,text,text,text,jsonb)'
+  );
+  v_audited_role oid := to_regprocedure(
+    'public.change_organization_member_role_audited_atomic(uuid,uuid,uuid,text,text,uuid,uuid,timestamptz,text,text,text,jsonb)'
+  );
+begin
+  if v_mfa_read is null or v_mfa_manage is null
+    or v_remove is null or v_seat is null
+    or v_audited_remove is null or v_audited_role is null then
+    raise exception 'P0-V44 required membership/MFA/seat/audited RPC is absent';
+  end if;
+
+  if position('tenant_mfa_satisfied(p_organization_id)' in pg_get_functiondef(v_mfa_read)) = 0
+    or position('tenant_mfa_satisfied(p_organization_id)' in pg_get_functiondef(v_mfa_manage)) = 0
+    or not has_function_privilege('authenticated', v_mfa_read, 'EXECUTE')
+    or not has_function_privilege('authenticated', v_mfa_manage, 'EXECUTE')
+    or has_function_privilege('anon', v_mfa_read, 'EXECUTE')
+    or has_function_privilege('anon', v_mfa_manage, 'EXECUTE')
+    or to_regprocedure('public.enterprise_member_can_read(uuid)') is not null
+    or to_regprocedure('public.enterprise_member_can_manage(uuid)') is not null then
+    raise exception 'P0-V44 private enterprise MFA authority gate failed';
+  end if;
+
+  if position('v_active_owner_count' in pg_get_functiondef(v_remove)) = 0
+    or position('v_active_owner_count' in pg_get_functiondef(v_seat)) = 0
+    or position('last_owner' in pg_get_functiondef(v_seat)) = 0 then
+    raise exception 'P0-V44 last active owner removal/seat guard failed';
+  end if;
+
+  if position('last_reconciled_at' in pg_get_functiondef(v_audited_remove)) = 0
+    or position('last_reconciled_at' in pg_get_functiondef(v_audited_role)) = 0
+    or position('append_audit_event_chained' in pg_get_functiondef(v_audited_remove)) = 0
+    or position('append_audit_event_chained' in pg_get_functiondef(v_audited_role)) = 0
+    or not has_function_privilege('service_role', v_audited_remove, 'EXECUTE')
+    or not has_function_privilege('service_role', v_audited_role, 'EXECUTE')
+    or has_function_privilege('authenticated', v_audited_remove, 'EXECUTE')
+    or has_function_privilege('authenticated', v_audited_role, 'EXECUTE')
+    or has_function_privilege('anon', v_audited_remove, 'EXECUTE')
+    or has_function_privilege('anon', v_audited_role, 'EXECUTE') then
+    raise exception 'P0-V44 audited atomic writer / usage / service ACL failed';
+  end if;
+
+  if exists (
+    select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname='public' and c.relkind='r'
+      and (not c.relrowsecurity or not c.relforcerowsecurity)
+  ) then
+    raise exception 'P0-V44 public table RLS/FORCE RLS coverage failed';
+  end if;
+end
+$p0_v44$;
+
+select 'p0_v44_postconditions_passed' as status;
+
 select 'forward_reconciliation_postconditions_passed' as status;
 
 -- Keep the production proof aligned with the isolated rehearsal: these
