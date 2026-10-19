@@ -235,9 +235,11 @@ def main():
         target_sql("CREATE DATABASE recovery_destination","postgres")
         for role in sorted(EXPECTED_ROLES):
             target_sql("DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+qident(role)+" NOLOGIN; END IF; END $role$;","postgres")
+        target_sql("GRANT CREATE ON DATABASE recovery_destination TO "+",".join(qident(role) for role in sorted(EXPECTED_ROLES)),"postgres")
         STAGE="isolated_decrypt_restore"
         piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],
-              ["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error"])
+              ["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--clean","--if-exists","--use-set-session-authorization"])
+        target_sql("REVOKE CREATE ON DATABASE recovery_destination FROM "+",".join(qident(role) for role in sorted(EXPECTED_ROLES)))
         STAGE="verify_real_logical_restore"
         def dst(query):
             return json.loads(target_sql("BEGIN READ ONLY; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;"))

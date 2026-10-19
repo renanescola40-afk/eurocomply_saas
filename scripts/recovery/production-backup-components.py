@@ -55,7 +55,8 @@ try:
         raise RuntimeError("REQUIRED_EXTENSION_VERSION_UNAVAILABLE")
     stage="synthetic_setup"
     sql(source,"CREATE DATABASE recovery_source")
-    sql(source,'''CREATE SCHEMA extensions; CREATE SCHEMA vault; CREATE SCHEMA auth;
+    sql(source,'''CREATE SCHEMA IF NOT EXISTS extensions; CREATE SCHEMA IF NOT EXISTS vault; CREATE SCHEMA IF NOT EXISTS auth;
+DROP EXTENSION IF EXISTS pg_stat_statements, "uuid-ossp", pgcrypto CASCADE;
 SET ROLE postgres;
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA extensions VERSION '1.11';
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions VERSION '1.1';
@@ -98,6 +99,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     for role in ("anon","authenticated"):
         sql(dest,"DO $r$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+role+" NOLOGIN; END IF; END $r$;")
     sql(dest,"CREATE DATABASE recovery_destination")
+    sql(dest,"GRANT CREATE ON DATABASE recovery_destination TO postgres,anon,authenticated")
     stage="synthetic_dump_restore"
     with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:
         work = Path(tmp)
@@ -156,7 +158,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         if not evidence["wrong_key_rejected"] or not evidence["tampered_ciphertext_rejected"]:raise RuntimeError("NEGATIVE_DECRYPTION_FAILED")
         stage = "stream_decrypt_restore"
         decryptor = subprocess.Popen(common+["age","-d","-i","/work/identity","/work/backup.dump.age"],env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        restorer = subprocess.Popen(["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error"],env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+        restorer = subprocess.Popen(["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--clean","--if-exists","--use-set-session-authorization"],env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         decryptor.stdout.close()
         try:
             restorer.communicate(timeout=90)
