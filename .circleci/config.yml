@@ -22,7 +22,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*) ;;
+              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -148,9 +148,11 @@ workflows:
               only:
                 - main
                 - /ci\/verify-.*/
+                - fix/p0-forward-manifest-v44-20261019
       - p0-postgres-synthetic:
           filters:
             branches:
               only:
                 - main
                 - /ci\/verify-.*/
+                - fix/p0-forward-manifest-v44-20261019
