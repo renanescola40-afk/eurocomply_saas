@@ -1,26 +1,64 @@
 {
   "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
-  "changeSet": "2026-09-10-production-runtime-contract-v43",
-  "sourceChangeSet": "2026-09-09-gdpr-rights-lifecycle-v42",
+  "changeSet": "2026-10-19-p0-membership-security-v44",
+  "sourceChangeSet": "2026-09-10-production-runtime-contract-v43",
   "migrations": [
     {
-      "filename": "20260910113000_reconcile_fria_operational_runtime_v43.sql",
-      "purpose": "forward-only reconciliation of the FRIA operational RPC, trigger, same-organization FK and service role ACL contract consumed by Production without replaying or weakening newer live RLS policies"
+      "filename": "20261015235500_enterprise_private_membership_mfa_gate.sql",
+      "purpose": "Require enterprise tenant MFA in private membership read/manage authorization paths"
     },
     {
-      "filename": "20260910113500_article5_policy_replay_compatibility_v43.sql",
-      "purpose": "bounded no-op-in-current-Production replay compatibility step that removes only five historical Article 5 member-read policies when those historical relations already exist, allowing the following canonical V43 policy replacement to remain clean-replay idempotent without migration-history repair"
+      "filename": "20261018023000_guard_last_active_owner_removal.sql",
+      "purpose": "Prevent removal of the last active owner through the canonical atomic membership removal RPC"
     },
     {
-      "filename": "20260910114000_reconcile_prohibited_practices_runtime_v43.sql",
-      "purpose": "forward-only materialization of the missing Article 5 prohibited-practices data plane, atomic workflows, active-membership boundaries, FORCE RLS and backend-only mutation authority"
+      "filename": "20261018113000_atomic_member_removal_with_chained_audit.sql",
+      "purpose": "Make membership removal and signed chained audit persistence one PostgreSQL transaction"
     },
     {
-      "filename": "20260910115000_atomic_data_subject_request_lifecycle_audit_v43.sql",
-      "purpose": "re-forward the reviewed service role only atomic GDPR data-subject lifecycle plus audit-chain transaction above the current Production migration head, including terminal onboarding-document pointer integrity reconciliation, without migration-history repair"
+      "filename": "20261018160000_atomic_member_role_change_with_chained_audit.sql",
+      "purpose": "Make audited membership role transitions atomic, owner-safe and fail-closed"
+    },
+    {
+      "filename": "20261018183000_guard_last_active_owner_seat_release.sql",
+      "purpose": "Guard the last active owner during seat suspension and SCIM deprovisioning"
+    },
+    {
+      "filename": "20261018190000_reconcile_audited_membership_usage_counters.sql",
+      "purpose": "Make audited membership remove and role-change writers reconcile usage counters atomically; historical two-org manual repair remains separate and gated"
     }
   ],
   "historicalBaselines": {
+    "v43": {
+      "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
+      "changeSet": "2026-09-10-production-runtime-contract-v43",
+      "sourceChangeSet": "2026-09-09-gdpr-rights-lifecycle-v42",
+      "migrations": [
+        {
+          "filename": "20260910113000_reconcile_fria_operational_runtime_v43.sql",
+          "purpose": "forward-only reconciliation of the FRIA operational RPC, trigger, same-organization FK and service role ACL contract consumed by Production without replaying or weakening newer live RLS policies"
+        },
+        {
+          "filename": "20260910113500_article5_policy_replay_compatibility_v43.sql",
+          "purpose": "bounded no-op-in-current-Production replay compatibility step that removes only five historical Article 5 member-read policies when those historical relations already exist, allowing the following canonical V43 policy replacement to remain clean-replay idempotent without migration-history repair"
+        },
+        {
+          "filename": "20260910114000_reconcile_prohibited_practices_runtime_v43.sql",
+          "purpose": "forward-only materialization of the missing Article 5 prohibited-practices data plane, atomic workflows, active-membership boundaries, FORCE RLS and backend-only mutation authority"
+        },
+        {
+          "filename": "20260910115000_atomic_data_subject_request_lifecycle_audit_v43.sql",
+          "purpose": "re-forward the reviewed service role only atomic GDPR data-subject lifecycle plus audit-chain transaction above the current Production migration head, including terminal onboarding-document pointer integrity reconciliation, without migration-history repair"
+        }
+      ],
+      "truthBoundary": {
+        "automaticClassification": false,
+        "productionWriteAuthorizedByConfig": false,
+        "migrationHistoryRepairAllowed": false,
+        "unrestrictedDbPushAllowed": false,
+        "onlyListedForwardMigrationsMayBeRehearsedOrRequested": true
+      }
+    },
     "v42": {
       "schema": "risck-comply.supabase-forward-reconciliation-config.v1",
       "changeSet": "2026-09-09-gdpr-rights-lifecycle-v42",
