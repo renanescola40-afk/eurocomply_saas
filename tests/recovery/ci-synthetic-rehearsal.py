@@ -70,6 +70,7 @@ def ready(container):
 def tool(args, *, data=None, ok=True):
     return run([DOCKER, 'run', '--rm', '-i', '--network', 'none',
                 '--user', str(os.getuid()) + ':' + str(os.getgid()),
+                '-v', '/etc/passwd:/etc/passwd:ro', '-v', '/etc/group:/etc/group:ro',
                 '-v', str(WORK) + ':' + str(WORK), TOOLS, *args],
                data=data, ok=ok)
 
@@ -77,6 +78,7 @@ def tool(args, *, data=None, ok=True):
 def rejects_decryption(identity, ciphertext):
     result = subprocess.run([DOCKER, 'run', '--rm', '-i', '--network', 'none',
         '--user', str(os.getuid()) + ':' + str(os.getgid()),
+        '-v', '/etc/passwd:/etc/passwd:ro', '-v', '/etc/group:/etc/group:ro',
         '-v', str(WORK) + ':' + str(WORK), TOOLS, 'age', '-d',
         '-i', str(identity), str(ciphertext)], stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL, timeout=30)
@@ -170,7 +172,7 @@ CREATE VIEW active_members AS SELECT org,id FROM members WHERE state='active';
         wrapper = wrappers / name
         wrapper.write_text('#!/usr/bin/env bash\nset -euo pipefail\nexec "' + DOCKER +
                            '" run --rm -i --network ' + network + ' --user "$(id -u):$(id -g)" ' +
-                           env_options + ' -v "' + str(WORK) + ':' + str(WORK) + '" ' +
+                           env_options + ' -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro -v "' + str(WORK) + ':' + str(WORK) + '" ' +
                            TOOLS + ' ' + name + ' "$@"\n')
         wrapper.chmod(0o700)
     identity = WORK / 'identity.age'
@@ -227,6 +229,7 @@ CREATE VIEW active_members AS SELECT org,id FROM members WHERE state='active';
     # Stream ciphertext decryption directly into another native restore; no plaintext file.
     decrypt = subprocess.Popen([DOCKER, 'run', '--rm', '-i', '--network', 'none',
         '--user', str(os.getuid()) + ':' + str(os.getgid()), '-v', str(WORK)+':'+str(WORK),
+        '-v', '/etc/passwd:/etc/passwd:ro', '-v', '/etc/group:/etc/group:ro',
         TOOLS, 'age', '-d', '-i', str(identity), str(dump)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     restore = subprocess.run([DOCKER, 'exec', '-i', target, 'pg_restore', '-U', 'fixture',
         '-d', 'fixture', '--no-owner', '--no-acl', '--exit-on-error'], stdin=decrypt.stdout,
