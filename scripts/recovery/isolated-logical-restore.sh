@@ -50,7 +50,7 @@ export PGPASSFILE="${connection_fields[4]}"
 unset connection_fields RISCK_SOURCE_DATABASE_URL PGPASSWORD PGHOSTADDR
 
 pg_dump --version | grep -q 'PostgreSQL) 17\.' || { echo "PG17 pg_dump required" >&2; exit 2; }
-pg_dump --format=custom --no-owner --no-acl --file=- | age -r "$RISCK_AGE_RECIPIENT" -o "$OUT/backup.dump.age"
+pg_dump --format=custom --no-owner --no-acl | age -r "$RISCK_AGE_RECIPIENT" -o "$OUT/backup.dump.age"
 unset PGHOST PGPORT PGUSER PGDATABASE PGPASSFILE
 rm -f "$work/source.pgpass" "$work/connection.env0"
 sha256sum "$OUT/backup.dump.age" > "$OUT/backup.dump.age.sha256"
