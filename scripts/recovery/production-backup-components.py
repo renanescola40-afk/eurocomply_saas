@@ -37,7 +37,7 @@ try:
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
     scope={"json":json,"re":re}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints")]
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
@@ -56,14 +56,17 @@ try:
     stage="synthetic_setup"
     sql(source,"CREATE DATABASE recovery_source")
     sql(source,'''CREATE SCHEMA extensions; CREATE SCHEMA vault; CREATE SCHEMA auth;
+SET ROLE postgres;
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA extensions VERSION '1.11';
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions VERSION '1.1';
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions VERSION '1.3';
+RESET ROLE;
 CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
 CREATE EXTENSION IF NOT EXISTS wrappers WITH SCHEMA extensions VERSION '0.6.1';
 CREATE TABLE auth.synthetic_users(id uuid PRIMARY KEY);
-CREATE TABLE public.synthetic_items(id integer PRIMARY KEY, user_id uuid NOT NULL REFERENCES auth.synthetic_users(id));
+CREATE TABLE public.synthetic_items(id integer PRIMARY KEY, obsolete text, user_id uuid NOT NULL REFERENCES auth.synthetic_users(id));
 INSERT INTO auth.synthetic_users VALUES ('00000000-0000-0000-0000-000000000001');
+ALTER TABLE public.synthetic_items DROP COLUMN obsolete;
 INSERT INTO public.synthetic_items VALUES (1,'00000000-0000-0000-0000-000000000001');
 ALTER TABLE public.synthetic_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.synthetic_items FORCE ROW LEVEL SECURITY;
@@ -169,6 +172,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     evidence["snapshot_row_integrity_matches"]=before_rows==after_rows
     evidence["catalog_owner_acl_rls_matches"]=before_catalog==after_catalog
     evidence["catalog_sections_match"]={k:before_catalog[k]==after_catalog.get(k) for k in before_catalog}
+    evidence["catalog_difference_summary"]=scope["catalog_difference_summary"](before_catalog,after_catalog)
     evidence["concurrent_insert_excluded_from_snapshot"]=json.loads(sql(dest,"SELECT json_build_object('ok',count(*)=1) FROM public.synthetic_items","recovery_destination"))["ok"]
     if not all(evidence[k] for k in ("snapshot_row_integrity_matches","catalog_owner_acl_rls_matches","concurrent_insert_excluded_from_snapshot")):raise RuntimeError("PRODUCTION_COMPONENT_COMPARISON_FAILED")
     stage="verify_restore"

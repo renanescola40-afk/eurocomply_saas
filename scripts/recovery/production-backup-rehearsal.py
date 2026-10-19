@@ -117,6 +117,20 @@ def fingerprints(query):
         rows.extend(batch)
     return sorted(rows,key=lambda r:(r[0],r[1]))
 
+
+def catalog_difference_summary(before, after):
+    keys={"extensions":1,"schemas":1,"relations":2,"columns":4,"constraints":3,"policies":3,"functions":3,"triggers":3,"event_triggers":1,"default_acls":3}
+    result={}
+    for section,size in keys.items():
+        left={canonical(row[:size]):row for row in (before.get(section) or [])}
+        right={canonical(row[:size]):row for row in (after.get(section) or [])}
+        fields={}
+        for key in left.keys() & right.keys():
+            for i,(a,b) in enumerate(zip(left[key],right[key])):
+                if a!=b: fields[str(i)]=fields.get(str(i),0)+1
+        result[section]={"source_records":len(left),"restored_records":len(right),"only_source":len(left.keys()-right.keys()),"only_restored":len(right.keys()-left.keys()),"differing_field_counts":fields}
+    return result
+
 def main():
     global TARGET, SNAPSHOT_PROCESS, STAGE
     if os.environ.get("CIRCLE_BRANCH") != BRANCH:raise RuntimeError("BRANCH_GUARD_FAILED")
@@ -233,6 +247,7 @@ def main():
         REPORT["row_integrity_matches"]=before_rows==after_rows
         REPORT["catalog_owner_acl_rls_matches"]=before_catalog==after_catalog
         REPORT["catalog_sections_match"]={k:before_catalog[k]==after_catalog.get(k) for k in before_catalog}
+        REPORT["catalog_difference_summary"]=catalog_difference_summary(before_catalog,after_catalog)
         REPORT["restored_integrity_sha256"]=hashlib.sha256(canonical(after_rows)).hexdigest()
         REPORT["restored_catalog_sha256"]=hashlib.sha256(canonical(after_catalog)).hexdigest()
         if before_rows!=after_rows or before_catalog!=after_catalog:raise RuntimeError("REAL_RESTORE_INTEGRITY_MISMATCH")
