@@ -5,6 +5,9 @@ import json
 import os
 import re
 import ssl
+import socket
+import struct
+import threading
 import subprocess
 import tempfile
 from pathlib import Path
@@ -45,7 +48,74 @@ def pg_escape(value):
     return value.replace("\\", "\\\\").replace(":", "\\:")
 
 
-def check(env, runner=subprocess.run):
+
+def synthetic_passfile_probe(common_args, env, work, runner):
+    """Local fake protocol endpoint; only a fixed synthetic password is used."""
+    synthetic = r"synthetic:pass\\word@2026!"
+    observed, failures = [], []
+    with socket.socket() as server:
+        server.bind(("127.0.0.1", 0))
+        server.listen(1)
+        server.settimeout(15)
+        port = server.getsockname()[1]
+        probe_file = work / "synthetic.pgpass"
+        fd = os.open(probe_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(":".join(map(pg_escape, ("127.0.0.1", str(port), "synthetic", "synthetic", synthetic))) + "\n")
+
+        def receive_exact(conn, size):
+            data = b""
+            while len(data) < size:
+                chunk = conn.recv(size - len(data))
+                if not chunk:
+                    raise ValueError("SYNTHETIC_PROTOCOL_FAILED")
+                data += chunk
+            return data
+
+        def serve():
+            try:
+                conn, _ = server.accept()
+                with conn:
+                    conn.settimeout(10)
+                    size = struct.unpack("!I", receive_exact(conn, 4))[0]
+                    if not 8 <= size <= 10000:
+                        raise ValueError("SYNTHETIC_PROTOCOL_FAILED")
+                    receive_exact(conn, size - 4)
+                    conn.sendall(b"R" + struct.pack("!II", 8, 3))
+                    kind = receive_exact(conn, 1)
+                    size = struct.unpack("!I", receive_exact(conn, 4))[0]
+                    if kind != b"p" or not 5 <= size <= 1000:
+                        raise ValueError("SYNTHETIC_PROTOCOL_FAILED")
+                    observed.append(receive_exact(conn, size - 4) == synthetic.encode() + b"\0")
+                    fields = b"SFATAL\0C28000\0Msynthetic probe complete\0\0"
+                    conn.sendall(b"E" + struct.pack("!I", len(fields) + 4) + fields)
+            except Exception:
+                failures.append(True)
+
+        worker = threading.Thread(target=serve, daemon=True)
+        worker.start()
+        args = list(common_args)
+        for key, value in {
+            "PGHOST": "127.0.0.1", "PGPORT": str(port),
+            "PGUSER": "synthetic", "PGDATABASE": "synthetic",
+            "PGPASSFILE": "/run/risck/synthetic.pgpass", "PGSSLMODE": "disable",
+            "PGGSSENCMODE": "disable", "PGCONNECT_TIMEOUT": "5",
+        }.items():
+            args.extend(["--env", f"{key}={value}"])
+        args.extend([IMAGE, "psql", "-X", "--no-password", "-c", "SELECT 1"])
+        try:
+            runner(args, env=env, capture_output=True, text=True, timeout=20)
+        finally:
+            worker.join(timeout=16)
+        if worker.is_alive() or failures or observed != [True]:
+            raise ValueError("SYNTHETIC_PASSFILE_CLIENT_FAILED")
+        probe_file.unlink()
+    return True
+
+
+def check(env, runner=subprocess.run, port=5432, probe=True):
+    if port not in (5432, 6543):
+        raise ValueError("PORT_NOT_ALLOWED")
     host, user, password, ca = inputs(env)
     # Only this process handles the password; Docker CLI receives a curated env.
     child_env = {k: env[k] for k in ("PATH", "HOME") if k in env}
@@ -55,7 +125,7 @@ def check(env, runner=subprocess.run):
         passfile = work / "source.pgpass"
         fd = os.open(passfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "w") as f:
-            f.write(":".join(map(pg_escape, (host, "5432", "postgres", user, password))) + "\n")
+            f.write(":".join(map(pg_escape, (host, str(port), "postgres", user, password))) + "\n")
         ca_file = work / "source-ca.pem"
         ca_file.write_text(ca)
         ca_file.chmod(0o400)
@@ -75,8 +145,10 @@ def check(env, runner=subprocess.run):
                 "--mount", f"type=bind,src={work / 'client.passwd'},dst=/etc/passwd,readonly",
                 "--mount", f"type=bind,src={work / 'client.group'},dst=/etc/group,readonly",
                 "--tmpfs", "/tmp:rw,noexec,nosuid,size=8m"]
+        if probe:
+            synthetic_passfile_probe(args, child_env, work, runner)
         for key, value in {
-            "PGHOST": host, "PGPORT": "5432", "PGUSER": user,
+            "PGHOST": host, "PGPORT": str(port), "PGUSER": user,
             "PGDATABASE": "postgres", "PGPASSFILE": "/run/risck/source.pgpass",
             "PGSSLMODE": "verify-full", "PGSSLROOTCERT": "/run/risck/source-ca.pem",
             "PGCONNECT_TIMEOUT": "10", "PGAPPNAME": "risck-readonly-recovery-preflight",
@@ -104,6 +176,7 @@ def check(env, runner=subprocess.run):
             raise ValueError("PUBLIC_FORCE_RLS_ASSERTION_FAILED")
         # Construct a narrow artifact; never save arbitrary query/client output.
         evidence = {"status": "PASS_CONNECTION_PREFLIGHT_ONLY", "server_major": 17,
+                    "port": port,
                     "read_only": True, "tls_verify_full": True,
                     "public_tables": tables, "public_force_rls": forced,
                     "customer_rows_exported": False, "database_writes": False,
@@ -112,20 +185,37 @@ def check(env, runner=subprocess.run):
     return evidence
 
 
+
+ALLOWED = {"HOST_NOT_ALLOWED_OR_MISSING", "PASSWORD_MISSING_OR_UNSUPPORTED",
+           "SOURCE_CA_INVALID_OR_MISSING", "PINNED_CLIENT_IMAGE_UNAVAILABLE",
+           "AUTHENTICATION_FAILED", "SERVER_CERTIFICATE_VERIFICATION_FAILED",
+           "SOURCE_NETWORK_OR_DNS_UNAVAILABLE", "CONNECTION_OR_TLS_OR_QUERY_FAILED",
+           "SERVER_OR_READONLY_OR_TLS_ASSERTION_FAILED", "PUBLIC_FORCE_RLS_ASSERTION_FAILED",
+           "SYNTHETIC_PASSFILE_CLIENT_FAILED", "PORT_NOT_ALLOWED"}
+
+
+def diagnose(env, checker=check):
+    results = []
+    for port in (5432, 6543):
+        try:
+            evidence = checker(env, port=port, probe=(port == 5432))
+            results.append({"port": port, "status": evidence["status"]})
+        except Exception as error:
+            reason = str(error) if type(error) is ValueError and str(error) in ALLOWED else "INTERNAL_OR_CLIENT_PREREQUISITE_FAILURE"
+            results.append({"port": port, "status": "FAILED", "reason": reason})
+            if reason != "AUTHENTICATION_FAILED":
+                break
+    probe_passed = bool(results) and (results[0]["status"] == "PASS_CONNECTION_PREFLIGHT_ONLY" or results[0].get("reason") == "AUTHENTICATION_FAILED")
+    passed = any(r["status"] == "PASS_CONNECTION_PREFLIGHT_ONLY" for r in results)
+    return {"status": "PASS_CONNECTION_DIAGNOSTIC_ONLY" if passed else "CONNECTION_DIAGNOSTIC_FAILED",
+            "attempts": results, "synthetic_passfile_probe": "PASS" if probe_passed else "NOT_PROVEN",
+            "customer_rows_exported": False, "database_writes": False,
+            "production_recovery": "NOT_TESTED"}
+
+
 if __name__ == "__main__":
-    try:
-        evidence = check(os.environ)
-        Path("artifacts").mkdir(exist_ok=True)
-        Path("artifacts/connection-preflight.json").write_text(json.dumps(evidence, indent=2) + "\n")
-        print(json.dumps(evidence))
-    except Exception as error:
-        # Error details may include credentials or source-provided text.
-        allowed = {"HOST_NOT_ALLOWED_OR_MISSING", "PASSWORD_MISSING_OR_UNSUPPORTED",
-                   "SOURCE_CA_INVALID_OR_MISSING", "PINNED_CLIENT_IMAGE_UNAVAILABLE",
-                   "AUTHENTICATION_FAILED", "SERVER_CERTIFICATE_VERIFICATION_FAILED",
-                   "SOURCE_NETWORK_OR_DNS_UNAVAILABLE", "CONNECTION_OR_TLS_OR_QUERY_FAILED",
-                   "SERVER_OR_READONLY_OR_TLS_ASSERTION_FAILED", "PUBLIC_FORCE_RLS_ASSERTION_FAILED"}
-        reason = str(error) if type(error) is ValueError and str(error) in allowed else "INTERNAL_OR_CLIENT_PREREQUISITE_FAILURE"
-        print(json.dumps({"status": "READ_ONLY_CONNECTION_PREFLIGHT_FAILED", "reason": reason,
-                          "production_recovery": "NOT_TESTED"}))
-        raise SystemExit(1)
+    evidence = diagnose(os.environ)
+    Path("artifacts").mkdir(exist_ok=True)
+    Path("artifacts/connection-preflight.json").write_text(json.dumps(evidence, indent=2) + "\n")
+    print(json.dumps(evidence))
+    raise SystemExit(0 if evidence["status"] == "PASS_CONNECTION_DIAGNOSTIC_ONLY" else 1)
