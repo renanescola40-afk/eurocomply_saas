@@ -232,13 +232,13 @@ def main():
         else:raise RuntimeError("TARGET_START_FAILED")
         def target_sql(query,database="recovery_destination"):
             return run(["docker","exec",TARGET,"psql","-X","-qAt","-U","supabase_admin","-d",database,"-v","ON_ERROR_STOP=1","-c",query],text=True)
-        target_sql("CREATE DATABASE recovery_destination","postgres")
+        target_sql("CREATE DATABASE recovery_destination WITH TEMPLATE template0","postgres")
         for role in sorted(EXPECTED_ROLES):
             target_sql("DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+qident(role)+" NOLOGIN; END IF; END $role$;","postgres")
         target_sql("GRANT CREATE ON DATABASE recovery_destination TO "+",".join(qident(role) for role in sorted(EXPECTED_ROLES)),"postgres")
         STAGE="isolated_decrypt_restore"
         piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],
-              ["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--clean","--if-exists","--use-set-session-authorization"])
+              ["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--use-set-session-authorization"])
         target_sql("REVOKE CREATE ON DATABASE recovery_destination FROM "+",".join(qident(role) for role in sorted(EXPECTED_ROLES)))
         STAGE="verify_real_logical_restore"
         def dst(query):

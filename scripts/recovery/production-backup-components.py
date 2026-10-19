@@ -98,7 +98,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     dest=start("-dest")
     for role in ("anon","authenticated"):
         sql(dest,"DO $r$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+role+" NOLOGIN; END IF; END $r$;")
-    sql(dest,"CREATE DATABASE recovery_destination")
+    sql(dest,"CREATE DATABASE recovery_destination WITH TEMPLATE template0")
     sql(dest,"GRANT CREATE ON DATABASE recovery_destination TO postgres,anon,authenticated")
     stage="synthetic_dump_restore"
     with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:
@@ -158,15 +158,17 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         if not evidence["wrong_key_rejected"] or not evidence["tampered_ciphertext_rejected"]:raise RuntimeError("NEGATIVE_DECRYPTION_FAILED")
         stage = "stream_decrypt_restore"
         decryptor = subprocess.Popen(common+["age","-d","-i","/work/identity","/work/backup.dump.age"],env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        restorer = subprocess.Popen(["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--clean","--if-exists","--use-set-session-authorization"],env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+        restorer = subprocess.Popen(["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--use-set-session-authorization"],env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         decryptor.stdout.close()
         try:
-            restorer.communicate(timeout=90)
-            decryptor.communicate(timeout=30)
+            _, restore_error = restorer.communicate(timeout=90)
+            _, decrypt_error = decryptor.communicate(timeout=30)
         finally:
             for process in (decryptor,restorer):
                 if process.poll() is None:process.kill();process.communicate()
-        if restorer.returncode or decryptor.returncode:raise RuntimeError("DECRYPT_RESTORE_PIPE_FAILED")
+        if restorer.returncode or decryptor.returncode:
+            evidence["synthetic_restore_diagnostic"]={"restore_returncode":restorer.returncode,"decrypt_returncode":decryptor.returncode,"restore_error":restore_error.decode(errors="replace")[:2000],"decrypt_error":decrypt_error.decode(errors="replace")[:400]}
+            raise RuntimeError("DECRYPT_RESTORE_PIPE_FAILED")
         evidence["plaintext_dump_file_written"] = False
     evidence["synthetic_ciphertext_and_keys_removed"] = not work.exists()
     stage="verify_production_integrity_components"
