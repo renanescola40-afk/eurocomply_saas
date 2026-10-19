@@ -43,6 +43,9 @@ try:
     exec(compile(ast.Module(body=selected,type_ignores=[]),"reviewed-production-components","exec"),scope)
     stage="source_start"
     source=start("-source")
+    stage="synthetic_role_bootstrap"
+    for role in ("anon","authenticated"):
+        sql(source,"DO $r$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+role+" NOLOGIN; END IF; END $r$;")
     stage="extension_inventory"
     versions=json.loads(sql(source,"SELECT coalesce(json_object_agg(name, versions),'{}'::json) FROM (SELECT name,json_agg(version) AS versions FROM pg_available_extension_versions WHERE name IN ('plpgsql','pg_stat_statements','uuid-ossp','pgcrypto','supabase_vault','wrappers') GROUP BY name) v"))
     evidence["required_extension_versions_available"]={k:v in versions.get(k,[]) for k,v in REQUIRED.items()}
@@ -84,6 +87,8 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     sql(source,"INSERT INTO public.synthetic_items VALUES(2,'00000000-0000-0000-0000-000000000001')","recovery_source")
     stage="destination_start"
     dest=start("-dest")
+    for role in ("anon","authenticated"):
+        sql(dest,"DO $r$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+role+" NOLOGIN; END IF; END $r$;")
     sql(dest,"CREATE DATABASE recovery_destination")
     stage="synthetic_dump_restore"
     with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:
