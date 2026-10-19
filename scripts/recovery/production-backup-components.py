@@ -120,12 +120,14 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         encryptor = subprocess.Popen(common+["age","-r",recipient,"-r",OWNER_RECIPIENT,"-o","/work/backup.dump.age"],env=ENV,stdin=producer.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         producer.stdout.close()
         try:
-            encryptor.communicate(timeout=90)
-            producer.communicate(timeout=30)
+            _, encrypt_error = encryptor.communicate(timeout=90)
+            _, dump_error = producer.communicate(timeout=30)
         finally:
             for process in (producer,encryptor):
                 if process.poll() is None:process.kill();process.communicate()
-        if producer.returncode or encryptor.returncode:raise RuntimeError("ENCRYPTION_PIPE_FAILED")
+        if producer.returncode or encryptor.returncode:
+            evidence["synthetic_pipeline_diagnostic"]={"dump_returncode":producer.returncode,"age_returncode":encryptor.returncode,"dump_error":dump_error.decode(errors="replace")[:1600],"age_error":encrypt_error.decode(errors="replace")[:1600]}
+            raise RuntimeError("ENCRYPTION_PIPE_FAILED")
         snapshot_process.stdin.write("COMMIT;\n");snapshot_process.stdin.close()
         snapshot_process.wait(timeout=20)
         if snapshot_process.returncode:raise RuntimeError("SNAPSHOT_CLOSE_FAILED")
@@ -179,7 +181,8 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     evidence["restored_assertions"]=result
     if not all(result.values()):raise RuntimeError("RESTORE_ASSERTION_FAILED")
     evidence["status"]="PASS_PRODUCTION_BACKUP_COMPONENTS_SYNTHETIC_ONLY"
-except Exception:
+except Exception as error:
+    evidence["failure_type"]=type(error).__name__
     evidence["status"]="FAILED_SYNTHETIC_TARGET_ONLY"
     evidence["failure_stage"]=stage
 finally:
