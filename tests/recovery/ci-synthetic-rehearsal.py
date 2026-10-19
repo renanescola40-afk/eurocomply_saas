@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -35,8 +36,12 @@ def run(args, *, env=None, data=None, ok=True, timeout=120):
                             env=env, timeout=timeout)
     if ok and result.returncode:
         # No commands, environment values or private key material in diagnostics.
+        diagnostic = ''
+        if Path(args[0]).name == 'psql':
+            diagnostic = re.sub(r'postgres(?:ql)?://\S+', '[REDACTED_URI]', result.stderr)
+            diagnostic = diagnostic.replace('synthetic-local-only', '[REDACTED]')[:700]
         raise RuntimeError('Command failed: ' + Path(args[0]).name +
-                           ', exit=' + str(result.returncode))
+                           ', exit=' + str(result.returncode) + ': ' + diagnostic)
     return result
 
 
