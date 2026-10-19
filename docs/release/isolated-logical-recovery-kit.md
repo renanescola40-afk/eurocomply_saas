@@ -3,7 +3,7 @@
 **Status: NOT EXECUTED / NOT ACCEPTED.** This is an operator-controlled prototype, not evidence of a production backup. Never run against production until security review, credential scope review, cost confirmation, and a dry run with synthetic data are complete.
 
 ## Safety prerequisites
-- Trusted executor with PostgreSQL 17 client utilities, Docker, age, sha256sum, and adequate private storage.
+- Trusted executor with PostgreSQL 17 client utilities, Docker, age, Python 3, sha256sum, and adequate private storage.
 - PostgreSQL source URL from a secure secret manager, scoped for read-only logical export; verify its permissions are sufficient to export the intended objects. No secret in chat, PR, logs or workflow inputs.
 - Use a `postgresql://` or `postgres://` URL naming one explicit TCP host, with **no query string or fragment**. Remove all URI options, including `sslmode=verify-full`; percent-encoded credentials remain supported. Unix-socket and multi-host URLs are deliberately unsupported.
 - `PGSSLMODE=verify-full` and `PGSSLROOTCERT` referencing a trusted CA file. Leave `PGSERVICE` unset: service-file settings and URI options can override environment defaults. The script rejects these inputs before invoking external tools.
@@ -28,3 +28,11 @@ The script creates an encrypted logical dump, a SHA-256 checksum and a minimal r
 
 ## Offline guard regression
 Run `bash tests/recovery/isolated-logical-restore-tls.test.sh`. Synthetic inputs exercise the real entry script with an empty executable search path. Accepted inputs stop at the missing-client prerequisite; rejected inputs stop at the input guard. No database, Docker container, export or recovery is attempted. Revert the recovery change as one unit if necessary; do not execute the older permissive guard.
+
+## Connection transport decision
+Do not put an entire connection URI in `PGDATABASE`: the native libpq clients used by the rehearsal attempted a local socket instead of the URI host. `prepare-libpq-connection.py` reads the query-free source URI from the environment and prepares explicit `PGHOST`, `PGPORT`, `PGUSER`, and database-name fields. It requires an explicit username, password and database, rejects controls/malformed encodings, and writes the escaped password to an exclusive mode-0600 temporary `PGPASSFILE`. The password is never emitted in helper output or passed in argv. Inherited `PGPASSWORD` and `PGHOSTADDR` are cleared. The password file and connection metadata are removed after a successful export; the existing trap removes the private temporary directory on failure. Use only a trusted executor and never enable shell tracing.
+
+Run `python3 tests/recovery/libpq-connection.test.py` for offline credential transport tests. Synthetic CI evidence must identify the exact tested script blob and validation commit; it does not prove production recovery or full Supabase managed-state restoration. PostgreSQL reference: https://www.postgresql.org/docs/17/libpq-envars.html and https://www.postgresql.org/docs/17/libpq-pgpass.html .
+
+## Dump streaming correction
+For custom-format archives, omit `--file` to stream to stdout. The native PostgreSQL17.6 rehearsal rejected the older `--file=-` invocation because it tried to open a literal file named `-`. On a writable working directory that form could leave an unencrypted dump instead of feeding age. The corrected pipeline is `pg_dump --format=custom --no-owner --no-acl | age ...`; the synthetic rehearsal verifies ciphertext, integrity failures, successful independent restoration and the absence of a plaintext dump file in the output directory. Production recovery remains NOT TESTED.
