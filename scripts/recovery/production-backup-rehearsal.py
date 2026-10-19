@@ -131,6 +131,13 @@ def catalog_difference_summary(before, after):
         result[section]={"source_records":len(left),"restored_records":len(right),"only_source":len(left.keys()-right.keys()),"only_restored":len(right.keys()-left.keys()),"differing_field_counts":fields}
     return result
 
+
+def align_existing_schema_owners(target_sql, catalog):
+    existing=json.loads(target_sql("SELECT coalesce(json_agg(nspname),'[]'::json) FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname<>'information_schema'"))
+    for name,owner,_acl in (catalog["schemas"] or []):
+        if name in existing:
+            target_sql("ALTER SCHEMA "+qident(name)+" OWNER TO "+qident(owner))
+
 def main():
     global TARGET, SNAPSHOT_PROCESS, STAGE
     if os.environ.get("CIRCLE_BRANCH") != BRANCH:raise RuntimeError("BRANCH_GUARD_FAILED")
@@ -236,6 +243,9 @@ def main():
         for role in sorted(EXPECTED_ROLES):
             target_sql("DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+qident(role)+" NOLOGIN; END IF; END $role$;","postgres")
         target_sql("GRANT CREATE ON DATABASE recovery_destination TO "+",".join(qident(role) for role in sorted(EXPECTED_ROLES)),"postgres")
+        align_existing_schema_owners(target_sql,before_catalog)
+        REPORT["existing_target_schema_owners_aligned"]=True
+        REPORT["target_database_template"]="template0"
         STAGE="isolated_decrypt_restore"
         piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],
               ["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--use-set-session-authorization"])

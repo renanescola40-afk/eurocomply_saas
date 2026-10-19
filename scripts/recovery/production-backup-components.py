@@ -37,7 +37,7 @@ try:
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
     scope={"json":json,"re":re}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary")]
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
@@ -100,6 +100,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         sql(dest,"DO $r$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+role+" NOLOGIN; END IF; END $r$;")
     sql(dest,"CREATE DATABASE recovery_destination WITH TEMPLATE template0")
     sql(dest,"GRANT CREATE ON DATABASE recovery_destination TO postgres,anon,authenticated")
+    scope["align_existing_schema_owners"](lambda query:sql(dest,query,"recovery_destination"),before_catalog)
     stage="synthetic_dump_restore"
     with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:
         work = Path(tmp)
