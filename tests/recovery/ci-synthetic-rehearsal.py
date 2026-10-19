@@ -201,12 +201,18 @@ CREATE VIEW active_members AS SELECT org,id FROM members WHERE state='active';
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     CONTAINERS.append('risck-restore-' + str(process.pid))
     try:
-        process.communicate(timeout=180)
+        prototype_stdout, prototype_stderr = process.communicate(timeout=180)
     except subprocess.TimeoutExpired:
         process.kill()
         process.communicate()
         raise RuntimeError('Recovery prototype exceeded bounded timeout')
-    check('recovery prototype exit zero', process.returncode == 0)
+    if process.returncode != 0:
+        diagnostic = re.sub(r'postgres(?:ql)?://\S+', '[REDACTED_URI]', prototype_stderr)
+        diagnostic = re.sub(r'AGE-SECRET-KEY-\S+', '[REDACTED_KEY]', diagnostic)
+        for secret in ['synthetic-local-only', 'synthetic-restore-only']:
+            diagnostic = diagnostic.replace(secret, '[REDACTED]')
+        raise RuntimeError('Recovery prototype failed: ' + diagnostic[-1200:])
+    check('recovery prototype exit zero', True)
     evidence = (WORK / 'output/restore-evidence.txt').read_text()
     check('candidate recovery script completed', 'RESTORE_PASS=true' in evidence)
     dump = WORK / 'output/backup.dump.age'
