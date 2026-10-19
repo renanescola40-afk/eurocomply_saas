@@ -158,18 +158,23 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         evidence["tampered_ciphertext_rejected"] = tampered.returncode != 0
         if not evidence["wrong_key_rejected"] or not evidence["tampered_ciphertext_rejected"]:raise RuntimeError("NEGATIVE_DECRYPTION_FAILED")
         stage = "stream_decrypt_restore"
-        decryptor = subprocess.Popen(common+["age","-d","-i","/work/identity","/work/backup.dump.age"],env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        restorer = subprocess.Popen(["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--use-set-session-authorization"],env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
-        decryptor.stdout.close()
-        try:
-            _, restore_error = restorer.communicate(timeout=90)
-            _, decrypt_error = decryptor.communicate(timeout=30)
-        finally:
-            for process in (decryptor,restorer):
-                if process.poll() is None:process.kill();process.communicate()
-        if restorer.returncode or decryptor.returncode:
-            evidence["synthetic_restore_diagnostic"]={"restore_returncode":restorer.returncode,"decrypt_returncode":decryptor.returncode,"restore_error":restore_error.decode(errors="replace")[:2000],"decrypt_error":decrypt_error.decode(errors="replace")[:400]}
-            raise RuntimeError("DECRYPT_RESTORE_PIPE_FAILED")
+        for section in ("pre-data","data","post-data"):
+            stage="synthetic_restore_"+section
+            restore=["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
+            if section=="pre-data":restore.append("--use-set-session-authorization")
+            decryptor = subprocess.Popen(common+["age","-d","-i","/work/identity","/work/backup.dump.age"],env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            restorer = subprocess.Popen(restore,env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+            try:
+                _,restore_error=restorer.communicate(timeout=90)
+                while decryptor.stdout.read(65536):pass
+                decryptor.stdout.close()
+                _,decrypt_error=decryptor.communicate(timeout=30)
+            finally:
+                for process in (decryptor,restorer):
+                    if process.poll() is None:process.kill();process.communicate()
+            if restorer.returncode or decryptor.returncode:
+                evidence["synthetic_restore_diagnostic"]={"section":section,"restore_returncode":restorer.returncode,"decrypt_returncode":decryptor.returncode,"restore_error":restore_error.decode(errors="replace")[:2000],"decrypt_error":decrypt_error.decode(errors="replace")[:400]}
+                raise RuntimeError("DECRYPT_RESTORE_PIPE_FAILED")
         evidence["plaintext_dump_file_written"] = False
     evidence["synthetic_ciphertext_and_keys_removed"] = not work.exists()
     stage="verify_production_integrity_components"

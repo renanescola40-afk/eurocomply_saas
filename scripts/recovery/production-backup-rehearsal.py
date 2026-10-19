@@ -34,14 +34,17 @@ def qident(value):
 def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",",":"), ensure_ascii=False).encode()
 
-def piped(producer_args, consumer_args, timeout=180):
+def piped(producer_args, consumer_args, timeout=180, drain_remaining=False):
     producer = subprocess.Popen(producer_args, env=ENV, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     consumer = subprocess.Popen(consumer_args, env=ENV, stdin=producer.stdout,
                                 stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     ACTIVE.extend([producer,consumer])
-    producer.stdout.close()
+    if not drain_remaining:producer.stdout.close()
     try:
         consumer.communicate(timeout=timeout)
+        if drain_remaining:
+            while producer.stdout.read(65536):pass
+            producer.stdout.close()
         producer.communicate(timeout=30)
     finally:
         for process in (producer,consumer):
@@ -247,8 +250,11 @@ def main():
         REPORT["existing_target_schema_owners_aligned"]=True
         REPORT["target_database_template"]="template0"
         STAGE="isolated_decrypt_restore"
-        piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],
-              ["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--use-set-session-authorization"])
+        for section in ("pre-data","data","post-data"):
+            STAGE="isolated_restore_"+section
+            restore=["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
+            if section=="pre-data":restore.append("--use-set-session-authorization")
+            piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],restore,drain_remaining=True)
         target_sql("REVOKE CREATE ON DATABASE recovery_destination FROM "+",".join(qident(role) for role in sorted(EXPECTED_ROLES)))
         STAGE="verify_real_logical_restore"
         def dst(query):
