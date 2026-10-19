@@ -11,7 +11,7 @@ import tempfile
 import time
 
 BASE_SHA = '051c7130b735bc50f5b36a6330e84058726c2d99'
-SCRIPT_BLOB = 'dc33f4e442e6fcfca20efe4e34a575a7d2597acd'
+SCRIPT_BLOB = 'a96da79d2b22d1448dc78ef9f3a88f910db7b063'
 ROOT = Path(__file__).resolve().parents[2]
 ARTIFACT = ROOT / 'artifacts/recovery/result.json'
 START = time.time()
@@ -104,7 +104,7 @@ def main():
     source = ROOT / 'scripts/recovery/isolated-logical-restore.sh'
     content = source.read_bytes()
     blob = hashlib.sha1(b'blob ' + str(len(content)).encode() + b'\0' + content).hexdigest()
-    check('exact frozen main script blob', blob == SCRIPT_BLOB)
+    check('exact candidate recovery script blob', blob == SCRIPT_BLOB)
     WORK = Path(tempfile.mkdtemp(prefix='risck-synthetic-recovery-'))
     WORK.chmod(0o700)
     run([DOCKER, 'pull', 'postgres:17.6'], timeout=240)
@@ -168,7 +168,7 @@ CREATE VIEW active_members AS SELECT org,id FROM members WHERE state='active';
     wrappers.mkdir()
     for name in ['pg_dump', 'pg_restore', 'psql', 'age']:
         network = 'none' if name == 'age' else 'host'
-        env_options = '' if name == 'age' else '-e PGDATABASE -e PGSSLMODE -e PGSSLROOTCERT'
+        env_options = '' if name == 'age' else '-e PGHOST -e PGPORT -e PGUSER -e PGDATABASE -e PGPASSFILE -e PGSSLMODE -e PGSSLROOTCERT'
         wrapper = wrappers / name
         wrapper.write_text('#!/usr/bin/env bash\nset -euo pipefail\nexec "' + DOCKER +
                            '" run --rm -i --network ' + network + ' --user "$(id -u):$(id -g)" ' +
@@ -186,7 +186,11 @@ CREATE VIEW active_members AS SELECT org,id FROM members WHERE state='active';
                 'RISCK_RESTORE_PASSWORD': 'synthetic-restore-only',
                 'RISCK_RECOVERY_OUTPUT_DIR': str(WORK / 'output'), 'TMPDIR': str(WORK)})
     tls_env = env.copy()
-    tls_env['PGDATABASE'] = env['RISCK_SOURCE_DATABASE_URL']
+    preflight_passfile = WORK / 'preflight.pgpass'
+    preflight_passfile.write_text('127.0.0.1:55432:fixture:fixture:synthetic-local-only\n')
+    preflight_passfile.chmod(0o600)
+    tls_env.update({'PGHOST':'127.0.0.1', 'PGPORT':'55432', 'PGUSER':'fixture',
+                    'PGDATABASE':'fixture', 'PGPASSFILE':str(preflight_passfile)})
     check('verified TLS connection', run([str(wrappers / 'psql'), '-XAt', '-c',
           'select ssl from pg_stat_ssl where pid=pg_backend_pid()'], env=tls_env).stdout.strip() == 't')
     bad_env = tls_env.copy()
@@ -204,7 +208,7 @@ CREATE VIEW active_members AS SELECT org,id FROM members WHERE state='active';
         raise RuntimeError('Recovery prototype exceeded bounded timeout')
     check('recovery prototype exit zero', process.returncode == 0)
     evidence = (WORK / 'output/restore-evidence.txt').read_text()
-    check('unchanged main recovery script completed', 'RESTORE_PASS=true' in evidence)
+    check('candidate recovery script completed', 'RESTORE_PASS=true' in evidence)
     dump = WORK / 'output/backup.dump.age'
     raw = dump.read_bytes()
     check('ciphertext age header', raw.startswith(b'age-encryption.org/v1\n'))

@@ -16,6 +16,7 @@ jobs:
             test "${CIRCLE_BRANCH:?}" = ci/verify-recovery-synthetic-20261019
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?}"
             bash tests/recovery/isolated-logical-restore-tls.test.sh
+            python3 tests/recovery/libpq-connection.test.py
             timeout 900s python3 tests/recovery/ci-synthetic-rehearsal.py
       - store_artifacts:
           path: artifacts/recovery
