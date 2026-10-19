@@ -1,4 +1,6 @@
 """Validation-branch-only native connection check. No dump or database writes."""
+import base64
+import hashlib
 import json
 import os
 import re
@@ -29,9 +31,13 @@ def inputs(env):
     password = env.get("RISCK_SOURCE_DB_PASSWORD", "")
     if not password or any(c in password for c in "\x00\r\n"):
         raise ValueError("PASSWORD_MISSING_OR_UNSUPPORTED")
-    ca = env.get("RISCK_SOURCE_DB_CA_PEM", "")
-    if "-----BEGIN CERTIFICATE-----" not in ca:
-        raise ValueError("SOURCE_CA_MISSING")
+    try:
+        ca = base64.b64decode(env.get("RISCK_SOURCE_DB_CA_B64", ""), validate=True).decode("ascii")
+        der = ssl.PEM_cert_to_DER_cert(ca)
+        if hashlib.sha256(der).hexdigest() != "807025ad50d4ed219d2c9c7d299c004f824eb00cf7f65afef607d07b72e6cafa":
+            raise ValueError("SOURCE_CA_FINGERPRINT_MISMATCH")
+    except Exception:
+        raise ValueError("SOURCE_CA_INVALID_OR_MISSING") from None
     return host, user, password, ca
 
 
@@ -81,6 +87,13 @@ def check(env, runner=subprocess.run):
         result = runner(args, env=child_env, capture_output=True, text=True, timeout=40)
         if result.returncode:
             # Never expose raw client diagnostics or connection material.
+            diagnostic = result.stderr.lower()
+            if "password authentication failed" in diagnostic:
+                raise ValueError("AUTHENTICATION_FAILED")
+            if "certificate verify failed" in diagnostic or "certificate verification failed" in diagnostic:
+                raise ValueError("SERVER_CERTIFICATE_VERIFICATION_FAILED")
+            if "timeout" in diagnostic or "network is unreachable" in diagnostic or "could not translate host name" in diagnostic:
+                raise ValueError("SOURCE_NETWORK_OR_DNS_UNAVAILABLE")
             raise ValueError("CONNECTION_OR_TLS_OR_QUERY_FAILED")
         value = json.loads(result.stdout.strip())
         if value.get("server_major") != 17 or value.get("read_only") is not True or value.get("ssl") is not True:
@@ -105,7 +118,14 @@ if __name__ == "__main__":
         Path("artifacts").mkdir(exist_ok=True)
         Path("artifacts/connection-preflight.json").write_text(json.dumps(evidence, indent=2) + "\n")
         print(json.dumps(evidence))
-    except Exception:
+    except Exception as error:
         # Error details may include credentials or source-provided text.
-        print("READ_ONLY_CONNECTION_PREFLIGHT_FAILED; no recovery acceptance implied")
+        allowed = {"HOST_NOT_ALLOWED_OR_MISSING", "PASSWORD_MISSING_OR_UNSUPPORTED",
+                   "SOURCE_CA_INVALID_OR_MISSING", "PINNED_CLIENT_IMAGE_UNAVAILABLE",
+                   "AUTHENTICATION_FAILED", "SERVER_CERTIFICATE_VERIFICATION_FAILED",
+                   "SOURCE_NETWORK_OR_DNS_UNAVAILABLE", "CONNECTION_OR_TLS_OR_QUERY_FAILED",
+                   "SERVER_OR_READONLY_OR_TLS_ASSERTION_FAILED", "PUBLIC_FORCE_RLS_ASSERTION_FAILED"}
+        reason = str(error) if type(error) is ValueError and str(error) in allowed else "INTERNAL_OR_CLIENT_PREREQUISITE_FAILURE"
+        print(json.dumps({"status": "READ_ONLY_CONNECTION_PREFLIGHT_FAILED", "reason": reason,
+                          "production_recovery": "NOT_TESTED"}))
         raise SystemExit(1)
