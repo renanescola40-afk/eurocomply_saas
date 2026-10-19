@@ -13,7 +13,7 @@ OWNER_RECIPIENT = "age1d8zgu9c38njefxj528kfucns2e2pxu0zqyzcjrjj475l9652afxs8xfcq
 def run(args, **kw):
     result = subprocess.run(args, env=ENV, capture_output=True, timeout=kw.pop("timeout", 90), **kw)
     if result.returncode:
-        if stage in ("synthetic_role_bootstrap","synthetic_setup"):
+        if stage in ("synthetic_role_bootstrap","synthetic_setup","destination_start","stream_encrypt_synthetic_dump","verify_production_integrity_components","verify_restore"):
             evidence["synthetic_setup_error"] = result.stderr.decode(errors="replace")[:1200] if isinstance(result.stderr,bytes) else result.stderr[:1200]
         raise RuntimeError("NATIVE_STEP_FAILED")
     return result.stdout
@@ -26,7 +26,7 @@ def start(suffix):
          "--env","POSTGRES_DB=postgres",IMAGE],text=True)
     containers.append(name)
     for _ in range(60):
-        ready=subprocess.run(["docker","exec",name,"pg_isready","-U","supabase_admin","-d","postgres"],env=ENV,capture_output=True)
+        ready=subprocess.run(["docker","exec",name,"pg_isready","-h","127.0.0.1","-U","supabase_admin","-d","postgres"],env=ENV,capture_output=True)
         if ready.returncode==0:return name
         time.sleep(1)
     raise RuntimeError("SYNTHETIC_START_TIMEOUT")

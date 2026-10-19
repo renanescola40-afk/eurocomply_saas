@@ -212,7 +212,7 @@ def main():
              "--env","POSTGRES_PASSWORD=isolated-disposable-not-production",
              "--env","POSTGRES_DB=postgres",SERVER_IMAGE])
         for _ in range(60):
-            r=subprocess.run(["docker","exec",TARGET,"pg_isready","-U","supabase_admin","-d","postgres"],env=ENV,capture_output=True)
+            r=subprocess.run(["docker","exec",TARGET,"pg_isready","-h","127.0.0.1","-U","supabase_admin","-d","postgres"],env=ENV,capture_output=True)
             if r.returncode==0:break
             time.sleep(1)
         else:raise RuntimeError("TARGET_START_FAILED")
