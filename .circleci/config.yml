@@ -1,44 +1,65 @@
 version: 2.1
-# VALIDATION ONLY. Do not merge this configuration into main.
-# No database dump, data export, migration, release or customer-row query.
+# Validation only. Production backup cannot run before synthetic checks and approval.
 jobs:
-  read-only-connection:
+  synthetic-backup-components:
     machine:
       image: ubuntu-2204:2026.05.1
     resource_class: medium
     steps:
       - checkout
       - run:
-          name: Verify fixed baseline and bounded validation-only changes
+          name: Reject production credentials in synthetic job
+          command: |
+            set -eu
+            set +x
+            test "$CIRCLE_BRANCH" = ci/verify-recovery-production-20261019
+            test -z "${RISCK_SOURCE_DB_PASSWORD:-}"
+            test -z "${RISCK_SOURCE_DATABASE_URL:-}"
+      - run:
+          name: Encrypted synthetic snapshot with owner and ACL restoration
+          command: timeout 900s python3 scripts/recovery/production-backup-components.py
+      - store_artifacts:
+          path: artifacts/supabase-target-probe.json
+          destination: synthetic-backup-components
+  encrypted-production-recovery:
+    machine:
+      image: ubuntu-2204:2026.05.1
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Verify bounded validation source and branch
           command: |
             set -eu
             set +x
             test "$CIRCLE_BRANCH" = ci/verify-recovery-production-20261019
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             test "$(git merge-base HEAD 1cd3c05ce628fcfd5de78169c1a18e8939f81d70)" = 1cd3c05ce628fcfd5de78169c1a18e8939f81d70
-            python3 -c "import subprocess; changed=set(subprocess.check_output(['git','diff','--name-only','1cd3c05ce628fcfd5de78169c1a18e8939f81d70','HEAD'],text=True).splitlines()); assert changed == {'.circleci/config.yml','scripts/recovery/connection-preflight.py'}"
+            python3 -c "import subprocess; changed=set(subprocess.check_output(['git','diff','--name-only','1cd3c05ce628fcfd5de78169c1a18e8939f81d70','HEAD'],text=True).splitlines()); assert changed == {'.circleci/config.yml','scripts/recovery/connection-preflight.py','scripts/recovery/production-backup-rehearsal.py','scripts/recovery/production-backup-components.py'}"
       - run:
-          name: Native PG17 read-only verified-TLS connection check
-          command: |
-            set -eu
-            set +x
-            umask 077
-            timeout 300s python3 scripts/recovery/connection-preflight.py
+          name: Approved read-only encrypted export and isolated logical restore
+          command: timeout 900s python3 scripts/recovery/production-backup-rehearsal.py
       - store_artifacts:
-          path: artifacts/connection-preflight.json
-          destination: connection-preflight
+          path: artifacts/recovery
+          destination: approved-encrypted-logical-recovery
 workflows:
-  guarded-connection-check:
+  guarded-encrypted-recovery:
     jobs:
-      - approve-read-only-connection:
-          type: approval
+      - synthetic-backup-components:
           filters:
             branches:
               only: ci/verify-recovery-production-20261019
-      - read-only-connection:
+      - approve-encrypted-production-backup:
+          type: approval
           requires:
-            - approve-read-only-connection
+            - synthetic-backup-components
+          filters:
+            branches:
+              only: ci/verify-recovery-production-20261019
+      - encrypted-production-recovery:
           context: risck-recovery
+          requires:
+            - approve-encrypted-production-backup
           filters:
             branches:
               only: ci/verify-recovery-production-20261019
