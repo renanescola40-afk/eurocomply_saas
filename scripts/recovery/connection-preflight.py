@@ -168,15 +168,24 @@ def check(env, runner=subprocess.run, port=5432, probe=True):
                 raise ValueError("SOURCE_NETWORK_OR_DNS_UNAVAILABLE")
             raise ValueError("CONNECTION_OR_TLS_OR_QUERY_FAILED")
         value = json.loads(result.stdout.strip())
-        if value.get("server_major") != 17 or value.get("read_only") is not True or value.get("ssl") is not True:
-            raise ValueError("SERVER_OR_READONLY_OR_TLS_ASSERTION_FAILED")
+        if value.get("server_major") != 17:
+            raise ValueError("SERVER_MAJOR_ASSERTION_FAILED")
+        if value.get("read_only") is not True:
+            raise ValueError("READONLY_ASSERTION_FAILED")
+        if type(value.get("ssl")) is not bool:
+            raise ValueError("BACKEND_TLS_SIGNAL_INVALID")
+        # pg_stat_ssl observes the pooler-to-database hop, not client-to-pooler.
+        # The native client still MUST use verify-full with the pinned root CA.
+        if host == f"db.{PROJECT}.supabase.co" and value["ssl"] is not True:
+            raise ValueError("DIRECT_BACKEND_TLS_ASSERTION_FAILED")
         tables = value.get("public_tables")
         forced = value.get("public_force_rls")
         if type(tables) is not int or type(forced) is not int or tables < 1 or tables != forced:
             raise ValueError("PUBLIC_FORCE_RLS_ASSERTION_FAILED")
         # Construct a narrow artifact; never save arbitrary query/client output.
         evidence = {"status": "PASS_CONNECTION_PREFLIGHT_ONLY", "server_major": 17,
-                    "port": port,
+                    "port": port, "backend_tls_observed": value["ssl"],
+                    "tls_scope": "client_to_pooler" if ".pooler." in host else "client_to_database",
                     "read_only": True, "tls_verify_full": True,
                     "public_tables": tables, "public_force_rls": forced,
                     "customer_rows_exported": False, "database_writes": False,
@@ -191,7 +200,9 @@ ALLOWED = {"HOST_NOT_ALLOWED_OR_MISSING", "PASSWORD_MISSING_OR_UNSUPPORTED",
            "AUTHENTICATION_FAILED", "SERVER_CERTIFICATE_VERIFICATION_FAILED",
            "SOURCE_NETWORK_OR_DNS_UNAVAILABLE", "CONNECTION_OR_TLS_OR_QUERY_FAILED",
            "SERVER_OR_READONLY_OR_TLS_ASSERTION_FAILED", "PUBLIC_FORCE_RLS_ASSERTION_FAILED",
-           "SYNTHETIC_PASSFILE_CLIENT_FAILED", "PORT_NOT_ALLOWED"}
+           "SYNTHETIC_PASSFILE_CLIENT_FAILED", "PORT_NOT_ALLOWED",
+           "SERVER_MAJOR_ASSERTION_FAILED", "READONLY_ASSERTION_FAILED",
+           "BACKEND_TLS_SIGNAL_INVALID", "DIRECT_BACKEND_TLS_ASSERTION_FAILED"}
 
 
 def diagnose(env, checker=check):
@@ -199,13 +210,17 @@ def diagnose(env, checker=check):
     for port in (5432, 6543):
         try:
             evidence = checker(env, port=port, probe=(port == 5432))
-            results.append({"port": port, "status": evidence["status"]})
+            results.append({"port": port, "status": evidence["status"],
+                            "read_only": evidence["read_only"],
+                            "client_tls_verify_full": evidence["tls_verify_full"],
+                            "backend_tls_observed": evidence["backend_tls_observed"],
+                            "tls_scope": evidence["tls_scope"]})
         except Exception as error:
             reason = str(error) if type(error) is ValueError and str(error) in ALLOWED else "INTERNAL_OR_CLIENT_PREREQUISITE_FAILURE"
             results.append({"port": port, "status": "FAILED", "reason": reason})
             if reason != "AUTHENTICATION_FAILED":
                 break
-    probe_passed = bool(results) and (results[0]["status"] == "PASS_CONNECTION_PREFLIGHT_ONLY" or results[0].get("reason") == "AUTHENTICATION_FAILED")
+    probe_passed = bool(results) and (results[0]["status"] == "PASS_CONNECTION_PREFLIGHT_ONLY" or results[0].get("reason") in {"AUTHENTICATION_FAILED", "SERVER_MAJOR_ASSERTION_FAILED", "READONLY_ASSERTION_FAILED", "BACKEND_TLS_SIGNAL_INVALID", "DIRECT_BACKEND_TLS_ASSERTION_FAILED", "PUBLIC_FORCE_RLS_ASSERTION_FAILED"})
     passed = any(r["status"] == "PASS_CONNECTION_PREFLIGHT_ONLY" for r in results)
     return {"status": "PASS_CONNECTION_DIAGNOSTIC_ONLY" if passed else "CONNECTION_DIAGNOSTIC_FAILED",
             "attempts": results, "synthetic_passfile_probe": "PASS" if probe_passed else "NOT_PROVEN",
