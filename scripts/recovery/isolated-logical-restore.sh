@@ -23,7 +23,7 @@ unset source_authority source_host
   { echo "PGSERVICE is not supported for recovery export" >&2; exit 2; }
 [[ "${PGSSLMODE:-}" == "verify-full" ]] || { echo "PGSSLMODE must be verify-full" >&2; exit 2; }
 [[ "${PGSSLROOTCERT:-}" != "" ]] || { echo "Set PGSSLROOTCERT to a trusted CA bundle" >&2; exit 2; }
-for command in pg_dump pg_restore psql age docker sha256sum; do
+for command in pg_dump pg_restore psql age docker sha256sum python3; do
   command -v "$command" >/dev/null || { echo "Missing dependency: $command" >&2; exit 2; }
 done
 : "${RISCK_AGE_RECIPIENT:?Set age public recipient}"
@@ -38,11 +38,21 @@ container="risck-restore-$$"
 cleanup() { docker rm -f "$container" >/dev/null 2>&1 || :; rm -rf "$work"; }
 trap cleanup EXIT
 # No plaintext dump is written to persistent disk. pg_dump streams to age.
-export PGDATABASE="$RISCK_SOURCE_DATABASE_URL"
-unset RISCK_SOURCE_DATABASE_URL
+# PGDATABASE is a database name, not a portable connection-URI transport.
+# Parse into explicit non-secret libpq fields and a mode-0600 password file.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python3 "$script_dir/prepare-libpq-connection.py" "$work" > "$work/connection.env0"
+mapfile -d '' -t connection_fields < "$work/connection.env0"
+[[ "${#connection_fields[@]}" == 5 ]] || { echo "Invalid prepared connection" >&2; exit 2; }
+export PGHOST="${connection_fields[0]}" PGPORT="${connection_fields[1]}"
+export PGUSER="${connection_fields[2]}" PGDATABASE="${connection_fields[3]}"
+export PGPASSFILE="${connection_fields[4]}"
+unset connection_fields RISCK_SOURCE_DATABASE_URL PGPASSWORD PGHOSTADDR
+
 pg_dump --version | grep -q 'PostgreSQL) 17\.' || { echo "PG17 pg_dump required" >&2; exit 2; }
 pg_dump --format=custom --no-owner --no-acl --file=- | age -r "$RISCK_AGE_RECIPIENT" -o "$OUT/backup.dump.age"
-unset PGDATABASE
+unset PGHOST PGPORT PGUSER PGDATABASE PGPASSFILE
+rm -f "$work/source.pgpass" "$work/connection.env0"
 sha256sum "$OUT/backup.dump.age" > "$OUT/backup.dump.age.sha256"
 # Restore into disposable PostgreSQL 17. No production database URL is available to this step.
 docker run -d --name "$container" --network none -e POSTGRES_PASSWORD="$RISCK_RESTORE_PASSWORD" -e POSTGRES_DB=risck_restore postgres:17 >/dev/null
