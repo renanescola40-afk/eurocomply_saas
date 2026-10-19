@@ -11,7 +11,7 @@ import tempfile
 import time
 
 BASE_SHA = '051c7130b735bc50f5b36a6330e84058726c2d99'
-SCRIPT_BLOB = 'a96da79d2b22d1448dc78ef9f3a88f910db7b063'
+SCRIPT_BLOB = 'c4062d311f879f166a591e861451a34a863899fe'
 ROOT = Path(__file__).resolve().parents[2]
 ARTIFACT = ROOT / 'artifacts/recovery/result.json'
 START = time.time()
