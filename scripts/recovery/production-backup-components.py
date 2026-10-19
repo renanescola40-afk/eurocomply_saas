@@ -13,6 +13,8 @@ OWNER_RECIPIENT = "age1d8zgu9c38njefxj528kfucns2e2pxu0zqyzcjrjj475l9652afxs8xfcq
 def run(args, **kw):
     result = subprocess.run(args, env=ENV, capture_output=True, timeout=kw.pop("timeout", 90), **kw)
     if result.returncode:
+        if stage in ("synthetic_role_bootstrap","synthetic_setup"):
+            evidence["synthetic_setup_error"] = result.stderr.decode(errors="replace")[:1200] if isinstance(result.stderr,bytes) else result.stderr[:1200]
         raise RuntimeError("NATIVE_STEP_FAILED")
     return result.stdout
 def sql(container, query, database="postgres"):
@@ -68,7 +70,7 @@ ALTER TABLE public.synthetic_items FORCE ROW LEVEL SECURITY;
 CREATE POLICY synthetic_isolation ON public.synthetic_items USING (false);
 ALTER TABLE public.synthetic_items OWNER TO postgres;
 GRANT SELECT ON public.synthetic_items TO anon;
-CREATE FUNCTION public.synthetic_security() RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $SELECT true$;
+CREATE FUNCTION public.synthetic_security() RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $$SELECT true$$;
 ALTER FUNCTION public.synthetic_security() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.synthetic_security() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"recovery_source")
@@ -192,4 +194,4 @@ finally:
     Path("artifacts").mkdir(exist_ok=True)
     Path("artifacts/supabase-target-probe.json").write_text(json.dumps(evidence,indent=2)+"\n")
     print(json.dumps(evidence))
-raise SystemExit(0 if evidence["status"]=="PASS_ENCRYPTED_SYNTHETIC_TARGET_ONLY" else 1)
+raise SystemExit(0 if evidence["status"]=="PASS_PRODUCTION_BACKUP_COMPONENTS_SYNTHETIC_ONLY" else 1)
