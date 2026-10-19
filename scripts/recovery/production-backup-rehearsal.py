@@ -240,7 +240,7 @@ def main():
               ["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error"])
         STAGE="verify_real_logical_restore"
         def dst(query):
-            return json.loads(target_sql("BEGIN READ ONLY; SET LOCAL timezone='UTC'; "+query+"; COMMIT;"))
+            return json.loads(target_sql("BEGIN READ ONLY; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;"))
         after_rows=fingerprints(dst)
         after_catalog=dst(CATALOG_SQL)
         REPORT["restored_table_count"]=len(after_rows)

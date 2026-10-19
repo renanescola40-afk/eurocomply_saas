@@ -169,7 +169,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     evidence["synthetic_ciphertext_and_keys_removed"] = not work.exists()
     stage="verify_production_integrity_components"
     def dst_query(query):
-        return json.loads(sql(dest,"BEGIN READ ONLY; SET LOCAL timezone='UTC'; "+query+"; COMMIT;","recovery_destination"))
+        return json.loads(sql(dest,"BEGIN READ ONLY; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;","recovery_destination"))
     after_rows=scope["fingerprints"](dst_query)
     after_catalog=dst_query(scope["CATALOG_SQL"])
     evidence["snapshot_row_integrity_matches"]=before_rows==after_rows
