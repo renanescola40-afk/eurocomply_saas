@@ -15,11 +15,12 @@ const expectedMigrations = [friaMigration, article5ReplayCompatMigration, articl
 describe('Supabase forward reconciliation control-plane capacity', () => {
   it('compiles the exact minimal V43 runtime package above the verified Production head', async () => {
     const config = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
+    const v43 = config.historicalBaselines.v43;
 
-    expect(config.changeSet).toBe('2026-09-10-production-runtime-contract-v43');
-    expect(config.sourceChangeSet).toBe('2026-09-09-gdpr-rights-lifecycle-v42');
-    expect(config.migrations.map((migration: { filename: string }) => migration.filename)).toEqual(expectedMigrations);
-    expect(config.migrations).toHaveLength(4);
+    expect(v43.changeSet).toBe('2026-09-10-production-runtime-contract-v43');
+    expect(v43.sourceChangeSet).toBe('2026-09-09-gdpr-rights-lifecycle-v42');
+    expect(v43.migrations.map((migration: { filename: string }) => migration.filename)).toEqual(expectedMigrations);
+    expect(v43.migrations).toHaveLength(4);
 
     let previous = productionHead;
     for (const filename of expectedMigrations) {
@@ -74,7 +75,7 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
     expect(dsr).toContain("'orphanedStoragePath'");
     expect(dsr).not.toMatch(/\b(drop\s+table|truncate\s+table)\b/i);
 
-    const manifest = await compileForwardReconciliationManifest({ config, rootDir, subjectSha });
+    const manifest = await compileForwardReconciliationManifest({ config: v43, rootDir, subjectSha });
     expect(manifest.targetSha).toBe(subjectSha);
     expect(manifest.migrations.map((migration) => migration.filename)).toEqual(expectedMigrations);
     expect(manifest.migrations).toHaveLength(4);
@@ -82,6 +83,60 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
     expect(manifest.checks.productionWriteAuthorized).toBe(false);
     expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);
     expect(manifest.checks.unrestrictedDbPushAuthorized).toBe(false);
+  });
+
+
+  it('binds the current V44 selected manifest to exactly six October P0 migrations', async () => {
+    const config = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
+    const selected = [
+      '20261015235500_enterprise_private_membership_mfa_gate.sql',
+      '20261018023000_guard_last_active_owner_removal.sql',
+      '20261018113000_atomic_member_removal_with_chained_audit.sql',
+      '20261018160000_atomic_member_role_change_with_chained_audit.sql',
+      '20261018183000_guard_last_active_owner_seat_release.sql',
+      '20261018190000_reconcile_audited_membership_usage_counters.sql',
+    ];
+
+    expect(config.changeSet).toBe('2026-10-19-p0-membership-security-v44');
+    expect(config.sourceChangeSet).toBe('2026-09-10-production-runtime-contract-v43');
+    expect(config.migrations.map((item: { filename: string }) => item.filename)).toEqual(selected);
+    expect(config.historicalBaselines.v43.migrations).toHaveLength(4);
+
+    const manifest = await compileForwardReconciliationManifest({ config, rootDir, subjectSha });
+    expect(manifest.changeSet).toBe(config.changeSet);
+    expect(manifest.migrations.map((item) => item.filename)).toEqual(selected);
+    expect(manifest.migrations).toHaveLength(6);
+    expect(manifest.checks.productionWriteAuthorized).toBe(false);
+    expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);
+  });
+
+  it('requires V44 catalog postconditions before accepting an isolated or LIVE forward cutover', async () => {
+    const sql = await readFile('scripts/supabase/verify-forward-reconciliation-postconditions.sql', 'utf8');
+    for (const required of [
+      'do $p0_v44$',
+      'enterprise_member_can_read(uuid)',
+      'enterprise_member_can_manage(uuid)',
+      'tenant_mfa_satisfied(p_organization_id)',
+      'remove_organization_member_atomic(uuid,uuid,uuid,text)',
+      'release_organization_seat_atomic(uuid,uuid,uuid,text,text)',
+      'remove_organization_member_audited_atomic',
+      'change_organization_member_role_audited_atomic',
+      'v_active_owner_count',
+      'last_reconciled_at',
+      'append_audit_event_chained',
+      "has_function_privilege('authenticated', v_audited_remove, 'EXECUTE')",
+      "has_function_privilege('anon', v_audited_role, 'EXECUTE')",
+      'not c.relforcerowsecurity',
+      "'p0_v44_postconditions_passed'",
+    ]) expect(sql).toContain(required);
+    const start = sql.indexOf('do $p0_v44$');
+    const finish = sql.indexOf('$p0_v44$;', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(finish).toBeGreaterThan(start);
+    const p0Verifier = sql.slice(start, finish);
+    expect(p0Verifier).not.toContain('drifted_usage_organizations');
+    expect(p0Verifier).not.toContain('legacy_removal_retired');
+    expect(p0Verifier).not.toContain('supabase_migrations.schema_migrations');
   });
 
   it('retains V42 as historical provenance instead of selected Production work', async () => {
@@ -107,4 +162,41 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
       compileForwardReconciliationManifest({ config: overLimit, rootDir, subjectSha }),
     ).rejects.toThrow('config migrations must contain 1-33 items');
   });
+  it('compiles six reviewed P0 membership migrations even when SQL starts with line comments', async () => {
+    const base = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
+    const files = [
+      '20261015235500_enterprise_private_membership_mfa_gate.sql',
+      '20261018023000_guard_last_active_owner_removal.sql',
+      '20261018113000_atomic_member_removal_with_chained_audit.sql',
+      '20261018160000_atomic_member_role_change_with_chained_audit.sql',
+      '20261018183000_guard_last_active_owner_seat_release.sql',
+      '20261018190000_reconcile_audited_membership_usage_counters.sql',
+    ];
+
+    const selected = {
+      ...base,
+      changeSet: '2026-10-19-p0-membership-security-v44',
+      migrations: files.map((filename) => ({ filename, purpose: 'synthetic source-only admission' })),
+    };
+
+    for (const filename of files) {
+      const sql = await readFile(`supabase/migrations/${filename}`, 'utf8');
+      expect(sql).toMatch(/begin\s*;/i);
+      expect(sql.trimEnd()).toMatch(/commit\s*;$/i);
+      expect(filename.slice(0, 14) > '20261015205458').toBe(true);
+    }
+
+    const manifest = await compileForwardReconciliationManifest({
+      config: selected,
+      rootDir,
+      subjectSha,
+    });
+
+    expect(manifest.migrations.map((migration) => migration.filename)).toEqual(files);
+    expect(manifest.migrations).toHaveLength(6);
+    expect(manifest.checks.transactionWrapped).toBe(true);
+    expect(manifest.checks.productionWriteAuthorized).toBe(false);
+    expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);
+  });
+
 });
