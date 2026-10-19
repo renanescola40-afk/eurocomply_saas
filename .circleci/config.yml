@@ -1,156 +1,29 @@
-
 version: 2.1
-
-# RISCK COMPLY: validação isolada, sem deploy
+# Validation branch only. No main change, deploy, production credentials or data.
 jobs:
-  validar-risck:
-    docker:
-      - image: cimg/node:22.16.0
-    # 8 GB RAM: prior 4 GB build exited with SIGKILL/137 after compilation.
-    # Consumes CircleCI compute credits. Owner must confirm Free quota before main activation; no deploy.
-    resource_class: large
-    working_directory: ~/project
-    environment:
-      STRICT_PUBLIC_SECRET_SCAN: "1"
-      CI_SECRET_LOG_POLICY: "fail-closed"
-      NEXT_PUBLIC_SUPABASE_URL: "https://ci-placeholder.supabase.co"
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-placeholder-anon-key"
-    steps:
-      - checkout
-      - run:
-          name: Confirmar branch permitida, SHA exato e Node 22
-          command: |
-            set -euo pipefail
-            case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*) ;;
-              *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
-            esac
-            test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
-            checked_out_sha="$(git rev-parse HEAD)"
-            test "$checked_out_sha" = "$CIRCLE_SHA1" || {
-              echo "CircleCI checkout SHA does not match pipeline SHA" >&2
-              exit 1
-            }
-            node --version
-            npm --version
-            printf 'Validated source SHA: %s\n' "$checked_out_sha"
-      - run:
-          name: Recusar credenciais privilegiadas neste CI isolado
-          command: |
-            set -euo pipefail
-            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
-              if [ -n "${!key:-}" ]; then
-                echo "Privileged provider variable must not be present in this source-only CI: $key" >&2
-                exit 1
-              fi
-            done
-      - run:
-          name: Instalar dependencias sem scripts externos
-          command: npm ci --ignore-scripts --no-audit --no-fund
-      - run:
-          name: Verificar package-lock
-          command: npm run security:package-lock
-      - run:
-          name: Validar contrato dos checks GitHub (offline)
-          command: node scripts/security/check-ci-required-checks-validation.mjs
-      - run:
-          name: Lint
-          command: npm run lint
-      - run:
-          name: TypeScript
-          command: npm run typecheck
-      - run:
-          name: Testes unitarios
-          command: npm run test
-      - run:
-          name: Contratos P0 PostgreSQL source-only (Node .test.mjs)
-          command: |
-            set -euo pipefail
-            node --test tests/security/p0-membership-release-admission.test.mjs \
-              tests/security/membership-usage-counter-drift.test.mjs \
-              tests/security/p0f-manual-counter-reconciliation.test.mjs \
-              tests/security/enterprise-private-membership-mfa-contract.test.mjs
-      - run:
-          name: Integridade ISO e SOC2
-          command: |
-            node --test scripts/security/iso-soc2-register-audit.test.mjs
-            node --test scripts/security/iso-soc2-gate-progress.test.mjs
-            node --test scripts/security/iso-soc2-common-criteria-check.test.mjs
-            node scripts/security/iso-soc2-register-audit.mjs
-            node scripts/security/iso-soc2-gate-progress.mjs
-            node scripts/security/iso-soc2-common-criteria-check.mjs
-      - run:
-          name: Seguranca sem servicos externos
-          command: node scripts/security/run-security-ci-without-audit.mjs
-      - run:
-          name: Strict exact-lockfile dependency policy
-          command: |
-            node --test scripts/security/npm-audit-policy.test.mjs
-            npm run security:npm-audit:all
-      - run:
-          name: Validate specialist routing when implementation is present
-          command: |
-            set -euo pipefail
-            if [ -f scripts/agents/select-specialists.cjs ]; then
-              node --test tests/agents/specialist-routing.test.cjs
-            else
-              echo "Not applicable: specialist routing implementation not yet in this SHA."
-            fi
-      - run:
-          name: Build Next.js
-          command: npm run build
-      - run:
-          name: Verificar rotas
-          command: npm run quality:routes
-
-  # Native PG service is disposable and contains ONLY synthetic fixtures.
-  # Free-plan included quota verified 2026-10-18 before activation.
-  p0-postgres-synthetic:
-    docker:
-      - image: cimg/node:22.16.0
-      - image: postgres:17.6
-        environment:
-          POSTGRES_DB: risck_synthetic
-          POSTGRES_USER: risck_synthetic
-          POSTGRES_PASSWORD: synthetic-local-only
-    resource_class: small
+  synthetic-logical-recovery:
+    machine:
+      image: ubuntu-2204:2026.05.1
+    resource_class: medium
     working_directory: ~/project
     steps:
       - checkout
       - run:
-          name: Exact source SHA and production-secret exclusion
+          name: Offline input guard and isolated PG17 encrypted recovery rehearsal
+          no_output_timeout: 10m
           command: |
             set -euo pipefail
-            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI SHA}"
-            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
-              test -z "${!key:-}" || { echo "Production credential forbidden in synthetic PG job: $key" >&2; exit 1; }
-            done
-      - run:
-          name: Install locked test-only PostgreSQL client without lifecycle scripts
-          command: npm ci --prefix tests/fixtures/p0-postgres-runtime --ignore-scripts --no-audit --no-fund
-      - run:
-          name: Native PG17 membership, MFA, rollback and multi-session concurrency
-          command: timeout 120s node scripts/security/verify-p0-postgres-isolated.mjs
+            test "${CIRCLE_BRANCH:?}" = ci/verify-recovery-synthetic-20261019
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?}"
+            bash tests/recovery/isolated-logical-restore-tls.test.sh
+            timeout 900s python3 tests/recovery/ci-synthetic-rehearsal.py
       - store_artifacts:
-          path: artifacts/p0-postgres
-          destination: p0-postgres-synthetic
-
+          path: artifacts/recovery
+          destination: synthetic-logical-recovery
 workflows:
-  verificacao-isolada:
+  synthetic-recovery-only:
     jobs:
-      - validar-risck:
+      - synthetic-logical-recovery:
           filters:
             branches:
-              # Apenas main e branches ci/verify-* controladas pelo owner.
-              # CircleCI usa creditos incluidos; nenhum deploy/segredo de producao.
-              # Branches ci/verify-* sao intencionalmente restritas para testes
-              # antes de abrir PRs que possam criar preview no Supabase.
-              only:
-                - main
-                - /ci\/verify-.*/
-      - p0-postgres-synthetic:
-          filters:
-            branches:
-              only:
-                - main
-                - /ci\/verify-.*/
+              only: ci/verify-recovery-synthetic-20261019
