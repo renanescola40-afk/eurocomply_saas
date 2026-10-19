@@ -107,4 +107,41 @@ describe('Supabase forward reconciliation control-plane capacity', () => {
       compileForwardReconciliationManifest({ config: overLimit, rootDir, subjectSha }),
     ).rejects.toThrow('config migrations must contain 1-33 items');
   });
+  it('compiles six reviewed P0 membership migrations even when SQL starts with line comments', async () => {
+    const base = JSON.parse(await readFile('config/supabase-forward-reconciliation.json', 'utf8'));
+    const files = [
+      '20261015235500_enterprise_private_membership_mfa_gate.sql',
+      '20261018023000_guard_last_active_owner_removal.sql',
+      '20261018113000_atomic_member_removal_with_chained_audit.sql',
+      '20261018160000_atomic_member_role_change_with_chained_audit.sql',
+      '20261018183000_guard_last_active_owner_seat_release.sql',
+      '20261018190000_reconcile_audited_membership_usage_counters.sql',
+    ];
+
+    const selected = {
+      ...base,
+      changeSet: '2026-10-19-p0-membership-security-v44',
+      migrations: files.map((filename) => ({ filename, purpose: 'synthetic source-only admission' })),
+    };
+
+    for (const filename of files) {
+      const sql = await readFile(`supabase/migrations/${filename}`, 'utf8');
+      expect(sql).toMatch(/begin\s*;/i);
+      expect(sql.trimEnd()).toMatch(/commit\s*;$/i);
+      expect(filename.slice(0, 14) > '20261015205458').toBe(true);
+    }
+
+    const manifest = await compileForwardReconciliationManifest({
+      config: selected,
+      rootDir,
+      subjectSha,
+    });
+
+    expect(manifest.migrations.map((migration) => migration.filename)).toEqual(files);
+    expect(manifest.migrations).toHaveLength(6);
+    expect(manifest.checks.transactionWrapped).toBe(true);
+    expect(manifest.checks.productionWriteAuthorized).toBe(false);
+    expect(manifest.checks.migrationHistoryRepairAuthorized).toBe(false);
+  });
+
 });
