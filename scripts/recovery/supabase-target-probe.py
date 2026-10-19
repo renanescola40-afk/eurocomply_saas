@@ -1,5 +1,5 @@
 """Synthetic-only Supabase PG17 target compatibility probe. No production access."""
-import json, os, subprocess, tempfile, time
+import json, os, subprocess, tempfile, time, hashlib
 from pathlib import Path
 IMAGE = "supabase/postgres:17.6.1.127"
 REQUIRED = {"plpgsql": "1.0", "pg_stat_statements": "1.11", "uuid-ossp": "1.1",
@@ -56,10 +56,67 @@ CREATE POLICY synthetic_isolation ON public.synthetic_items USING (false);''',"r
     dest=start("-dest")
     sql(dest,"CREATE DATABASE recovery_destination")
     stage="synthetic_dump_restore"
-    with tempfile.TemporaryDirectory(prefix="risck-synthetic-dump-") as work:
-        dump=run(["docker","exec",source,"pg_dump","-U","supabase_admin","-d","recovery_source","--format=custom","--no-owner","--no-acl"])
-        run(["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--no-owner","--no-acl","--exit-on-error"],input=dump)
-        del dump
+    with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:
+        work = Path(tmp)
+        work.chmod(0o700)
+        stage = "encryption_tools"
+        build = work / "build"
+        build.mkdir()
+        (build / "Dockerfile").write_text("FROM postgres:17.6\nRUN apt-get update && apt-get install -y --no-install-recommends age && rm -rf /var/lib/apt/lists/*\n")
+        tools = PREFIX + "-tools"
+        run(["docker", "build", "--pull", "-t", tools, str(build)], timeout=300)
+        common = ["docker","run","--rm","-i","--network","none","--read-only",
+                  "--cap-drop=ALL","--security-opt=no-new-privileges",
+                  "--user",str(os.getuid())+":"+str(os.getgid()),
+                  "--mount",f"type=bind,src={work},dst=/work",
+                  "--mount","type=bind,src=/etc/passwd,dst=/etc/passwd,readonly",
+                  "--mount","type=bind,src=/etc/group,dst=/etc/group,readonly",tools]
+        def age(args, **kw):
+            return run(common + args, **kw)
+        stage = "synthetic_keygen"
+        age(["age-keygen","-o","/work/identity"])
+        age(["age-keygen","-o","/work/wrong-identity"])
+        recipient = age(["age-keygen","-y","/work/identity"], text=True).strip()
+        evidence["age_version"] = age(["age","--version"], text=True).strip()
+        stage = "stream_encrypt_synthetic_dump"
+        producer = subprocess.Popen(["docker","exec",source,"pg_dump","-U","supabase_admin","-d","recovery_source","--format=custom","--no-owner","--no-acl"], env=ENV, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        encryptor = subprocess.Popen(common+["age","-r",recipient,"-o","/work/backup.dump.age"],env=ENV,stdin=producer.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+        producer.stdout.close()
+        try:
+            encryptor.communicate(timeout=90)
+            producer.communicate(timeout=30)
+        finally:
+            for process in (producer,encryptor):
+                if process.poll() is None:process.kill();process.communicate()
+        if producer.returncode or encryptor.returncode:raise RuntimeError("ENCRYPTION_PIPE_FAILED")
+        ciphertext = work / "backup.dump.age"
+        digest = hashlib.sha256(ciphertext.read_bytes()).hexdigest()
+        (work / "backup.sha256").write_text(digest + "  backup.dump.age\n")
+        run(["sha256sum","--check","backup.sha256"],cwd=work)
+        evidence["ciphertext_checksum_verified"] = True
+        stage = "negative_decryption_checks"
+        wrong = subprocess.run(common+["age","-d","-i","/work/wrong-identity","/work/backup.dump.age"],env=ENV,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=30)
+        evidence["wrong_key_rejected"] = wrong.returncode != 0
+        damaged = bytearray(ciphertext.read_bytes())
+        damaged[-1] ^= 1
+        (work / "tampered.age").write_bytes(damaged)
+        del damaged
+        tampered = subprocess.run(common+["age","-d","-i","/work/identity","/work/tampered.age"],env=ENV,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=30)
+        evidence["tampered_ciphertext_rejected"] = tampered.returncode != 0
+        if not evidence["wrong_key_rejected"] or not evidence["tampered_ciphertext_rejected"]:raise RuntimeError("NEGATIVE_DECRYPTION_FAILED")
+        stage = "stream_decrypt_restore"
+        decryptor = subprocess.Popen(common+["age","-d","-i","/work/identity","/work/backup.dump.age"],env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        restorer = subprocess.Popen(["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--no-owner","--no-acl","--exit-on-error"],env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+        decryptor.stdout.close()
+        try:
+            restorer.communicate(timeout=90)
+            decryptor.communicate(timeout=30)
+        finally:
+            for process in (decryptor,restorer):
+                if process.poll() is None:process.kill();process.communicate()
+        if restorer.returncode or decryptor.returncode:raise RuntimeError("DECRYPT_RESTORE_PIPE_FAILED")
+        evidence["plaintext_dump_file_written"] = False
+    evidence["synthetic_ciphertext_and_keys_removed"] = not work.exists()
     stage="verify_restore"
     result=json.loads(sql(dest,'''SELECT json_build_object(
 'row_counts',(SELECT count(*)=1 FROM public.synthetic_items) AND (SELECT count(*)=1 FROM auth.synthetic_users),
@@ -69,7 +126,7 @@ CREATE POLICY synthetic_isolation ON public.synthetic_items USING (false);''',"r
 'extension_versions',(SELECT count(*)=6 FROM pg_extension WHERE (extname,extversion) IN (('plpgsql','1.0'),('pg_stat_statements','1.11'),('uuid-ossp','1.1'),('pgcrypto','1.3'),('supabase_vault','0.3.1'),('wrappers','0.6.1'))))''',"recovery_destination"))
     evidence["restored_assertions"]=result
     if not all(result.values()):raise RuntimeError("RESTORE_ASSERTION_FAILED")
-    evidence["status"]="PASS_SYNTHETIC_TARGET_ONLY"
+    evidence["status"]="PASS_ENCRYPTED_SYNTHETIC_TARGET_ONLY"
 except Exception:
     evidence["status"]="FAILED_SYNTHETIC_TARGET_ONLY"
     evidence["failure_stage"]=stage
@@ -83,4 +140,4 @@ finally:
     Path("artifacts").mkdir(exist_ok=True)
     Path("artifacts/supabase-target-probe.json").write_text(json.dumps(evidence,indent=2)+"\n")
     print(json.dumps(evidence))
-raise SystemExit(0 if evidence["status"]=="PASS_SYNTHETIC_TARGET_ONLY" else 1)
+raise SystemExit(0 if evidence["status"]=="PASS_ENCRYPTED_SYNTHETIC_TARGET_ONLY" else 1)
