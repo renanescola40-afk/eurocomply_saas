@@ -151,7 +151,13 @@ function verifyV43RuntimeContracts() {
 }
 
 async function main() {
-  const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+  const activeConfig = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+  // This V43 evidence utility remains a historical verifier after newer
+  // bounded release packages become the active selection.
+  const config = activeConfig.changeSet === EXPECTED_CHANGE_SET
+    ? activeConfig
+    : activeConfig.historicalBaselines?.v43;
+  if (!config) fail('The historical V43 reconciliation baseline is missing');
   if (config.changeSet !== EXPECTED_CHANGE_SET) {
     fail(`Unexpected reconciliation changeSet: ${String(config.changeSet)}`);
   }
