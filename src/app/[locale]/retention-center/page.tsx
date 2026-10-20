@@ -1,7 +1,7 @@
-import Link from 'next/link';
-import { Archive, CalendarClock, CheckCircle2, Clock3, Download, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Archive, CalendarClock, CheckCircle2, Clock3, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { AuthenticatedProductShell } from '@/components/dashboard/authenticated-product-shell';
+import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/retention-policy';
 
@@ -140,10 +140,12 @@ export default async function RetentionCenterPage({ params }: { params: Promise<
               <p className="mt-4 rounded-2xl border bg-background p-4 text-sm leading-6 text-muted-foreground">
                 {t.notice}
               </p>
-              <Link href="/api/retention-center/export" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">
-                <Download className="h-4 w-4" />
-                {t.exportLabel}
-              </Link>
+              <StepUpCsvExportButton
+                endpoint="/api/retention-center/export"
+                filename="risckcomply-retention-policy-review.json"
+                label={t.exportLabel}
+                className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5"
+              />
               <p className="mt-2 text-xs text-muted-foreground">{t.exportDescription}</p>
             </div>
             <div className="rounded-3xl border bg-background p-6 text-center">
@@ -213,3 +215,4 @@ export default async function RetentionCenterPage({ params }: { params: Promise<
 
   return <AuthenticatedProductShell locale={locale}>{content}</AuthenticatedProductShell>;
 }
+
