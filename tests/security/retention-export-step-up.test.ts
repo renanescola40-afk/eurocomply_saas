@@ -18,14 +18,14 @@ function load(path: string, modules: Record<string, unknown>, globals: Record<st
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
     jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true,
   } });
-  const module = { exports: {} as Record<string, any> };
-  vm.runInNewContext(output.outputText, { module, exports: module.exports,
+  const testModule = { exports: {} as Record<string, any> };
+  vm.runInNewContext(output.outputText, { module: testModule, exports: testModule.exports,
     require: (name: string) => {
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
       assert.ok(name in modules, `Unexpected dependency: ${name}`);
       return modules[name];
     }, ...globals }, { filename: path });
-  return module.exports;
+  return testModule.exports;
 }
 const StepUpDialog = () => null;
 const header = 'x-eurocomply-step-up-token';
