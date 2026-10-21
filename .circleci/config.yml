@@ -22,7 +22,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019) ;;
+              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|fix/circleci-source-evidence-v17-20261021) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -102,6 +102,16 @@ jobs:
       - run:
           name: Verificar rotas
           command: npm run quality:routes
+      - run:
+          name: Emitir prova CircleCI de testes SOURCE-ONLY sem GO
+          command: |
+            set -euo pipefail
+            node --test tests/security/circleci-source-proof.test.mjs tests/security/verify-circleci-source-proof.test.mjs
+            node scripts/security/create-circleci-source-proof.mjs
+            node scripts/security/verify-circleci-source-proof.mjs
+      - store_artifacts:
+          path: artifacts/circleci-source-validation
+          destination: source-only-exact-sha-evidence
 
   # Native PG service is disposable and contains ONLY synthetic fixtures.
   # Free-plan included quota verified 2026-10-18 before activation.
@@ -141,7 +151,7 @@ workflows:
       - validar-risck:
           filters:
             branches:
-              # Apenas main e branches ci/verify-* controladas pelo owner.
+              # Main, ci/verify-* e branch pontual de prova CircleCI controladas pelo owner.
               # CircleCI usa creditos incluidos; nenhum deploy/segredo de producao.
               # Branches ci/verify-* sao intencionalmente restritas para testes
               # antes de abrir PRs que possam criar preview no Supabase.
@@ -149,6 +159,7 @@ workflows:
                 - main
                 - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
+                - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
           filters:
             branches:
@@ -156,3 +167,4 @@ workflows:
                 - main
                 - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
+                - fix/circleci-source-evidence-v17-20261021
