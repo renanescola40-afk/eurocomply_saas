@@ -102,6 +102,15 @@ jobs:
       - run:
           name: Verificar rotas
           command: npm run quality:routes
+      - run:
+          name: Emitir prova CircleCI de testes SOURCE-ONLY sem GO
+          command: |
+            set -euo pipefail
+            node --test tests/security/circleci-source-proof.test.mjs
+            node scripts/security/create-circleci-source-proof.mjs
+      - store_artifacts:
+          path: artifacts/circleci-source-validation
+          destination: source-only-exact-sha-evidence
 
   # Native PG service is disposable and contains ONLY synthetic fixtures.
   # Free-plan included quota verified 2026-10-18 before activation.
