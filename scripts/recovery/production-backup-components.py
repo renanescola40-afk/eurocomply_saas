@@ -83,7 +83,11 @@ REVOKE ALL ON FUNCTION public.synthetic_security() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;
 CREATE SCHEMA synthetic_database_owned AUTHORIZATION pg_database_owner;
 CREATE TABLE synthetic_database_owned.synthetic_probe(id int PRIMARY KEY);
-INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);''',"recovery_source")
+INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);
+GRANT USAGE,CREATE ON SCHEMA auth TO supabase_auth_admin;
+SET SESSION AUTHORIZATION supabase_auth_admin;
+CREATE TYPE auth.synthetic_member_state AS ENUM ('active','inactive');
+RESET SESSION AUTHORIZATION;''',"recovery_source")
     stage="export_consistent_synthetic_snapshot"
     snapshot_process=subprocess.Popen(["docker","exec","-i",source,"psql","-X","-qAt","-U","supabase_admin","-d","recovery_source","-v","ON_ERROR_STOP=1"],env=ENV,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     snapshot_process.stdin.write("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SELECT pg_export_snapshot();\n");snapshot_process.stdin.flush()
@@ -116,6 +120,21 @@ INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);''',"recovery_sou
     if failure.get("sqlstate")!="42501" or failure.get("object_kind")!="database":
         raise RuntimeError("DATABASE_OWNER_REGRESSION_NOT_REPRODUCED")
     evidence["unprepared_database_owner_create_rejected"]=True
+    stage="negative_schema_acl_order"
+    try:
+        scope["run"](["docker","exec",dest,"psql","-X","-qAt","-U","supabase_admin",
+                      "-d","recovery_destination","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose",
+                      "-c","BEGIN; CREATE SCHEMA synthetic_acl_probe; SET SESSION AUTHORIZATION supabase_auth_admin; CREATE TYPE synthetic_acl_probe.synthetic_state AS ENUM ('active'); ROLLBACK;"])
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED":raise
+    else:
+        raise RuntimeError("MISSING_SCHEMA_ACL_UNEXPECTEDLY_SUCCEEDED")
+    failure=scope["REPORT"].get("failure_diagnostic",{})
+    if failure.get("sqlstate")!="42501" or failure.get("object_kind")!="schema":
+        raise RuntimeError("SCHEMA_ACL_ORDER_REGRESSION_NOT_REPRODUCED")
+    evidence["unprepared_schema_type_create_rejected"]=True
+    sql(dest,"BEGIN; CREATE SCHEMA synthetic_acl_probe; GRANT USAGE,CREATE ON SCHEMA synthetic_acl_probe TO supabase_auth_admin; SET SESSION AUTHORIZATION supabase_auth_admin; CREATE TYPE synthetic_acl_probe.synthetic_state AS ENUM ('active'); RESET SESSION AUTHORIZATION; ROLLBACK;","recovery_destination")
+    evidence["original_schema_acl_allows_type_creation"]=True
     # Keep the failing owner's database CREATE absent. The alternative must
     # restore its schema AND ownership without expanding that privilege.
     evidence["database_owner_create_not_granted"] = True
@@ -249,6 +268,8 @@ INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);''',"recovery_sou
 'cross_schema_fk',(SELECT count(*)=1 FROM pg_constraint WHERE conrelid='public.synthetic_items'::regclass AND contype='f'),
 'force_rls',(SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid='public.synthetic_items'::regclass),
 'policy',(SELECT count(*)=1 FROM pg_policy WHERE polrelid='public.synthetic_items'::regclass),
+'enum_owner',(SELECT pg_get_userbyid(t.typowner)='supabase_auth_admin' FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='auth' AND t.typname='synthetic_member_state'),
+'enum_labels',(SELECT array_agg(e.enumlabel::text ORDER BY e.enumsortorder)=ARRAY['active','inactive'] FROM pg_enum e WHERE e.enumtypid='auth.synthetic_member_state'::regtype),
 'extension_versions',(SELECT count(*)=6 FROM pg_extension WHERE (extname,extversion) IN (('plpgsql','1.0'),('pg_stat_statements','1.11'),('uuid-ossp','1.1'),('pgcrypto','1.3'),('supabase_vault','0.3.1'),('wrappers','0.6.1'))))''',"recovery_destination"))
     evidence["restored_assertions"]=result
     if not all(result.values()):raise RuntimeError("RESTORE_ASSERTION_FAILED")
