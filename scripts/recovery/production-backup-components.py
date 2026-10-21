@@ -4,6 +4,24 @@ from pathlib import Path
 IMAGE = "supabase/postgres:17.6.1.127"
 REQUIRED = {"plpgsql": "1.0", "pg_stat_statements": "1.11", "uuid-ossp": "1.1",
             "pgcrypto": "1.3", "supabase_vault": "0.3.1", "wrappers": "0.6.1"}
+# Verified from production in a read-only query on 2026-10-21. This exact
+# synthetic fixture is deliberately invalidated by any source-owner drift.
+LIVE_EXTENSION_CONTRACT = (
+    ("pg_stat_statements", "1.11", "extensions", "postgres"),
+    ("pgcrypto", "1.3", "extensions", "postgres"),
+    ("plpgsql", "1.0", "pg_catalog", "supabase_admin"),
+    ("supabase_vault", "0.3.1", "vault", "supabase_admin"),
+    ("uuid-ossp", "1.1", "extensions", "postgres"),
+    ("wrappers", "0.6.1", "extensions", "supabase_admin"),
+)
+def matches_live_extension_contract(profile):
+    if not isinstance(profile,list):
+        return False
+    try:
+        normalized=[tuple(row) for row in profile]
+        return len(normalized)==len(LIVE_EXTENSION_CONTRACT) and sorted(normalized)==sorted(LIVE_EXTENSION_CONTRACT)
+    except (TypeError,ValueError):
+        return False
 ENV = {k: os.environ[k] for k in ("PATH", "HOME") if k in os.environ}
 PREFIX = "risck-synthetic-target-" + str(os.getpid())
 containers = []
@@ -89,6 +107,20 @@ try:
         scope["run"]=original_run
         scope["REPORT"].clear()
     evidence["extension_owner_profile_unit_cases"]=len(variations)
+    stage="live_extension_contract_unit"
+    valid=[list(item) for item in LIVE_EXTENSION_CONTRACT]
+    deviations=[
+        valid,
+        valid[:-1],
+        valid + [valid[0]],
+        [list(x) if i else ["pg_stat_statements","1.11","extensions","supabase_admin"] for i,x in enumerate(valid)],
+        [list(x) if i else ["pg_stat_statements","9.9","extensions","postgres"] for i,x in enumerate(valid)],
+        [list(x) if i else ["pg_stat_statements","1.11","public","postgres"] for i,x in enumerate(valid)]
+    ]
+    for i,fixture in enumerate(deviations):
+        if matches_live_extension_contract(fixture)!=(i==0):
+            raise RuntimeError("LIVE_EXTENSION_CONTRACT_UNIT_FAILED")
+    evidence["live_extension_contract_unit_cases"]=len(deviations)
     if "--unit-only" in sys.argv:
         evidence["status"]="PASS_OFFLINE_UNIT_ONLY"
         raise SystemExit(0)
@@ -172,9 +204,11 @@ GRANT EXECUTE ON FUNCTION public.synthetic_owned_no_create() TO anon;''',"recove
         return json.loads(sql(source,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET TRANSACTION SNAPSHOT '"+snapshot+"'; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;","recovery_source"))
     before_rows=scope["fingerprints"](src_query)
     before_catalog=src_query(scope["CATALOG_SQL"])
-    extension_owners={row[0]:row[3] for row in before_catalog["extensions"]}
-    evidence["source_postgres_extension_owners_verified"] = all(extension_owners.get(name)=="postgres" for name in ("pg_stat_statements","uuid-ossp","pgcrypto"))
-    if not evidence["source_postgres_extension_owners_verified"]:raise RuntimeError("SYNTHETIC_EXTENSION_OWNER_PROFILE_NOT_REPRODUCED")
+    stage="synthetic_source_extension_contract"
+    evidence["synthetic_source_exact_extension_contract"]=matches_live_extension_contract(before_catalog["extensions"])
+    if not evidence["synthetic_source_exact_extension_contract"]:
+        raise RuntimeError("SYNTHETIC_LIVE_EXTENSION_CONTRACT_MISMATCH")
+    evidence["source_postgres_extension_owners_verified"]=True
     sql(source,"INSERT INTO public.synthetic_items VALUES(2,'00000000-0000-0000-0000-000000000001')","recovery_source")
     stage="destination_start"
     dest=start("-dest")
