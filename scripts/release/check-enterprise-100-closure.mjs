@@ -244,7 +244,7 @@ export function evaluateEnterpriseClosure({
       accepted,
       reason: accepted
         ? null
-        : explicitFailure
+        : statusAccepted && explicitFailure
           ? 'explicit_failure_or_placeholder_evidence'
         : semanticFailures.length > 0
           ? 'semantic_evidence_contract_failed'
@@ -322,3 +322,4 @@ if (enforcement === 'internal') {
 } else if (!result.passed) {
   process.exitCode = 1;
 }
+
