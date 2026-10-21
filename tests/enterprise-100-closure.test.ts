@@ -236,6 +236,71 @@ describe('enterprise 100 closure contract', () => {
     expect(result.controls[0]?.sha).toBe(TARGET_SHA);
   });
 
+  it('rejects GO when an exact-SHA final decision contradicts a failed status', async () => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const evidencePath = 'release-validation/final-go-no-go.json';
+    const root = evidenceRootAt(evidencePath, {
+      finalDecision: 'GO',
+      status: 'FAILED',
+      outcome: 'failed',
+      commitSha: TARGET_SHA,
+    });
+    const config = {
+      requiredDecision: 'GO',
+      controls: [{
+        id: 'final-go-no-go',
+        owner: 'release',
+        scope: 'external',
+        evidence: evidencePath,
+        acceptedStatuses: ['GO', 'APPROVED'],
+      }],
+    };
+
+    const result = evaluateEnterpriseClosure({ expectedSha: TARGET_SHA, config, evidenceRoots: [root] });
+
+    expect(result.passed).toBe(false);
+    expect(result.controls[0]?.status).toBe('GO');
+    expect(result.controls[0]?.accepted).toBe(false);
+    expect(result.controls[0]?.reason).toBe('explicit_failure_or_placeholder_evidence');
+  });
+
+  it('rejects a passing decision contradicted by a failed runtime outcome', async () => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const root = evidenceRoot({
+      decision: 'PASS',
+      status: 'Complete',
+      outcome: 'failed',
+      releaseSha: TARGET_SHA,
+    });
+
+    const result = evaluateEnterpriseClosure({
+      expectedSha: TARGET_SHA,
+      config: singleControlConfig,
+      evidenceRoots: [root],
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.controls[0]?.reason).toBe('explicit_failure_or_placeholder_evidence');
+  });
+
+  it('rejects placeholder evidence even when it declares PASS and the exact SHA', async () => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const root = evidenceRoot({
+      status: 'PASS',
+      releaseSha: TARGET_SHA,
+      evidenceIntegrity: { placeholderOnly: true, containsSensitiveValues: false },
+    });
+
+    const result = evaluateEnterpriseClosure({
+      expectedSha: TARGET_SHA,
+      config: singleControlConfig,
+      evidenceRoots: [root],
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.controls[0]?.reason).toBe('explicit_failure_or_placeholder_evidence');
+  });
+
   it('rejects exact-SHA evidence explicitly marked sensitive', async () => {
     const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
     const root = evidenceRoot({
