@@ -52,3 +52,15 @@ test('Correction writes attributable legacy audit log and no tenant details to q
   assert.doesNotMatch(sql,/select\s+\*\s+from\s+public\.(organization_members|organizations)/i);
   assert.doesNotMatch(sql, /insert into public.audit_events/);
 });
+
+test('Manual correction is restricted to two drifted tenants with no memberships of any status', () => {
+  assert.match(sql, /v_orphan_drift integer/);
+  assert.match(sql, /count\(\*\) filter\(where a\.organization_id is null\)::integer/);
+  assert.match(sql, /v_orphan_drift <> 2/);
+  assert.match(sql, /expected two drifting organizations without membership rows/);
+  assert.match(sql, /and a\.organization_id is null\s+order by u\.organization_id/);
+  const locking = sql.indexOf('lock table public.organization_members');
+  const subtype = sql.indexOf('v_orphan_drift <> 2');
+  const repairing = sql.indexOf('for v_target in');
+  assert.ok(locking >= 0 && subtype > locking && repairing > subtype);
+});
