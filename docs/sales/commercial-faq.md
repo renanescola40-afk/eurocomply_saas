@@ -120,7 +120,7 @@ Support depends on the plan. Enterprise support terms should be defined in the s
 
 ## 20. Can RISCK COMPLY replace our spreadsheet immediately?
 
-Yes for a first workflow, if the customer can provide a clear starting point: AI tools list, risk list, vendor list, documents and owners. Start with one use case, prove value, then expand.
+A bounded AI inventory or governance workflow can be evaluated as a replacement when the customer has a usable starting list of AI systems, risks, vendors, documents and owners. The transition should be validated in the customer's authorised environment: confirm access controls, data persistence, exports, ownership and operational handover before retiring the original spreadsheet. Do not promise immediate migration, unsupported imports or production acceptance before the agreed acceptance criteria pass.
 
 ## 21. What should we bring to a demo?
 
