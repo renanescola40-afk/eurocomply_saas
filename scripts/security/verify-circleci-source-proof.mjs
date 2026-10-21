@@ -63,7 +63,7 @@ export function verifyCircleCISourceProof(proof, env, { now = new Date() } = {})
   if (!exactKeys(proof.sourceOnly, keys.sourceOnly)
     || proof.sourceOnly.result !== 'SOURCE_ONLY_CHECKS_COMPLETED'
     || typeof proof.sourceOnly.prerequisite !== 'string'
-    || !proof.sourceOnly.prerequisite.startsWith('Emitted only after successful ')
+    || proof.sourceOnly.prerequisite !== 'Emitted only after successful lint, typecheck, unit, security, lockfile, Next.js build, and route-validation steps in this job'
     || !Array.isArray(proof.sourceOnly.includes)
     || proof.sourceOnly.includes.length !== requiredChecks.length
     || new Set(proof.sourceOnly.includes).size !== requiredChecks.length
@@ -80,7 +80,7 @@ export function verifyCircleCISourceProof(proof, env, { now = new Date() } = {})
     || release.externalAssurance !== 'NOT_TESTED'
     || release.mandatoryGithubActions !== 'NOT_SUBSTITUTED'
     || typeof release.reason !== 'string'
-    || !release.reason.startsWith('CircleCI source evidence is distinct')) {
+    || release.reason !== 'CircleCI source evidence is distinct from final exact-SHA enterprise release acceptance.') {
     errors.push('enterprise_no_go_boundary_breached');
   }
   return errors;
