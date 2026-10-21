@@ -47,6 +47,7 @@ test('offline QA refuses privileged provider credentials', () => {
 test('offline QA runs source-only Node tests without npm install', () => {
   assert.match(qaJob, /node --test --test-reporter=tap/);
   assert.match(qaJob, /tests\/security\/e2e-preflight-offline\.test\.mjs/);
+  assert.match(qaJob, /tests\/security\/payment-first-qa-origin-guard\.test\.mjs/);
   assert.match(qaJob, /tests\/security\/circleci-qa-manual-gate\.test\.mjs/);
   assert.doesNotMatch(qaJob, /npm (ci|install|run build)/);
   assert.doesNotMatch(qaJob, /vercel (deploy|promote)|stripe (trigger|listen)|supabase (db push|migration up)/);
