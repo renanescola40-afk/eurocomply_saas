@@ -280,7 +280,9 @@ def main():
         target_sql("CREATE DATABASE recovery_destination WITH TEMPLATE template0","postgres")
         for role in sorted(EXPECTED_ROLES):
             target_sql("DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+qident(role)+" NOLOGIN; END IF; END $role$;","postgres")
-        target_sql("GRANT CREATE ON DATABASE recovery_destination TO "+",".join(qident(role) for role in sorted(EXPECTED_ROLES)),"postgres")
+        # Temporary bootstrap ONLY in the network-isolated disposable target.
+        restore_creator_roles = EXPECTED_ROLES | {"pg_database_owner"}
+        target_sql("GRANT CREATE ON DATABASE recovery_destination TO "+",".join(qident(role) for role in sorted(restore_creator_roles)),"postgres")
         align_existing_schema_owners(target_sql,before_catalog)
         REPORT["existing_target_schema_owners_aligned"]=True
         REPORT["target_database_template"]="template0"
@@ -290,7 +292,10 @@ def main():
             restore=["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
             if section=="pre-data":restore.append("--use-set-session-authorization")
             piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],restore,drain_remaining=True)
-        target_sql("REVOKE CREATE ON DATABASE recovery_destination FROM "+",".join(qident(role) for role in sorted(EXPECTED_ROLES)))
+        target_sql("REVOKE CREATE ON DATABASE recovery_destination FROM "+",".join(qident(role) for role in sorted(restore_creator_roles)))
+        revoked = json.loads(target_sql("SELECT json_build_object('revoked',NOT has_database_privilege('pg_database_owner',current_database(),'CREATE'))"))["revoked"]
+        REPORT["temporary_database_owner_create_revoked"] = revoked
+        if not revoked:raise RuntimeError("TEMPORARY_RESTORE_PRIVILEGE_NOT_REVOKED")
         STAGE="verify_real_logical_restore"
         def dst(query):
             return json.loads(target_sql("BEGIN READ ONLY; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;"))

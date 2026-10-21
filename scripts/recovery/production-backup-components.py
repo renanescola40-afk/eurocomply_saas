@@ -80,7 +80,10 @@ GRANT SELECT ON public.synthetic_items TO anon;
 CREATE FUNCTION public.synthetic_security() RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $$SELECT true$$;
 ALTER FUNCTION public.synthetic_security() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.synthetic_security() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"recovery_source")
+GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;
+CREATE SCHEMA synthetic_database_owned AUTHORIZATION pg_database_owner;
+CREATE TABLE synthetic_database_owned.synthetic_probe(id int PRIMARY KEY);
+INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);''',"recovery_source")
     stage="export_consistent_synthetic_snapshot"
     snapshot_process=subprocess.Popen(["docker","exec","-i",source,"psql","-X","-qAt","-U","supabase_admin","-d","recovery_source","-v","ON_ERROR_STOP=1"],env=ENV,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     snapshot_process.stdin.write("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SELECT pg_export_snapshot();\n");snapshot_process.stdin.flush()
@@ -100,6 +103,20 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         sql(dest,"DO $r$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+role+" NOLOGIN; END IF; END $r$;")
     sql(dest,"CREATE DATABASE recovery_destination WITH TEMPLATE template0")
     sql(dest,"GRANT CREATE ON DATABASE recovery_destination TO postgres,anon,authenticated")
+    stage="negative_database_owner_bootstrap"
+    try:
+        scope["run"](["docker","exec",dest,"psql","-X","-qAt","-U","supabase_admin",
+                      "-d","recovery_destination","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose",
+                      "-c","SET SESSION AUTHORIZATION pg_database_owner; CREATE SCHEMA synthetic_unprepared;"])
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED":raise
+    else:
+        raise RuntimeError("UNPREPARED_DATABASE_OWNER_UNEXPECTEDLY_SUCCEEDED")
+    failure=scope["REPORT"].get("failure_diagnostic",{})
+    if failure.get("sqlstate")!="42501" or failure.get("object_kind")!="database":
+        raise RuntimeError("DATABASE_OWNER_REGRESSION_NOT_REPRODUCED")
+    evidence["unprepared_database_owner_create_rejected"]=True
+    sql(dest,"GRANT CREATE ON DATABASE recovery_destination TO pg_database_owner")
     scope["align_existing_schema_owners"](lambda query:sql(dest,query,"recovery_destination"),before_catalog)
     stage="synthetic_dump_restore"
     with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:
@@ -177,6 +194,10 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
                 raise RuntimeError("DECRYPT_RESTORE_PIPE_FAILED")
         evidence["plaintext_dump_file_written"] = False
     evidence["synthetic_ciphertext_and_keys_removed"] = not work.exists()
+    sql(dest,"REVOKE CREATE ON DATABASE recovery_destination FROM pg_database_owner")
+    revoked=json.loads(sql(dest,"SELECT json_build_object('revoked',NOT has_database_privilege('pg_database_owner',current_database(),'CREATE'))","recovery_destination"))["revoked"]
+    evidence["temporary_database_owner_create_revoked"]=revoked
+    if not revoked:raise RuntimeError("TEMPORARY_RESTORE_PRIVILEGE_NOT_REVOKED")
     stage="verify_production_integrity_components"
     def dst_query(query):
         return json.loads(sql(dest,"BEGIN READ ONLY; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;","recovery_destination"))
