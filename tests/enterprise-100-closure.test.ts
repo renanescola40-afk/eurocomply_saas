@@ -301,6 +301,44 @@ describe('enterprise 100 closure contract', () => {
     expect(result.controls[0]?.reason).toBe('explicit_failure_or_placeholder_evidence');
   });
 
+  it('rejects a passing declaration when a top-level passed assertion is false', async () => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const root = evidenceRoot({
+      decision: 'PASS',
+      status: 'Complete',
+      outcome: 'passed',
+      passed: false,
+      releaseSha: TARGET_SHA,
+    });
+
+    const result = evaluateEnterpriseClosure({
+      expectedSha: TARGET_SHA,
+      config: singleControlConfig,
+      evidenceRoots: [root],
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.controls[0]?.reason).toBe('explicit_failure_or_placeholder_evidence');
+  });
+
+  it('rejects an exact-SHA PASS when the evidence contains an unresolved blocker', async () => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const root = evidenceRoot({
+      status: 'PASS',
+      releaseSha: TARGET_SHA,
+      blockers: ['live_runtime_not_verified'],
+    });
+
+    const result = evaluateEnterpriseClosure({
+      expectedSha: TARGET_SHA,
+      config: singleControlConfig,
+      evidenceRoots: [root],
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.controls[0]?.reason).toBe('explicit_failure_or_placeholder_evidence');
+  });
+
   it('rejects exact-SHA evidence explicitly marked sensitive', async () => {
     const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
     const root = evidenceRoot({
