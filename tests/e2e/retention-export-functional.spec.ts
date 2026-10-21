@@ -64,7 +64,8 @@ test.describe('paid owner retention export: live UI and MFA boundary', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // No OTP and no step-up token: a business-plan owner must still be denied.
-    // This is deliberately read-only; a successful export would append a real audit event.
+    // The export must not be generated; the step-up denial may still append a
+    // security audit record. Run this only on a disposable, isolated QA tenant.
     const apiResponse = await page.request.get('/api/retention-center/export', { maxRedirects: 0 });
     expect(apiResponse.status()).toBe(403);
     // A generic 403 could mean no membership, insufficient plan, or another
