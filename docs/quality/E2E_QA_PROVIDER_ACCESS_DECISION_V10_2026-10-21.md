@@ -108,3 +108,31 @@ LIVE_PAYMENTS_CREATED=0
 PRODUCTION_WRITES=0
 UNAPPROVED_SPENDING=0
 \`\`\`
+
+## V12-C REPORT-ACCEPTANCE ADDENDUM — 21 October 2026
+
+**Objective:** prevent a full Playwright invocation from being marketed as customer acceptance when the paid owner / MFA functional test is skipped because isolated provider prerequisites are missing.
+
+- `scripts/quality/check-paid-owner-playwright-proof.mjs` reads a standard Playwright JSON reporter output and requires precisely one completed successful attempt of `tests/e2e/retention-export-functional.spec.ts` → `owner clicks export, receives MFA dialog, and unverified API request is denied`.
+- Explicitly rejects skipped, missing, failed, interrupted, retried/flaky or duplicate matching test records; denies a report with unexpected or flaky suite results. No guarantee is inferred from output file existence alone.
+- The isolated manual E2E workflow uses `PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/qa-customer-playwright.json`, runs Playwright with the JSON reporter and then runs the verifier. The workflow blocks the known current Vercel production aliases in addition to the `risckcomply.com` production domain.
+- The offline CircleCI preflight incorporates `tests/security/paid-owner-playwright-proof.test.mjs` with 12 local test fixtures, **12/12 actually executed on Node 22**, and both GitHub blob SHAs matching exactly the locally executed validator/test files (`15afefdb33012a6ea9b1fcdb1dcde643e9e9aae0` and `fd3a19a4e2a570eeb3f28cbfb6d478c1cf16d422`). **No exact-head CI PASS is claimed**.
+- The verifier establishes only the stated paid-owner browser MFA negative boundary. It cannot establish positive export under verified step-up, signed Stripe webhook delivery, durable provider writes, tenant security, subscription lifecycle, final GDPR compliance or legal acceptance.
+
+**Read-only provider state:** seven Supabase projects were visible, only the named production project active; six inactive projects are not approved as disposable. Vercel branch-filtered deployment listing for the QA branch returned zero. Therefore no current isolated browser-to-provider E2E acceptance has been executed.
+
+**Supabase upcoming platform change (provider changelog checked 21 Oct 2026):** on 30 October 2026, the Data API automatic exposure policy changes for existing projects. The PostgreSQL 17.11 upgrade may also require extension/index compatibility checks. Executor B owns database schema/security postconditions; this QA workstream does **not** relax grants/RLS or apply migrations to production. An isolated provider-backed acceptance must verify both table API exposure and correct tenant-authorized row results (GRANT alone does not prove secure RLS).
+
+```text
+OFFLINE_PAID_OWNER_REPORT_CHECKER=12_PASS_0_FAIL_EXACT_FILE_BLOBS
+EXACT_HEAD_CI=NOT_EXECUTED
+ISOLATED_QA_DEPLOYMENT=NOT_FOUND
+ISOLATED_QA_DATABASE=NOT_ACTIVATED_OR_APPROVED
+PAID_OWNER_MFA_BROWSER=NOT_EXECUTED
+PROVIDER_PERSISTENCE=NOT_VERIFIED
+STRIPE_TEST_WEBHOOK_DELIVERY=NOT_VERIFIED
+EMAILS_SENT=0
+PRODUCTION_WRITES=0
+LIVE_PAYMENTS_CREATED=0
+UNAPPROVED_SPEND=0
+```
