@@ -1,5 +1,5 @@
 """Synthetic-only Supabase PG17 target compatibility probe. No production access."""
-import json, os, subprocess, tempfile, time, hashlib, ast, re, selectors
+import json, os, subprocess, tempfile, time, hashlib, ast, re, selectors, sys
 from pathlib import Path
 IMAGE = "supabase/postgres:17.6.1.127"
 REQUIRED = {"plpgsql": "1.0", "pg_stat_statements": "1.11", "uuid-ossp": "1.1",
@@ -44,6 +44,25 @@ try:
             for target in n.targets:
                 if isinstance(target,ast.Name) and target.id in ("TABLES_SQL","CATALOG_SQL"):scope[target.id]=ast.literal_eval(n.value)
     exec(compile(ast.Module(body=selected,type_ignores=[]),"reviewed-production-components","exec"),scope)
+    # No database, Docker or network access: verify diagnostics from both failures.
+    stage="dual_pipeline_failure_diagnostic"
+    try:
+        scope["piped"](
+            [sys.executable,"-c","import sys; sys.stderr.write('permission denied'); sys.exit(9)"],
+            [sys.executable,"-c","import sys; sys.stdin.read(); sys.stderr.write('input file is too short'); sys.exit(10)"],
+            timeout=20)
+    except RuntimeError as error:
+        if str(error)!="STREAM_PIPE_FAILED":raise
+    else:
+        raise RuntimeError("EXPECTED_PIPELINE_FAILURE_NOT_REJECTED")
+    both=scope["REPORT"].get("pipeline_failure_diagnostics",{})
+    if (set(both)!={"encrypted_producer","restore_consumer"}
+            or both["encrypted_producer"]["category"]!="permission_denied"
+            or both["restore_consumer"]["category"]!="archive_truncated"
+            or scope["REPORT"].get("failure_diagnostic")!=both["encrypted_producer"]):
+        raise RuntimeError("DUAL_PIPELINE_DIAGNOSTIC_NOT_PRESERVED")
+    evidence["both_failure_diagnostics_sanitized"]=True
+    scope["REPORT"].clear()
     stage="source_start"
     source=start("-source")
     stage="synthetic_role_bootstrap"

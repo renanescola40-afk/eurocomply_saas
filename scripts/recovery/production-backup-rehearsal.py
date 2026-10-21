@@ -91,8 +91,15 @@ def piped(producer_args, consumer_args, timeout=180, drain_remaining=False, capt
             if process.poll() is None:process.kill();process.communicate()
             ACTIVE.remove(process)
     if producer.returncode or consumer.returncode:
-        failed = (consumer_error, consumer.returncode, "restore_consumer") if consumer.returncode else (producer_error, producer.returncode, "encrypted_producer")
-        REPORT["failure_diagnostic"] = failure_diagnostic(*failed)
+        # A failed decryptor often causes a secondary truncated-archive error.
+        # Preserve both causes without leaking either process's raw stderr.
+        diagnostics = {}
+        if producer.returncode:
+            diagnostics["encrypted_producer"] = failure_diagnostic(producer_error, producer.returncode, "encrypted_producer")
+        if consumer.returncode:
+            diagnostics["restore_consumer"] = failure_diagnostic(consumer_error, consumer.returncode, "restore_consumer")
+        REPORT["pipeline_failure_diagnostics"] = diagnostics
+        REPORT["failure_diagnostic"] = diagnostics.get("encrypted_producer") or diagnostics["restore_consumer"]
         raise RuntimeError("STREAM_PIPE_FAILED")
     return consumer_output
 
