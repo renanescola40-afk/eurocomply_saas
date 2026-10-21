@@ -65,3 +65,14 @@ test('runtime guard executes before any Playwright browser or provider request',
   assert.ok(call > 0 && browser > call, 'unsafe provider access must be preceded by isolation check');
   assert.match(source, /if \(!shouldRunPaymentFirstRuntimeProof\(\)\) return;/);
 });
+
+test('paid-owner retention browser proof also requires an isolated provider fixture', () => {
+  const retention = readFileSync(
+    new URL('../e2e/retention-export-functional.spec.ts', import.meta.url), 'utf8',
+  );
+  assert.match(retention, /dbHost !== 'tganhbbhfxcpblmgqprg\.supabase\.co'/);
+  assert.match(retention, /hostname\.endsWith\('\.risckcomply\.com'\)/);
+  assert.match(retention, /STRIPE_SECRET_KEY\?\.startsWith\('sk_test_'\)/);
+  assert.match(retention, /E2E_QA_MAIL_SINK_CONFIRMED === 'true'/);
+  assert.match(retention, /test\.skip\(!isolatedTarget/);
+});
