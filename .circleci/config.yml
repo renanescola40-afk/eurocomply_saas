@@ -1,4 +1,3 @@
-
 version: 2.1
 
 # Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
