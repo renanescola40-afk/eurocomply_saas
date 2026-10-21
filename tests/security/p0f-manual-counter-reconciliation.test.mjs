@@ -64,3 +64,15 @@ test('Manual correction is restricted to two drifted tenants with no memberships
   const repairing = sql.indexOf('for v_target in');
   assert.ok(locking >= 0 && subtype > locking && repairing > subtype);
 });
+
+test('Manual repair refuses aggregate drift fingerprint changes or NULL counters under lock', () => {
+  assert.match(sql, /v_delta_members integer/);
+  assert.match(sql, /v_null_counters integer/);
+  assert.match(sql, /v_null_counters <> 0/);
+  assert.match(sql, /is distinct from \(3,3,0,0,2\)/);
+  assert.match(sql, /reviewed aggregate drift fingerprint changed; abort manual repair/);
+  const locks = sql.indexOf('lock table public.organization_members');
+  const fingerprint = sql.indexOf('v_null_counters <> 0');
+  const loop = sql.indexOf('for v_target in');
+  assert.ok(locks >= 0 && fingerprint > locks && loop > fingerprint);
+});
