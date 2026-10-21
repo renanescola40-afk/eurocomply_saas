@@ -36,8 +36,8 @@ try:
     run(["docker","pull",IMAGE],text=True,timeout=300)
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
-    scope={"json":json,"re":re}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners")]
+    scope={"json":json,"re":re,"subprocess":subprocess,"ENV":ENV,"REPORT":{},"ACTIVE":[]}
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
@@ -196,6 +196,25 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         negative_checks[label]=changed!=before_catalog
     evidence["security_catalog_changes_rejected"]=negative_checks
     if not all(negative_checks.values()):raise RuntimeError("SECURITY_CATALOG_NEGATIVE_CHECK_FAILED")
+
+    stage="negative_failure_diagnostic"
+    try:
+        scope["run"](["docker","exec",dest,"psql","-X","-qAt","-U","supabase_admin",
+                      "-d","recovery_destination","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose",
+                      "-c","SET ROLE anon; CREATE TABLE public.synthetic_forbidden_diagnostic(id int);"])
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED":raise
+    else:
+        raise RuntimeError("EXPECTED_PERMISSION_FAILURE_NOT_REJECTED")
+    diagnostic=scope["REPORT"].get("failure_diagnostic",{})
+    if diagnostic.get("category")!="permission_denied" or diagnostic.get("sqlstate")!="42501":
+        raise RuntimeError("NATIVE_SQLSTATE_DIAGNOSTIC_NOT_CAPTURED")
+    if set(diagnostic)!={"category","component","returncode","sqlstate"}:
+        raise RuntimeError("UNEXPECTED_DIAGNOSTIC_FIELDS")
+    if "synthetic_forbidden_diagnostic" in json.dumps(diagnostic):
+        raise RuntimeError("DIAGNOSTIC_EXPOSED_OBJECT_NAME")
+    evidence["native_permission_failure_sanitized"]=True
+    evidence["native_failure_sqlstate"]=diagnostic["sqlstate"]
 
     stage="verify_restore"
     result=json.loads(sql(dest,'''SELECT json_build_object(

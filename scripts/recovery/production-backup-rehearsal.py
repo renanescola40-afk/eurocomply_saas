@@ -22,10 +22,35 @@ TARGET = None
 SNAPSHOT_PROCESS = None
 STAGE = "input_guard"
 
+def failure_diagnostic(stderr, returncode, component):
+    # Publish only fixed categories and PostgreSQL SQLSTATE, never raw stderr.
+    message = stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else (stderr or "")
+    patterns = (
+        ("session_authorization_denied", r"(?:permission denied to set session authorization|cannot set session authorization)"),
+        ("superuser_required", r"(?:must be superuser|superuser privileges)"),
+        ("ownership_required", r"must be owner of"),
+        ("permission_denied", r"permission denied"),
+        ("role_missing", r"role .+ does not exist"),
+        ("schema_exists", r"schema .+ already exists"),
+        ("relation_exists", r"relation .+ already exists"),
+        ("extension_unavailable", r"extension .+ is not available"),
+        ("duplicate_object", r"already exists"),
+        ("archive_truncated", r"(?:unexpected end of file|end of file|input file is too short)"),
+        ("connection_failed", r"(?:could not connect|connection refused|connection.*failed)"),
+    )
+    category = next((name for name, pattern in patterns if re.search(pattern, message, re.IGNORECASE)), "unclassified_native_failure")
+    sqlstate = re.search(r"(?:ERROR|FATAL):\s+([0-9A-Z]{5}):", message)
+    diagnostic = {"category": category, "component": component, "returncode": returncode}
+    if sqlstate:
+        diagnostic["sqlstate"] = sqlstate.group(1)
+    return diagnostic
+
 def run(args, *, data=None, text=False, timeout=120, **kwargs):
     result = subprocess.run(args, input=data, text=text, capture_output=True,
                             env=ENV, timeout=timeout, **kwargs)
-    if result.returncode:raise RuntimeError("NATIVE_STEP_FAILED")
+    if result.returncode:
+        REPORT["failure_diagnostic"] = failure_diagnostic(result.stderr, result.returncode, "native_command")
+        raise RuntimeError("NATIVE_STEP_FAILED")
     return result.stdout
 
 def qident(value):
@@ -41,16 +66,19 @@ def piped(producer_args, consumer_args, timeout=180, drain_remaining=False):
     ACTIVE.extend([producer,consumer])
     if not drain_remaining:producer.stdout.close()
     try:
-        consumer.communicate(timeout=timeout)
+        _, consumer_error = consumer.communicate(timeout=timeout)
         if drain_remaining:
             while producer.stdout.read(65536):pass
             producer.stdout.close()
-        producer.communicate(timeout=30)
+        _, producer_error = producer.communicate(timeout=30)
     finally:
         for process in (producer,consumer):
             if process.poll() is None:process.kill();process.communicate()
             ACTIVE.remove(process)
-    if producer.returncode or consumer.returncode:raise RuntimeError("STREAM_PIPE_FAILED")
+    if producer.returncode or consumer.returncode:
+        failed = (consumer_error, consumer.returncode, "restore_consumer") if consumer.returncode else (producer_error, producer.returncode, "encrypted_producer")
+        REPORT["failure_diagnostic"] = failure_diagnostic(*failed)
+        raise RuntimeError("STREAM_PIPE_FAILED")
 
 TABLES_SQL = """SELECT coalesce(json_agg(json_build_array(n.nspname,c.relname) ORDER BY n.nspname,c.relname),'[]'::json)
 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -292,3 +320,4 @@ finally:
     (OUT/"result.json").write_text(json.dumps(REPORT,indent=2)+"\n")
     print(json.dumps(REPORT))
 raise SystemExit(0 if REPORT["status"]=="PASS_LOGICAL_BACKUP_AND_ISOLATED_RESTORE" else 1)
+
