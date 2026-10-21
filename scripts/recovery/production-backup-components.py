@@ -209,10 +209,11 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     diagnostic=scope["REPORT"].get("failure_diagnostic",{})
     if diagnostic.get("category")!="permission_denied" or diagnostic.get("sqlstate")!="42501":
         raise RuntimeError("NATIVE_SQLSTATE_DIAGNOSTIC_NOT_CAPTURED")
-    if set(diagnostic)!={"category","component","returncode","sqlstate"}:
+    if set(diagnostic)!={"category","component","returncode","sqlstate","object_kind"}:
         raise RuntimeError("UNEXPECTED_DIAGNOSTIC_FIELDS")
     if "synthetic_forbidden_diagnostic" in json.dumps(diagnostic):
         raise RuntimeError("DIAGNOSTIC_EXPOSED_OBJECT_NAME")
+    if diagnostic["object_kind"]!="schema":raise RuntimeError("NATIVE_PERMISSION_SCOPE_NOT_CAPTURED")
     evidence["native_permission_failure_sanitized"]=True
     evidence["native_failure_sqlstate"]=diagnostic["sqlstate"]
 
@@ -243,3 +244,4 @@ finally:
     Path("artifacts/supabase-target-probe.json").write_text(json.dumps(evidence,indent=2)+"\n")
     print(json.dumps(evidence))
 raise SystemExit(0 if evidence["status"]=="PASS_PRODUCTION_BACKUP_COMPONENTS_SYNTHETIC_ONLY" else 1)
+

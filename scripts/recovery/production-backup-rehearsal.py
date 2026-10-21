@@ -41,6 +41,13 @@ def failure_diagnostic(stderr, returncode, component):
     category = next((name for name, pattern in patterns if re.search(pattern, message, re.IGNORECASE)), "unclassified_native_failure")
     sqlstate = re.search(r"(?:ERROR|FATAL):\s+([0-9A-Z]{5}):", message)
     diagnostic = {"category": category, "component": component, "returncode": returncode}
+    object_kind = re.search(r"permission denied (?:for|to create) (schema|table|relation|sequence|function|extension|language|database)\b", message, re.IGNORECASE)
+    if object_kind:
+        diagnostic["object_kind"] = object_kind.group(1).lower()
+    for operation in ("CREATE TABLE", "CREATE FUNCTION", "CREATE SCHEMA", "CREATE EXTENSION", "CREATE SEQUENCE", "CREATE VIEW", "CREATE TYPE", "ALTER TABLE", "COMMENT ON", "SET SESSION AUTHORIZATION"):
+        if re.search(r"Command was:\s*" + re.escape(operation) + r"\b", message, re.IGNORECASE):
+            diagnostic["operation"] = operation
+            break
     if sqlstate:
         diagnostic["sqlstate"] = sqlstate.group(1)
     return diagnostic
