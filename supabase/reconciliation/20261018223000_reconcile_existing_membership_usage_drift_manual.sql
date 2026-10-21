@@ -83,6 +83,7 @@ declare
   v_release_sha text := current_setting('risck.p0f_release_sha', true);
   v_missing_usage integer;
   v_drift integer;
+  v_drift_with_member_rows integer;
   v_remaining integer;
   v_updated integer := 0;
   v_affected integer;
@@ -100,6 +101,7 @@ begin
 
   with actual as (
     select organization_id,
+      count(*)::integer member_rows,
       count(*) filter(where status='active')::integer active_members,
       count(*) filter(where status='active' and seat_type='full')::integer full_users,
       count(*) filter(where status='active' and seat_type='participant')::integer participants,
@@ -107,7 +109,9 @@ begin
       count(*) filter(where status='active' and lower(coalesce(role,'')) in ('owner','admin'))::integer active_admins
     from public.organization_members group by organization_id
   )
-  select count(*)::integer into v_drift
+  select count(*)::integer,
+    count(*) filter(where coalesce(a.member_rows,0) > 0)::integer
+    into v_drift,v_drift_with_member_rows
   from public.organization_usage u left join actual a on a.organization_id=u.organization_id
   where (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
     is distinct from
@@ -118,6 +122,12 @@ begin
   -- If another number of tenants is affected, stop and re-review the plan.
   if v_drift <> 2 then
     raise exception 'P0-F expected exactly two drifting organizations; observed %',v_drift;
+  end if;
+  -- Observed LIVE subtype: both drifted organizations have zero members
+  -- of ANY status (including suspended). Both relations are DML-locked.
+  -- Fail closed if either drifts into a new operational scenario.
+  if v_drift_with_member_rows <> 0 then
+    raise exception 'P0-F unexpected member-linked drift: %',v_drift_with_member_rows;
   end if;
 
   for v_target in
