@@ -1,25 +1,94 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-type PackageManifest = {
-  engines: { node: string };
+type PackageManifest = { engines: { node: string } };
+
+const workflow = readFileSync('.github/workflows/e2e.yml', 'utf8');
+
+function extractQaPreflight() {
+  const startTag = "          node --input-type=module <<'NODE'\n";
+  const endTag = '\n          NODE\n';
+  const start = workflow.indexOf(startTag);
+  const end = workflow.indexOf(endTag, start + startTag.length);
+  expect(start).toBeGreaterThan(-1);
+  expect(end).toBeGreaterThan(start);
+  const body = workflow.slice(start + startTag.length, end);
+  return body.split('\n').map((line) => {
+    expect(line.startsWith('          '), 'Every guard source line must retain YAML block indentation').toBe(true);
+    return line.slice(10);
+  }).join('\n');
+}
+
+const qaPreflight = extractQaPreflight();
+const qaDefaults: Record<string, string> = {
+  E2E_BASE_URL: 'https://qa.example.invalid',
+  NEXT_PUBLIC_SUPABASE_URL: 'https://isolateddisposableqa.supabase.co',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-fixture',
+  SUPABASE_SERVICE_ROLE_KEY: 'test-role-fixture',
+  STRIPE_SECRET_KEY: 'sk_test_fake_fixture',
+  STRIPE_WEBHOOK_SECRET: 'whsec_fake_fixture',
+  E2E_OWNER_EMAIL: 'qa-owner@example.invalid',
+  E2E_OWNER_PASSWORD: 'nonsecret-disposable-fixture',
+  E2E_QA_MAIL_SINK_CONFIRMED: 'true',
 };
 
-describe('manual Playwright E2E runner engine contract', () => {
-  it('uses a Node major version allowed by the application package engine', () => {
+function exercisePreflight(overrides: Record<string, string | null> = {}) {
+  // Never use inherited provider credentials: the child receives only fixtures.
+  const env = { ...qaDefaults };
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === null) delete env[key];
+    else env[key] = value;
+  }
+  return spawnSync(process.execPath, ['--input-type=module', '--eval', qaPreflight], {
+    env, encoding: 'utf8', timeout: 5_000,
+  });
+}
+
+describe('manual Playwright E2E execution safety', () => {
+  it('uses a Node version allowed by package.json', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as PackageManifest;
-    const workflow = readFileSync('.github/workflows/e2e.yml', 'utf8');
+    const min = Number(pkg.engines.node.match(/>=\s*(\d+)/)?.[1]);
+    const max = Number(pkg.engines.node.match(/<\s*(\d+)/)?.[1]);
+    const versions = [...workflow.matchAll(/^\s+node-version:\s*['"]?(\d+)['"]?\s*$/gm)];
+    expect(versions).toHaveLength(1);
+    expect(Number(versions[0][1])).toBeGreaterThanOrEqual(min);
+    expect(Number(versions[0][1])).toBeLessThan(max);
+  });
 
-    const minimumMajor = Number(pkg.engines.node.match(/>=\s*(\d+)/)?.[1]);
-    const exclusiveMaximumMajor = Number(pkg.engines.node.match(/<\s*(\d+)/)?.[1]);
-    const nodeVersionMatches = [...workflow.matchAll(/^\s+node-version:\s*['"]?(\d+)['"]?\s*$/gm)];
+  it('does not wire generic live-or-test provider secrets into E2E', () => {
+    expect(workflow).not.toContain('secrets.STRIPE_SECRET_KEY');
+    expect(workflow).not.toContain('secrets.SUPABASE_SERVICE_ROLE_KEY');
+    expect(workflow).toContain('secrets.E2E_QA_STRIPE_SECRET_KEY');
+    expect(workflow).toContain('secrets.E2E_QA_SUPABASE_SERVICE_ROLE_KEY');
+  });
 
-    expect(Number.isInteger(minimumMajor)).toBe(true);
-    expect(Number.isInteger(exclusiveMaximumMajor)).toBe(true);
-    expect(nodeVersionMatches, 'Manual E2E must declare one setup-node runtime').toHaveLength(1);
+  it('permits isolated QA test-mode fixtures without sending network requests', () => {
+    const run = exercisePreflight();
+    expect(run.status, run.stderr).toBe(0);
+    expect(run.stdout).toContain('Isolated E2E QA preflight passed');
+  });
 
-    const configuredMajor = Number(nodeVersionMatches[0][1]);
-    expect(configuredMajor).toBeGreaterThanOrEqual(minimumMajor);
-    expect(configuredMajor).toBeLessThan(exclusiveMaximumMajor);
+  it('rejects real production application and Supabase targets', () => {
+    const app = exercisePreflight({ E2E_BASE_URL: 'https://www.risckcomply.com' });
+    expect(app.status).not.toBe(0);
+    expect(app.stderr).toContain('qa_runtime_cannot_target_public_production');
+    const db = exercisePreflight({
+      NEXT_PUBLIC_SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co',
+    });
+    expect(db.status).not.toBe(0);
+    expect(db.stderr).toContain('qa_runtime_requires_nonproduction_supabase');
+  });
+
+  it('rejects Stripe live keys, missing QA identities and unconfirmed mail sink', () => {
+    const live = exercisePreflight({ STRIPE_SECRET_KEY: 'sk_live_fake_fixture' });
+    expect(live.status).not.toBe(0);
+    expect(live.stderr).toContain('qa_runtime_requires_stripe_test_keys');
+    const noOwner = exercisePreflight({ E2E_OWNER_PASSWORD: null });
+    expect(noOwner.status).not.toBe(0);
+    expect(noOwner.stderr).toContain('qa_runtime_missing_configuration');
+    const mail = exercisePreflight({ E2E_QA_MAIL_SINK_CONFIRMED: 'false' });
+    expect(mail.status).not.toBe(0);
+    expect(mail.stderr).toContain('qa_runtime_mail_sink_not_confirmed');
   });
 });
