@@ -114,6 +114,27 @@ def schema_restore_lists(toc):
     if count == 0:raise RuntimeError("RESTORE_SCHEMA_TOC_EMPTY")
     return "".join(schemas).encode(), "".join(schema_acls).encode(), "".join(extensions).encode(), "".join(remaining).encode(), count
 
+def create_owned_extension(target, database, extension, version, namespace, owner):
+    if not target.startswith(("risck-real-isolated-restore-","risck-synthetic-target-")) or database not in {"recovery_source","recovery_destination"}:
+        raise RuntimeError("EXTENSION_BOOTSTRAP_TARGET_REJECTED")
+    if owner not in {"postgres","supabase_admin"}:
+        raise RuntimeError("UNREVIEWED_EXTENSION_OWNER")
+    if run(["docker","inspect","--format","{{.HostConfig.NetworkMode}}",target],text=True).strip() != "none":
+        raise RuntimeError("EXTENSION_BOOTSTRAP_NETWORK_REJECTED")
+    create = ("CREATE EXTENSION IF NOT EXISTS "+qident(extension)+" WITH SCHEMA "+qident(namespace)+
+              " VERSION '"+version.replace("'","''")+"';")
+    # An already-privileged local administrator bootstraps the snapshot owner
+    # in one transaction. No other session observes an elevated postgres role;
+    # both success and failure leave its committed NOSUPERUSER state intact.
+    guard = "DO $guard$ BEGIN IF current_user <> 'supabase_admin' OR NOT (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR (SELECT rolsuper FROM pg_roles WHERE rolname='postgres') THEN RAISE EXCEPTION 'ISOLATED_ROLE_PROFILE_REJECTED'; END IF; END $guard$;"
+    statement = "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s'; "+guard
+    if owner == "postgres":
+        statement += " ALTER ROLE postgres SUPERUSER; SET SESSION AUTHORIZATION postgres; "+create+" RESET SESSION AUTHORIZATION; ALTER ROLE postgres NOSUPERUSER; "
+    else:
+        statement += create
+    statement += guard+" COMMIT;"
+    run(["docker","exec",target,"psql","-X","-qAt","-U","supabase_admin","-d",database,"-v","ON_ERROR_STOP=1","-c",statement])
+
 def restore_predata_with_owned_schemas(decrypt, target, private_work, catalog):
     base = ["docker","exec","-i",target,"pg_restore","-U","supabase_admin"]
     toc = piped(decrypt,base+["--list"],drain_remaining=True,capture_stdout=True)
@@ -123,11 +144,7 @@ def restore_predata_with_owned_schemas(decrypt, target, private_work, catalog):
             # pg_dump does not record an EXTENSION owner in its TOC. Create
             # with the snapshot owner/version before archive IF NOT EXISTS.
             for extension, version, namespace, owner in catalog["extensions"]:
-                if owner not in {"postgres","supabase_admin"}:
-                    raise RuntimeError("UNREVIEWED_EXTENSION_OWNER")
-                statement = ("CREATE EXTENSION IF NOT EXISTS "+qident(extension)+
-                    " WITH SCHEMA "+qident(namespace)+" VERSION '"+version.replace("'","''")+"';")
-                run(["docker","exec",target,"psql","-X","-qAt","-U",owner,"-d","recovery_destination","-v","ON_ERROR_STOP=1","-c",statement])
+                create_owned_extension(target,"recovery_destination",extension,version,namespace,owner)
         metadata = private_work/("restore-"+name+".toc")
         metadata.write_bytes(content);metadata.chmod(0o600)
         destination = "/tmp/risck-restore-"+name+".toc"
@@ -135,7 +152,7 @@ def restore_predata_with_owned_schemas(decrypt, target, private_work, catalog):
         restore = base+["-d","recovery_destination","--exit-on-error","--use-list="+destination]
         # Standard ALTER OWNER retains ownership without requiring historical
         # owners to retain DDL privileges. Extensions have no ALTER OWNER form.
-        # No --no-owner, ACL/RLS exclusion or privileged role change.
+        # No --no-owner, ACL/RLS exclusion or committed privilege expansion.
         # Original schema ACLs must precede CREATE TYPE/TABLE by a distinct
         # source owner. Apply only the archived grants, no bootstrap expansion.
         if name in ("extensions","objects"):restore.append("--section=pre-data")

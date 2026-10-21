@@ -9,6 +9,7 @@ PREFIX = "risck-synthetic-target-" + str(os.getpid())
 containers = []
 stage = "pull"
 snapshot_process = None
+privilege_probe = None
 OWNER_RECIPIENT = "age1d8zgu9c38njefxj528kfucns2e2pxu0zqyzcjrjj475l9652afxs8xfcqy"
 def run(args, **kw):
     result = subprocess.run(args, env=ENV, capture_output=True, timeout=kw.pop("timeout", 90), **kw)
@@ -37,7 +38,7 @@ try:
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
     scope={"json":json,"re":re,"subprocess":subprocess,"ENV":ENV,"REPORT":{},"ACTIVE":[]}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges","schema_restore_lists","restore_predata_with_owned_schemas")]
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges","schema_restore_lists","create_owned_extension","restore_predata_with_owned_schemas")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
@@ -59,9 +60,23 @@ try:
     sql(source,'''CREATE SCHEMA IF NOT EXISTS extensions; CREATE SCHEMA IF NOT EXISTS vault; CREATE SCHEMA IF NOT EXISTS auth;
 DROP EXTENSION IF EXISTS pg_stat_statements, "uuid-ossp", pgcrypto CASCADE;
 GRANT USAGE,CREATE ON SCHEMA extensions TO postgres;''',"recovery_source")
-    sql(source,'''CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA extensions VERSION '1.11';
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions VERSION '1.1';
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions VERSION '1.3';''',"recovery_source",user="postgres")
+    stage="transactional_bootstrap_isolation"
+    privilege_probe=subprocess.Popen(["docker","exec","-i",source,"psql","-X","-qAt","-U","supabase_admin","-d","recovery_source","-v","ON_ERROR_STOP=1"],env=ENV,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    privilege_probe.stdin.write("BEGIN; ALTER ROLE postgres SUPERUSER; SELECT 'bootstrap_ready';\n");privilege_probe.stdin.flush()
+    with selectors.DefaultSelector() as selector:
+        selector.register(privilege_probe.stdout,selectors.EVENT_READ)
+        if not selector.select(timeout=20) or privilege_probe.stdout.readline().strip()!="bootstrap_ready":
+            raise RuntimeError("BOOTSTRAP_ISOLATION_PROBE_FAILED")
+    evidence["uncommitted_bootstrap_invisible_to_other_session"] = json.loads(sql(source,"SELECT json_build_object('not_superuser',NOT rolsuper) FROM pg_roles WHERE rolname='postgres'","recovery_source"))["not_superuser"]
+    privilege_probe.stdin.write("ROLLBACK;\n");privilege_probe.stdin.close();privilege_probe.wait(timeout=20)
+    if privilege_probe.returncode:raise RuntimeError("BOOTSTRAP_PROBE_ROLLBACK_FAILED")
+    privilege_probe=None
+    evidence["failed_bootstrap_role_rollback_verified"] = json.loads(sql(source,"SELECT json_build_object('not_superuser',NOT rolsuper) FROM pg_roles WHERE rolname='postgres'","recovery_source"))["not_superuser"]
+    if not all(evidence[k] for k in ("uncommitted_bootstrap_invisible_to_other_session","failed_bootstrap_role_rollback_verified")):
+        raise RuntimeError("BOOTSTRAP_ROLE_VISIBILITY_OR_ROLLBACK_FAILED")
+    stage="synthetic_setup"
+    for extension in ("pg_stat_statements","uuid-ossp","pgcrypto"):
+        scope["create_owned_extension"](source,"recovery_source",extension,REQUIRED[extension],"extensions","postgres")
     sql(source,'''CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
 CREATE EXTENSION IF NOT EXISTS wrappers WITH SCHEMA extensions VERSION '0.6.1';
 ALTER SCHEMA public OWNER TO postgres;
@@ -295,6 +310,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_owned_no_create() TO anon;''',"recove
 'enum_labels',(SELECT array_agg(e.enumlabel::text ORDER BY e.enumsortorder)=ARRAY['active','inactive'] FROM pg_enum e WHERE e.enumtypid='auth.synthetic_member_state'::regtype),
 'historical_function_owner',(SELECT pg_get_userbyid(proowner)='authenticated' AND prosecdef AND proconfig=ARRAY['search_path=pg_catalog'] FROM pg_proc WHERE oid='public.synthetic_owned_no_create()'::regprocedure),
 'historical_owner_not_escalated',NOT has_schema_privilege('authenticated','public','CREATE'),
+'extension_owner_not_escalated',(SELECT NOT rolsuper FROM pg_roles WHERE rolname='postgres'),
 'extension_versions',(SELECT count(*)=6 FROM pg_extension WHERE (extname,extversion) IN (('plpgsql','1.0'),('pg_stat_statements','1.11'),('uuid-ossp','1.1'),('pgcrypto','1.3'),('supabase_vault','0.3.1'),('wrappers','0.6.1'))))''',"recovery_destination"))
     evidence["restored_assertions"]=result
     if not all(result.values()):raise RuntimeError("RESTORE_ASSERTION_FAILED")
@@ -306,6 +322,8 @@ except Exception as error:
     evidence["status"]="FAILED_SYNTHETIC_TARGET_ONLY"
     evidence["failure_stage"]=stage
 finally:
+    if privilege_probe is not None and privilege_probe.poll() is None:
+        privilege_probe.kill();privilege_probe.communicate()
     if snapshot_process is not None and snapshot_process.poll() is None:
         snapshot_process.kill();snapshot_process.communicate()
     cleanup=True
