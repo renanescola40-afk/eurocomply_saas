@@ -133,6 +133,16 @@ try {
  await seed();const suspendedDrift=await seedEmptyMembershipDrift();
  await q("insert into organization_members(id,organization_id,user_id,role,status,seat_type) values($1,$2,$3,'viewer','suspended','viewer')",[randomUUID(),suspendedDrift[0],randomUUID()]);
  await check('Manual repair rejects suspended-only member drift with zero active members',async()=>{const before=await snapshot();await assert.rejects(()=>manualAttempt(),/unexpected member-linked drift/);assert.equal(await snapshot(),before);});
+ await seed();const patternDrift=await seedEmptyMembershipDrift();
+ await q('update organization_usage set active_admins=0 where organization_id=$1',[patternDrift[0]]);
+ await q('update organization_usage set active_admins=2 where organization_id=$1',[patternDrift[1]]);
+ await check('Manual repair rejects changed per-tenant pattern with matching aggregate totals',async()=>{
+  const before=await snapshot();
+  const totals=await q('select sum(active_members)::int members,sum(full_users)::int full,sum(active_admins)::int admins from organization_usage where organization_id=any($1::uuid[])',[patternDrift]);
+  assert.deepEqual(totals[0],{members:3,full:3,admins:2});
+  await assert.rejects(()=>manualAttempt(),/reviewed per-organization drift fingerprint changed/);
+  assert.equal(await snapshot(),before);
+ });
  await seed();const emptyDrift=await seedEmptyMembershipDrift();
  await check('Manual reconciliation repairs exactly two empty-membership synthetic rows and records two logs',async()=>{await manualAttempt();await counters(A);await counters(B);for(const id of emptyDrift)await counters(id);assert.equal(await scalar("select count(*)::int from audit_logs where action='enterprise.membership_usage_reconciled'"),2);});
  await seed();await seedEmptyMembershipDrift();
