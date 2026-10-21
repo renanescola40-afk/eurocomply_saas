@@ -106,8 +106,9 @@ jobs:
           name: Emitir prova CircleCI de testes SOURCE-ONLY sem GO
           command: |
             set -euo pipefail
-            node --test tests/security/circleci-source-proof.test.mjs
+            node --test tests/security/circleci-source-proof.test.mjs tests/security/verify-circleci-source-proof.test.mjs
             node scripts/security/create-circleci-source-proof.mjs
+            node scripts/security/verify-circleci-source-proof.mjs
       - store_artifacts:
           path: artifacts/circleci-source-validation
           destination: source-only-exact-sha-evidence
