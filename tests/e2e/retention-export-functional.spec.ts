@@ -15,17 +15,24 @@ test.describe('paid owner retention export: live UI and MFA boundary', () => {
   const hasDisposableCredentials = Boolean(ownerEmail && ownerPassword);
   const isolatedTarget = (() => {
     try {
-      const base = process.env.E2E_BASE_URL;
-      if (!base) return false;
-      const target = new URL(base);
+      const target = new URL(process.env.E2E_BASE_URL ?? '');
+      const db = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '');
       const hostname = target.hostname.toLowerCase().replace(/\.+$/, '');
+      const dbHost = db.hostname.toLowerCase().replace(/\.+$/, '');
       return target.protocol === 'https:' && !target.username && !target.password &&
-        hostname !== 'risckcomply.com' && !hostname.endsWith('.risckcomply.com');
+        !target.port && target.pathname === '/' && !target.search && !target.hash &&
+        hostname !== 'risckcomply.com' && !hostname.endsWith('.risckcomply.com') &&
+        db.protocol === 'https:' && !db.username && !db.password && !db.port &&
+        db.pathname === '/' && !db.search && !db.hash &&
+        /^[a-z0-9]+\.supabase\.co$/i.test(dbHost) &&
+        dbHost !== 'tganhbbhfxcpblmgqprg.supabase.co' &&
+        process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') === true &&
+        process.env.E2E_QA_MAIL_SINK_CONFIRMED === 'true';
     } catch {
       return false;
     }
   })();
-  test.skip(!isolatedTarget, 'Paid-owner E2E requires an explicit isolated HTTPS QA target, never production.');
+  test.skip(!isolatedTarget, 'Paid-owner E2E requires isolated app/Supabase, Stripe TEST and a confirmed QA mail sink.');
   test.skip(!ownerStorageState && !hasDisposableCredentials,
     'Requires disposable paid-owner credentials or an existing isolated QA browser session.');
   if (ownerStorageState) test.use({ storageState: ownerStorageState });
