@@ -84,6 +84,8 @@ declare
   v_missing_usage integer;
   v_drift integer;
   v_drift_with_member_rows integer;
+  v_reviewed_type_a integer;
+  v_reviewed_type_b integer;
   v_remaining integer;
   v_updated integer := 0;
   v_affected integer;
@@ -110,8 +112,14 @@ begin
     from public.organization_members group by organization_id
   )
   select count(*)::integer,
-    count(*) filter(where coalesce(a.member_rows,0) > 0)::integer
-    into v_drift,v_drift_with_member_rows
+    count(*) filter(where coalesce(a.member_rows,0) > 0)::integer,
+    count(*) filter(where a.organization_id is null and
+      (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
+        = (2,2,0,0,1))::integer,
+    count(*) filter(where a.organization_id is null and
+      (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
+        = (1,1,0,0,1))::integer
+    into v_drift,v_drift_with_member_rows,v_reviewed_type_a,v_reviewed_type_b
   from public.organization_usage u left join actual a on a.organization_id=u.organization_id
   where (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
     is distinct from
@@ -128,6 +136,13 @@ begin
   -- Fail closed if either drifts into a new operational scenario.
   if v_drift_with_member_rows <> 0 then
     raise exception 'P0-F unexpected member-linked drift: %',v_drift_with_member_rows;
+  end if;
+  -- Both drifted rows must match the reviewed 2026-10-21 distribution,
+  -- not merely the same aggregate totals: (+2 full/members,+1 admin) and
+  -- (+1 full/members,+1 admin), with no participant/viewer drift.
+  -- No tenant identifiers are embedded in, or exposed by, this guard.
+  if v_reviewed_type_a <> 1 or v_reviewed_type_b <> 1 then
+    raise exception 'P0-F reviewed per-organization drift fingerprint changed';
   end if;
 
   for v_target in
