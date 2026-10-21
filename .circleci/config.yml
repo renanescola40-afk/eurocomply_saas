@@ -16,6 +16,9 @@ jobs:
             test -z "${RISCK_SOURCE_DB_PASSWORD:-}"
             test -z "${RISCK_SOURCE_DATABASE_URL:-}"
       - run:
+          name: Offline owner profile and dual pipeline failure unit tests
+          command: python3 scripts/recovery/production-backup-components.py --unit-only
+      - run:
           name: Encrypted synthetic snapshot with owner and ACL restoration
           command: timeout 900s python3 scripts/recovery/production-backup-components.py
       - store_artifacts:
