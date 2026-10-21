@@ -61,6 +61,23 @@ test('CircleCI retains a SHA-bound no-provider QA evidence artifact on success',
   assert.match(qaJob, /destination: qa-preflight-exact-sha/);
 });
 
+test('Stripe webhook and entitlement source contract checks run without provider access', () => {
+  assert.match(qaJob, /node scripts\/security\/check-stripe-webhook-contract\.mjs/);
+  assert.match(qaJob, /node scripts\/security\/run-stripe-runtime-validation\.mjs/);
+  assert.match(qaJob, /stripe-webhook-contract\.txt/);
+  assert.match(qaJob, /stripe-runtime-source-only\.json/);
+  assert.match(qaJob, /stripeWebhookContractSha256/);
+  assert.match(qaJob, /stripeRuntimeSourceOnlySha256/);
+});
+
+test('Stripe source validation must not falsely claim paid E2E or promote enterprise proof', () => {
+  const validator = readFileSync(new URL('../../scripts/security/run-stripe-runtime-validation.mjs', import.meta.url), 'utf8');
+  assert.match(validator, /runtimeProofExecuted: false/);
+  assert.match(validator, /validationStatus: evidence\.validationStatus/);
+  assert.match(validator, /repository_contract_passed_runtime_not_run/);
+  assert.doesNotMatch(qaJob, /--update-register|--write-open-evidence/);
+});
+
 test('existing full validation and synthetic PostgreSQL workflows are not removed', () => {
   assert.match(config, /  validar-risck:\n/);
   assert.match(config, /  p0-postgres-synthetic:\n/);
