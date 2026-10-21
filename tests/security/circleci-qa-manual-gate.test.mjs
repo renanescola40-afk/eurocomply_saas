@@ -41,9 +41,24 @@ test('offline QA refuses privileged provider credentials', () => {
 });
 
 test('offline QA runs source-only Node tests without npm install', () => {
-  assert.match(qaJob, /node --test tests\/security\/e2e-preflight-offline\.test\.mjs/);
+  assert.match(qaJob, /node --test --test-reporter=tap/);
+  assert.match(qaJob, /tests\/security\/e2e-preflight-offline\.test\.mjs/);
+  assert.match(qaJob, /tests\/security\/circleci-qa-manual-gate\.test\.mjs/);
   assert.doesNotMatch(qaJob, /npm (ci|install|run build)/);
   assert.doesNotMatch(qaJob, /vercel (deploy|promote)|stripe (trigger|listen)|supabase (db push|migration up)/);
+});
+
+test('source QA suites cannot falsely pass when the first suite fails', () => {
+  assert.match(qaJob, /set -euo pipefail/);
+  assert.match(qaJob, /2>&1 \| tee artifacts\/qa-preflight\/tests\.tap/);
+});
+
+test('CircleCI retains a SHA-bound no-provider QA evidence artifact on success', () => {
+  assert.match(qaJob, /sha !== process\.env\.CIRCLE_SHA1/);
+  assert.match(qaJob, /testReportSha256:/);
+  assert.match(qaJob, /proofBoundary: 'Offline Node source tests only/);
+  assert.match(qaJob, /path: artifacts\/qa-preflight/);
+  assert.match(qaJob, /destination: qa-preflight-exact-sha/);
 });
 
 test('existing full validation and synthetic PostgreSQL workflows are not removed', () => {
