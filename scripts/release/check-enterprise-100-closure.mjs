@@ -26,6 +26,22 @@ function normalise(value) {
   return String(value ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
 }
 
+// A positive decision must never override an explicit failed state or synthetic placeholder.
+function hasExplicitFailure(document) {
+  if (document?.evidenceIntegrity?.placeholderOnly === true || document?.placeholderOnly === true) return true;
+  const failedStates = new Set([
+    'FAIL', 'FAILED', 'FAILURE', 'ERROR', 'OPEN', 'BLOCKED', 'NO_GO',
+    'NO_PASS', 'REJECTED', 'DENIED', 'CANCELLED', 'CANCELED',
+  ]);
+  return [
+    document?.status,
+    document?.outcome,
+    document?.validationStatus,
+    document?.summary?.status,
+    document?.summary?.outcome,
+  ].some((value) => typeof value === 'string' && failedStates.has(normalise(value)));
+}
+
 function findStatus(document) {
   const decisionCandidates = [
     document?.publicationStatus,
@@ -194,13 +210,14 @@ export function evaluateEnterpriseClosure({
     const selected = exact[0];
     const acceptedStatuses = (control.acceptedStatuses ?? []).map(normalise);
     const statusAccepted = selected.status !== null && acceptedStatuses.includes(selected.status);
+    const explicitFailure = hasExplicitFailure(selected.value);
     const semanticFailures = control.id === 'external-security-assurance'
       ? validateExternalSecurityReviewEvidence(selected.value, {
           expectedCommitSha: expectedSha,
           now: new Date(),
         })
       : [];
-    const accepted = statusAccepted && semanticFailures.length === 0;
+    const accepted = statusAccepted && !explicitFailure && semanticFailures.length === 0;
 
     return {
       id: control.id,
@@ -213,9 +230,11 @@ export function evaluateEnterpriseClosure({
       sha: selected.sha,
       shaSource: selected.shaSource,
       shaMatches: true,
-      accepted: statusAccepted && semanticFailures.length === 0,
+      accepted,
       reason: accepted
         ? null
+        : explicitFailure
+          ? 'explicit_failure_or_placeholder_evidence'
         : semanticFailures.length > 0
           ? 'semantic_evidence_contract_failed'
           : 'status_not_accepted',
