@@ -25,6 +25,7 @@ All documents in this directory are **review drafts**, not final legal instrumen
 
 - [Enterprise Data Processing & Security Schedule V11](ENTERPRISE_DATA_PROCESSING_SECURITY_SCHEDULE_V7_REVIEW_DRAFT.md) — detailed proposed Article 28 processing specifications, TOMs, role-dependent provider disclosures, and buyer-specific signoff fields.
 - [EU AI Act + GDPR Applicability Matrix V11](EU_AI_ACT_GDPR_APPLICABILITY_MATRIX_V7_REVIEW_DRAFT.md) — updated 2026 statutory dates, role-specific obligations, and the distinction between product support and customers' legal duties.
+- [Enterprise Pilot Scope & Acceptance V12-C](ENTERPRISE_PILOT_SCOPE_ACCEPTANCE_V12_REVIEW_DRAFT.md) — non-binding pilot order rider, technical acceptance scorecard, activation prerequisites and customer-specific approval fields.
 - [Legal Publication & Procurement Handoff V7](../../legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md) — internal evidence-gated publication handoff and authoritative-company/IP/transfer blockers.
 
 - [Owner final legal facts and acceptance pack](../OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md) — internal company, tax, IP and signatory fact collection; contains no completed legal act.
