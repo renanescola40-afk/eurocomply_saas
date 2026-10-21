@@ -83,6 +83,19 @@ describe('manual Playwright E2E execution safety', () => {
     expect(db.stderr).toContain('qa_runtime_requires_nonproduction_supabase');
   });
 
+  it('rejects trailing-DNS-dot production aliases, production subdomains and URL credentials', () => {
+    for (const target of [
+      'https://www.risckcomply.com.',
+      'https://risckcomply.com.',
+      'https://qa.risckcomply.com',
+      'https://test-user@qa.example.invalid',
+    ]) {
+      const run = exercisePreflight({ E2E_BASE_URL: target });
+      expect(run.status, target).not.toBe(0);
+      expect(run.stderr, target).toContain('qa_runtime_cannot_target_public_production');
+    }
+  });
+
   it('rejects Stripe live keys, missing QA identities and unconfirmed mail sink', () => {
     const live = exercisePreflight({ STRIPE_SECRET_KEY: 'sk_live_fake_fixture' });
     expect(live.status).not.toBe(0);
