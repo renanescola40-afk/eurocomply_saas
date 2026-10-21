@@ -137,7 +137,9 @@ jobs:
             done
       - run:
           name: Execute exact-source QA isolation regression using Node built-in test runner
-          command: node --test tests/security/e2e-preflight-offline.test.mjs
+          command: |
+            node --test tests/security/e2e-preflight-offline.test.mjs
+            node --test tests/security/circleci-qa-manual-gate.test.mjs
 
   # Native PG service is disposable and contains ONLY synthetic fixtures.
   # Free-plan included quota verified 2026-10-18 before activation.
