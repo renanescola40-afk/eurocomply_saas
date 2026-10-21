@@ -55,7 +55,7 @@ try:
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
     scope={"json":json,"re":re,"subprocess":subprocess,"ENV":ENV,"REPORT":{},"ACTIVE":[]}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges","schema_restore_lists","create_owned_extension","verify_isolated_extension_owner_profile","restore_predata_with_owned_schemas")]
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges","schema_restore_lists","create_owned_extension","verify_isolated_extension_owner_profile","restore_predata_with_owned_schemas","restore_isolated_acl_equivalence")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
@@ -364,6 +364,14 @@ GRANT EXECUTE ON FUNCTION public.synthetic_owned_no_create() TO anon;''',"recove
         return json.loads(sql(dest,"BEGIN READ ONLY; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;","recovery_destination"))
     after_rows=scope["fingerprints"](dst_query)
     after_catalog=dst_query(scope["CATALOG_SQL"])
+    # Reproduce omitted/extra ACL drift using only synthetic fixture objects.
+    sql(dest,"REVOKE USAGE ON SCHEMA public FROM anon; REVOKE SELECT ON TABLE public.synthetic_items FROM anon;","recovery_destination")
+    acl_drift=dst_query(scope["CATALOG_SQL"])
+    evidence["isolated_acl_objects_restored"]=scope["restore_isolated_acl_equivalence"](dest,before_catalog,acl_drift)
+    if evidence["isolated_acl_objects_restored"]!=2:
+        raise RuntimeError("SYNTHETIC_ACL_DRIFT_NOT_REPRODUCED")
+    after_catalog=dst_query(scope["CATALOG_SQL"])
+    evidence["acl_comparison"]="canonical_acl_with_postgresql_defaults_and_original_grantors"
     evidence["snapshot_row_integrity_matches"]=before_rows==after_rows
     evidence["catalog_owner_acl_rls_matches"]=before_catalog==after_catalog
     evidence["catalog_sections_match"]={k:before_catalog[k]==after_catalog.get(k) for k in before_catalog}

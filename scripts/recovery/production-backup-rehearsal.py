@@ -235,10 +235,10 @@ AND (NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass A
 CATALOG_SQL = """SELECT json_build_object(
 'extensions',(SELECT json_agg(json_build_array(e.extname,e.extversion,n.nspname,pg_get_userbyid(e.extowner)) ORDER BY e.extname) FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace),
 'schemas',(SELECT json_agg(json_build_array(nspname,pg_get_userbyid(nspowner),
- (SELECT array_agg(a::text ORDER BY a::text) FROM unnest(nspacl) a)) ORDER BY nspname)
+ (SELECT array_agg(a::text ORDER BY a::text) FROM unnest(coalesce(nspacl,acldefault('n',nspowner))) a)) ORDER BY nspname)
  FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname<>'information_schema'),
 'relations',(SELECT json_agg(json_build_array(n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner),
- c.relrowsecurity,c.relforcerowsecurity,(SELECT array_agg(a::text ORDER BY a::text) FROM unnest(c.relacl) a)) ORDER BY n.nspname,c.relname)
+ c.relrowsecurity,c.relforcerowsecurity,(SELECT array_agg(a::text ORDER BY a::text) FROM unnest(coalesce(c.relacl,acldefault(case when c.relkind='S' then 'S'::"char" else 'r'::"char" end,c.relowner))) a)) ORDER BY n.nspname,c.relname)
  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT LIKE 'pg_%'
  AND n.nspname<>'information_schema' AND c.relkind IN ('r','p','S','v','m','f')),
 'columns',(SELECT json_agg(json_build_array(n.nspname,c.relname,(SELECT count(*) FROM pg_attribute prior WHERE prior.attrelid=a.attrelid AND prior.attnum>0 AND prior.attnum<=a.attnum AND NOT prior.attisdropped),a.attname,
@@ -314,6 +314,64 @@ def align_existing_schema_owners(target_sql, catalog):
     for name,owner,_acl in (catalog["schemas"] or []):
         if name in existing:
             target_sql("ALTER SCHEMA "+qident(name)+" OWNER TO "+qident(owner))
+
+def restore_isolated_acl_equivalence(target, before, after):
+    """Restore at most three snapshot ACLs through ordinary transactional DDL."""
+    if not target.startswith(("risck-real-isolated-restore-","risck-synthetic-target-")):
+        raise RuntimeError("ACL_RESTORE_TARGET_REJECTED")
+    if run(["docker","inspect","--format","{{.HostConfig.NetworkMode}}",target],text=True).strip() != "none":
+        raise RuntimeError("ACL_RESTORE_NETWORK_REJECTED")
+    roles={"anon","authenticated","authenticator","dashboard_user","postgres","service_role","supabase_admin","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin","pg_database_owner"}
+    jobs=[]
+    for section in before:
+        if section not in {"schemas","relations"}:
+            if before[section] != after.get(section):
+                raise RuntimeError("ACL_RESTORE_NON_ACL_CATALOG_DRIFT")
+            continue
+        index=2 if section=="schemas" else 6
+        left=before[section] or [];right=after.get(section) or []
+        if len(left)!=len(right):raise RuntimeError("ACL_RESTORE_OBJECT_COUNT_DRIFT")
+        for source,restored in zip(left,right):
+            if source[:index]!=restored[:index]:raise RuntimeError("ACL_RESTORE_OWNER_OR_SECURITY_DRIFT")
+            if source[index]!=restored[index]:jobs.append((section,source,restored))
+    if len(jobs)>3:raise RuntimeError("ACL_RESTORE_POPULATION_EXCEEDED")
+    privileges={"a":"INSERT","r":"SELECT","w":"UPDATE","d":"DELETE","D":"TRUNCATE","x":"REFERENCES","t":"TRIGGER","m":"MAINTAIN","U":"USAGE","C":"CREATE"}
+    statements=["BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s';"]
+    for section,source,restored in jobs:
+        index=2 if section=="schemas" else 6
+        owner=source[1] if section=="schemas" else source[3]
+        if owner not in roles:raise RuntimeError("ACL_RESTORE_UNREVIEWED_OWNER")
+        kind="SCHEMA" if section=="schemas" else "SEQUENCE" if source[2]=="S" else "TABLE"
+        object_name=qident(source[0]) if section=="schemas" else qident(source[0])+"."+qident(source[1])
+        allowed="UC" if kind=="SCHEMA" else "rUw" if kind=="SEQUENCE" else "arwdDxtm"
+        parsed=[]
+        for acl in (source[index] or [],restored[index] or []):
+            entries=[]
+            for item in acl:
+                match=re.fullmatch(r"([a-z_][a-z0-9_]*|)=([arwdDxtmUC*]+)/([a-z_][a-z0-9_]*)",item)
+                if not match:raise RuntimeError("ACL_RESTORE_UNSUPPORTED_ACL")
+                grantee,letters,grantor=match.groups()
+                if (grantee and grantee not in roles) or grantor!=owner:
+                    raise RuntimeError("ACL_RESTORE_UNREVIEWED_GRANT_CHAIN")
+                rights=re.findall(r"([arwdDxtmUC])(\*?)",letters)
+                if ''.join(a+b for a,b in rights)!=letters or any(a not in allowed for a,_ in rights):
+                    raise RuntimeError("ACL_RESTORE_INVALID_PRIVILEGE")
+                entries.append((grantee,rights))
+            parsed.append(entries)
+        statements.append("SET SESSION AUTHORIZATION "+qident(owner)+";")
+        grantees={""}|{name for entries in parsed for name,_ in entries}
+        for grantee in sorted(grantees):
+            role=qident(grantee) if grantee else "PUBLIC"
+            statements.append("REVOKE ALL PRIVILEGES ON "+kind+" "+object_name+" FROM "+role+" RESTRICT;")
+        for grantee,rights in parsed[0]:
+            role=qident(grantee) if grantee else "PUBLIC"
+            for letter,grant_option in rights:
+                statements.append("GRANT "+privileges[letter]+" ON "+kind+" "+object_name+" TO "+role+(" WITH GRANT OPTION" if grant_option else "")+";")
+        statements.append("RESET SESSION AUTHORIZATION;")
+    if jobs:
+        statements.append("COMMIT;")
+        run(["docker","exec",target,"psql","-X","-qAt","-U","supabase_admin","-d","recovery_destination","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose","-c",' '.join(statements)])
+    return len(jobs)
 
 def main():
     global TARGET, SNAPSHOT_PROCESS, STAGE
@@ -454,6 +512,10 @@ def main():
             return json.loads(target_sql("BEGIN READ ONLY; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;"))
         after_rows=fingerprints(dst)
         after_catalog=dst(CATALOG_SQL)
+        REPORT["isolated_acl_objects_restored"]=restore_isolated_acl_equivalence(TARGET,before_catalog,after_catalog)
+        REPORT["acl_comparison"]="canonical_acl_with_postgresql_defaults_and_original_grantors"
+        if REPORT["isolated_acl_objects_restored"]:
+            after_catalog=dst(CATALOG_SQL)
         REPORT["restored_table_count"]=len(after_rows)
         REPORT["row_integrity_matches"]=before_rows==after_rows
         REPORT["catalog_owner_acl_rls_matches"]=before_catalog==after_catalog
@@ -467,9 +529,11 @@ def main():
 
 try:
     main()
-except Exception:
+except Exception as error:
     REPORT["status"]="FAILED_LOGICAL_RECOVERY"
     REPORT["failure_stage"]=STAGE
+    if isinstance(error,RuntimeError) and re.fullmatch(r"[A-Z][A-Z0-9_]{1,95}",str(error)):
+        REPORT["failure_code"]=str(error)
 finally:
     for process in ACTIVE:
         if process.poll() is None:process.kill()
