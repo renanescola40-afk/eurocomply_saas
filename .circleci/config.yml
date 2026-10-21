@@ -136,10 +136,36 @@ jobs:
               fi
             done
       - run:
-          name: Execute exact-source QA isolation regression using Node built-in test runner
+          name: Execute source-only QA suites and preserve exact-SHA evidence
           command: |
-            node --test tests/security/e2e-preflight-offline.test.mjs
-            node --test tests/security/circleci-qa-manual-gate.test.mjs
+            set -euo pipefail
+            mkdir -p artifacts/qa-preflight
+            node --test --test-reporter=tap \
+              tests/security/e2e-preflight-offline.test.mjs \
+              tests/security/circleci-qa-manual-gate.test.mjs \
+              2>&1 | tee artifacts/qa-preflight/tests.tap
+            node --input-type=module <<'NODE'
+            import { writeFileSync } from 'node:fs';
+            import { createHash } from 'node:crypto';
+            import { readFileSync } from 'node:fs';
+            import { execFileSync } from 'node:child_process';
+            const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            if (sha !== process.env.CIRCLE_SHA1) throw new Error('qa_evidence_sha_mismatch');
+            const tap = readFileSync('artifacts/qa-preflight/tests.tap');
+            writeFileSync('artifacts/qa-preflight/evidence.json', JSON.stringify({
+              kind: 'RISCK_CIRCLECI_QA_SOURCE_PROOF',
+              checkedOutSha: sha,
+              pipelineSha: process.env.CIRCLE_SHA1,
+              branch: process.env.CIRCLE_BRANCH,
+              workflow: 'qa-preflight-manual',
+              result: 'PASS',
+              testReportSha256: createHash('sha256').update(tap).digest('hex'),
+              proofBoundary: 'Offline Node source tests only; no Playwright, Stripe, Supabase or deployment proof',
+            }, null, 2) + '\n');
+            NODE
+      - store_artifacts:
+          path: artifacts/qa-preflight
+          destination: qa-preflight-exact-sha
 
   # Native PG service is disposable and contains ONLY synthetic fixtures.
   # Free-plan included quota verified 2026-10-18 before activation.
