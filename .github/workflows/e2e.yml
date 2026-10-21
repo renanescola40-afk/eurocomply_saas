@@ -85,5 +85,12 @@ jobs:
       - name: Install Playwright browsers
         run: bash scripts/quality/install-playwright-ci.sh
 
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run E2E tests with attributable JSON output
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/qa-customer-playwright.json
+        run: |
+          mkdir -p test-results
+          npm run test:e2e -- --reporter=json
+
+      - name: Refuse missing, skipped or flaky paid-owner acceptance
+        run: node scripts/quality/check-paid-owner-playwright-proof.mjs test-results/qa-customer-playwright.json
