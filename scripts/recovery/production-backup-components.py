@@ -37,7 +37,7 @@ try:
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
     scope={"json":json,"re":re,"subprocess":subprocess,"ENV":ENV,"REPORT":{},"ACTIVE":[]}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped")]
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
@@ -117,6 +117,8 @@ INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);''',"recovery_sou
         raise RuntimeError("DATABASE_OWNER_REGRESSION_NOT_REPRODUCED")
     evidence["unprepared_database_owner_create_rejected"]=True
     sql(dest,"GRANT CREATE ON DATABASE recovery_destination TO pg_database_owner")
+    if scope["creator_privileges"](lambda query:sql(dest,query,"recovery_destination"),{"pg_database_owner"})!={"checked":1,"prepared":1}:
+        raise RuntimeError("ISOLATED_PRIVILEGE_PROBE_FAILED")
     scope["align_existing_schema_owners"](lambda query:sql(dest,query,"recovery_destination"),before_catalog)
     stage="synthetic_dump_restore"
     with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:

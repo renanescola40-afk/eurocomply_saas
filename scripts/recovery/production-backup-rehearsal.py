@@ -44,6 +44,9 @@ def failure_diagnostic(stderr, returncode, component):
     object_kind = re.search(r"permission denied (?:for|to create) (schema|table|relation|sequence|function|extension|language|database)\b", message, re.IGNORECASE)
     if object_kind:
         diagnostic["object_kind"] = object_kind.group(1).lower()
+    denied_database = re.search(r'permission denied for database "([^"]+)"', message, re.IGNORECASE)
+    if denied_database:
+        diagnostic["database_scope"] = {"recovery_destination":"isolated_target","postgres":"bootstrap_database"}.get(denied_database.group(1),"other_database")
     for operation in ("CREATE TABLE", "CREATE FUNCTION", "CREATE SCHEMA", "CREATE EXTENSION", "CREATE SEQUENCE", "CREATE VIEW", "CREATE TYPE", "ALTER TABLE", "COMMENT ON", "SET SESSION AUTHORIZATION"):
         if re.search(r"Command was:\s*" + re.escape(operation) + r"\b", message, re.IGNORECASE):
             diagnostic["operation"] = operation
@@ -65,6 +68,10 @@ def qident(value):
 
 def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",",":"), ensure_ascii=False).encode()
+
+def creator_privileges(query, roles):
+    names = ",".join("'" + role.replace("'", "''") + "'" for role in sorted(roles))
+    return json.loads(query("SELECT json_build_object('checked',count(*),'prepared',count(*) FILTER (WHERE has_database_privilege(oid,current_database(),'CREATE'))) FROM pg_roles WHERE rolname IN ("+names+")"))
 
 def piped(producer_args, consumer_args, timeout=180, drain_remaining=False):
     producer = subprocess.Popen(producer_args, env=ENV, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -283,15 +290,27 @@ def main():
         # Temporary bootstrap ONLY in the network-isolated disposable target.
         restore_creator_roles = EXPECTED_ROLES | {"pg_database_owner"}
         target_sql("GRANT CREATE ON DATABASE recovery_destination TO "+",".join(qident(role) for role in sorted(restore_creator_roles)),"postgres")
+        REPORT["isolated_creator_privileges_before_restore"] = creator_privileges(target_sql,restore_creator_roles)
+        if REPORT["isolated_creator_privileges_before_restore"] != {"checked":len(restore_creator_roles),"prepared":len(restore_creator_roles)}:
+            raise RuntimeError("ISOLATED_CREATOR_GRANTS_NOT_APPLIED")
         align_existing_schema_owners(target_sql,before_catalog)
         REPORT["existing_target_schema_owners_aligned"]=True
         REPORT["target_database_template"]="template0"
         STAGE="isolated_decrypt_restore"
-        for section in ("pre-data","data","post-data"):
-            STAGE="isolated_restore_"+section
-            restore=["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
-            if section=="pre-data":restore.append("--use-set-session-authorization")
-            piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],restore,drain_remaining=True)
+        try:
+            for section in ("pre-data","data","post-data"):
+                STAGE="isolated_restore_"+section
+                restore=["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
+                if section=="pre-data":restore.append("--use-set-session-authorization")
+                piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],restore,drain_remaining=True)
+        except RuntimeError:
+            original_diagnostic=REPORT.get("failure_diagnostic")
+            try:
+                REPORT["isolated_creator_privileges_at_failure"]=creator_privileges(target_sql,restore_creator_roles)
+            except RuntimeError:
+                REPORT["isolated_privilege_probe_failed"]=True
+            if original_diagnostic is not None:REPORT["failure_diagnostic"]=original_diagnostic
+            raise
         target_sql("REVOKE CREATE ON DATABASE recovery_destination FROM "+",".join(qident(role) for role in sorted(restore_creator_roles)))
         revoked = json.loads(target_sql("SELECT json_build_object('revoked',NOT has_database_privilege('pg_database_owner',current_database(),'CREATE'))"))["revoked"]
         REPORT["temporary_database_owner_create_revoked"] = revoked
