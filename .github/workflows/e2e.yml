@@ -41,13 +41,14 @@ jobs:
           // production boundary. Credentials embedded in a URL are forbidden.
           const targetHost = target.hostname.toLowerCase().replace(/\.+$/, '');
           if (target.protocol !== 'https:' || target.username || target.password ||
+              target.port || target.pathname !== '/' || target.search || target.hash ||
               targetHost === 'risckcomply.com' || targetHost.endsWith('.risckcomply.com')) {
             throw new Error('qa_runtime_cannot_target_public_production');
           }
 
           const db = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL);
           if (db.protocol !== 'https:' || db.username || db.password ||
-              db.pathname !== '/' || db.search || db.hash ||
+              db.port || db.pathname !== '/' || db.search || db.hash ||
               !/^[a-z0-9]+\.supabase\.co$/i.test(db.hostname) ||
               db.hostname.toLowerCase().startsWith('tganhbbhfxcpblmgqprg.')) {
             throw new Error('qa_runtime_requires_nonproduction_supabase');
