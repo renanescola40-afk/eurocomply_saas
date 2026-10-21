@@ -8,6 +8,7 @@ import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/ret
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { requireApiUser, requirePermission, secureApiError } from '@/server/security/api-guards';
+import { shouldReportRetentionExportError } from '@/server/security/retention-export-error-reporting';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
@@ -148,10 +149,14 @@ export async function GET(request: Request) {
 
     return jsonDownloadResponse(exportPayload, filename);
   } catch (error) {
-    reportError(error, {
-      area: 'retention_policy_export',
-      error: error instanceof Error ? error.name : 'unknown',
-    });
+    // An expected unauthenticated 401 remains fail-closed and is logged as
+    // a security denial by secureApiError, not as an application error in Sentry.
+    if (shouldReportRetentionExportError(error)) {
+      reportError(error, {
+        area: 'retention_policy_export',
+        error: error instanceof Error ? error.name : 'unknown',
+      });
+    }
 
     return secureApiError(error);
   }
