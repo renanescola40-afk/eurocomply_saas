@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
 
 // Offline source contract for the manual, credit-conscious CircleCI QA route.
 // No real CircleCI credentials, provider tokens, network calls, deployments or payments.
@@ -59,7 +60,7 @@ test('source QA suites cannot falsely pass when the first suite fails', () => {
 test('CircleCI retains a SHA-bound no-provider QA evidence artifact on success', () => {
   assert.match(qaJob, /sha !== process\.env\.CIRCLE_SHA1/);
   assert.match(qaJob, /testReportSha256:/);
-  assert.match(qaJob, /proofBoundary: 'Offline Node source tests only/);
+  assert.match(qaJob, /proofBoundary: 'Offline Node and Stripe source-contract checks only; no Playwright, provider delivery, Supabase, payment or deployment proof'/);
   assert.match(qaJob, /path: artifacts\/qa-preflight/);
   assert.match(qaJob, /destination: qa-preflight-exact-sha/);
 });
@@ -110,4 +111,15 @@ test('existing full validation and synthetic PostgreSQL workflows are not remove
   assert.match(config, /  p0-postgres-synthetic:\n/);
   assert.match(config, /  verificacao-isolada:\n/);
   assert.match(config, /Node\.test\.mjs|tests\/security\/p0-membership-release-admission\.test\.mjs/);
+});
+
+test('QA evidence heredoc survives CircleCI interpolation and remains valid Bash', () => {
+  assert.doesNotMatch(qaJob, /(?<!\\)<<['"]?NODE/);
+  const match = qaJob.match(/name: Execute source-only QA suites and preserve exact-SHA evidence\s+command: \|\n([\s\S]*?)(?=\n      - store_artifacts:)/);
+  assert.ok(match, 'Validate the actual command retained in the job');
+  const command = match[1].split('\n').map(line => line.replace(/^ {12}/, '')).join('\n')
+    .replace(/\\<</g, '<<');
+  assert.match(command, /node --input-type=module <<'NODE'/);
+  const syntax = spawnSync('bash', ['-n'], { input: command, encoding: 'utf8' });
+  assert.equal(syntax.status, 0, syntax.stderr);
 });
