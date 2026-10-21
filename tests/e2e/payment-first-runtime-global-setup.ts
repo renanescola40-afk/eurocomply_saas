@@ -40,6 +40,10 @@ function assertIsolatedQaRuntime(baseURL: string, supabaseURL: string) {
     app.protocol !== 'https:' || app.username || app.password || app.port ||
     app.pathname !== '/' || app.search || app.hash ||
     appHost === 'risckcomply.com' || appHost.endsWith('.risckcomply.com') ||
+    appHost === 'eurocomply-saas.vercel.app' ||
+    appHost === 'eurocomply-saas-renanescola40-afks-projects.vercel.app' ||
+    appHost === 'eurocomply-saas-git-main-renanescola40-afks-projects.vercel.app' ||
+    appHost === 'eurocomply-saas-o6ws7qrp2-renanescola40-afks-projects.vercel.app' ||
     db.protocol !== 'https:' || db.username || db.password || db.port ||
     db.pathname !== '/' || db.search || db.hash ||
     !/^[a-z0-9]+\.supabase\.co$/i.test(dbHost) ||
