@@ -14,6 +14,7 @@ All documents in this directory are **review drafts**, not final legal instrumen
 - Enterprise Order Form
 - Privacy Policy
 - Data Processing Addendum
+- **Enterprise DPA Processing, Security & Transfer Schedule V7 (2026-10-21)** — complete customer-review annex candidate covering Article 28 processing details, evidence-bound TOMs, proposed vendor/transfer schedule, retention, incident assistance and AI limitations; still unsigned and dependent on specific party/provider/product facts.
 - Subprocessor Register
 - Service, Support and Incident Schedule
 - Claims Register
