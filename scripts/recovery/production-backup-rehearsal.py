@@ -136,6 +136,7 @@ def create_owned_extension(target, database, extension, version, namespace, owne
     # enabled. Change only the disposable network-none server, restore the
     # original setting in finally, and keep role elevation uncommitted.
     original = run(command+["SELECT current_setting('supautils.superuser')"],text=True).strip()
+    REPORT["isolated_extension_delegation_profile"] = original if original in {"postgres","supabase_admin",""} else "unreviewed_role"
     if original != "supabase_admin":
         raise RuntimeError("ISOLATED_EXTENSION_DELEGATION_PROFILE_REJECTED")
     guard = "DO $guard$ BEGIN IF current_user <> 'supabase_admin' OR NOT (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR (SELECT rolsuper FROM pg_roles WHERE rolname='postgres') THEN RAISE EXCEPTION 'ISOLATED_ROLE_PROFILE_REJECTED'; END IF; END $guard$;"

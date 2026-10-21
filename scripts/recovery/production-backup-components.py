@@ -418,6 +418,10 @@ except Exception as error:
     if "scope" in locals() and scope["REPORT"].get("failure_diagnostic"):
         evidence["synthetic_restore_diagnostic"] = scope["REPORT"]["failure_diagnostic"]
     evidence["failure_type"]=type(error).__name__
+    if isinstance(error,RuntimeError) and re.fullmatch(r"[A-Z][A-Z0-9_]{1,95}",str(error)):
+        evidence["failure_code"]=str(error)
+    if "scope" in locals() and "isolated_extension_delegation_profile" in scope["REPORT"]:
+        evidence["isolated_extension_delegation_profile"]=scope["REPORT"]["isolated_extension_delegation_profile"]
     evidence["status"]="FAILED_SYNTHETIC_TARGET_ONLY"
     evidence["failure_stage"]=stage
 finally:
