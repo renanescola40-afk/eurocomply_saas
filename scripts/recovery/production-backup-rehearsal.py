@@ -142,6 +142,27 @@ def create_owned_extension(target, database, extension, version, namespace, owne
     statement += guard+" COMMIT;"
     run(["docker","exec",target,"psql","-X","-qAt","-U","supabase_admin","-d",database,"-v","ON_ERROR_STOP=1","-c",statement])
 
+def verify_isolated_extension_owner_profile(target, database, catalog):
+    # Detect delegated extension ownership before moving any snapshot rows.
+    # Only sanitized counts/booleans reach the CI report.
+    if not target.startswith(("risck-real-isolated-restore-","risck-synthetic-target-")) or database not in ("recovery_source","recovery_destination"):
+        raise RuntimeError("EXTENSION_PROFILE_TARGET_REJECTED")
+    expected = sorted(tuple(item) for item in catalog["extensions"])
+    if not expected:
+        raise RuntimeError("EXTENSION_PROFILE_SOURCE_EMPTY")
+    extnames = ",".join("'" + name.replace("'","''") + "'" for name,_,_,_ in expected)
+    sql = ("SELECT coalesce(json_agg(json_build_array(e.extname,e.extversion,n.nspname,pg_get_userbyid(e.extowner)) "
+           "ORDER BY e.extname),'[]'::json) FROM pg_extension e "
+           "JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname IN (" + extnames + ")")
+    actual = json.loads(run(["docker","exec",target,"psql","-X","-qAt","-U","supabase_admin",
+                             "-d",database,"-v","ON_ERROR_STOP=1","-c",sql],text=True))
+    matches = sorted(tuple(item) for item in actual) == expected
+    REPORT["isolated_extension_owner_preflight"] = {"matches":matches, "expected_count":len(expected),
+                                                      "found_count":len(actual)}
+    if not matches:
+        raise RuntimeError("ISOLATED_EXTENSION_OWNER_PROFILE_MISMATCH")
+    return True
+
 def restore_predata_with_owned_schemas(decrypt, target, private_work, catalog):
     base = ["docker","exec","-i",target,"pg_restore","-U","supabase_admin"]
     toc = piped(decrypt,base+["--list"],drain_remaining=True,capture_stdout=True)
@@ -152,6 +173,7 @@ def restore_predata_with_owned_schemas(decrypt, target, private_work, catalog):
             # with the snapshot owner/version before archive IF NOT EXISTS.
             for extension, version, namespace, owner in catalog["extensions"]:
                 create_owned_extension(target,"recovery_destination",extension,version,namespace,owner)
+            verify_isolated_extension_owner_profile(target,"recovery_destination",catalog)
         metadata = private_work/("restore-"+name+".toc")
         metadata.write_bytes(content);metadata.chmod(0o600)
         destination = "/tmp/risck-restore-"+name+".toc"
