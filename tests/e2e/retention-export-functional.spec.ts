@@ -18,8 +18,9 @@ test.describe('paid owner retention export: live UI and MFA boundary', () => {
       const base = process.env.E2E_BASE_URL;
       if (!base) return false;
       const target = new URL(base);
-      return target.protocol === 'https:' &&
-        !['risckcomply.com', 'www.risckcomply.com'].includes(target.hostname.toLowerCase());
+      const hostname = target.hostname.toLowerCase().replace(/\.+$/, '');
+      return target.protocol === 'https:' && !target.username && !target.password &&
+        hostname !== 'risckcomply.com' && !hostname.endsWith('.risckcomply.com');
     } catch {
       return false;
     }
