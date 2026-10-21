@@ -1,5 +1,49 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/**
+ * This guard is enforced at Playwright configuration-load time for every
+ * synthetic-write suite, not just for one test's global setup.
+ * A boolean opt-in is never evidence that a target is disposable.
+ */
+function assertSyntheticWriteQaEnvironment(env: NodeJS.ProcessEnv) {
+  let app: URL;
+  let db: URL;
+  try {
+    app = new URL(env.E2E_BASE_URL ?? '');
+    db = new URL(env.NEXT_PUBLIC_SUPABASE_URL ?? '');
+  } catch {
+    throw new Error('synthetic_write_requires_explicit_isolated_qa_origins');
+  }
+
+  const appHost = app.hostname.toLowerCase().replace(/\.+$/, '');
+  const dbHost = db.hostname.toLowerCase().replace(/\.+$/, '');
+  if (
+    app.protocol !== 'https:' || app.username || app.password || app.port ||
+    app.pathname !== '/' || app.search || app.hash ||
+    appHost === 'risckcomply.com' || appHost.endsWith('.risckcomply.com') ||
+    db.protocol !== 'https:' || db.username || db.password || db.port ||
+    db.pathname !== '/' || db.search || db.hash ||
+    !/^[a-z0-9]+\.supabase\.co$/i.test(dbHost) ||
+    dbHost === 'tganhbbhfxcpblmgqprg.supabase.co'
+  ) {
+    throw new Error('synthetic_write_requires_explicit_isolated_qa_origins');
+  }
+  if (!env.STRIPE_SECRET_KEY?.startsWith('sk_test_') ||
+      !env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) {
+    throw new Error('synthetic_write_requires_stripe_test_credentials');
+  }
+  if (env.E2E_QA_MAIL_SINK_CONFIRMED !== 'true') {
+    throw new Error('synthetic_write_requires_qa_mail_sink');
+  }
+  if (env.PLAYWRIGHT_USE_PRODUCTION_SERVER === 'true') {
+    throw new Error('synthetic_write_cannot_use_production_server_gate');
+  }
+}
+
+if (process.env.E2E_ALLOW_SYNTHETIC_APP_WRITES === 'true') {
+  assertSyntheticWriteQaEnvironment(process.env);
+}
+
 const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000';
 const useBuiltAppForRouteGate =
   process.env.PLAYWRIGHT_USE_PRODUCTION_SERVER === 'true' ||
