@@ -15,7 +15,10 @@ function extractQaPreflight() {
   expect(end).toBeGreaterThan(start);
   const body = workflow.slice(start + startTag.length, end);
   return body.split('\n').map((line) => {
-    expect(line.startsWith('          '), 'Every guard source line must retain YAML block indentation').toBe(true);
+    // YAML literal blocks may contain genuinely empty lines; do not treat those
+    // as indentation corruption or throw before Vitest registers the cases.
+    if (line === '') return '';
+    expect(line.startsWith('          '), 'Every nonblank guard source line must retain YAML block indentation').toBe(true);
     return line.slice(10);
   }).join('\n');
 }
