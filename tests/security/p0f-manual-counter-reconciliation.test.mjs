@@ -54,6 +54,18 @@ test('Manual repair requires both drifting organizations to have zero members of
   assert.match(sql,/count\(\*\) filter\(where coalesce\(a\.member_rows,0\) > 0\)::integer/);
   assert.match(sql,/P0-F unexpected member-linked drift/);
 });
+test('Manual repair rejects a changed per-organization distribution even when aggregate totals match', () => {
+  assert.match(sql, /v_reviewed_type_a integer/);
+  assert.match(sql, /v_reviewed_type_b integer/);
+  assert.match(sql, /\(2,2,0,0,1\)/);
+  assert.match(sql, /\(1,1,0,0,1\)/);
+  assert.match(sql, /v_reviewed_type_a <> 1 or v_reviewed_type_b <> 1/);
+  assert.match(sql, /reviewed per-organization drift fingerprint changed/);
+  const memberLock = sql.indexOf('lock table public.organization_members');
+  const patternGuard = sql.indexOf('if v_reviewed_type_a <> 1');
+  const firstUpdate = sql.indexOf('for v_target in');
+  assert.ok(memberLock < patternGuard && patternGuard < firstUpdate);
+});
 test('Correction writes attributable legacy audit log and no tenant details to query output', () => {
   assert.match(sql, /insert into public.audit_logs/);
   assert.match(sql, /enterprise\.membership_usage_reconciled/);
