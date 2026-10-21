@@ -83,6 +83,7 @@ declare
   v_release_sha text := current_setting('risck.p0f_release_sha', true);
   v_missing_usage integer;
   v_drift integer;
+  v_orphan_drift integer;
   v_remaining integer;
   v_updated integer := 0;
   v_affected integer;
@@ -107,7 +108,12 @@ begin
       count(*) filter(where status='active' and lower(coalesce(role,'')) in ('owner','admin'))::integer active_admins
     from public.organization_members group by organization_id
   )
-  select count(*)::integer into v_drift
+  -- An absent aggregate row means ZERO memberships of ANY status, not merely
+  -- zero ACTIVE memberships. The recorded LIVE P0-F subtype requires both
+  -- drifting organizations to be completely membership-free.
+  select count(*)::integer,
+    count(*) filter(where a.organization_id is null)::integer
+    into v_drift,v_orphan_drift
   from public.organization_usage u left join actual a on a.organization_id=u.organization_id
   where (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
     is distinct from
@@ -118,6 +124,11 @@ begin
   -- If another number of tenants is affected, stop and re-review the plan.
   if v_drift <> 2 then
     raise exception 'P0-F expected exactly two drifting organizations; observed %',v_drift;
+  end if;
+  -- Locks above prevent the membership subtype changing between admission
+  -- and update. Refuse a newly drifting populated tenant even when count=2.
+  if v_orphan_drift <> 2 then
+    raise exception 'P0-F expected two drifting organizations without membership rows; observed %',v_orphan_drift;
   end if;
 
   for v_target in
@@ -141,6 +152,7 @@ begin
        is distinct from
       (coalesce(a.active_members,0),coalesce(a.full_users,0),
        coalesce(a.participants,0),coalesce(a.viewers,0),coalesce(a.active_admins,0))
+      and a.organization_id is null
     order by u.organization_id
   loop
     update public.organization_usage
