@@ -66,6 +66,18 @@ test('Manual repair rejects a changed per-organization distribution even when ag
   const firstUpdate = sql.indexOf('for v_target in');
   assert.ok(memberLock < patternGuard && patternGuard < firstUpdate);
 });
+test('Exact-target precondition binds tenant identities and counter values under locks', () => {
+  assert.ok(sql.includes("p0f_expected_drift_fingerprint"));
+  assert.ok(sql.includes("!~ '^[a-f0-9]{64}$'"));
+  assert.match(sql,/sha256\(convert_to/);
+  assert.ok(sql.includes("u.organization_id::text"));
+  assert.ok(sql.includes("';' order by u.organization_id"));
+  const lock = sql.indexOf('lock table public.organization_members');
+  const hash = sql.indexOf('if v_target_fingerprint is distinct from');
+  const write = sql.indexOf('for v_target in');
+  assert.ok(lock > 0 && hash > lock && write > hash);
+});
+
 test('Correction writes attributable legacy audit log and no tenant details to query output', () => {
   assert.match(sql, /insert into public.audit_logs/);
   assert.match(sql, /enterprise\.membership_usage_reconciled/);
