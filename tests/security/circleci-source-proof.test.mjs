@@ -1,5 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { makeSourceOnlyProof } from '../../scripts/security/create-circleci-source-proof.mjs';
 
 const SHA = '7'.repeat(40);
@@ -39,4 +43,35 @@ test('rejects absent job number', () => assert.throws(() => run({...base(), CIRC
 test('never copies unallowlisted environment data into evidence', () => {
   const report = JSON.stringify(run({...base(), UNRELATED_PRIVATE_VALUE: 'do-not-echo'}));
   assert.equal(report.includes('do-not-echo'), false);
+});
+
+test('actual CircleCI admission command accepts the source-proof branch and rejects untrusted branches or SHA', () => {
+  const config = readFileSync('.circleci/config.yml', 'utf8');
+  const match = config.match(/name: Confirmar branch permitida, SHA exato e Node 22\s+command: \|\n([\s\S]*?)(?=\n      - run:)/);
+  assert.ok(match, 'Read the actual first job command, not a mirrored predicate');
+  const command = match[1].split('\n').map(line => line.replace(/^ {12}/, '')).join('\n');
+  const cwd = mkdtempSync(join(tmpdir(), 'risck-ci-admission-'));
+  try {
+    execFileSync('git', ['init', '--quiet', cwd]);
+    execFileSync('git', ['-c', 'user.name=Synthetic CI', '-c', 'user.email=ci@example.test',
+      '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'synthetic admission fixture'], { cwd });
+    const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
+    const runAdmission = (branch, sourceSha = sha) => spawnSync('bash', ['-c', command], {
+      cwd, encoding: 'utf8', env: { PATH: process.env.PATH, CIRCLE_BRANCH: branch, CIRCLE_SHA1: sourceSha },
+    });
+    for (const branch of ['main', 'ci/verify-source-evidence-v17', 'fix/circleci-source-evidence-v17-20261021']) {
+      const run = runAdmission(branch);
+      assert.equal(run.status, 0, `${branch}: ${run.stderr}`);
+    }
+    for (const branch of ['feature/random', 'fix/circleci-source-evidence-v17-20261021-untrusted']) {
+      const run = runAdmission(branch);
+      assert.notEqual(run.status, 0);
+      assert.match(run.stderr, /unexpected branch/);
+    }
+    const wrongSha = runAdmission('fix/circleci-source-evidence-v17-20261021', '0'.repeat(40));
+    assert.notEqual(wrongSha.status, 0);
+    assert.match(wrongSha.stderr, /checkout SHA does not match pipeline SHA/);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
 });
