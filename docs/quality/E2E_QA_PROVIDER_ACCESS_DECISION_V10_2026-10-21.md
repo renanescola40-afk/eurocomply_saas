@@ -51,7 +51,7 @@ Current QA PR #2553 provides:
 ```bash
 node --test tests/security/e2e-preflight-offline.test.mjs
 ```
-Node 22 focused results **17/17 PASS** on 2026-10-21, verified against the two exact GitHub blob SHAs. These validate isolated QA preflight logic only, not Playwright, provider execution, runtime authentication, legal acceptance or release. Do not waive CI or substitute this unit proof for enterprise acceptance.
+Node 22 focused results **23/23 PASS** on 2026-10-21, verified against GitHub workflow blob `8271a66e68e8e3d9e18297bd78778af52888c969` and synthetic-test blob `d4757b926d7e01aae2d83a193e2b968aee77073e`. Six additional negative cases reject QA application and Supabase origins carrying paths, query/fragment or nonstandard HTTPS ports. The Node TAP report is in the V10 handoff zip. These validate isolated QA preflight logic only, not Playwright, provider execution, runtime authentication, legal acceptance or release. Do not waive CI or substitute this unit proof for enterprise acceptance.
 
 ## 4. Explicit owner confirmation — limited scope
 
