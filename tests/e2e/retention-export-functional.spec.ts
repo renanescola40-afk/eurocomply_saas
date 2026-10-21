@@ -33,7 +33,9 @@ test.describe('paid owner retention export: live UI and MFA boundary', () => {
     // The isolated QA workflow provides E2E_OWNER_EMAIL/PASSWORD, not a storageState file.
     // Authenticate through the actual UI rather than silently skipping paid-owner coverage.
     if (!ownerStorageState) {
-      const loginResponse = await page.goto('/en/login?next=/en/retention-center', {
+      // The login route intentionally allows only selected return destinations.
+      // Target the approved organization dashboard, then navigate to retention after authentication.
+      const loginResponse = await page.goto('/en/login?next=%2Fen%2Fdashboard%2Forganizations', {
         waitUntil: 'domcontentloaded',
       });
       expect(loginResponse?.status()).toBeLessThan(500);
