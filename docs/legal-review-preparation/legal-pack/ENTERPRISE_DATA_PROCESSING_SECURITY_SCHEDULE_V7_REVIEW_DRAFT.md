@@ -1,163 +1,226 @@
-# RISCK COMPLY — Enterprise Data Processing & Security Schedule (V7)
+# RISCK COMPLY — Enterprise DPA Processing, Security & Transfer Schedule (V11 consolidated review)
 
-**Version:** 0.1 review, 21 October 2026  
-**Classification:** CUSTOMER-REVIEW DRAFT — NOT EXECUTED, NOT AN EFFECTIVE DPA OR SCC, NOT A SECURITY CERTIFICATION  
-**Proposed supplier:** SAMUEL CERQUEIRA, UNIPESSOAL LDA, trading as RISCK COMPLY (**registered identifiers, registered office and signatory authority not yet independently established**).  
-**Contact for proposed contracting/privacy intake:** comercial@risckcomply.com  
-**Product:** https://www.risckcomply.com  
-**Source baseline:** GitHub `main` commit `70d3545f414d063379d481fd238aed563e05edda`. This is a source-documentation baseline, **not proof that production runs this SHA**.
+**Document status:** CUSTOMER-REVIEW DRAFT / NOT EXECUTED / NOT EFFECTIVE  
+**Prepared:** 2026-10-21
+**Integration status:** ONE PROPOSED DPA SCHEDULE / DRAFT ONLY
+**Provenance:** #2554 at `f77ccc1e037dfd37e6acefc0371418483b3e5e74` (processing/TOM parent); #2555 at `2a5e6f04daa6fbb1ea2f0c5e25c098b3776a55b9` (role, objection and buyer-completion additions).
+**Proposed contracting/privacy intake:** comercial@risckcomply.com (address only; delivery/support SLA not tested by this consolidation).  
+**Source baseline:** GitHub main commit 70d3545f414d063379d481fd238aed563e05edda  
+**Intended service provider:** SAMUEL CERQUEIRA, UNIPESSOAL LDA (operator-designated; authoritative registration/signatory facts outstanding)  
+**Product:** RISCK COMPLY — B2B AI governance and compliance-operations SaaS
 
-> **For buyer review, not execution.** This proposed schedule is intended to accompany the controlled Master Services Agreement, an approved Order Form and the separately approved Data Processing Addendum (DPA). It does not itself create a contract; it must not be represented as signed, GDPR-approved, buyer-accepted or incorporated into customer terms. Each buyer-specific annex and provider/production fact must be confirmed before contracting.
+> This schedule is a negotiated annex candidate, not legal advice, a signed DPA, an approved security certificate, or evidence of regulatory authorisation. It should accompany the canonical Data Processing Addendum Review Draft, Master Services Agreement and Enterprise Order Form only after factual reconciliation, party approval and lawful incorporation. It does **not** silently supersede their terms. If factual verification does not support an item, amend or remove it before execution.
 
-## 1. Processing parties and permitted scope
+## 0. Instructions for contract assembly
 
-1. **Customer workspace personal data.** Depending on the customer's underlying activities, the customer is controller or processor; RISCK COMPLY is proposed to act as processor or subprocessor for personal data handled on documented customer instructions. The customer retains legal responsibility for determining lawful purposes, instructions, content accuracy, data-subject notices and its own GDPR/AI Act role and obligations.
-2. **Supplier's independent activities.** Website visits, account administration, security and fraud prevention, procurement, support and billing may involve independent controller purposes. Such processing is subject to the supplier's **final effective** privacy notice and provider-specific role analysis, rather than being silently included in the customer-processor processing perimeter.
-3. **Product scope.** Subscription-based B2B AI governance and compliance-operations workspaces, subject to the enabled plan, actual deployment and buyer-specific Order Form. No claim that the platform grants legal advice, conformity assessment, regulatory approval or guaranteed compliance.
-4. **Instructions.** The signed agreement, approved Order Form, documented product configurations and authenticated support instructions define authorised processing. An instruction contrary to data-protection law is escalated under the signed DPA; a software assessment is not a legal determination.
-5. **Restricted content.** Special-category, criminal-offence, children's or similarly sensitive personal data is not approved as a default customer use case; specific processing requires agreed scope, legal conditions, security measures and verified capability.
+1. Attach this schedule to the exact-version DPA after completing every bracketed field and removing inapplicable choices.
+2. Identify the parties and the precise controller/processor roles **per processing activity**, not just once for the whole commercial relationship.
+3. Revalidate each provider, data-flow, location, retention and technical-security assertion against the actual production account and relevant release SHA immediately before signature.
+4. Complete the technical measures and subprocessor annexes with attributable evidence; do not turn a source-code control into a guaranteed deployment or test result without production evidence.
+5. Separately adopt any applicable Chapter V GDPR transfer instrument (such as the relevant 2021/914 SCC module) rather than misdescribing Article 28 controller-processor clauses as transfer SCCs.
+6. Company legal representatives and the buyer must expressly approve and execute/incorporate the final version. A review draft or platform webpage is not an executed customer contract.
 
-## 2. Article 28(3) processing specification
+**Drafting references:** GDPR Articles 5, 6, 9, 12–22, 28, 32–36 and Chapter V; Commission Decision (EU) 2021/915 (Article 28 clauses); Commission Decision (EU) 2021/914 (international transfers); Portuguese CNPD breach guidance. Official links are included in section I.
 
-| Item | Proposed processing specification | Confirmation requirement |
+## A. Schedule of processing (GDPR Article 28(3))
+
+| Required item | Proposed customer-facing scope | Mandatory closing verification |
 | --- | --- | --- |
-| Subject matter | Provision, security, maintenance and support of the subscribed RISCK COMPLY customer workspace | Final Order Form/service description |
-| Duration | Subscription term and legally/contractually justified post-termination return, deletion or retention | Final DPA and verified downstream lifecycle |
-| Nature of processing | Receipt, organisation, hosting/storage, retrieval, workspace access, controlled disclosure, export and deletion-support | Actual enabled integrations and flows |
-| Purposes | Customer-directed AI system inventory, governance/compliance workflow, evidence and controlled-document handling; service security and maintenance | Customer purpose and instructions |
-| Data subjects | Authorised customer users; customer employees/contractors; business and vendor contacts; any persons documented in customer-provided content | Customer-specific categories |
-| Data categories | Identity, business contact, workspace membership, system/vendor/risk/task/assessment records, compliance documents, support messages and necessary operational metadata, insofar as they contain personal data | Customer-specific categories and uploaded documents |
-| Customer obligations | Lawful instructions, legal bases/notices, access authorisation, accurate classification, appropriate inputs, data-subject request decisions | Customer/controller confirmation |
-| Supplier obligations | Article 28 duties within agreed processing scope, subject to an executed DPA and evidence-backed technical and organisational measures | Exact effective DPA and operator authority |
+| Controller/customer | [CUSTOMER LEGAL ENTITY, CONTACT, REGISTERED ADDRESS, GDPR ROLE] | Verify entity and processing role |
+| Service provider/processor | SAMUEL CERQUEIRA, UNIPESSOAL LDA — **owner-designated only** | Verify registered details, signatory authority and contract-side identity |
+| Processing role | Customer normally controls customer-workspace content; RISCK COMPLY intends to act as processor, or subprocessor if the customer is itself a processor; provider-side website, billing, marketing and certain security processing must be mapped separately | Complete processing-activity role mapping with buyer |
+| Subject matter | Hosting and operating contracted AI-governance, inventory, risk, assessment, document/evidence and related compliance workflows | Tie to ordered/deployed modules |
+| Nature of processing | Receive, organise, validate, store, retrieve, restrict access to, back up where applicable, display, export, transmit to authorised service providers, investigate support incidents, and delete/return data according to instructions and law | Verify enabled functionality and providers |
+| Purpose | Delivery, security, support and maintenance of the contracted service, on documented customer instructions; no independent reuse of workspace content for unrelated purposes | Reconcile with Terms, privacy notice and actual product functionality |
+| Duration | Contract term plus agreed retrieval/return/deletion and legally necessary retention periods | Approved retention table and provider lifecycles required |
+| Data subjects | Authorised users, customer staff and contractors, business contacts, vendor contacts, individuals identified in customer-submitted AI-system records and any other approved persons | Customer to confirm populations |
+| Ordinary data categories | Business identities and contact details, account/workspace IDs, membership/role metadata, compliance records, customer-uploaded documents and evidence containing personal data, support communications, relevant event/audit metadata | Confirm payload schemas and enabled integrations |
+| Special-category / offence data | **Outside default processing scope**; not an unconditional ban on processing that might incidentally appear. Intentional/high-volume use requires specific approved scope, lawful conditions and safeguards | Buyer-specific decision; DPIA where required |
+| Customer instructions | Final signed DPA/MSA, approved order form, documented customer configuration and authorised support requests, subject to legally required processing | Confirm instruction/change logging and escalation route |
+| Transfer instructions | Only documented, authorised transfers and access in accordance with the agreed data-flow inventory and applicable law | Section D must be finished before contract effect |
+| Return and deletion | Choose return or deletion on termination as the GDPR requires, except where Union/Member-State law requires retention; implement verified backup and legal-hold exceptions | Full lifecycle evidence and customer export method required |
 
-**No blanket processing of personal data in the EU only is represented.** Existing documentation identifies primary Supabase Production project region `eu-west-1` (Ireland), but other providers may process or access data from other jurisdictions.
+**Independent supplier purposes:** website visits, account administration, fraud/security prevention, procurement, support and billing require purpose-by-purpose controller/processor analysis and the supplier's final privacy notice. They are not silently included in the customer-instruction perimeter.
 
-## 3. Technical and organisational measures — buyer-disclosure boundary
+**Default customer restrictions for review:** no prohibited AI uses; no deliberate submission of biometric/special-category, criminal-offence or children's personal data without approved scope, lawful conditions and verified safeguards; no expectation that RISCK COMPLY makes regulated decisions for the customer. Any restriction must match the real product and the executed commercial agreement.
 
-These measures are documented **designs and implementation areas in repository materials**, not a newly performed or current exact-production penetration test. `IMPLEMENTED` means represented in source; `DEPLOYED`/`TESTED` require current release-specific artifacts; `ACCEPTED` requires the applicable genuine acceptance authority.
+## B. Article 28 processor obligations — clause alignment
 
-| Control | Disclosure suitable for due diligence | Status/limit |
+The definitive DPA should include: processing only on documented instructions (including international transfers, subject to legal exceptions); confidentiality for authorised personnel; appropriate Article 32 measures; authorised-subprocessor governance and flow-down Article 28 obligations; assistance with rights requests and Articles 32–36 where applicable; notice to the controller **without undue delay** after awareness of a personal-data breach; deletion or return at the end of services unless required retention applies; provision of compliance information and allowance for legally required audits/inspections; and notification where an instruction appears unlawful.
+
+The owner-selected operational drafting positions remain **subject to final legal and technical acceptance**:
+
+| Topic | Current proposed position | Status |
 | --- | --- | --- |
-| Identity and access | Supabase Auth integration, server-side authentication/authorisation, scoped workspace membership and RBAC | IMPLEMENTED per architecture; exact buyer deployment and tenant configuration need verification |
-| Segregation | Workspace/organisation scoping, Postgres RLS and server-side tenant checks | IMPLEMENTED; do not assert exact-production cross-tenant test PASS without current accepted evidence |
-| Elevated operations | Step-up controls used for certain sensitive privacy/audit actions | IMPLEMENTED where evidenced; not universal MFA on every tenant by default |
-| Documents and exports | Protected, tenant-scoped document and evidence workflows, controlled export/deletion paths | IMPLEMENTED; storage policy and release-specific negative tests require evidence |
-| Security evidence | Audit events, tamper-evident chain and gated evidence exports | IMPLEMENTED; do **not** claim WORM/immutable third-party retention |
-| Data in transit/at rest | Provider-managed security and encryption controls to the extent applicable to active services/configuration | No unsupported key ownership, algorithm, regional exclusivity or end-to-end encryption guarantee |
-| Logging and monitoring | Diagnostic, security and incident workflows with privacy-minimisation practices | Provider settings/retention need current configuration evidence; no contractual 24/7 on-call |
-| Secure delivery | Source/CI security and release gates | Repository evidence only; exact deployed SHA and release control acceptance must be checked |
-| Backup/restore | Prior bounded isolated database restoration and migration-replay tests documented | No currently established full-application customer-data restore, storage recovery, RTO or RPO contractual commitment |
-| Independent assessment | Third-party black-box web assessment dated 12 September 2026 documented; original TLS Highs have subsequent technical remediation evidence | Clean independent terminal retest and comprehensive authenticated isolation assurance **not claimed** |
-| Certifications | Neither ISO 27001 certification nor SOC 2 Type I/II report is currently claimed | NOT AVAILABLE |
+| Subprocessor authorisation | General prior written authorisation, change notice and documented right of objection | OWNER POSITION SELECTED / EFFECTIVE TERMS PENDING |
+| New material subprocessor notice | Target of 30 days where practicable/contractually applicable; reasonable data-protection objections and an agreed remedy/affected-service exit route, preserving mandatory GDPR rights | TARGET ONLY / NOT A CURRENT PROMISE |
+| Routine audit procedure | Remote security evidence/questionnaires first, generally once in 12 months except justified additional audits; GDPR mandatory audit rights preserved | OWNER POSITION SELECTED / REVIEW |
+| Processor breach notice | Without undue delay after awareness; no automatic 24 h/48 h pledge | DRAFT CONTRACT POSITION |
+| Post-termination export | 30-day target, conditioned on verified functionality and applicable final agreement | UNPROVEN AS UNIVERSAL SERVICE GUARANTEE |
+| Customer-content model training | No authorised customer-content training for provider or third-party AI models without separate lawful and documented approval | POLICY POSITION; VERIFY EACH ENABLED DATA FLOW |
 
-The contracting Security Annex must map promised measures to **current** environment and evidence references. Code presence, past provider statements and a `READY` deployment alone are insufficient for current production effectiveness.
+## C. Schedule of technical and organisational measures (TOMs)
 
-## 4. Proposed provider/disclosure register (role-specific; review before incorporation)
+This table states the **candidate measure and proof requirement**, not an unqualified production warranty. A customer-facing signed TOM schedule must identify the exact committed measure, scope and evidence effective at signature. Legend: **SOURCE** = source/document structure present; **TESTED** = attributable test result exists for named version/scope; **DEPLOYED** = shown in observed environment; **ACCEPTED** = independent or governed approval where required; **PENDING** = insufficient current contractual evidence.
 
-The following are **identified integrations or operational vendors**, not a declaration that every company is a contractual subprocessor of every customer-data flow. Confirm provider legal entity, exact customer account, active product options, personal-data flows, service region/access, retention and role prior to converting any row into a binding Annex III.
-
-| Service | Typical purpose/data | Current known boundary | Contract-grade status |
+| Control domain | Proposed evidence-bounded representation | Repository evidence reference | Pre-signature status |
 | --- | --- | --- | --- |
-| **Supabase** | Production Postgres/Auth/Storage; customer content, account/workspace data | Production project previously evidenced in Ireland (`eu-west-1`); general DPA incorporation framework recorded in provider correspondence | Exact account/entity, backup/support access and onward transfers still require final validation |
-| **Vercel** | Application hosting, request metadata, edge/server execution, deployment logs | Pro-team/provider DPA framework documented; no universal EU-only statement | Contracting entity, retention, access locations and flow mapping PENDING |
-| **Cloudflare** | DNS, proxy/TLS edge and traffic/security metadata | Public self-service DPA framework documented | Enabled products, customer entity and cross-border flow PENDING |
-| **Resend** | Transactional delivery where configured: email recipient, content and metadata | DPA incorporation framework documented | Actual account/entity, retention and enabled delivery features PENDING |
-| **Upstash / Redis** | Security/rate-limit operational identifiers | Provider DPA framework documented | Active region, account plan and backup/retention configuration PENDING |
-| **Sentry** | Diagnostic errors and possibly request/user identifiers | Service integration and provider framework documented | Current project, scrubbers, retention and onward access PENDING |
-| **PostHog** | Optional, consent-gated analytics events | Historical executed PostHog DPA documented; currently connected generic project does not establish Production attribution | Active Production project, consent and retention PENDING |
-| **Google Identity / OAuth** | Selected login profile/identity metadata | Identity integration documented | Legal role, terms and enabled data flows PENDING |
-| **Stripe** | Billing, subscriptions, invoicing/payment-related metadata | Material commercial processor/controller functions may vary by activity | Account-specific legal role, seller/tax settings and data-flow PENDING |
-| **Google Workspace / GitHub Actions** | Corporate support communications; development/CI and limited protected operational evidence where configured | Operational processors or independent services depending on activity | Include only where processing in the scoped DPA actually occurs; role/account facts PENDING |
+| Identity and login | Managed authentication and server-side verification are implemented in the application design | `docs/trust/SECURITY_OVERVIEW.md`, `docs/trust/ARCHITECTURE_OVERVIEW.md` | SOURCE; exact release deployment and runtime proof PENDING |
+| Tenant segregation | Organisation/workspace-scoped authorisation, RBAC and database RLS controls are used; no blanket claim that all cross-tenant negatives have passed on this exact release | `docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md`, tenant-isolation evidence contract | SOURCE; release-specific live TESTED/ACCEPTED PENDING |
+| Privileged operations | Step-up protection exists for sensitive administrative/privacy operations where enabled | `docs/legal-review-preparation/legal-pack/DATA_PROCESSING_ADDENDUM_REVIEW_DRAFT.md` | SOURCE; tenant configuration and deployed results PENDING |
+| Data transit/storage | Provider-managed encryption/TLS controls are used subject to enabled plan, implementation and supplier terms; algorithm/key-residency details are not universally warranted | `docs/trust/SECURITY_OVERVIEW.md`, `docs/trust/SUBPROCESSORS.md` | Provider- and configuration-specific proof PENDING |
+| Logging | Tenant-scoped activity records and tamper-evident audit-chain features are documented; external WORM/immutable archiving is **not** claimed | `docs/security/AUDIT_CHAIN.md`, `docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md` | SOURCE; current runtime evidence PENDING |
+| Document handling | Private workspace-document handling with access controls is implemented in source and reviewed against tenant scoping | `docs/trust/DATA_PROTECTION.md` | SOURCE; deployed negative-test proof PENDING |
+| Security development | Protected CI/security checks, change review and release-validation controls exist | `docs/trust/SECURITY_OVERVIEW.md`, canonical release workflows | SOURCE; accepted current-SHA results PENDING |
+| Incident handling | Documented intake, triage, containment, remediation, evidence preservation and communications workflow exists | `docs/trust/INCIDENT_RESPONSE.md` | DOCUMENTED; staffing and response-time guarantees NOT CLAIMED |
+| Vulnerability testing | Independent black-box review dated 2026-09-12 and technical TLS findings remediation are recorded; clean independent terminal retest is **not** claimed | `docs/trust/PENTEST_READINESS.md` | Historical assessment documented; current independent retest PENDING |
+| Backup and restore | Existing CircleCI #180 demonstrated encrypted, production-read-only logical PostgreSQL backup and isolated restoration: 155/155 selected tables with matching rows and selected catalogs/ACLs. Scope is LOGICAL_DATABASE_ONLY; not Storage object bytes, managed Auth configuration, global logins, application rollback or full application RTO/RPO | https://circleci.com/gh/renanescola40-afk/eurocomply_saas/180 — operational SHA `06ca08668a3d8f796ed175d6770d368a99f3e778`; `docs/dr/DR_RUNTIME_EVIDENCE.md` | TESTED for the attributed logical scope only; formal backup-restore/full-platform acceptance PENDING |
+| Certifications | No ISO 27001 certification or SOC 2 Type I/II report is claimed by this schedule | `docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md` | Not evidenced as available; no certification warranty |
+| Service availability | No default percentage uptime, 24/7 operations, guaranteed RTO/RPO or service credits are offered | `docs/legal-review-preparation/legal-pack/SERVICE_SUPPORT_INCIDENT_SCHEDULE_REVIEW_DRAFT.md` | No contractual numerical SLA |
+| Privacy lifecycle | GDPR handling and category-specific retention/export/delete procedures are documented; provider copies have their own lifecycle | `docs/privacy/DATA_RETENTION_POLICY.md`, `docs/privacy/GDPR_RUNBOOK.md` | SOURCE / partial technical tests; final retention periods PENDING |
 
-An AI model provider used privately by a founder is **not automatically** a direct SaaS runtime subprocessor. No active direct customer-facing model API is established by the cited product-scope register. Reassess promptly if runtime architecture changes.
+**Before execution:** security owner must sign off a release-specific evidence attachment identifying which rows are IMPLEMENTED, TESTED, DEPLOYED and ACCEPTED, with test artefact IDs and the production SHA. Rows lacking evidence must remain qualified or be removed.
 
-### Change notices / objections — proposed owner-selected model
+## D. Candidate supplier, subprocessor and international-transfer annex
 
-General written authorisation, with a **target** of 30 days' advance notice for new material subprocessors where practicable and contractually applicable; reasonable data-protection objections and an agreed remedy/affected-service exit route. **This is a proposed term awaiting final agreement, not a binding universal promise.** Mandatory GDPR Article 28 rights must not be restricted by the procedural language.
+A service provider is not necessarily a GDPR subprocessor for every activity. This register is a **role-analysis working schedule**, not unconditional customer approval of all vendors. Do not publish specific supplier personnel, account IDs or confidential contract material.
 
-## 5. International transfers
+| Supplier / integration | Candidate relevant function | Current evidence limitation / buyer-safe disclosure |
+| --- | --- | --- |
+| Supabase | Customer data database, authentication and private Storage | Production region previously evidenced as eu-west-1 (Ireland); access, backups, onward transfers and any negotiated contract remain account-specific |
+| Vercel | Web application hosting / runtime / delivery | Published provider DPA framework documented; current plan not attested by this schedule; exact contracting entity, request/access locations and current deployment must be reconfirmed |
+| Cloudflare | DNS, CDN/edge TLS/security/network processing | Enabled services, edge-log retention, account legal entity and international transfer facts must be confirmed |
+| Sentry | Error/diagnostic monitoring | Netherlands location reported historically; exact live organisation settings, payload scrubbing, retention and support access pending |
+| Upstash / Redis | Distributed rate limiting / security metadata | Actual database region, plan and retention/backup configuration unverified in this annex |
+| Resend | Transactional email | Current account/contracting entity, message data and retention configuration need confirmation; **no emails are sent by creating this schedule** |
+| Stripe | Billing/payment/subscription metadata | May have independent-controller as well as service-provider roles; account-specific role, tax details and terms require reconciliation |
+| Google Identity/OAuth | Optional sign-in service | OAuth identity role and transfer analysis depends on account configuration and actual data flow |
+| Google Workspace | Business contact and support communications | Treat separately from workspace content; verify corporate account terms and retained messages |
+| GitHub / GitHub Actions | Source control and protected CI jobs | Whether production personal data reaches runners must be established before treating as a workspace subprocessor |
+| PostHog (if enabled) | Consent-dependent product analytics | Historic EU Cloud/DPA evidence exists; actual production project connection is not currently attributable; omit as an active personal-data destination unless validated |
 
-1. A server located in Ireland does **not** prove that every relevant processing, remote access or support operation remains within the EEA.
-2. Record each actual exporter/importer, purpose, data categories, destination, vendor role and onward transfer.
-3. For third-country transfers, verify whether GDPR Article 45 adequacy applies, or identify an appropriate Chapter V transfer mechanism (including applicable **2021/914** international-transfer SCC module where used), supplementary safeguards/TIA where needed, and account-specific signed/incorporated evidence.
-4. EU Commission **2021/915** controller–processor clauses address Article 28 relationships; they are **not by themselves** proof of a lawful Chapter V international transfer.
-5. A vendor's website stating that SCCs or DPF may apply is not proof that a RISCK COMPLY account, entity or particular data flow satisfies Chapter V requirements.
+An AI service used privately by a creator is not automatically a direct SaaS runtime subprocessor. Include it only if the scoped service actually transfers customer personal data to it; reassess promptly when runtime architecture changes.
 
-**Status:** Transfer register exists; final flow-by-flow transfer outcomes remain open. No blanket `GDPR TRANSFERS=PASS` assertion.
+**Mandatory pre-approval table** for each *actual* subprocessor: [legal supplier name] · [RISCK contract counterparty] · [data categories] · [role] · [processing/storage/access countries] · [transfer mechanism] · [retention] · [DPA/effective reference] · [change notice] · [owner signoff] · [verification date]. Fill with attributable provider account and agreement evidence.
 
-## 6. Data lifecycle, rights and deletion
+**Data residency:** The primary production Supabase project was evidenced in Ireland; **RISCK COMPLY makes no blanket EU-only storage, access or processing claim** for the whole service.
 
-- **Collection/use:** customer or authorised workspace member determines ordinary business content, subject to the approved service scope.
-- **Access/correction/export:** described controls and request procedures exist; particular requests require proper identity, membership and role checks. The supplier assists the controller under the DPA where applicable.
-- **Termination:** owner-selected **30-day post-termination export-window target** remains a *draft negotiating position*, contingent on real capability, third-party constraints and the approved contract. Do not promise it to a buyer as effective.
-- **Deletion/return:** final mechanism, timing, backup expiry and exceptions for tax, security, litigation or other legal holds must be set by data class and provider. A user-facing deletion is not instantaneous disappearance of all backups/logs.
-- **Regulatory retention:** billing/tax records, audit/security data and workspace records may have different lawful periods. Do not advertise a single fixed lifetime.
-- **Subprocessor assistance:** require relevant deletion/return and DSR assistance according to signed, lawful processor agreements.
+**Transfer decision rule:** A supplier's public SCC/DPF description does not by itself establish lawful coverage for each RISCK COMPLY flow. For each transfer, identify exporter/importer role, destination, adequate-country status or other lawful mechanism, correct 2021/914 SCC module (where needed), transfer impact/supplementary measures where required, and contractual evidence. Commission Decision 2021/915 for Article 28 contracting is **not** interchangeable with Decision 2021/914 for Chapter V international transfers.
 
-## 7. Incidents, information and audit
+## E. Retention, return, deletion and breach assistance
 
-- On becoming aware of a personal-data breach involving processor-scope customer data, proposed processor notification is **without undue delay**, accompanied by reasonably available details and subsequent updates. No unproved automatic 24-hour/48-hour promise is made.
-- Controller regulatory notification and data-subject duties must be assessed by the controller based on actual Article 33/34 applicability; this processor schedule does not transfer the controller's statutory responsibility.
-- Supplier will assist with relevant Articles 32–36 requests to the extent required by the binding DPA and available information.
-- First-line buyer reviews may use evidence packs and questionnaires; owner-selected routine audit **once per 12 months** is a proposed procedure, **without excluding audits required by Article 28(3)(h)** or regulator instructions.
-- No default availability percentage, service-credit promise, 24/7 service or guaranteed RPO/RTO. Any negotiated enterprise commitment requires operational proof and signed terms.
+### E1. Contract schedule to be completed
 
-## 8. AI governance scope and limitations
+| Dataset | Proposed retention principle | Final numerical period/status |
+| --- | --- | --- |
+| Customer workspace content / uploaded documents | During service plus agreed export/return and removal process | [AGREED PERIOD / PROCESS; NOT VERIFIED] |
+| Users / authentication records | Necessary for account, identity and security administration | [PERIOD; NOT VERIFIED] |
+| Billing and invoice records | Legal/tax obligations and dispute evidence to extent applicable | [PERIOD AND LEGAL BASIS; NOT VERIFIED] |
+| Security and audit records | Security investigation, integrity and proportionate accountability | [CATEGORY-SPECIFIC PERIOD; NOT VERIFIED] |
+| Support correspondence | Issue resolution and documented lawful business retention | [PERIOD; NOT VERIFIED] |
+| Managed backup copies, logs and snapshots | Applicable supplier lifecycle and lawful holds | [SUPPLIER-BY-SUPPLIER FACTS; NOT VERIFIED] |
 
-RISCK COMPLY provides compliance-support workflows, not automatic legal conclusions or AI Act certification. Each customer is responsible for identifying whether its individual AI systems are in scope, whether it is provider/deployer or another regulated actor, its Article 5 and Article 50 obligations, applicable high-risk classification/exceptions, Article 9–15 provider controls and Article 27 fundamental-rights impact assessment when legally required.
+A successful in-app deletion request does **not** establish immediate deletion from immutable audit evidence, legally retained records, logs, supplier backups or all downstream copies. Customer rights and exceptions depend on the GDPR role, legal grounds and approved retention schedule.
 
-The supplier's own classification as a governance software operator must be reassessed if the software begins invoking AI models, generating or materially manipulating synthetic media, or taking decisions in sensitive Annex III applications.
+### E2. Personal-data incident cooperation
 
-The current EU AI Act applicability timeline includes prohibited practices/AI literacy from **2 February 2025**, broad provisions from **2 August 2026**, and revised high-risk milestones **2 December 2027** (stand-alone) and **2 August 2028** (product-embedded). Specific rules, exceptions and transitions must be checked for the actual use and legal role. See the separate applicability matrix in this branch.
+On becoming aware of a customer-data personal-data breach, the proposed processor commitment is to inform the relevant controller **without undue delay**, supply available incident description, affected data categories/scale where known, contact and mitigation details, and follow-up information as it becomes available. The controller evaluates its independent duty to notify the supervisory authority, normally within **72 hours** after becoming aware where GDPR Article 33 conditions are met, and data subjects where Article 34 applies. A processor does not automatically take over the controller's filing obligation. Record incidents even where a regulatory notification is not required.
 
-## 9. Customer-specific completion block (must be filled for any actual contract)
+## F. AI functionality / regulatory limitation schedule
 
-| Required confirmation | Final value |
-| --- | --- |
-| Exact approved supplier legal name, registered office, NIPC, authority/signatory | **PENDING OFFICIAL CORPORATE RECORDS** |
-| Customer legal identity, controller/processor status, authorised signatory | **CUSTOMER INPUT REQUIRED** |
-| Order Form ID, approved contract/DPA versions, effective date and precedence | **PENDING** |
-| Nature/scope of customer processing and affected users | **CUSTOMER INPUT REQUIRED** |
-| Additional data categories, high-risk/special-category restrictions and approved integrations | **CUSTOMER INPUT REQUIRED** |
-| Approved supplier/subprocessor list including actual legal entities | **PENDING ACCOUNT/ROLE VALIDATION** |
-| International transfers, adopted mechanism/modules and assessments | **PENDING FLOW-SPECIFIC VALIDATION** |
-| Final TOMs and exact release/security evidence | **PENDING EXACT-PRODUCTION EVIDENCE** |
-| Validated post-termination export and provider backup/deletion periods | **PENDING TECHNICAL/PROVIDER EVIDENCE** |
-| Owner-approved legal/operational deviations | **PENDING APPROVAL** |
-| Final privacy/cookies notice, lawful-basis and ePrivacy position | **PENDING FACTUAL/LEGAL PUBLICATION** |
-| Valid execution/incorporation of DPA and Order Form | **PENDING** |
+RISCK COMPLY is marketed as **governance and compliance-workflow software**. Repository documentation at the source baseline reports no attributable direct customer-facing model invocation in the current SaaS runtime. This is a source/evidence-bounded observation, **not** a guarantee about all future deployments or enabled integrations.
 
-## 10. Review / acceptance rule
+The customer remains responsible for establishing intended purpose, role (provider, deployer, importer, distributor, etc.), actual AI-system risk classification, prohibited-use exceptions, transparency duties, legal bases and any applicable provider/deployer high-risk obligations, FRIA/DPIA or conformity requirements. Platform-generated classifications, explanations and evidence templates require competent human review; they are not an approval by a regulator, certification, legal opinion or guarantee of legal compliance.
 
-This document becomes a contract annex **only** when the verified details are completed, legal/commercial approvers accept the exact version as applicable, and the authorised company and customer complete the required agreement mechanism. The formal repository `legal-publication` control separately requires genuine `LEGAL_LAUNCH_ACCEPTED` evidence; this draft must never be used to manufacture that status.
+EU AI Act currently relevant principal dates (verify again at signature):
+- 2025-02-02: first general/prohibition measures applied;
+- 2025-08-02: GPAI/governance requirements;
+- 2026-08-02: broad application including Article 50 transparency;
+- 2026-12-02: specified additional Article 5 prohibitions and a limited Article 50(2) transition;
+- 2027-12-02: Annex III high-risk rules;
+- 2028-08-02: Annex I regulated-product high-risk rules.
 
-### Canonical repository evidence (not incorporated automatically)
+These dates follow the 2026 amendment Regulation (EU) 2026/1744 and are role/transition dependent. Classification of the RISCK COMPLY platform **itself** must be revisited if generative/model execution, automated high-impact decisioning, biometric or other scoped AI functionality is introduced.
 
+## G. Enterprise order-form factual acceptance sheet
+
+| Item | Proposed recorded response | Acceptance condition |
+| --- | --- | --- |
+| Exact customer legal identity | [CUSTOMER] | Procurement/customer verified |
+| Exact supplier legal identity and signatory | [VERIFY REGISTRY / SIGNING POWER] | Registry evidence and signature authority |
+| DPA and schedule versions | [VERSION, HASH, EFFECTIVE DATE] | Same approved versions incorporated in contract |
+| Data controller/processor role allocation | [ROLE MATRIX] | Buyer confirms |
+| Active subprocessors and their purposes | [DATED ACTUAL SET] | Provider account evidence and accepted notice process |
+| International transfer legal mechanisms | [FLOW-BY-FLOW ANNEX] | Legal/factual validation |
+| Technical security claims | [VERSIONED PROOF PACK / TARGET SHA] | Security/release-owner approval |
+| Data retention/deletion window | [CATEGORY-SPECIFIC TABLE] | Supplier and service capability confirmed |
+| Service SLA and recovery obligations | [NONE BY DEFAULT / SPECIFIC SIGNED EXCEPTION] | No invented metric |
+| Post-termination export | [APPROVED ACTUAL MECHANISM] | Functional/prod proof; no unverified 30-day promise |
+| Additional assessment/certification demands | [CUSTOMER-SPECIFIC] | Accept only when actually evidenced |
+| Order Form ID, document precedence and approved versions | [PENDING APPROVAL] | Same agreed contract set |
+| Additional data categories, restricted-content scope and integrations | [CUSTOMER INPUT REQUIRED] | Lawful conditions, agreed scope and verified safeguards |
+| Owner-approved legal/operational deviations | [PENDING APPROVAL] | Attributable authorised decision; no silent promises |
+| Final privacy/cookies notice and lawful-basis disclosure | [PENDING FACTUAL/LEGAL PUBLICATION] | Current facts and valid publication approval |
+| Contract signature and effective date | [NOT COMPLETE] | Authorised party action |
+
+**Unsigned status:** all table placeholders are open and must be completed case by case. No fictional acceptance can be generated from this annex.
+
+## H. Responsibility split
+
+**RISCK COMPLY:** operate only the actual contracted service, perform documented processor obligations, maintain appropriate technical/security and vendor controls, preserve accurate disclosures, handle processor-side breach assistance, and provide available compliance evidence.
+
+**Customer:** provide lawful and accurate inputs; establish each AI system's real intended purpose and legal role; decide legal bases and AI Act classifications/obligations; operate human review and governance; fulfil controller responsibilities and respond to supervisory bodies; approve its own privacy/transfer and procurement decisions.
+
+## I. Sources and authoritative repository references
+
+Official sources:
+- Council official amended timeline (corroborated 2026-10-21): https://www.consilium.europa.eu/en/policies/artificial-intelligence-act/timeline-artificial-intelligence/
+- GDPR Regulation (EU) 2016/679: https://eur-lex.europa.eu/eli/reg/2016/679/oj
+- Article 28 controller-processor SCC decision 2021/915: https://eur-lex.europa.eu/eli/dec_impl/2021/915/oj
+- International transfer SCC decision 2021/914: https://eur-lex.europa.eu/eli/dec_impl/2021/914/oj
+- European Commission SCC guidance: https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection/new-standard-contractual-clauses-questions-and-answers-overview_en
+- CNPD breach notification: https://www.cnpd.pt/organizacoes/outras-obrigacoes/violacao-de-dados-ou-data-breach/
+- Consolidated AI Act (including 2026 changes): https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R1689-20260727
+- Amendment Regulation (EU) 2026/1744: https://eur-lex.europa.eu/eli/reg/2026/1744/oj
+
+Canonical repository materials cross-checked on the stated source baseline:
 - `docs/legal-review-preparation/legal-pack/DATA_PROCESSING_ADDENDUM_REVIEW_DRAFT.md`
 - `docs/legal-review-preparation/legal-pack/MASTER_SERVICES_AGREEMENT_REVIEW_DRAFT.md`
 - `docs/legal-review-preparation/legal-pack/ENTERPRISE_ORDER_FORM_REVIEW_DRAFT.md`
 - `docs/legal-assurance/DPA_ARTICLE_28_CONTROL_MATRIX.md`
-- `docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md`
 - `docs/legal-assurance/TOMS_MATRIX.md`
+- `docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md`
 - `docs/trust/SUBPROCESSORS.md`
 - `docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md`
 - `docs/evidence/LEGAL_PROCUREMENT_COMMERCIAL_CLOSURE_2026-10-03.md`
 - `config/enterprise-100-closure.json`
 
-### Official legal source references (reviewed 21 October 2026)
+## J. Canonical review set and closing status
 
-- GDPR (EU) 2016/679: https://eur-lex.europa.eu/eli/reg/2016/679/oj
-- Article 28 model controller–processor clauses, Decision (EU) 2021/915: https://eur-lex.europa.eu/eli/dec_impl/2021/915/oj/eng
-- Commission SCC FAQ (Article 28 versus Chapter V): https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection/new-standard-contractual-clauses-questions-and-answers-overview_en
-- Commission international data transfer rules: https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection/rules-international-data-transfers_en
-- EU Council AI Act 2026 amended calendar: https://www.consilium.europa.eu/en/policies/artificial-intelligence-act/timeline-artificial-intelligence/
-- AI Act 2024/1689 and amending Regulation 2026/1744: https://eur-lex.europa.eu/eli/reg/2024/1689/oj and https://eur-lex.europa.eu/eli/reg/2026/1744/oj
+This is the sole proposed V11 processing/security schedule in this integration candidate. It supplements the existing base DPA; it does not replace that DPA, a signed contract or mandatory law. Do not attach the parallel #2554 schedule as a second simultaneous annex.
+
+- Customer role/timing matrix: [EU AI Act/GDPR matrix](EU_AI_ACT_GDPR_APPLICABILITY_MATRIX_V7_REVIEW_DRAFT.md).
+- Private owner facts/IP completion: [owner acceptance pack](../OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md).
+- Publication control: [procurement handoff](../../legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md).
+- Exact origin/coverage decisions: [reconciliation record](../../legal-assurance/LEGAL_V7_DUPLICATION_RECONCILIATION_V10_2026-10-21.md).
+
 
 ```text
-DOCUMENT=ENTERPRISE_DATA_PROCESSING_SECURITY_SCHEDULE_V7
-DRAFT_FINALIZED_FOR_REVIEW=YES
-CUSTOMER_READY_FOR_NEGOTIATION=YES_WITH_DISCLOSED_LIMITATIONS
-SIGNED_OR_EFFECTIVE=NO
-LEGAL_LAUNCH_ACCEPTED=NOT_CLAIMED
-EXTERNAL_EMAILS_SENT=0
+DOCUMENT_PREPARED=YES
+SOURCE_REPOSITORY_REVIEW=YES
+OFFICIAL_TIMELINE_CORROBORATED=COUNCIL_2026_10_21
+COMPLETE_STATUTORY_REVIEW=NOT_PERFORMED_BY_THIS_CONSOLIDATION
+CUSTOMER_SPECIFIC_ANNEX_FACTS=OPEN
+VERCEL_PRODUCTION_DEPLOYMENT=dpl_CmyiHWky6g41su26PE1nyGwwCS1f
+VERCEL_PRODUCTION_DEPLOYMENT_STATE=READY_OBSERVED_2026_10_21
+PRODUCTION_SOURCE_SHA_PARITY=OBSERVED_70d3545f414d063379d481fd238aed563e05edda
+PUBLIC_LEGAL_ROUTE_HTTP_CONTENT_VERIFICATION=NOT_RETESTED_IN_THIS_CONSOLIDATION
+FULL_RUNTIME_AND_PROVIDER_CONTROL_ACCEPTANCE=NOT_ESTABLISHED
+DPA_EXECUTED=NO
+LEGAL_LAUNCH_ACCEPTED=NO
+CUSTOMER_PROCUREMENT_ACCEPTED=NO
+EMAILS_SENT=0
+EXTERNAL_SUBMISSIONS=0
 ```
+
+**Document owner action:** Only release an effective version after a current production evidence check, company and vendor factual reconciliation, customer-specific scoping, authorised legal approval as required and valid contract execution/incorporation.

@@ -1,8 +1,10 @@
-# RISCK COMPLY — EU AI Act + GDPR Applicability and Responsibility Matrix V7
+# RISCK COMPLY — EU AI Act + GDPR Applicability and Responsibility Matrix V11 (consolidated review)
 
 **Reviewed:** 21 October 2026 | **Source baseline:** `main` @ `70d3545f414d063379d481fd238aed563e05edda`  
 **Use:** controlled due-diligence annex for customers and counsel. **Not** a legal opinion, certification, regulator decision or evidence that any specific customer is compliant.  
 **Status:** `SOURCE-RECONCILED_DRAFT / ROLE-AND-USE-DEPENDENT / QUALIFIED-REVIEW_WHERE_NEEDED`.
+
+**Canonical review selection:** #2555 matrix is the working parent; unique scope, role-change, product-evidence and lifecycle material from #2554 is incorporated below. This resolves draft duplication only.
 
 ## A. Reading and acceptance rules
 
@@ -17,9 +19,10 @@
 
 | Topic and applicable timing | Primary duty bearer | RISCK COMPLY customer-facing support | Customer's non-delegable decision / limit | Evidence/status |
 | --- | --- | --- | --- | --- |
+| **Arts. 2–3 scope / inventory** | Each actor according to actual system, territorial scope and role | Inventory and intended-purpose evidence | Determine whether the technology is an AI system and any exemption; no universal standalone inventory duty is asserted for every minimal-risk use | Customer-specific PENDING |
 | **Art. 4 AI literacy** — from **2 Feb 2025** | Relevant AI system providers and deployers | Document staff training, risk ownership and governance records where enabled | Determine appropriate literacy measures for actual staff, contexts and systems | DOCUMENTED; customer adoption PENDING |
 | **Art. 5 prohibited practices** — general provisions from **2 Feb 2025**; later 2026 additions subject to their own date | Providers/deployers and other parties specified by provision | Screening, escalation and supporting evidence for flagged practices | Determine actual statutory facts/exceptions; do not use software score as authorisation | Rule/workflow implementation documented; customer/legal outcome PENDING |
-| **Art. 50 transparency** — applicable rules mainly from **2 Aug 2026**, including amended transitional timing for some synthetic-content provider solutions | Specific providers/deployers depending on interaction/output use | Disclosure review/evidence workflows where implemented | Establish whether the actual system is conversational, emotion recognition, biometric categorisation or generative/synthetic and meet relevant information/marking duties | DOCUMENTED; feature, use and exceptions PENDING |
+| **Art. 50 transparency** — applicable rules mainly from **2 Aug 2026**, subject to the narrow amended transition ending 2 Dec 2026 for applicable synthetic-content provider solutions; verify the actual system/market-placement conditions | Specific providers/deployers depending on interaction/output use | Disclosure review/evidence workflows where implemented | Establish whether the actual system is conversational, emotion recognition, biometric categorisation or generative/synthetic and meet relevant information/marking duties | DOCUMENTED; feature, use and exceptions PENDING |
 | **Annex III stand-alone high-risk AI** — revised application **2 Dec 2027** | Provider; deployer obligations separately | Inventory, intended-purpose and context review, classification evidence | Establish whether any individual customer system is legally high-risk, qualifies for exclusion, or needs registration | Classification support DOCUMENTED; legal determination PENDING |
 | **Annex I product-embedded high-risk AI** — revised application **2 Aug 2028**, with product/sectoral conditions | Product/system provider and regulated parties | Structured records/evidence relating to relevant conformity workflows where enabled | Determine product legislation, conformity-assessment route and any sectoral interplay | DOCUMENTED; no certification claimed |
 | **Arts. 9–15 high-risk provider safeguards** — only when system, role and provisions applicable | High-risk AI provider | Risk-management, data-governance, documentation, logging, transparency and human-oversight records as applicable | Design and actually operate compliant controls for the specific system; validate data, testing, robustness and cybersecurity | Workflow/support only; system-specific acceptance PENDING |
@@ -28,7 +31,7 @@
 | **Art. 53–55 GPAI model rules** — provisions applying from **2 Aug 2025** subject to relevant transition and role | Provider of a GPAI model | Inventory/vendor review and supporting documentation, not model-provider substitution | Determine whether customer is a GPAI model provider; produce actual model documentation/rights/safety assessments | No direct model-provider obligation automatically assigned to governance SaaS |
 | **Scope of RISCK COMPLY itself** | Platform operator according to actual software nature | Current evidence describes primarily governance/compliance workflows, without attributable direct model invocation in customer-facing SaaS runtime | Reassess classification on any new direct model use, model training, synthetic content, sensitive decisions or changed intended purpose | Current repository scope only; exact-production model calls not independently retested in this review |
 
-**Timing note:** Council of the EU official timeline (last reviewed 31 July 2026) confirms the 2026 omnibus fixed delayed dates, with separate changes relevant to some synthetic content/transparency measures. Do **not** use the 2024 pre-amendment August 2026 date for *all* high-risk controls. Retain legal review/change-trigger logic as amendments and delegated/implementing acts evolve.
+**Timing note (timeline corroborated 21 October 2026; not a full statutory or customer-specific legal review):** Council of the EU official timeline (last reviewed 31 July 2026) confirms the 2026 omnibus fixed delayed dates, with separate changes relevant to some synthetic content/transparency measures. Do **not** use the 2024 pre-amendment August 2026 date for *all* high-risk controls. Retain legal review/change-trigger logic as amendments and delegated/implementing acts evolve.
 
 ### GDPR matrix (already applicable; actual legal roles are processing-specific)
 
@@ -73,6 +76,20 @@
 | New recording/cookies/analytics functionality | ePrivacy and GDPR legal-basis review; consent/UI verification |
 | Material public legal-claim change | Revalidate source date, buyer evidence and exact publication approval |
 | New release or architectural change | Bind claims to exact `main` / deployed SHA, and rerun controlled security/privacy evidence |
+
+## C1. Unique scope and evidence qualifications preserved from #2554
+
+- A significant modification or changed intended purpose may change a customer's legal role, including provider duties. Record the change and reassess rather than keeping an old software risk label.
+- Non-EU customers may still fall within EU territorial scope based on placing systems on the market, use or output in the EU. The service is not represented as universally regulated or universally exempt outside the EU.
+- Provider duties and deployer duties are distinct; a workflow subscription does not transfer statutory conformity, registration or human-oversight responsibilities to RISCK COMPLY.
+- A FRIA and a GDPR DPIA have different legal triggers. Template completion does not prove either assessment is legally sufficient.
+- Lifecycle review covers intake → tenant-scoped processing/access/audit → authorised export/rights assistance → incident cooperation → agreed return/deletion and provider-copy exceptions. Rights decisions remain with the responsible controller.
+
+| Buyer statement | Permitted evidence boundary |
+| --- | --- |
+| Inventory, assessments and documents | Workflow support subject to the subscribed and actually deployed scope; not regulatory approval |
+| Logical backup and restore | Existing CircleCI #180 at operational SHA `06ca08668a3d8f796ed175d6770d368a99f3e778` demonstrated selected logical PostgreSQL recovery (155/155 tables, matching rows/catalogs/ACLs); no full-platform/Storage/Auth/rollback/RTO/RPO acceptance |
+| Legal, security and procurement | Draft preparation, implementation, deployment, tests and formal acceptance are separate; no certification, signed DPA, seller-title or clean terminal pentest implied |
 
 ## D. Source register (official primary references)
 

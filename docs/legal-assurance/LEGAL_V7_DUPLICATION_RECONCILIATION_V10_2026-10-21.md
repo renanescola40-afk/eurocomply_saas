@@ -1,20 +1,34 @@
-# RISCK COMPLY — Legal V7 overlap reconciliation (V10, 21 October 2026)
+# RISCK COMPLY — Legal V7 overlap reconciliation (V11 consolidated review, 21 October 2026)
 
-**Status:** integration guidance only; not an effective contract, legal approval, or enterprise acceptance.  
+**Status:** V11 consolidation implemented in review branch only; not an effective contract, legal approval, or enterprise acceptance.  
 **Base reviewed:** `main` @ `70d3545f414d063379d481fd238aed563e05edda`.  
 **Sources compared:** PR #2554 (`f77ccc1e037dfd37e6acefc0371418483b3e5e74`) and PR #2555 (`b2d98f482d67f853a9a2ba31cb70582422d9c1c2`).  
+**V11 integration parent:** #2555 `2a5e6f04daa6fbb1ea2f0c5e25c098b3776a55b9`; #2554 source remains `f77ccc1e037dfd37e6acefc0371418483b3e5e74`.
 **Scope:** documentation reconciliation only. No customer data, legal-signoff flag, main/release action or provider configuration changed.
 
 ## 1. Exact duplicate family discovered
 
 | Function | PR #2554 | PR #2555 | Integration decision |
 | --- | --- | --- | --- |
-| DPA Art. 28 processing + TOMs + transfers | `docs/legal-review-preparation/legal-pack/ENTERPRISE_DPA_PROCESSING_AND_SECURITY_SCHEDULE_V7_2026-10-21.md` | `docs/legal-review-preparation/legal-pack/ENTERPRISE_DATA_PROCESSING_SECURITY_SCHEDULE_V7_REVIEW_DRAFT.md` | **ONE canonical DPA annex only.** Suggested working parent: #2554 (detailed obligations/TOM evidence). Preserve buyer-useful information from #2555 through a reviewed amendment rather than publishing two schedules. |
-| EU AI Act + GDPR role/timing matrix | `docs/legal-review-preparation/legal-pack/AI_ACT_GDPR_CUSTOMER_APPLICABILITY_MATRIX_V7_2026-10-21.md` | `docs/legal-review-preparation/legal-pack/EU_AI_ACT_GDPR_APPLICABILITY_MATRIX_V7_REVIEW_DRAFT.md` | **ONE canonical role/timing matrix only.** Suggested working parent: #2555 (explicit change-trigger register); merge unique coverage only after checking legal-rule dates against the then-effective text. |
-| Integration/owner signoff | `docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md` | `docs/legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md` | **Complementary, not redundant.** Keep both: owner factual completion vs publication gate/handoff. |
-| Index | both PRs edit `docs/legal-review-preparation/legal-pack/README.md` | both edit same file | **Explicit merge conflict risk:** rebuild README links only after choosing canonical annexes. Avoid links that make both DPA variants appear equally effective. |
+| DPA Art. 28 processing + TOMs + transfers | `docs/legal-review-preparation/legal-pack/ENTERPRISE_DPA_PROCESSING_AND_SECURITY_SCHEDULE_V7_2026-10-21.md` | `docs/legal-review-preparation/legal-pack/ENTERPRISE_DATA_PROCESSING_SECURITY_SCHEDULE_V7_REVIEW_DRAFT.md` | **Selected:** #2554 detailed processing/TOM parent consolidated into the existing #2555 schedule path, retaining #2555 independent-controller, sensitive-data, objection/remedy and buyer-completion qualifications. One proposed annex; no second #2554 schedule copied. |
+| EU AI Act + GDPR role/timing matrix | `docs/legal-review-preparation/legal-pack/AI_ACT_GDPR_CUSTOMER_APPLICABILITY_MATRIX_V7_2026-10-21.md` | `docs/legal-review-preparation/legal-pack/EU_AI_ACT_GDPR_APPLICABILITY_MATRIX_V7_REVIEW_DRAFT.md` | **Selected:** existing #2555 matrix path, retaining its evidence legend/change triggers and adding #2554 scope, non-EU reach, role-change, FRIA/DPIA and lifecycle qualifications. Council timeline corroborated 2026-10-21; no customer-specific legal acceptance. |
+| Integration/owner signoff | `docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md` | `docs/legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md` | **Preserved both in this candidate:** owner factual completion from #2554 and publication gate/handoff from #2555. Updated owner annex link to the single selected schedule. |
+| Index | both PRs edit `docs/legal-review-preparation/legal-pack/README.md` | both edit same file | **Resolved in candidate:** README lists exactly one proposed DPA schedule, one applicability matrix, and both complementary internal handoffs. Original branches remain historical sources. |
 
-## 2. Contract assembly controls
+## 2. Preserved coverage and contract assembly controls
+
+| Distinct source material | Consolidated location |
+| --- | --- |
+| #2554 Article 28 processing, TOM proof rows, provider/transfer table, lifecycle and order-form sheet | Selected #2555 schedule, sections A–I |
+| #2555 independent supplier purposes, children's-data scope, objection/remedy and private-model-provider boundary | Selected schedule, sections A/B/D |
+| #2555 role matrix, evidence legend, GDPR provisions and change-trigger register | Selected #2555 matrix, A–C |
+| #2554 territorial/scope/role changes, FRIA vs DPIA distinction and customer lifecycle | Selected matrix, A and C1 |
+| #2554 owner facts, IP and CAE evidence inventory | Owner facts document; no company fact completed |
+| #2555 exact legal-publication gate and procurement handoff | Existing publication handoff; acceptance unchanged |
+| Existing logical recovery #180 | DPA TOM row and matrix C1: scope explicitly limited to logical PostgreSQL; full-platform/rollback acceptance remains pending |
+
+This is editorial consolidation of existing draft positions, not selection of new binding commercial terms. A legal reviewer still assesses the final combined version. Earlier statutory cross-check below is retained as historical work; this consolidation independently corroborated the broad amended milestones through the official Council timeline, not a complete fresh statutory review.
+
 
 ### Statutory-date cross-check performed 21 October 2026 (primary EU sources)
 
@@ -27,7 +41,7 @@
 
 
 
-1. Before merging either branch, designated integrator chooses one contractual DPA annex and one customer applicability matrix, reconciles Section numbering, defined terms, provider list, data-transfer instruments and applicable-date references, and preserves a changelog of discarded/superseded duplicate drafts.
+1. The candidate now selects one proposed DPA annex and one customer matrix; section links and references are reconciled. Review the combined defined terms, provider/transfer facts and date references before integration. #2554 is superseded for integration by this candidate; retain its branch/history and do not merge both draft families.
 2. Do **not** equate the European Commission's Article 28 model clauses (Decision 2021/915) with third-country transfer SCCs (Decision 2021/914); verify actual exporter/importer/processing roles and transfer flows before selecting modules.
 3. A primary EU database region does not establish global EU-only processing or legal sufficiency of international transfers.
 4. Verify seller's registered identity, active CAE, tax/VAT status, legal representative authority, intellectual-property chain of title and actual provider DPA/SCC/subprocessor terms privately before execution. Do not publish unverified identifiers.
@@ -38,12 +52,12 @@
 
 - `DPA_FAMILY_OVERLAP=CONFIRMED`
 - `MATRIX_FAMILY_OVERLAP=CONFIRMED`
-- `CANONICAL_CONTRACT_SET=REQUIRES_REVIEW_AND_INTEGRATION`
+- `CANONICAL_CONTRACT_SET=CONSOLIDATED_REVIEW_CANDIDATE_NOT_EFFECTIVE`
 - `SELLER_AUTHORITY=UNVERIFIED`
 - `CUSTOMER_ACCEPTANCE=NOT_OBTAINED`
 - `LEGAL_PUBLICATION=NO_PASS`
-- `ENGINEERING_MAIN_WRITER=OTHER_EXECUTOR`
+- `ENGINEERING_MAIN_WRITER=PRIMARY_V11_EXECUTOR`
 - `EMAILS_SENT=0`
 - `PRODUCTION_WRITES=0`
 
-**Next action for the release/legal integrator:** integrate exactly one DPA processing schedule and one AI Act/GDPR matrix, reconcile the common README, then obtain legal factual signoff and execute the official legal publication control. Do not auto-merge both draft families.
+**Next acceptance action:** review this exact combined version under required checks and qualified review, obtain company/IP/provider factual signoff and valid contract execution, then execute the official legal-publication control. No merge, signature, live publication, email or submission occurred.
