@@ -9,6 +9,9 @@
 -- Operator must bind these TWO settings in the same privileged DB session:
 --   SET risck.p0f_reconcile_confirmation = 'APPROVED_MANUAL_P0F_REPAIR';
 --   SET risck.p0f_release_sha = '<reviewed 40-character exact production SHA>';
+--   SET risck.p0f_expected_drift_fingerprint = '<64-character reviewed target SHA256>';
+-- Digest is derived via SELECT-only before maintenance approval and binds
+-- tenant identity plus the five pre-repair values. It is NOT consent.
 -- These settings are safety prompts, NOT cryptographic human approval proof.
 -- The protected release controller must independently verify those assertions.
 \set ON_ERROR_STOP on
@@ -22,7 +25,8 @@ declare
 begin
   if current_setting('risck.p0f_reconcile_confirmation', true)
        is distinct from 'APPROVED_MANUAL_P0F_REPAIR'
-     or v_release_sha is null or v_release_sha !~ '^[a-f0-9]{40}$' then
+     or v_release_sha is null or v_release_sha !~ '^[a-f0-9]{40}$'
+     or coalesce(current_setting('risck.p0f_expected_drift_fingerprint',true),'') !~ '^[a-f0-9]{64}$' then
     raise exception 'P0-F manual owner authorization and exact release SHA are required';
   end if;
 
@@ -92,6 +96,8 @@ declare
   v_delta_viewers integer;
   v_delta_admins integer;
   v_null_counters integer;
+  v_target_fingerprint text;
+  v_expected_target_fingerprint text := current_setting('risck.p0f_expected_drift_fingerprint',true);
   v_remaining integer;
   v_updated integer := 0;
   v_affected integer;
@@ -131,10 +137,16 @@ begin
     coalesce(sum(coalesce(u.viewers,0)-coalesce(a.viewers,0)),0)::integer,
     coalesce(sum(coalesce(u.active_admins,0)-coalesce(a.active_admins,0)),0)::integer,
     count(*) filter (where u.active_members is null or u.full_users is null
-      or u.participants is null or u.viewers is null or u.active_admins is null)::integer
+      or u.participants is null or u.viewers is null or u.active_admins is null)::integer,
+    encode(sha256(convert_to(coalesce(string_agg(
+      format('%s|%s|%s|%s|%s|%s',u.organization_id::text,
+        coalesce(u.active_members::text,'NULL'),coalesce(u.full_users::text,'NULL'),
+        coalesce(u.participants::text,'NULL'),coalesce(u.viewers::text,'NULL'),
+        coalesce(u.active_admins::text,'NULL')),
+      ';' order by u.organization_id),''),'UTF8')),'hex')
     into v_drift,v_drift_with_member_rows,v_reviewed_type_a,v_reviewed_type_b,
       v_delta_members,v_delta_full,v_delta_participants,v_delta_viewers,
-      v_delta_admins,v_null_counters
+      v_delta_admins,v_null_counters,v_target_fingerprint
   from public.organization_usage u left join actual a on a.organization_id=u.organization_id
   where (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
     is distinct from
@@ -165,6 +177,11 @@ begin
   -- No tenant identifiers are embedded in, or exposed by, this guard.
   if v_reviewed_type_a <> 1 or v_reviewed_type_b <> 1 then
     raise exception 'P0-F reviewed per-organization drift fingerprint changed';
+  end if;
+  -- The same count histogram is insufficient if an unrelated tenant replaced a target.
+  -- This check runs under both exclusive DML locks before the first UPDATE.
+  if v_target_fingerprint is distinct from v_expected_target_fingerprint then
+    raise exception 'P0-F reviewed target fingerprint changed; abort manual repair';
   end if;
 
   for v_target in
