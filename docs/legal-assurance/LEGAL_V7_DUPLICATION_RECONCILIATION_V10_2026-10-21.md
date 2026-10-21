@@ -1,0 +1,38 @@
+# RISCK COMPLY — Legal V7 overlap reconciliation (V10, 21 October 2026)
+
+**Status:** integration guidance only; not an effective contract, legal approval, or enterprise acceptance.  
+**Base reviewed:** `main` @ `70d3545f414d063379d481fd238aed563e05edda`.  
+**Sources compared:** PR #2554 (`f77ccc1e037dfd37e6acefc0371418483b3e5e74`) and PR #2555 (`b2d98f482d67f853a9a2ba31cb70582422d9c1c2`).  
+**Scope:** documentation reconciliation only. No customer data, legal-signoff flag, main/release action or provider configuration changed.
+
+## 1. Exact duplicate family discovered
+
+| Function | PR #2554 | PR #2555 | Integration decision |
+| --- | --- | --- | --- |
+| DPA Art. 28 processing + TOMs + transfers | `docs/legal-review-preparation/legal-pack/ENTERPRISE_DPA_PROCESSING_AND_SECURITY_SCHEDULE_V7_2026-10-21.md` | `docs/legal-review-preparation/legal-pack/ENTERPRISE_DATA_PROCESSING_SECURITY_SCHEDULE_V7_REVIEW_DRAFT.md` | **ONE canonical DPA annex only.** Suggested working parent: #2554 (detailed obligations/TOM evidence). Preserve buyer-useful information from #2555 through a reviewed amendment rather than publishing two schedules. |
+| EU AI Act + GDPR role/timing matrix | `docs/legal-review-preparation/legal-pack/AI_ACT_GDPR_CUSTOMER_APPLICABILITY_MATRIX_V7_2026-10-21.md` | `docs/legal-review-preparation/legal-pack/EU_AI_ACT_GDPR_APPLICABILITY_MATRIX_V7_REVIEW_DRAFT.md` | **ONE canonical role/timing matrix only.** Suggested working parent: #2555 (explicit change-trigger register); merge unique coverage only after checking legal-rule dates against the then-effective text. |
+| Integration/owner signoff | `docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md` | `docs/legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md` | **Complementary, not redundant.** Keep both: owner factual completion vs publication gate/handoff. |
+| Index | both PRs edit `docs/legal-review-preparation/legal-pack/README.md` | both edit same file | **Explicit merge conflict risk:** rebuild README links only after choosing canonical annexes. Avoid links that make both DPA variants appear equally effective. |
+
+## 2. Contract assembly controls
+
+1. Before merging either branch, designated integrator chooses one contractual DPA annex and one customer applicability matrix, reconciles Section numbering, defined terms, provider list, data-transfer instruments and applicable-date references, and preserves a changelog of discarded/superseded duplicate drafts.
+2. Do **not** equate the European Commission's Article 28 model clauses (Decision 2021/915) with third-country transfer SCCs (Decision 2021/914); verify actual exporter/importer/processing roles and transfer flows before selecting modules.
+3. A primary EU database region does not establish global EU-only processing or legal sufficiency of international transfers.
+4. Verify seller's registered identity, active CAE, tax/VAT status, legal representative authority, intellectual-property chain of title and actual provider DPA/SCC/subprocessor terms privately before execution. Do not publish unverified identifiers.
+5. Bind security claims to a tested release, not to draft source. No blanket uptime percentage, RTO/RPO, deletion SLA, clean external pentest, ISO 27001/SOC 2, or regulator approval without proof.
+6. Exact-version buyer and signatory acceptance are separate from Git merge or document creation; never auto-set `LEGAL_LAUNCH_ACCEPTED`.
+
+## 3. Reconciliation status and ownership boundary
+
+- `DPA_FAMILY_OVERLAP=CONFIRMED`
+- `MATRIX_FAMILY_OVERLAP=CONFIRMED`
+- `CANONICAL_CONTRACT_SET=REQUIRES_REVIEW_AND_INTEGRATION`
+- `SELLER_AUTHORITY=UNVERIFIED`
+- `CUSTOMER_ACCEPTANCE=NOT_OBTAINED`
+- `LEGAL_PUBLICATION=NO_PASS`
+- `ENGINEERING_MAIN_WRITER=OTHER_EXECUTOR`
+- `EMAILS_SENT=0`
+- `PRODUCTION_WRITES=0`
+
+**Next action for the release/legal integrator:** integrate exactly one DPA processing schedule and one AI Act/GDPR matrix, reconcile the common README, then obtain legal factual signoff and execute the official legal publication control. Do not auto-merge both draft families.
