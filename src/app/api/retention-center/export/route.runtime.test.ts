@@ -145,6 +145,34 @@ describe('retention export GET handler (real execution with isolated dependencie
     }
   });
 
+  it('calls permission, business plan, MFA, rate limit and durable audit in the required order', async () => {
+    const response = await GET(new Request(requestUrl));
+
+    expect(response.status).toBe(200);
+    expect(mocks.requirePermission).toHaveBeenCalledWith({
+      userId: 'synthetic-owner',
+      organizationId: organization.id,
+      permission: 'export_data',
+    });
+    expect(mocks.assertPlanAtLeast).toHaveBeenCalledWith(organization.id, 'business');
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'export_data',
+      userId: 'synthetic-owner',
+      organizationId: organization.id,
+    }));
+    const ordered = [
+      mocks.requireApiUser.mock.invocationCallOrder[0],
+      mocks.getCurrentOrganizationForUser.mock.invocationCallOrder[0],
+      mocks.requirePermission.mock.invocationCallOrder[0],
+      mocks.assertPlanAtLeast.mock.invocationCallOrder[0],
+      mocks.requireStepUpForRequest.mock.invocationCallOrder[0],
+      mocks.checkDistributedRateLimit.mock.invocationCallOrder[0],
+      mocks.createAuditEvent.mock.invocationCallOrder[0],
+    ];
+    expect(ordered.every((n) => typeof n === 'number')).toBe(true);
+    expect(ordered).toEqual([...ordered].sort((a, b) => a - b));
+  });
+
   it('returns an integrity-verifiable, no-store JSON download only after audit persistence', async () => {
     const response = await GET(new Request(requestUrl));
 
