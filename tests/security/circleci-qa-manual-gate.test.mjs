@@ -49,6 +49,7 @@ test('offline QA runs source-only Node tests without npm install', () => {
   assert.match(qaJob, /tests\/security\/e2e-preflight-offline\.test\.mjs/);
   assert.match(qaJob, /tests\/security\/payment-first-qa-origin-guard\.test\.mjs/);
   assert.match(qaJob, /tests\/security\/playwright-synthetic-write-qa-gate\.test\.mjs/);
+  assert.match(qaJob, /tests\/security\/paid-owner-playwright-proof\.test\.mjs/);
   assert.match(qaJob, /tests\/security\/circleci-qa-manual-gate\.test\.mjs/);
   assert.doesNotMatch(qaJob, /npm (ci|install|run build)/);
   assert.doesNotMatch(qaJob, /vercel (deploy|promote)|stripe (trigger|listen)|supabase (db push|migration up)/);
