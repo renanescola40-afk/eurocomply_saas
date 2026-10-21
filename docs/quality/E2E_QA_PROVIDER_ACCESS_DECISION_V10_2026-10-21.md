@@ -26,6 +26,19 @@
 5. Run PR #2553 E2E isolation proof first, then PR #2551 positive/negative paid-owner MFA tests against QA. To prove success export, an attributable QA MFA factor and paid **business** plan are required, not only a lower-tier fixture.
 6. Confirm a new QA-only Stripe TEST webhook is enabled *on the correct isolated deployment*, using signing-secret verification and no copied protection-bypass URLs in evidence. Execute sandbox checkout, signed TEST webhook replay/idempotency and durable entitlement assertions against isolated QA; record exact code/deploy/test artefacts. No PASS on a skipped, simulated, stale or provider-mismatched path.
 
+### Two-stage QA CI closure (21 October 2026)
+
+Both pipelines are on **PR #2553 only**, restricted to branch `qa/fix-e2e-node22-20261021`, and default to `false`:
+
+| CircleCI manual parameter | Test evidence | Cost exposure | Explicit acceptance boundary |
+| --- | --- | --- | --- |
+| `run_qa_preflight=true` | Node 22 source-only isolated E2E guard, CI gate contracts and Stripe source-contract scanners. Stores TAP + SHA-bound hashes. | Small CircleCI executor; **only after existing included credits are confirmed**. | The preflight proves repository contract behavior, **not** real Stripe billing, Supabase RLS, authenticated Playwright, procurement or production. |
+| `run_qa_full=true` | Reuses existing `validar-risck` job: npm lockfile, lint, TypeScript, Vitest, P0 source tests, ISO/SOC2, security, dependency policy, Next.js build, route audit; and existing `p0-postgres-synthetic`: disposable PostgreSQL 17.6 tenant/MFA/rollback/concurrency. | **Large + small** resource jobs consume more credits; only with verified free quota and owner approval. | Code-level and disposable-PG17 checks only. Does not replace isolated QA browser or provider-backed billing proof. |
+
+**No CircleCI job was executed by this QA branch edit.** The normal `verificacao-isolada` workflow retains its original branch filters and will *not* automatically run on this QA branch. The full validation job's internal checkout allowlist was enlarged only for the exact QA branch so it can run through the manual workflow; its SHA and privileged-provider-secret guards remain active. Do **not** disable GitHub required status checks or claim release equivalence without governance approval and exact-SHA provider evidence.
+
+Suggested sequence if included credits are sufficient: (1) manually execute `run_qa_preflight=true` with `run_qa_full=false`; (2) review the SHA-bound artifact, (3) execute `run_qa_full=true` with `run_qa_preflight=false`; (4) archive job IDs, terminal status, commit SHA, artifacts and actual consumption. **Stop on any FAIL** rather than automatically rerunning.
+
 ### CircleCI manual QA control (added 21 October 2026)
 
 `.circleci/config.yml` on PR #2553 defines `qa-preflight-manual`, gated by `run_qa_preflight` (default `false`). It only permits the exact QA branch and uses a small Node 22 executor. In addition to dependency-free Node preflight and CircleCI contract checks, it now runs the existing source-only `check-stripe-webhook-contract.mjs` and `run-stripe-runtime-validation.mjs` validators. It preserves a SHA-bound `tests.tap`, `stripe-webhook-contract.txt`, `stripe-runtime-source-only.json`, plus report digests. The Stripe validator itself explicitly outputs `repository_contract_passed_runtime_not_run`: **this is code-contract evidence, not a signed webhook or entitlement E2E result**. The existing full validation and synthetic PostgreSQL jobs are preserved. No CircleCI QA run is claimed yet; the project dashboard/verified job evidence must establish PASS.
