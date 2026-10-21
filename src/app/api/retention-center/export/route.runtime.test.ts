@@ -96,6 +96,37 @@ describe('retention export GET handler (real execution with isolated dependencie
     expect(mocks.createAuditEvent).not.toHaveBeenCalled();
   });
 
+  it('blocks a below-business plan before step-up, export, or audit', async () => {
+    mocks.assertPlanAtLeast.mockResolvedValueOnce({
+      ok: false,
+      status: 402,
+      error: 'subscription_required',
+      message: 'Business plan required',
+      entitlements: { plan: 'starter' },
+    });
+
+    const response = await GET(new Request(requestUrl));
+
+    expect(response.status).toBe(402);
+    expect(await response.json()).toEqual({ error: 'upgrade_required' });
+    expect(response.headers.get('Content-Disposition')).toBeNull();
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.checkDistributedRateLimit).not.toHaveBeenCalled();
+    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it('does not export data if the audit writer throws unexpectedly', async () => {
+    mocks.createAuditEvent.mockRejectedValueOnce(new Error('isolated audit writer unavailable'));
+
+    const response = await GET(new Request(requestUrl));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: 'internal_error' });
+    expect(response.headers.get('Content-Disposition')).toBeNull();
+    expect(mocks.createAuditEvent).toHaveBeenCalledTimes(1);
+    expect(mocks.reportError).toHaveBeenCalled();
+  });
+
   it('fails closed with 503 and never sends export data when the audit event is not durable', async () => {
     mocks.createAuditEvent.mockResolvedValueOnce({ persisted: false });
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
