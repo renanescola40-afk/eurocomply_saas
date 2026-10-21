@@ -114,6 +114,11 @@ try {
  });
  const manual = readFileSync('supabase/reconciliation/20261018223000_reconcile_existing_membership_usage_drift_manual.sql','utf8').replace(/^\\set ON_ERROR_STOP on\s*$/m,'');
  async function manualAttempt(){try{await db.exec(manual);}catch(e){await db.exec('rollback');throw e;}}
+ async function seedEmptyMembershipDrift(){
+  const c=randomUUID(),d=randomUUID();
+  await q('insert into organization_usage(organization_id,active_members,full_users,active_admins) values($1,2,2,1),($2,1,1,1)',[c,d]);
+  return [c,d];
+ }
  await check('Manual reconciliation rejects absent session authorization',async()=>{await assert.rejects(()=>manualAttempt(),/manual owner authorization/);});
  await q("select set_config('risck.p0f_reconcile_confirmation','APPROVED_MANUAL_P0F_REPAIR',false),set_config('risck.p0f_release_sha',$1,false)",[report.sourceSha]);
  await check('Manual repair rejects execution before legacy writer retirement',async()=>{await assert.rejects(()=>manualAttempt(),/cutover was not accepted/);});
@@ -124,8 +129,10 @@ try {
  await seed();await check('Audited role change still executes as service_role after legacy retirement',async()=>{await db.exec('set role service_role');try{assert.equal(await role(3,'admin',0,'viewer',A,null),'changed');}finally{await db.exec('reset role');}await counters();});
  await seed();await check('Manual reconciliation rejects unexpected zero drifting rows',async()=>{await assert.rejects(()=>manualAttempt(),/expected exactly two/);});
  await seed();await db.exec('update organization_usage set active_members=active_members+1');
- await check('Manual reconciliation repairs exactly two synthetic rows and records two logs',async()=>{await manualAttempt();await counters(A);await counters(B);assert.equal(await scalar("select count(*)::int from audit_logs where action='enterprise.membership_usage_reconciled'"),2);});
- await seed();await db.exec('update organization_usage set active_members=active_members+1');
+ await check('Manual repair rejects drift on organizations with members of any status',async()=>{const before=await snapshot();await assert.rejects(()=>manualAttempt(),/unexpected member-linked drift/);assert.equal(await snapshot(),before);});
+ await seed();const emptyDrift=await seedEmptyMembershipDrift();
+ await check('Manual reconciliation repairs exactly two empty-membership synthetic rows and records two logs',async()=>{await manualAttempt();await counters(A);await counters(B);for(const id of emptyDrift)await counters(id);assert.equal(await scalar("select count(*)::int from audit_logs where action='enterprise.membership_usage_reconciled'"),2);});
+ await seed();await seedEmptyMembershipDrift();
  await check('Manual repair fully rolls back both counters if administrative audit fails',async()=>{await db.exec("alter table audit_logs add constraint synthetic_repair_reject check(action <> 'enterprise.membership_usage_reconciled');");const before=await snapshot();try{await assert.rejects(()=>manualAttempt(),/synthetic_repair_reject/);assert.equal(await snapshot(),before);}finally{await db.exec('alter table audit_logs drop constraint synthetic_repair_reject');}});
  await seed();await check('Admission admits only schema candidate with all six migrations and retired legacy writers',async()=>{await db.exec("do $$ declare t record; begin for t in select tablename from pg_tables where schemaname='public' loop execute format('alter table public.%I enable row level security',t.tablename);execute format('alter table public.%I force row level security',t.tablename);end loop;end $$;");const r=(await q(readFileSync('scripts/supabase/p0-membership-release-admission.sql','utf8')))[0];assert.equal(r.schema_admission,'SCHEMA_CANDIDATE_REQUIRES_RUNTIME_ACCEPTANCE');assert.equal(r.applied_count,6);assert.equal(r.drifted_usage_organizations,0);});
   const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
