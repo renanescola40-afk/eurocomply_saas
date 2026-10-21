@@ -39,17 +39,28 @@ function hasExplicitFailure(document) {
     document?.evidenceIntegrity?.exactShaBound,
   ].some((value) => value === false)) return true;
   if (Array.isArray(document?.blockers) && document.blockers.length > 0) return true;
+  if (Array.isArray(document?.summary?.blockers) && document.summary.blockers.length > 0) return true;
 
   const failedStates = new Set([
     'FAIL', 'FAILED', 'FAILURE', 'ERROR', 'OPEN', 'BLOCKED', 'NO_GO',
     'NO_PASS', 'REJECTED', 'DENIED', 'CANCELLED', 'CANCELED',
+    'WAITING_EXTERNAL', 'PENDING', 'NOT_TESTED', 'UNVERIFIED',
+    'INCOMPLETE', 'IN_PROGRESS', 'SKIPPED',
   ]);
   return [
+    // Every competing decision/result is an assertion that can veto a positive status.
     document?.status,
     document?.outcome,
     document?.validationStatus,
+    document?.publicationStatus,
+    document?.finalDecision,
+    document?.releaseDecision,
+    document?.decision,
+    document?.result,
     document?.summary?.status,
     document?.summary?.outcome,
+    document?.summary?.decision,
+    document?.summary?.result,
   ].some((value) => typeof value === 'string' && failedStates.has(normalise(value)));
 }
 
