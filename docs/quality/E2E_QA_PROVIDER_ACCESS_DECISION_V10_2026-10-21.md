@@ -28,7 +28,7 @@
 
 ### CircleCI manual QA control (added 21 October 2026)
 
-`.circleci/config.yml` on PR #2553 defines `qa-preflight-manual`, gated by `run_qa_preflight` (default `false`). It only permits the exact QA branch and runs Node's dependency-free preflight and CircleCI source contracts with a small executor. The existing full validation and synthetic PostgreSQL jobs are preserved. No CircleCI QA run is claimed yet; the project dashboard/verified job evidence must establish PASS.
+`.circleci/config.yml` on PR #2553 defines `qa-preflight-manual`, gated by `run_qa_preflight` (default `false`). It only permits the exact QA branch and uses a small Node 22 executor. In addition to dependency-free Node preflight and CircleCI contract checks, it now runs the existing source-only `check-stripe-webhook-contract.mjs` and `run-stripe-runtime-validation.mjs` validators. It preserves a SHA-bound `tests.tap`, `stripe-webhook-contract.txt`, `stripe-runtime-source-only.json`, plus report digests. The Stripe validator itself explicitly outputs `repository_contract_passed_runtime_not_run`: **this is code-contract evidence, not a signed webhook or entitlement E2E result**. The existing full validation and synthetic PostgreSQL jobs are preserved. No CircleCI QA run is claimed yet; the project dashboard/verified job evidence must establish PASS.
 
 **CircleCI official:** https://circleci.com/docs/guides/orchestrate/pipeline-variables/ for manually passing booleans; https://circleci.com/docs/guides/plans-pricing/credits/ for remaining/free credits.
 
