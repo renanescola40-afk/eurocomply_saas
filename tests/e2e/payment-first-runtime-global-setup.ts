@@ -21,6 +21,34 @@ function requiredEnvironment(name: string) {
   return value;
 }
 
+/**
+ * Fail closed before launching a browser or using the service-role key.
+ * This negative proof attempts PostgREST writes; production is excluded.
+ */
+function assertIsolatedQaRuntime(baseURL: string, supabaseURL: string) {
+  let app: URL;
+  let db: URL;
+  try {
+    app = new URL(baseURL);
+    db = new URL(supabaseURL);
+  } catch {
+    throw new Error('payment_first_runtime_requires_isolated_qa');
+  }
+  const appHost = app.hostname.toLowerCase().replace(/\.+$/, '');
+  const dbHost = db.hostname.toLowerCase().replace(/\.+$/, '');
+  if (
+    app.protocol !== 'https:' || app.username || app.password || app.port ||
+    app.pathname !== '/' || app.search || app.hash ||
+    appHost === 'risckcomply.com' || appHost.endsWith('.risckcomply.com') ||
+    db.protocol !== 'https:' || db.username || db.password || db.port ||
+    db.pathname !== '/' || db.search || db.hash ||
+    !/^[a-z0-9]+\.supabase\.co$/i.test(dbHost) ||
+    dbHost === 'tganhbbhfxcpblmgqprg.supabase.co'
+  ) {
+    throw new Error('payment_first_runtime_requires_isolated_qa');
+  }
+}
+
 function shouldRunPaymentFirstRuntimeProof() {
   return process.env.E2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED === 'true'
     && Boolean(process.env.E2E_UNLICENSED_OWNER_EMAIL?.trim())
@@ -179,6 +207,9 @@ export default async function paymentFirstRuntimeGlobalSetup(config: FullConfig)
   const anonKey = process.env.SUPABASE_ANON_KEY?.trim()
     || requiredEnvironment('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   const serviceRoleKey = requiredEnvironment('SUPABASE_SERVICE_ROLE_KEY');
+
+  // Fail closed before any browser or direct API request can touch a data plane.
+  assertIsolatedQaRuntime(baseURL, supabaseUrl);
 
   const browser = await chromium.launch();
   const context = await browser.newContext({ baseURL });
