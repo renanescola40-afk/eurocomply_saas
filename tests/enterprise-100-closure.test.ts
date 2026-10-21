@@ -339,6 +339,24 @@ describe('enterprise 100 closure contract', () => {
     expect(result.controls[0]?.reason).toBe('explicit_failure_or_placeholder_evidence');
   });
 
+  it.each([
+    ['PASS decision contradicted by FAILED result', { decision: 'PASS', result: 'FAILED' }],
+    ['PASS publication contradicted by final NO_GO', { publicationStatus: 'PASS', finalDecision: 'NO_GO' }],
+    ['PASS decision contradicted by WAITING_EXTERNAL status', { decision: 'PASS', status: 'WAITING_EXTERNAL' }],
+    ['PASS status contradicted by unresolved summary blockers', { status: 'PASS', summary: { blockers: ['unverified_runtime'] } }],
+  ])('rejects conflicting Enterprise evidence: %s', async (_name, conflicting) => {
+    const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
+    const root = evidenceRoot({ releaseSha: TARGET_SHA, ...conflicting });
+    const result = evaluateEnterpriseClosure({
+      expectedSha: TARGET_SHA,
+      config: singleControlConfig,
+      evidenceRoots: [root],
+    });
+    expect(result.passed).toBe(false);
+    expect(result.controls[0]?.accepted).toBe(false);
+    expect(result.controls[0]?.reason).toBe('explicit_failure_or_placeholder_evidence');
+  });
+
   it('rejects exact-SHA evidence explicitly marked sensitive', async () => {
     const { evaluateEnterpriseClosure } = await import('../scripts/release/check-enterprise-100-closure.mjs');
     const root = evidenceRoot({
