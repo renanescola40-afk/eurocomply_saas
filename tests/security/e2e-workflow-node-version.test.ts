@@ -38,7 +38,7 @@ const qaDefaults: Record<string, string> = {
 
 function exercisePreflight(overrides: Record<string, string | null> = {}) {
   // Never use inherited provider credentials: the child receives only fixtures.
-  const env = { ...qaDefaults };
+  const env: NodeJS.ProcessEnv = { ...qaDefaults, NODE_ENV: 'test' };
   for (const [key, value] of Object.entries(overrides)) {
     if (value === null) delete env[key];
     else env[key] = value;
