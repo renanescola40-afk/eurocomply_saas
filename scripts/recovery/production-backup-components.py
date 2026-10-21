@@ -207,6 +207,8 @@ GRANT EXECUTE ON FUNCTION public.synthetic_owned_no_create() TO anon;''',"recove
     stage="synthetic_source_extension_contract"
     evidence["synthetic_source_exact_extension_contract"]=matches_live_extension_contract(before_catalog["extensions"])
     if not evidence["synthetic_source_exact_extension_contract"]:
+        # Public extension metadata from synthetic data only; never tenant data.
+        evidence["synthetic_extension_contract_observed"]=before_catalog["extensions"]
         raise RuntimeError("SYNTHETIC_LIVE_EXTENSION_CONTRACT_MISMATCH")
     evidence["source_postgres_extension_owners_verified"]=True
     sql(source,"INSERT INTO public.synthetic_items VALUES(2,'00000000-0000-0000-0000-000000000001')","recovery_source")

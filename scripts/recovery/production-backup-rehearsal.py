@@ -136,7 +136,11 @@ def create_owned_extension(target, database, extension, version, namespace, owne
     guard = "DO $guard$ BEGIN IF current_user <> 'supabase_admin' OR NOT (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR (SELECT rolsuper FROM pg_roles WHERE rolname='postgres') THEN RAISE EXCEPTION 'ISOLATED_ROLE_PROFILE_REJECTED'; END IF; END $guard$;"
     statement = "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s'; "+guard
     if owner == "postgres":
-        statement += " ALTER ROLE postgres SUPERUSER; SET SESSION AUTHORIZATION postgres; "+create+" RESET SESSION AUTHORIZATION; ALTER ROLE postgres NOSUPERUSER; "
+        # Supautils delegates privileged CREATE EXTENSION to its configured
+        # elevation role even when the caller is already a superuser. Keep
+        # that delegation enabled, but use the snapshot owner for this one
+        # isolated transaction. SET LOCAL cannot persist beyond COMMIT/ROLLBACK.
+        statement += " ALTER ROLE postgres SUPERUSER; SET LOCAL supautils.superuser='postgres'; SET SESSION AUTHORIZATION postgres; "+create+" RESET SESSION AUTHORIZATION; ALTER ROLE postgres NOSUPERUSER; "
     else:
         statement += create
     statement += guard+" COMMIT;"
