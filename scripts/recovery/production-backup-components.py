@@ -38,7 +38,7 @@ try:
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
     scope={"json":json,"re":re,"subprocess":subprocess,"ENV":ENV,"REPORT":{},"ACTIVE":[]}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges","schema_restore_lists","create_owned_extension","restore_predata_with_owned_schemas")]
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges","schema_restore_lists","create_owned_extension","verify_isolated_extension_owner_profile","restore_predata_with_owned_schemas")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
@@ -63,6 +63,33 @@ try:
         raise RuntimeError("DUAL_PIPELINE_DIAGNOSTIC_NOT_PRESERVED")
     evidence["both_failure_diagnostics_sanitized"]=True
     scope["REPORT"].clear()
+    # Zero-provider, zero-Docker negative tests for the new fail-closed gate.
+    stage="extension_owner_profile_unit"
+    profile={"extensions":[["pgcrypto","1.3","extensions","postgres"]]}
+    variations=[
+        ([["pgcrypto","1.3","extensions","postgres"]],True),
+        ([["pgcrypto","1.3","extensions","supabase_admin"]],False),
+        ([["pgcrypto","9.9","extensions","postgres"]],False),
+        ([["pgcrypto","1.3","public","postgres"]],False),
+        ([],False)
+    ]
+    original_run=scope["run"]
+    try:
+        for rows,should_pass in variations:
+            scope["run"]=lambda *_args, _rows=rows, **_kwargs: json.dumps(_rows)
+            try:
+                accepted=scope["verify_isolated_extension_owner_profile"](
+                    "risck-synthetic-target-unit","recovery_destination",profile)
+            except RuntimeError as error:
+                if should_pass or str(error)!="ISOLATED_EXTENSION_OWNER_PROFILE_MISMATCH":
+                    raise
+            else:
+                if not should_pass or not accepted:
+                    raise RuntimeError("EXTENSION_OWNER_PREFLIGHT_FALSE_ACCEPT")
+    finally:
+        scope["run"]=original_run
+        scope["REPORT"].clear()
+    evidence["extension_owner_profile_unit_cases"]=len(variations)
     stage="source_start"
     source=start("-source")
     stage="synthetic_role_bootstrap"
