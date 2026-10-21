@@ -84,6 +84,12 @@ declare
   v_missing_usage integer;
   v_drift integer;
   v_orphan_drift integer;
+  v_delta_members integer;
+  v_delta_full integer;
+  v_delta_participants integer;
+  v_delta_viewers integer;
+  v_delta_admins integer;
+  v_null_counters integer;
   v_remaining integer;
   v_updated integer := 0;
   v_affected integer;
@@ -112,8 +118,16 @@ begin
   -- zero ACTIVE memberships. The recorded LIVE P0-F subtype requires both
   -- drifting organizations to be completely membership-free.
   select count(*)::integer,
-    count(*) filter(where a.organization_id is null)::integer
-    into v_drift,v_orphan_drift
+    count(*) filter(where a.organization_id is null)::integer,
+    coalesce(sum(coalesce(u.active_members,0)-coalesce(a.active_members,0)),0)::integer,
+    coalesce(sum(coalesce(u.full_users,0)-coalesce(a.full_users,0)),0)::integer,
+    coalesce(sum(coalesce(u.participants,0)-coalesce(a.participants,0)),0)::integer,
+    coalesce(sum(coalesce(u.viewers,0)-coalesce(a.viewers,0)),0)::integer,
+    coalesce(sum(coalesce(u.active_admins,0)-coalesce(a.active_admins,0)),0)::integer,
+    count(*) filter (where u.active_members is null or u.full_users is null
+      or u.participants is null or u.viewers is null or u.active_admins is null)::integer
+    into v_drift,v_orphan_drift,v_delta_members,v_delta_full,
+      v_delta_participants,v_delta_viewers,v_delta_admins,v_null_counters
   from public.organization_usage u left join actual a on a.organization_id=u.organization_id
   where (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
     is distinct from
@@ -129,6 +143,15 @@ begin
   -- and update. Refuse a newly drifting populated tenant even when count=2.
   if v_orphan_drift <> 2 then
     raise exception 'P0-F expected two drifting organizations without membership rows; observed %',v_orphan_drift;
+  end if;
+  -- Reviewed LIVE aggregate on 2026-10-21: +3 active, +3 full, +0
+  -- participant, +0 viewer, +2 admin. This locks the manual repair to the
+  -- observed drift pattern without exporting any tenant identifiers.
+  -- A changed or NULL counter demands a NEW read-only review and new approval.
+  if v_null_counters <> 0 or
+     (v_delta_members,v_delta_full,v_delta_participants,v_delta_viewers,v_delta_admins)
+       is distinct from (3,3,0,0,2) then
+    raise exception 'P0-F reviewed aggregate drift fingerprint changed; abort manual repair';
   end if;
 
   for v_target in
