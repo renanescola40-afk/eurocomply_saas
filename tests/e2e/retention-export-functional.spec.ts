@@ -66,7 +66,11 @@ test.describe('paid owner retention export: live UI and MFA boundary', () => {
     // This is deliberately read-only; a successful export would append a real audit event.
     const apiResponse = await page.request.get('/api/retention-center/export', { maxRedirects: 0 });
     expect(apiResponse.status()).toBe(403);
+    // A generic 403 could mean no membership, insufficient plan, or another
+    // guard failure. Only an explicit step_up_required proves the MFA boundary.
+    const denial = await apiResponse.json();
+    expect(denial?.error).toBe('step_up_required');
     expect(apiResponse.headers()['content-disposition']).toBeUndefined();
-    expect(await apiResponse.text()).not.toContain('risckcomply.retention_policy_review_export');
+    expect(JSON.stringify(denial)).not.toContain('risckcomply.retention_policy_review_export');
   });
 });
