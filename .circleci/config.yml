@@ -144,6 +144,7 @@ jobs:
             mkdir -p artifacts/qa-preflight
             node --test --test-reporter=tap \
               tests/security/e2e-preflight-offline.test.mjs \
+              tests/security/payment-first-qa-origin-guard.test.mjs \
               tests/security/circleci-qa-manual-gate.test.mjs \
               2>&1 | tee artifacts/qa-preflight/tests.tap
             # No external provider call, install, payment or runtime mutation.
