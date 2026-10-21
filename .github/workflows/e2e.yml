@@ -43,7 +43,7 @@ jobs:
           }
 
           const db = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL);
-          if (db.protocol !== 'https:' || !/^[a-z0-9]+\\.supabase\\.co$/i.test(db.hostname) ||
+          if (db.protocol !== 'https:' || !/^[a-z0-9]+\.supabase\.co$/i.test(db.hostname) ||
               db.hostname.toLowerCase().startsWith('tganhbbhfxcpblmgqprg.')) {
             throw new Error('qa_runtime_requires_nonproduction_supabase');
           }
