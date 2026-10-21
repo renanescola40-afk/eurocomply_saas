@@ -80,7 +80,7 @@ Suggested answer:
 
 ## 14. Do you sign a DPA?
 
-For Business and Enterprise customers, DPA review can be part of the procurement process. Final terms depend on the signed agreement.
+Where RISCK COMPLY acts as a processor of customer personal data, an effective Article 28 GDPR processing agreement is required regardless of the subscription tier. The current DPA and processing/security schedules are prepared review drafts, **not** executed agreements. The actual contracting entity, processing details, subprocessors, transfer arrangements, agreed version and lawful incorporation/acceptance must be verified before representing the DPA as effective. Customer-specific legal review may be needed.
 
 ## 15. Do you list subprocessors?
 
