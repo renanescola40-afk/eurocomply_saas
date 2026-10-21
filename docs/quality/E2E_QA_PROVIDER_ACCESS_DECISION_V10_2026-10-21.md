@@ -60,3 +60,51 @@ Node 22 focused results **23/23 PASS** on 2026-10-21, verified against GitHub wo
 **Second decision when ready:** allow a **non-production, isolated, disposable QA environment** only after verifying no charges, specifying whether the existing inactive project may be touched, and ensuring any old records are protected. This is separate from releasing production or signing customer contracts.
 
 **No general unrestricted authorization or password sharing is requested.** No owner action can make external legal opinions, independent pentest reports or production E2E proofs true without actual attributable execution.
+
+
+## V12-C CENTRAL WRITE GUARD ADDENDUM — 21 October 2026
+
+**Executor C scope:** existing PR #2553 only; no main merge, deploy, external email, Stripe provider mutation, Supabase production read/write query, new spend or changes to Executor A/B branches.
+
+### Concrete defect and scoped correction
+
+The inherited opt-in browser suites (\`authenticated-commercial-acceptance.spec.ts\`, \`full-saas-functional-journey.spec.ts\`, \`new-customer-commercial-activation.spec.ts\`) treated \`E2E_ALLOW_SYNTHETIC_APP_WRITES=true\` plus disposable-fixture wording as permission to attempt writes, without a common configuration-load-time check of the application/database destination.
+
+The existing \`payment-first-runtime-global-setup.ts\` test performs negative PostgREST write attempts against an unlicensed synthetic tenant when specifically activated; it also needed a fail-closed destination check **before** browser launch/direct API access. The paid-owner retention browser spec needed the same provider isolation when using explicit QA credentials.
+
+Implemented **on the existing QA PR only**:
+
+- \`playwright.config.ts\`: a central fail-closed preflight runs before \`defineConfig\` whenever \`E2E_ALLOW_SYNTHETIC_APP_WRITES=true\`, requiring a root HTTPS non-production QA app URL, an explicit non-production Supabase project URL, Stripe \`sk_test_\` credentials and webhook signing-secret shape, a confirmed QA mail sink and no production-like server gate.
+- Known public application origins (apex, www, subdomains) and confirmed production Vercel aliases are rejected. The current Vercel project read-only domain inventory confirmed \`eurocomply-saas.vercel.app\` as a production alias and returned further canonical/main and current production-deployment hosts; these known hosts were excluded. **This static list does not establish that an arbitrary other Vercel preview is isolated**: runtime target validation and provider-account verification still need actual evidence.
+- \`payment-first-runtime-global-setup.ts\`: refuses unsafe/production application and database origins before acquiring a browser or making negative write requests.
+- \`retention-export-functional.spec.ts\`: paid-owner fixture now also needs non-production app/DB, TEST billing key and confirmed mail sink. The anonymous read-only denial test remains available.
+- New offline Node suites \`payment-first-qa-origin-guard.test.mjs\` and \`playwright-synthetic-write-qa-gate.test.mjs\` cover positive disposable-URL scenarios, known production aliases, malformed/missing origins, production Supabase, forbidden Stripe LIVE credentials and missing mail sink.
+- The existing small \`qa-preflight-offline\` CircleCI workflow and its own contract tests now execute both suites without privileged provider keys or npm installation.
+
+### Actually executed vs not executed
+
+A **local isolated Node 22 rehearsal of the guard logic** (using recreated local copies of the reviewed guard source, *not* a checkout of the private PR head) executed 59/59 checks successfully. It establishes logic-level confidence only: **not** an exact-SHA repository test run and **not** browser, QA provider, Stripe webhook, database persistence or CI evidence. All changed remote files were read back through the GitHub connector and checked for guard presence and ordering.
+
+**New PR-head status:** prior CircleCI #209/#210/#211 PASS reports remain confined to older SHA \`9b7ef4df352e6a4c5246618f1c224d9e242b0728\`. New commits invalidate transfer of that execution status; on this newly edited branch the combined GitHub commit statuses must be reread, and the exact-head QA preflight/full CI must run if free provider resources are available. No unearned PASS or release equivalence.
+
+### Smallest next real provider acceptance
+
+1. Independently attest an isolated non-production Supabase project is disposable, owned, contains no customer/protected data and may be active at zero extra cost. Existing historical inactive projects are **not** automatically disposable.
+2. Provide an approved protected QA preview with verifiable deployment SHA and QA-only backend/Stripe TEST bindings, disposable owner/member identities, verified mail sink and no production credential inheritance.
+3. After remaining CircleCI credits are confirmed, run the small source-only manual preflight on the latest QA SHA. Escalate exact-head full CI and authenticated Playwright only when all prerequisites hold.
+4. Create/configure a **new** QA-only Stripe TEST webhook after the isolated target exists; prove real signed receipt, event idempotency, workspace association, subscription persistence, entitlements/reloads and revocation. Do not enable the currently disabled stale TEST endpoint or reuse its protection-bypass metadata.
+5. Return exact SHA, CI job IDs, test names/counts, skipped tests, QA deployment ID, provider-backed redacted evidence and open failures to Executor A. Executor A alone governs review, merge and release.
+
+\`\`\`text
+QA_ISOLATED_WRITE_GUARD=IMPLEMENTED_ON_PR_2553
+LOCAL_GUARD_REHEARSAL=59_PASS_0_FAIL_NOT_EXACT_HEAD_CI
+PRODUCTION_APP_ALIAS_EXCLUSIONS=APEX_AND_VERIFIED_VERCEL_ALIASES
+AUTHENTICATED_E2E=NO_PASS
+STRIPE_TEST_SIGNED_WEBHOOK=NO_PASS
+PROVIDER_PERSISTENCE=NO_PASS
+CUSTOMER_PAID_PILOT_GO=NO_GO
+EXTERNAL_MESSAGES_SENT=0
+LIVE_PAYMENTS_CREATED=0
+PRODUCTION_WRITES=0
+UNAPPROVED_SPENDING=0
+\`\`\`
