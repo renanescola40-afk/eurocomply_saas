@@ -5,6 +5,9 @@ parameters:
   run_qa_preflight:
     type: boolean
     default: false
+  run_qa_full:
+    type: boolean
+    default: false
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
@@ -27,7 +30,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019) ;;
+              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|qa/fix-e2e-node22-20261021) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -211,6 +214,24 @@ workflows:
     when: << pipeline.parameters.run_qa_preflight >>
     jobs:
       - qa-preflight-offline:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+
+  qa-full-manual:
+    # Full lint/typecheck/unit/security/build + synthetic PG17 acceptance.
+    # Disabled by default and scoped only to the QA branch. This can consume
+    # significant CircleCI credits. Trigger ONLY after explicit free-credit
+    # confirmation; never retry blindly or use production credentials.
+    when: << pipeline.parameters.run_qa_full >>
+    jobs:
+      - validar-risck:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+      - p0-postgres-synthetic:
           filters:
             branches:
               only:
