@@ -45,6 +45,15 @@ test('Only confirmed drifting derived membership counters can change', () => {
     assert.doesNotMatch(sql,new RegExp('set\\s+'+key+'\\s*=','i'));
   }
 });
+test('Manual repair requires both drifting organizations to have zero members of ANY status under DML locks', () => {
+  const membersLock=sql.indexOf('lock table public.organization_members');
+  const memberRows=sql.indexOf('count(*)::integer member_rows');
+  const guard=sql.indexOf('if v_drift_with_member_rows <> 0');
+  const mutation=sql.indexOf('for v_target in');
+  assert.ok(membersLock > 0 && memberRows > membersLock && guard > memberRows && mutation > guard);
+  assert.match(sql,/count\(\*\) filter\(where coalesce\(a\.member_rows,0\) > 0\)::integer/);
+  assert.match(sql,/P0-F unexpected member-linked drift/);
+});
 test('Correction writes attributable legacy audit log and no tenant details to query output', () => {
   assert.match(sql, /insert into public.audit_logs/);
   assert.match(sql, /enterprise\.membership_usage_reconciled/);
