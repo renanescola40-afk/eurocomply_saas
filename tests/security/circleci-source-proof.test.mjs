@@ -24,6 +24,11 @@ test('emits bound source-only validation but never enterprise GO', () => {
   assert.equal(p.enterpriseRelease.authenticatedTenantIsolation, 'NOT_TESTED');
   assert.equal(p.enterpriseRelease.mandatoryGithubActions, 'NOT_SUBSTITUTED');
 });
+test('allows only the specifically named source-proof branch', () => {
+  const exact = 'fix/circleci-source-evidence-v17-20261021';
+  assert.equal(run({...base(), CIRCLE_BRANCH: exact}).circleci.branch, exact);
+  assert.throws(() => run({...base(), CIRCLE_BRANCH: exact + '-untrusted'}), /disallowed_circleci_branch/);
+});
 test('rejects checkout SHA mismatch', () => assert.throws(() => run(base(), '8'.repeat(40)), /checkout_sha_mismatch/));
 test('rejects missing CircleCI authorization', () => assert.throws(() => run({...base(), CIRCLECI: ''}), /circleci_runner_required/));
 test('rejects unrelated CircleCI job', () => assert.throws(() => run({...base(), CIRCLE_JOB: 'deploy'}), /validar_risck_job_required/));
