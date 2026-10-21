@@ -1,6 +1,12 @@
 
 version: 2.1
 
+# Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
+parameters:
+  run_qa_preflight:
+    type: boolean
+    default: false
+
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
   validar-risck:
@@ -103,6 +109,36 @@ jobs:
           name: Verificar rotas
           command: npm run quality:routes
 
+  # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
+  qa-preflight-offline:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact QA checkout and refuse provider secrets
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "qa/fix-e2e-node22-20261021" || {
+              echo "CircleCI QA job cannot run on other branches" >&2
+              exit 1
+            }
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?CircleCI source SHA missing}" || {
+              echo "CircleCI checkout must match pipeline SHA" >&2
+              exit 1
+            }
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              if [ -n "${!key:-}" ]; then
+                echo "Provider credential forbidden in offline QA: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Execute exact-source QA isolation regression using Node built-in test runner
+          command: node --test tests/security/e2e-preflight-offline.test.mjs
+
   # Native PG service is disposable and contains ONLY synthetic fixtures.
   # Free-plan included quota verified 2026-10-18 before activation.
   p0-postgres-synthetic:
@@ -136,6 +172,16 @@ jobs:
           destination: p0-postgres-synthetic
 
 workflows:
+  qa-preflight-manual:
+    # A code push alone does not launch this job or incur executor credits.
+    when: << pipeline.parameters.run_qa_preflight >>
+    jobs:
+      - qa-preflight-offline:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+
   verificacao-isolada:
     jobs:
       - validar-risck:
