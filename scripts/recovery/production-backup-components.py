@@ -55,13 +55,15 @@ try:
         raise RuntimeError("REQUIRED_EXTENSION_VERSION_UNAVAILABLE")
     stage="synthetic_setup"
     sql(source,"CREATE DATABASE recovery_source")
+    sql(source,"GRANT CREATE ON DATABASE recovery_source TO postgres")
     sql(source,'''CREATE SCHEMA IF NOT EXISTS extensions; CREATE SCHEMA IF NOT EXISTS vault; CREATE SCHEMA IF NOT EXISTS auth;
 DROP EXTENSION IF EXISTS pg_stat_statements, "uuid-ossp", pgcrypto CASCADE;
-SET ROLE postgres;
+GRANT USAGE,CREATE ON SCHEMA extensions TO postgres;
+SET SESSION AUTHORIZATION postgres;
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA extensions VERSION '1.11';
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions VERSION '1.1';
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions VERSION '1.3';
-RESET ROLE;
+RESET SESSION AUTHORIZATION;
 CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
 CREATE EXTENSION IF NOT EXISTS wrappers WITH SCHEMA extensions VERSION '0.6.1';
 ALTER SCHEMA public OWNER TO postgres;
@@ -107,6 +109,9 @@ GRANT EXECUTE ON FUNCTION public.synthetic_owned_no_create() TO anon;''',"recove
         return json.loads(sql(source,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET TRANSACTION SNAPSHOT '"+snapshot+"'; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;","recovery_source"))
     before_rows=scope["fingerprints"](src_query)
     before_catalog=src_query(scope["CATALOG_SQL"])
+    extension_owners={row[0]:row[3] for row in before_catalog["extensions"]}
+    evidence["source_postgres_extension_owners_verified"] = all(extension_owners.get(name)=="postgres" for name in ("pg_stat_statements","uuid-ossp","pgcrypto"))
+    if not evidence["source_postgres_extension_owners_verified"]:raise RuntimeError("SYNTHETIC_EXTENSION_OWNER_PROFILE_NOT_REPRODUCED")
     sql(source,"INSERT INTO public.synthetic_items VALUES(2,'00000000-0000-0000-0000-000000000001')","recovery_source")
     stage="destination_start"
     dest=start("-dest")
@@ -219,7 +224,7 @@ GRANT EXECUTE ON FUNCTION public.synthetic_owned_no_create() TO anon;''',"recove
         stage="synthetic_restore_pre-data"
         scope["REPORT"].clear()
         decrypt=common+["age","-d","-i","/work/identity","/work/backup.dump.age"]
-        evidence["schemas_restored_with_original_owners"] = scope["restore_predata_with_owned_schemas"](decrypt,dest,work)
+        evidence["schemas_restored_with_original_owners"] = scope["restore_predata_with_owned_schemas"](decrypt,dest,work,before_catalog)
         for section in ("data","post-data"):
             stage="synthetic_restore_"+section
             restore=["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]

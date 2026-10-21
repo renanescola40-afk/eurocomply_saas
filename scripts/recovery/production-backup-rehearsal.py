@@ -114,11 +114,20 @@ def schema_restore_lists(toc):
     if count == 0:raise RuntimeError("RESTORE_SCHEMA_TOC_EMPTY")
     return "".join(schemas).encode(), "".join(schema_acls).encode(), "".join(extensions).encode(), "".join(remaining).encode(), count
 
-def restore_predata_with_owned_schemas(decrypt, target, private_work):
+def restore_predata_with_owned_schemas(decrypt, target, private_work, catalog):
     base = ["docker","exec","-i",target,"pg_restore","-U","supabase_admin"]
     toc = piped(decrypt,base+["--list"],drain_remaining=True,capture_stdout=True)
     schemas, schema_acls, extensions, remaining, count = schema_restore_lists(toc)
     for name, content in (("schemas",schemas),("schema-acls",schema_acls),("extensions",extensions),("objects",remaining)):
+        if name == "extensions":
+            # pg_dump does not record an EXTENSION owner in its TOC. Create
+            # with the snapshot owner/version before archive IF NOT EXISTS.
+            for extension, version, namespace, owner in catalog["extensions"]:
+                if owner not in {"postgres","supabase_admin"}:
+                    raise RuntimeError("UNREVIEWED_EXTENSION_OWNER")
+                statement = ("SET SESSION AUTHORIZATION "+qident(owner)+"; CREATE EXTENSION IF NOT EXISTS "+qident(extension)+
+                    " WITH SCHEMA "+qident(namespace)+" VERSION '"+version.replace("'","''")+"'; RESET SESSION AUTHORIZATION;")
+                run(["docker","exec",target,"psql","-X","-qAt","-U","supabase_admin","-d","recovery_destination","-v","ON_ERROR_STOP=1","-c",statement])
         metadata = private_work/("restore-"+name+".toc")
         metadata.write_bytes(content);metadata.chmod(0o600)
         destination = "/tmp/risck-restore-"+name+".toc"
@@ -341,7 +350,7 @@ def main():
         try:
             STAGE="isolated_restore_pre-data"
             decrypt=age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"]
-            REPORT["schemas_restored_with_original_owners"] = restore_predata_with_owned_schemas(decrypt,TARGET,work)
+            REPORT["schemas_restored_with_original_owners"] = restore_predata_with_owned_schemas(decrypt,TARGET,work,before_catalog)
             for section in ("data","post-data"):
                 STAGE="isolated_restore_"+section
                 restore=["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
