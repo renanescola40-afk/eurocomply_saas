@@ -19,7 +19,7 @@ export function makeSourceOnlyProof({ env, gitSha, timestamp }) {
   }
   if (gitSha !== env.CIRCLE_SHA1) throw new Error('checkout_sha_mismatch');
   const branch = env.CIRCLE_BRANCH || '';
-  if (!(branch === 'main' || /^ci\/verify-[A-Za-z0-9._/-]+$/.test(branch) || branch === 'fix/p0-forward-manifest-v44-20261019')) {
+  if (!(branch === 'main' || /^ci\/verify-[A-Za-z0-9._/-]+$/.test(branch) || branch === 'fix/p0-forward-manifest-v44-20261019' || branch === 'fix/circleci-source-evidence-v17-20261021')) {
     throw new Error('disallowed_circleci_branch');
   }
   for (const name of [
