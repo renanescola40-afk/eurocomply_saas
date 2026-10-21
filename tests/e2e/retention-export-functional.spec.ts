@@ -10,10 +10,46 @@ test('anonymous retention export is refused without a downloadable evidence payl
 
 test.describe('paid owner retention export: live UI and MFA boundary', () => {
   const ownerStorageState = process.env.E2E_OWNER_STORAGE_STATE;
-  test.skip(!ownerStorageState, 'Requires an existing disposable paid owner browser session.');
+  const ownerEmail = process.env.E2E_OWNER_EMAIL?.trim();
+  const ownerPassword = process.env.E2E_OWNER_PASSWORD;
+  const hasDisposableCredentials = Boolean(ownerEmail && ownerPassword);
+  const isolatedTarget = (() => {
+    try {
+      const base = process.env.E2E_BASE_URL;
+      if (!base) return false;
+      const target = new URL(base);
+      return target.protocol === 'https:' &&
+        !['risckcomply.com', 'www.risckcomply.com'].includes(target.hostname.toLowerCase());
+    } catch {
+      return false;
+    }
+  })();
+  test.skip(!isolatedTarget, 'Paid-owner E2E requires an explicit isolated HTTPS QA target, never production.');
+  test.skip(!ownerStorageState && !hasDisposableCredentials,
+    'Requires disposable paid-owner credentials or an existing isolated QA browser session.');
   if (ownerStorageState) test.use({ storageState: ownerStorageState });
 
   test('owner clicks export, receives MFA dialog, and unverified API request is denied', async ({ page }) => {
+    // The isolated QA workflow provides E2E_OWNER_EMAIL/PASSWORD, not a storageState file.
+    // Authenticate through the actual UI rather than silently skipping paid-owner coverage.
+    if (!ownerStorageState) {
+      const loginResponse = await page.goto('/en/login?next=/en/retention-center', {
+        waitUntil: 'domcontentloaded',
+      });
+      expect(loginResponse?.status()).toBeLessThan(500);
+      const emailInput = page.getByRole('textbox', { name: 'Work email', exact: true });
+      const loginForm = page.locator('form').filter({ has: emailInput });
+      await expect(loginForm).toHaveCount(1);
+      await emailInput.fill(ownerEmail!);
+      await loginForm.getByLabel('Password', { exact: true }).fill(ownerPassword!);
+      await Promise.all([
+        page.waitForURL((url) => !url.pathname.includes('/login'), {
+          timeout: 30_000, waitUntil: 'domcontentloaded',
+        }),
+        loginForm.locator('button[type="submit"]').click(),
+      ]);
+    }
+
     const pageResponse = await page.goto('/en/retention-center', { waitUntil: 'domcontentloaded' });
 
     expect(pageResponse?.status()).toBeLessThan(500);
