@@ -29,6 +29,17 @@ function normalise(value) {
 // A positive decision must never override an explicit failed state or synthetic placeholder.
 function hasExplicitFailure(document) {
   if (document?.evidenceIntegrity?.placeholderOnly === true || document?.placeholderOnly === true) return true;
+  // An explicit false is a failed assertion, not an absent assertion.
+  if ([
+    document?.success,
+    document?.passed,
+    document?.accepted,
+    document?.ok,
+    document?.summary?.passed,
+    document?.evidenceIntegrity?.exactShaBound,
+  ].some((value) => value === false)) return true;
+  if (Array.isArray(document?.blockers) && document.blockers.length > 0) return true;
+
   const failedStates = new Set([
     'FAIL', 'FAILED', 'FAILURE', 'ERROR', 'OPEN', 'BLOCKED', 'NO_GO',
     'NO_PASS', 'REJECTED', 'DENIED', 'CANCELLED', 'CANCELED',
