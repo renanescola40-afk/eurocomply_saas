@@ -98,35 +98,39 @@ def piped(producer_args, consumer_args, timeout=180, drain_remaining=False, capt
 
 def schema_restore_lists(toc):
     # Metadata stays private; preserve every TOC entry exactly once.
-    schemas, schema_acls, remaining = [], [], []
+    schemas, schema_acls, extensions, remaining = [], [], [], []
     for line in toc.decode("utf-8").splitlines(keepends=True):
         if line.startswith(";") or not line.strip():
-            schemas.append(line);schema_acls.append(line);remaining.append(line)
+            schemas.append(line);schema_acls.append(line);extensions.append(line);remaining.append(line)
         elif re.match(r"^\d+;\s+\d+\s+\d+\s+SCHEMA\s",line):
             schemas.append(line)
         elif re.match(r"^\d+;\s+\d+\s+\d+\s+ACL\s+-\s+SCHEMA\s",line):
             schema_acls.append(line)
+        elif re.match(r"^\d+;\s+\d+\s+\d+\s+EXTENSION\s",line):
+            extensions.append(line)
         else:
             remaining.append(line)
     count = sum(bool(re.match(r"^\d+;",line)) for line in schemas)
     if count == 0:raise RuntimeError("RESTORE_SCHEMA_TOC_EMPTY")
-    return "".join(schemas).encode(), "".join(schema_acls).encode(), "".join(remaining).encode(), count
+    return "".join(schemas).encode(), "".join(schema_acls).encode(), "".join(extensions).encode(), "".join(remaining).encode(), count
 
 def restore_predata_with_owned_schemas(decrypt, target, private_work):
     base = ["docker","exec","-i",target,"pg_restore","-U","supabase_admin"]
     toc = piped(decrypt,base+["--list"],drain_remaining=True,capture_stdout=True)
-    schemas, schema_acls, remaining, count = schema_restore_lists(toc)
-    for name, content in (("schemas",schemas),("schema-acls",schema_acls),("objects",remaining)):
+    schemas, schema_acls, extensions, remaining, count = schema_restore_lists(toc)
+    for name, content in (("schemas",schemas),("schema-acls",schema_acls),("extensions",extensions),("objects",remaining)):
         metadata = private_work/("restore-"+name+".toc")
         metadata.write_bytes(content);metadata.chmod(0o600)
         destination = "/tmp/risck-restore-"+name+".toc"
         run(["docker","cp",str(metadata),target+":"+destination])
         restore = base+["-d","recovery_destination","--exit-on-error","--use-list="+destination]
-        # Standard ALTER OWNER for schemas; original-session ownership for
-        # extensions and other objects. No --no-owner or ACL/RLS exclusions.
+        # Standard ALTER OWNER retains ownership without requiring historical
+        # owners to retain DDL privileges. Extensions have no ALTER OWNER form.
+        # No --no-owner, ACL/RLS exclusion or privileged role change.
         # Original schema ACLs must precede CREATE TYPE/TABLE by a distinct
         # source owner. Apply only the archived grants, no bootstrap expansion.
-        if name == "objects":restore += ["--section=pre-data","--use-set-session-authorization"]
+        if name in ("extensions","objects"):restore.append("--section=pre-data")
+        if name == "extensions":restore.append("--use-set-session-authorization")
         piped(decrypt,restore,drain_remaining=True)
         metadata.unlink()
     return count
