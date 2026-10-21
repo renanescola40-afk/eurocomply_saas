@@ -16,6 +16,17 @@
 
 ## 2. Contract assembly controls
 
+### Statutory-date cross-check performed 21 October 2026 (primary EU sources)
+
+- Consolidated Regulation (EU) 2024/1689 as at 27 July 2026, Article 113: general applicability is 2 August 2026, with the express staggered exceptions in Article 113. The general applicability date is **not** a blanket high-risk operational deadline for every Annex.
+- Regulation (EU) 2026/1744 (Digital Omnibus on AI), published in the Official Journal on 24 July 2026 and in force, amended Article 113: **2 December 2027** for Chapter III Sections 1–3 high-risk AI under Article 6(2)/Annex III, and **2 August 2028** for Article 6(1)/Annex I. Article 6(5) has an express exception from that amended paragraph.
+- For specifically enumerated Article 5(1) additions and new paragraphs, the amendment specifies **2 December 2026**; this is not a blanket postponement of the Article 5 prohibitions already applicable since 2 February 2025.
+- A narrow transitional provision concerns Article 50(2) obligations for certain providers of systems producing synthetic content placed on the market before 2 August 2026, with a 2 December 2026 adaptation date. Determine the actual provider/system/transitional facts before relying on it.
+- Primary sources: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R1744 and https://eur-lex.europa.eu/eli/reg/2024/1689/2026-07-27/eng and https://digital-strategy.ec.europa.eu/en/news/ai-omnibus-enters-force.
+- **Decision:** The dated Annex III / Annex I assertions in the overlapping V7 matrices are independently corroborated by current authoritative text. This resolves the *source/date lookup only*, not legal applicability for a particular customer's AI system, legal sign-off, contractual effect, or the duplicate-document publication decision. Recheck before buyer execution if the law changes.
+
+
+
 1. Before merging either branch, designated integrator chooses one contractual DPA annex and one customer applicability matrix, reconciles Section numbering, defined terms, provider list, data-transfer instruments and applicable-date references, and preserves a changelog of discarded/superseded duplicate drafts.
 2. Do **not** equate the European Commission's Article 28 model clauses (Decision 2021/915) with third-country transfer SCCs (Decision 2021/914); verify actual exporter/importer/processing roles and transfer flows before selecting modules.
 3. A primary EU database region does not establish global EU-only processing or legal sufficiency of international transfers.
