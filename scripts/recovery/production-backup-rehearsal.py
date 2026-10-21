@@ -130,21 +130,44 @@ def create_owned_extension(target, database, extension, version, namespace, owne
         raise RuntimeError("EXTENSION_BOOTSTRAP_NETWORK_REJECTED")
     create = ("CREATE EXTENSION IF NOT EXISTS "+qident(extension)+" WITH SCHEMA "+qident(namespace)+
               " VERSION '"+version.replace("'","''")+"';")
-    # An already-privileged local administrator bootstraps the snapshot owner
-    # in one transaction. No other session observes an elevated postgres role;
-    # both success and failure leave its committed NOSUPERUSER state intact.
+    command = ["docker","exec",target,"psql","-X","-qAt","-U","supabase_admin","-d",database,
+               "-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose","-c"]
+    # Supautils uses a SIGHUP-only elevation-role setting. Its hook remains
+    # enabled. Change only the disposable network-none server, restore the
+    # original setting in finally, and keep role elevation uncommitted.
+    original = run(command+["SELECT current_setting('supautils.superuser')"],text=True).strip()
+    if original != "supabase_admin":
+        raise RuntimeError("ISOLATED_EXTENSION_DELEGATION_PROFILE_REJECTED")
     guard = "DO $guard$ BEGIN IF current_user <> 'supabase_admin' OR NOT (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR (SELECT rolsuper FROM pg_roles WHERE rolname='postgres') THEN RAISE EXCEPTION 'ISOLATED_ROLE_PROFILE_REJECTED'; END IF; END $guard$;"
     statement = "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s'; "+guard
     if owner == "postgres":
-        # Supautils delegates privileged CREATE EXTENSION to its configured
-        # elevation role even when the caller is already a superuser. Keep
-        # that delegation enabled, but use the snapshot owner for this one
-        # isolated transaction. SET LOCAL cannot persist beyond COMMIT/ROLLBACK.
-        statement += " ALTER ROLE postgres SUPERUSER; SET LOCAL supautils.superuser='postgres'; SET SESSION AUTHORIZATION postgres; "+create+" RESET SESSION AUTHORIZATION; ALTER ROLE postgres NOSUPERUSER; "
+        statement += " ALTER ROLE postgres SUPERUSER; SET SESSION AUTHORIZATION postgres; "+create+" RESET SESSION AUTHORIZATION; ALTER ROLE postgres NOSUPERUSER; "
     else:
         statement += create
     statement += guard+" COMMIT;"
-    run(["docker","exec",target,"psql","-X","-qAt","-U","supabase_admin","-d",database,"-v","ON_ERROR_STOP=1","-c",statement])
+    def reload_as(expected):
+        run(command+["SELECT pg_reload_conf()"],text=True)
+        # A reload signals the postmaster asynchronously. Open a fresh backend
+        # and allow at most two checks; reject stale settings before any DDL.
+        for attempt in range(2):
+            current = run(command+["SELECT current_setting('supautils.superuser')"],text=True).strip()
+            if current == expected:
+                return
+            if attempt == 0:
+                __import__('time').sleep(0.1)
+        raise RuntimeError("ISOLATED_EXTENSION_DELEGATION_RELOAD_FAILED")
+    if owner == "postgres":
+        try:
+            run(command+["ALTER SYSTEM SET supautils.superuser='postgres'"])
+            reload_as("postgres")
+            run(command+[statement])
+        finally:
+            run(command+["ALTER SYSTEM SET supautils.superuser='supabase_admin'"])
+            reload_as(original)
+    else:
+        run(command+[statement])
+    if run(command+["SELECT NOT rolsuper FROM pg_roles WHERE rolname='postgres'"],text=True).strip() != "t":
+        raise RuntimeError("ISOLATED_EXTENSION_OWNER_PRIVILEGE_LEAK")
 
 def verify_isolated_extension_owner_profile(target, database, catalog):
     # Detect delegated extension ownership before moving any snapshot rows.
@@ -453,4 +476,5 @@ finally:
     (OUT/"result.json").write_text(json.dumps(REPORT,indent=2)+"\n")
     print(json.dumps(REPORT))
 raise SystemExit(0 if REPORT["status"]=="PASS_LOGICAL_BACKUP_AND_ISOLATED_RESTORE" else 1)
+
 

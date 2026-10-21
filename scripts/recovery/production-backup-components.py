@@ -159,6 +159,19 @@ GRANT USAGE,CREATE ON SCHEMA extensions TO postgres;''',"recovery_source")
     stage="synthetic_setup"
     for extension in ("pg_stat_statements","uuid-ossp","pgcrypto"):
         scope["create_owned_extension"](source,"recovery_source",extension,REQUIRED[extension],"extensions","postgres")
+    stage="extension_bootstrap_failure_rollback"
+    try:
+        scope["create_owned_extension"](source,"recovery_source","risck_synthetic_missing_extension","1.0","extensions","postgres")
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED" or scope["REPORT"].get("failure_diagnostic",{}).get("category")!="extension_unavailable":
+            raise
+    else:
+        raise RuntimeError("MISSING_EXTENSION_UNEXPECTEDLY_CREATED")
+    evidence["failed_extension_delegation_and_role_restored"]=json.loads(sql(source,"SELECT json_build_object('restored',current_setting('supautils.superuser')='supabase_admin' AND (SELECT NOT rolsuper FROM pg_roles WHERE rolname='postgres'))","recovery_source"))["restored"]
+    if not evidence["failed_extension_delegation_and_role_restored"]:
+        raise RuntimeError("FAILED_EXTENSION_BOOTSTRAP_STATE_LEAK")
+    scope["REPORT"].clear()
+    stage="synthetic_setup"
     sql(source,'''CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
 CREATE EXTENSION IF NOT EXISTS wrappers WITH SCHEMA extensions VERSION '0.6.1';
 ALTER SCHEMA public OWNER TO postgres;
@@ -422,4 +435,5 @@ finally:
     Path("artifacts/supabase-target-probe.json").write_text(json.dumps(evidence,indent=2)+"\n")
     print(json.dumps(evidence))
 raise SystemExit(0 if evidence["status"]=="PASS_PRODUCTION_BACKUP_COMPONENTS_SYNTHETIC_ONLY" else 1)
+
 
