@@ -21,6 +21,14 @@ All documents in this directory are **review drafts**, not final legal instrumen
 - Master Legal Opinion Handoff
 - Final Decision Sheet template
 
+## V7 customer-review annexes (21 October 2026)
+
+- [Enterprise Data Processing & Security Schedule V7](ENTERPRISE_DATA_PROCESSING_SECURITY_SCHEDULE_V7_REVIEW_DRAFT.md) — detailed proposed Article 28 processing specifications, TOMs, role-dependent provider disclosures, and buyer-specific signoff fields.
+- [EU AI Act + GDPR Applicability Matrix V7](EU_AI_ACT_GDPR_APPLICABILITY_MATRIX_V7_REVIEW_DRAFT.md) — updated 2026 statutory dates, role-specific obligations, and the distinction between product support and customers' legal duties.
+- [Legal Publication & Procurement Handoff V7](../../legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md) — internal evidence-gated publication handoff and authoritative-company/IP/transfer blockers.
+
+These are supplementary, evidence-bound **review drafts**. They neither replace the canonical documents in this directory nor close any legal acceptance gate.
+
 ## Status rules
 
 - `REVIEW_DRAFT`: prepared but not legally approved.
