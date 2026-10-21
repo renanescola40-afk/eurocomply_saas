@@ -37,8 +37,11 @@ jobs:
           if (missing.length) throw new Error('qa_runtime_missing_configuration: ' + missing.join(', '));
 
           const target = new URL(process.env.E2E_BASE_URL);
-          if (target.protocol !== 'https:' ||
-              ['risckcomply.com', 'www.risckcomply.com'].includes(target.hostname.toLowerCase())) {
+          // Trailing DNS dots and unverified subdomains must not bypass the
+          // production boundary. Credentials embedded in a URL are forbidden.
+          const targetHost = target.hostname.toLowerCase().replace(/\\.+$/, '');
+          if (target.protocol !== 'https:' || target.username || target.password ||
+              targetHost === 'risckcomply.com' || targetHost.endsWith('.risckcomply.com')) {
             throw new Error('qa_runtime_cannot_target_public_production');
           }
 
