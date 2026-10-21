@@ -73,3 +73,14 @@ test('Correction writes attributable legacy audit log and no tenant details to q
   assert.doesNotMatch(sql,/select\s+\*\s+from\s+public\.(organization_members|organizations)/i);
   assert.doesNotMatch(sql, /insert into public.audit_events/);
 });
+
+test('Consolidated repair preserves aggregate, NULL and final orphan target guards', () => {
+  assert.match(sql, /v_null_counters <> 0/);
+  assert.match(sql, /is distinct from \(3,3,0,0,2\)/);
+  assert.match(sql, /and a\.organization_id is null\s+order by u\.organization_id/);
+  const locks = sql.indexOf('lock table public.organization_members');
+  const aggregate = sql.indexOf('if v_null_counters <> 0');
+  const histogram = sql.indexOf('if v_reviewed_type_a <> 1');
+  const mutation = sql.indexOf('for v_target in');
+  assert.ok(locks < aggregate && aggregate < histogram && histogram < mutation);
+});

@@ -133,6 +133,12 @@ try {
  await seed();const suspendedDrift=await seedEmptyMembershipDrift();
  await q("insert into organization_members(id,organization_id,user_id,role,status,seat_type) values($1,$2,$3,'viewer','suspended','viewer')",[randomUUID(),suspendedDrift[0],randomUUID()]);
  await check('Manual repair rejects suspended-only member drift with zero active members',async()=>{const before=await snapshot();await assert.rejects(()=>manualAttempt(),/unexpected member-linked drift/);assert.equal(await snapshot(),before);});
+ await seed();const aggregateDrift=await seedEmptyMembershipDrift();
+ await q('update organization_usage set active_members=3,full_users=3 where organization_id=$1',[aggregateDrift[0]]);
+ await check('Manual repair rejects changed aggregate totals without writes',async()=>{const before=await snapshot();await assert.rejects(()=>manualAttempt(),/reviewed aggregate drift fingerprint changed/);assert.equal(await snapshot(),before);});
+ await seed();const nullDrift=await seedEmptyMembershipDrift();
+ await q('update organization_usage set active_admins=null where organization_id=$1',[nullDrift[0]]);
+ await check('Manual repair rejects NULL drift counters without writes',async()=>{const before=await snapshot();await assert.rejects(()=>manualAttempt(),/reviewed aggregate drift fingerprint changed/);assert.equal(await snapshot(),before);});
  await seed();const patternDrift=await seedEmptyMembershipDrift();
  await q('update organization_usage set active_admins=0 where organization_id=$1',[patternDrift[0]]);
  await q('update organization_usage set active_admins=2 where organization_id=$1',[patternDrift[1]]);

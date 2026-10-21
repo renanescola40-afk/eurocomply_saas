@@ -86,6 +86,12 @@ declare
   v_drift_with_member_rows integer;
   v_reviewed_type_a integer;
   v_reviewed_type_b integer;
+  v_delta_members integer;
+  v_delta_full integer;
+  v_delta_participants integer;
+  v_delta_viewers integer;
+  v_delta_admins integer;
+  v_null_counters integer;
   v_remaining integer;
   v_updated integer := 0;
   v_affected integer;
@@ -118,8 +124,17 @@ begin
         = (2,2,0,0,1))::integer,
     count(*) filter(where a.organization_id is null and
       (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
-        = (1,1,0,0,1))::integer
-    into v_drift,v_drift_with_member_rows,v_reviewed_type_a,v_reviewed_type_b
+        = (1,1,0,0,1))::integer,
+    coalesce(sum(coalesce(u.active_members,0)-coalesce(a.active_members,0)),0)::integer,
+    coalesce(sum(coalesce(u.full_users,0)-coalesce(a.full_users,0)),0)::integer,
+    coalesce(sum(coalesce(u.participants,0)-coalesce(a.participants,0)),0)::integer,
+    coalesce(sum(coalesce(u.viewers,0)-coalesce(a.viewers,0)),0)::integer,
+    coalesce(sum(coalesce(u.active_admins,0)-coalesce(a.active_admins,0)),0)::integer,
+    count(*) filter (where u.active_members is null or u.full_users is null
+      or u.participants is null or u.viewers is null or u.active_admins is null)::integer
+    into v_drift,v_drift_with_member_rows,v_reviewed_type_a,v_reviewed_type_b,
+      v_delta_members,v_delta_full,v_delta_participants,v_delta_viewers,
+      v_delta_admins,v_null_counters
   from public.organization_usage u left join actual a on a.organization_id=u.organization_id
   where (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
     is distinct from
@@ -136,6 +151,13 @@ begin
   -- Fail closed if either drifts into a new operational scenario.
   if v_drift_with_member_rows <> 0 then
     raise exception 'P0-F unexpected member-linked drift: %',v_drift_with_member_rows;
+  end if;
+  -- Preserve #2549's explicit aggregate/NULL guard alongside the narrower
+  -- per-organization distribution check. Both run under the same DML locks.
+  if v_null_counters <> 0 or
+     (v_delta_members,v_delta_full,v_delta_participants,v_delta_viewers,v_delta_admins)
+       is distinct from (3,3,0,0,2) then
+    raise exception 'P0-F reviewed aggregate drift fingerprint changed; abort manual repair';
   end if;
   -- Both drifted rows must match the reviewed 2026-10-21 distribution,
   -- not merely the same aggregate totals: (+2 full/members,+1 admin) and
@@ -166,6 +188,7 @@ begin
        is distinct from
       (coalesce(a.active_members,0),coalesce(a.full_users,0),
        coalesce(a.participants,0),coalesce(a.viewers,0),coalesce(a.active_admins,0))
+      and a.organization_id is null
     order by u.organization_id
   loop
     update public.organization_usage
