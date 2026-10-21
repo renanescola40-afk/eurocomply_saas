@@ -125,9 +125,9 @@ def restore_predata_with_owned_schemas(decrypt, target, private_work, catalog):
             for extension, version, namespace, owner in catalog["extensions"]:
                 if owner not in {"postgres","supabase_admin"}:
                     raise RuntimeError("UNREVIEWED_EXTENSION_OWNER")
-                statement = ("SET SESSION AUTHORIZATION "+qident(owner)+"; CREATE EXTENSION IF NOT EXISTS "+qident(extension)+
-                    " WITH SCHEMA "+qident(namespace)+" VERSION '"+version.replace("'","''")+"'; RESET SESSION AUTHORIZATION;")
-                run(["docker","exec",target,"psql","-X","-qAt","-U","supabase_admin","-d","recovery_destination","-v","ON_ERROR_STOP=1","-c",statement])
+                statement = ("CREATE EXTENSION IF NOT EXISTS "+qident(extension)+
+                    " WITH SCHEMA "+qident(namespace)+" VERSION '"+version.replace("'","''")+"';")
+                run(["docker","exec",target,"psql","-X","-qAt","-U",owner,"-d","recovery_destination","-v","ON_ERROR_STOP=1","-c",statement])
         metadata = private_work/("restore-"+name+".toc")
         metadata.write_bytes(content);metadata.chmod(0o600)
         destination = "/tmp/risck-restore-"+name+".toc"

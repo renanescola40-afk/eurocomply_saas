@@ -17,8 +17,8 @@ def run(args, **kw):
             evidence["synthetic_setup_error"] = result.stderr.decode(errors="replace")[:1200] if isinstance(result.stderr,bytes) else result.stderr[:1200]
         raise RuntimeError("NATIVE_STEP_FAILED")
     return result.stdout
-def sql(container, query, database="postgres"):
-    return run(["docker","exec",container,"psql","-X","-qAt","-U","supabase_admin","-d",database,"-v","ON_ERROR_STOP=1","-c",query],text=True)
+def sql(container, query, database="postgres", user="supabase_admin"):
+    return run(["docker","exec",container,"psql","-X","-qAt","-U",user,"-d",database,"-v","ON_ERROR_STOP=1","-c",query],text=True)
 def start(suffix):
     name=PREFIX+suffix
     run(["docker","run","-d","--name",name,"--network","none",
@@ -58,13 +58,11 @@ try:
     sql(source,"GRANT CREATE ON DATABASE recovery_source TO postgres")
     sql(source,'''CREATE SCHEMA IF NOT EXISTS extensions; CREATE SCHEMA IF NOT EXISTS vault; CREATE SCHEMA IF NOT EXISTS auth;
 DROP EXTENSION IF EXISTS pg_stat_statements, "uuid-ossp", pgcrypto CASCADE;
-GRANT USAGE,CREATE ON SCHEMA extensions TO postgres;
-SET SESSION AUTHORIZATION postgres;
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA extensions VERSION '1.11';
+GRANT USAGE,CREATE ON SCHEMA extensions TO postgres;''',"recovery_source")
+    sql(source,'''CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA extensions VERSION '1.11';
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions VERSION '1.1';
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions VERSION '1.3';
-RESET SESSION AUTHORIZATION;
-CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions VERSION '1.3';''',"recovery_source",user="postgres")
+    sql(source,'''CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
 CREATE EXTENSION IF NOT EXISTS wrappers WITH SCHEMA extensions VERSION '0.6.1';
 ALTER SCHEMA public OWNER TO postgres;
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
