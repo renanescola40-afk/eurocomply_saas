@@ -7,6 +7,9 @@ import { test } from 'node:test';
 const config = readFileSync(new URL('../../.circleci/config.yml', import.meta.url), 'utf8');
 const qaJob = config.split('  qa-preflight-offline:\n')[1]?.split('  # Native PG service is disposable')[0] ?? '';
 const qaWorkflow = config.split('  qa-preflight-manual:\n')[1]?.split('  verificacao-isolada:\n')[0] ?? '';
+const fullQaWorkflow = config.split('  qa-full-manual:\n')[1]?.split('  verificacao-isolada:\n')[0] ?? '';
+const canonicalWorkflow = config.split('  verificacao-isolada:\n')[1] ?? '';
+
 
 test('CircleCI uses 2.1 configuration', () => {
   assert.match(config, /^version: 2\.1$/m);
@@ -76,6 +79,30 @@ test('Stripe source validation must not falsely claim paid E2E or promote enterp
   assert.match(validator, /validationStatus: evidence\.validationStatus/);
   assert.match(validator, /repository_contract_passed_runtime_not_run/);
   assert.doesNotMatch(qaJob, /--update-register|--write-open-evidence/);
+});
+
+test('full QA is disabled by default and only manually runs on exact QA branch', () => {
+  assert.match(config, /  run_qa_full:\n    type: boolean\n    default: false/);
+  assert.match(fullQaWorkflow, /when: << pipeline\.parameters\.run_qa_full >>/);
+  assert.match(fullQaWorkflow, /- validar-risck:/);
+  assert.match(fullQaWorkflow, /- p0-postgres-synthetic:/);
+  assert.equal((fullQaWorkflow.match(/- qa\/fix-e2e-node22-20261021/g) ?? []).length, 2);
+  assert.doesNotMatch(fullQaWorkflow, /- main\b/);
+});
+
+test('normal automatic workflow never launches full QA jobs on the QA branch', () => {
+  assert.match(canonicalWorkflow, /- main\n/);
+  assert.doesNotMatch(canonicalWorkflow, /- qa\/fix-e2e-node22-20261021/);
+});
+
+test('full QA keeps existing source-only secret denial and exact source SHA', () => {
+  const fullJob = config.split('  validar-risck:\n')[1]?.split('  # Opt-in small executor')[0] ?? '';
+  const pgJob = config.split('  p0-postgres-synthetic:\n')[1]?.split('workflows:\n')[0] ?? '';
+  assert.match(fullJob, /CIRCLE_SHA1/);
+  assert.match(fullJob, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(pgJob, /CIRCLE_SHA1/);
+  assert.match(pgJob, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(pgJob, /postgres:17\.6/);
 });
 
 test('existing full validation and synthetic PostgreSQL workflows are not removed', () => {
