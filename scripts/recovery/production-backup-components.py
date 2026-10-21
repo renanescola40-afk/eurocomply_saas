@@ -37,7 +37,7 @@ try:
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
     scope={"json":json,"re":re,"subprocess":subprocess,"ENV":ENV,"REPORT":{},"ACTIVE":[]}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges")]
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges","schema_restore_lists","restore_predata_with_owned_schemas")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
@@ -116,9 +116,9 @@ INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);''',"recovery_sou
     if failure.get("sqlstate")!="42501" or failure.get("object_kind")!="database":
         raise RuntimeError("DATABASE_OWNER_REGRESSION_NOT_REPRODUCED")
     evidence["unprepared_database_owner_create_rejected"]=True
-    sql(dest,"GRANT CREATE ON DATABASE recovery_destination TO pg_database_owner")
-    if scope["creator_privileges"](lambda query:sql(dest,query,"recovery_destination"),{"pg_database_owner"})!={"checked":1,"prepared":1}:
-        raise RuntimeError("ISOLATED_PRIVILEGE_PROBE_FAILED")
+    # Keep the failing owner's database CREATE absent. The alternative must
+    # restore its schema AND ownership without expanding that privilege.
+    evidence["database_owner_create_not_granted"] = True
     scope["align_existing_schema_owners"](lambda query:sql(dest,query,"recovery_destination"),before_catalog)
     stage="synthetic_dump_restore"
     with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:
@@ -177,10 +177,13 @@ INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);''',"recovery_sou
         evidence["tampered_ciphertext_rejected"] = tampered.returncode != 0
         if not evidence["wrong_key_rejected"] or not evidence["tampered_ciphertext_rejected"]:raise RuntimeError("NEGATIVE_DECRYPTION_FAILED")
         stage = "stream_decrypt_restore"
-        for section in ("pre-data","data","post-data"):
+        stage="synthetic_restore_pre-data"
+        scope["REPORT"].clear()
+        decrypt=common+["age","-d","-i","/work/identity","/work/backup.dump.age"]
+        evidence["schemas_restored_with_original_owners"] = scope["restore_predata_with_owned_schemas"](decrypt,dest,work)
+        for section in ("data","post-data"):
             stage="synthetic_restore_"+section
             restore=["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
-            if section=="pre-data":restore.append("--use-set-session-authorization")
             decryptor = subprocess.Popen(common+["age","-d","-i","/work/identity","/work/backup.dump.age"],env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             restorer = subprocess.Popen(restore,env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
             try:
@@ -251,6 +254,8 @@ INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);''',"recovery_sou
     if not all(result.values()):raise RuntimeError("RESTORE_ASSERTION_FAILED")
     evidence["status"]="PASS_PRODUCTION_BACKUP_COMPONENTS_SYNTHETIC_ONLY"
 except Exception as error:
+    if "scope" in locals() and scope["REPORT"].get("failure_diagnostic"):
+        evidence["synthetic_restore_diagnostic"] = scope["REPORT"]["failure_diagnostic"]
     evidence["failure_type"]=type(error).__name__
     evidence["status"]="FAILED_SYNTHETIC_TARGET_ONLY"
     evidence["failure_stage"]=stage

@@ -44,9 +44,10 @@ def failure_diagnostic(stderr, returncode, component):
     object_kind = re.search(r"permission denied (?:for|to create) (schema|table|relation|sequence|function|extension|language|database)\b", message, re.IGNORECASE)
     if object_kind:
         diagnostic["object_kind"] = object_kind.group(1).lower()
-    denied_database = re.search(r'permission denied for database "([^"]+)"', message, re.IGNORECASE)
+    denied_database = re.search(r'permission denied for database (?:"([^"\r\n]+)"|([^\s;]+))', message, re.IGNORECASE)
     if denied_database:
-        diagnostic["database_scope"] = {"recovery_destination":"isolated_target","postgres":"bootstrap_database"}.get(denied_database.group(1),"other_database")
+        database = denied_database.group(1) or denied_database.group(2)
+        diagnostic["database_scope"] = {"recovery_destination":"isolated_target","postgres":"bootstrap_database"}.get(database,"other_database")
     for operation in ("CREATE TABLE", "CREATE FUNCTION", "CREATE SCHEMA", "CREATE EXTENSION", "CREATE SEQUENCE", "CREATE VIEW", "CREATE TYPE", "ALTER TABLE", "COMMENT ON", "SET SESSION AUTHORIZATION"):
         if re.search(r"Command was:\s*" + re.escape(operation) + r"\b", message, re.IGNORECASE):
             diagnostic["operation"] = operation
@@ -73,14 +74,14 @@ def creator_privileges(query, roles):
     names = ",".join("'" + role.replace("'", "''") + "'" for role in sorted(roles))
     return json.loads(query("SELECT json_build_object('checked',count(*),'prepared',count(*) FILTER (WHERE has_database_privilege(oid,current_database(),'CREATE'))) FROM pg_roles WHERE rolname IN ("+names+")"))
 
-def piped(producer_args, consumer_args, timeout=180, drain_remaining=False):
+def piped(producer_args, consumer_args, timeout=180, drain_remaining=False, capture_stdout=False):
     producer = subprocess.Popen(producer_args, env=ENV, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     consumer = subprocess.Popen(consumer_args, env=ENV, stdin=producer.stdout,
-                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                                stdout=subprocess.PIPE if capture_stdout else subprocess.DEVNULL, stderr=subprocess.PIPE)
     ACTIVE.extend([producer,consumer])
     if not drain_remaining:producer.stdout.close()
     try:
-        _, consumer_error = consumer.communicate(timeout=timeout)
+        consumer_output, consumer_error = consumer.communicate(timeout=timeout)
         if drain_remaining:
             while producer.stdout.read(65536):pass
             producer.stdout.close()
@@ -93,6 +94,38 @@ def piped(producer_args, consumer_args, timeout=180, drain_remaining=False):
         failed = (consumer_error, consumer.returncode, "restore_consumer") if consumer.returncode else (producer_error, producer.returncode, "encrypted_producer")
         REPORT["failure_diagnostic"] = failure_diagnostic(*failed)
         raise RuntimeError("STREAM_PIPE_FAILED")
+    return consumer_output
+
+def schema_restore_lists(toc):
+    # Metadata stays private; preserve every TOC entry exactly once.
+    schemas, remaining = [], []
+    for line in toc.decode("utf-8").splitlines(keepends=True):
+        if line.startswith(";") or not line.strip():
+            schemas.append(line);remaining.append(line)
+        elif re.match(r"^\d+;\s+\d+\s+\d+\s+SCHEMA\s",line):
+            schemas.append(line)
+        else:
+            remaining.append(line)
+    count = sum(bool(re.match(r"^\d+;",line)) for line in schemas)
+    if count == 0:raise RuntimeError("RESTORE_SCHEMA_TOC_EMPTY")
+    return "".join(schemas).encode(), "".join(remaining).encode(), count
+
+def restore_predata_with_owned_schemas(decrypt, target, private_work):
+    base = ["docker","exec","-i",target,"pg_restore","-U","supabase_admin"]
+    toc = piped(decrypt,base+["--list"],drain_remaining=True,capture_stdout=True)
+    schemas, remaining, count = schema_restore_lists(toc)
+    for name, content in (("schemas",schemas),("objects",remaining)):
+        metadata = private_work/("restore-"+name+".toc")
+        metadata.write_bytes(content);metadata.chmod(0o600)
+        destination = "/tmp/risck-restore-"+name+".toc"
+        run(["docker","cp",str(metadata),target+":"+destination])
+        restore = base+["-d","recovery_destination","--exit-on-error","--section=pre-data","--use-list="+destination]
+        # Standard ALTER OWNER for schemas; original-session ownership for
+        # extensions and other objects. No --no-owner or ACL/RLS exclusions.
+        if name == "objects":restore.append("--use-set-session-authorization")
+        piped(decrypt,restore,drain_remaining=True)
+        metadata.unlink()
+    return count
 
 TABLES_SQL = """SELECT coalesce(json_agg(json_build_array(n.nspname,c.relname) ORDER BY n.nspname,c.relname),'[]'::json)
 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -288,7 +321,7 @@ def main():
         for role in sorted(EXPECTED_ROLES):
             target_sql("DO $role$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+qident(role)+" NOLOGIN; END IF; END $role$;","postgres")
         # Temporary bootstrap ONLY in the network-isolated disposable target.
-        restore_creator_roles = EXPECTED_ROLES | {"pg_database_owner"}
+        restore_creator_roles = EXPECTED_ROLES
         target_sql("GRANT CREATE ON DATABASE recovery_destination TO "+",".join(qident(role) for role in sorted(restore_creator_roles)),"postgres")
         REPORT["isolated_creator_privileges_before_restore"] = creator_privileges(target_sql,restore_creator_roles)
         if REPORT["isolated_creator_privileges_before_restore"] != {"checked":len(restore_creator_roles),"prepared":len(restore_creator_roles)}:
@@ -298,11 +331,13 @@ def main():
         REPORT["target_database_template"]="template0"
         STAGE="isolated_decrypt_restore"
         try:
-            for section in ("pre-data","data","post-data"):
+            STAGE="isolated_restore_pre-data"
+            decrypt=age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"]
+            REPORT["schemas_restored_with_original_owners"] = restore_predata_with_owned_schemas(decrypt,TARGET,work)
+            for section in ("data","post-data"):
                 STAGE="isolated_restore_"+section
                 restore=["docker","exec","-i",TARGET,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
-                if section=="pre-data":restore.append("--use-set-session-authorization")
-                piped(age+["age","-d","-i","/work/ephemeral-identity","/work/backup.partial.age"],restore,drain_remaining=True)
+                piped(decrypt,restore,drain_remaining=True)
         except RuntimeError:
             original_diagnostic=REPORT.get("failure_diagnostic")
             try:
