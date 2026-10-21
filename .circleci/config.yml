@@ -143,6 +143,11 @@ jobs:
               tests/security/e2e-preflight-offline.test.mjs \
               tests/security/circleci-qa-manual-gate.test.mjs \
               2>&1 | tee artifacts/qa-preflight/tests.tap
+            # No external provider call, install, payment or runtime mutation.
+            node scripts/security/check-stripe-webhook-contract.mjs \
+              2>&1 | tee artifacts/qa-preflight/stripe-webhook-contract.txt
+            node scripts/security/run-stripe-runtime-validation.mjs \
+              2>&1 | tee artifacts/qa-preflight/stripe-runtime-source-only.json
             node --input-type=module <<'NODE'
             import { writeFileSync } from 'node:fs';
             import { createHash } from 'node:crypto';
@@ -159,7 +164,9 @@ jobs:
               workflow: 'qa-preflight-manual',
               result: 'PASS',
               testReportSha256: createHash('sha256').update(tap).digest('hex'),
-              proofBoundary: 'Offline Node source tests only; no Playwright, Stripe, Supabase or deployment proof',
+              stripeWebhookContractSha256: createHash('sha256').update(readFileSync('artifacts/qa-preflight/stripe-webhook-contract.txt')).digest('hex'),
+              stripeRuntimeSourceOnlySha256: createHash('sha256').update(readFileSync('artifacts/qa-preflight/stripe-runtime-source-only.json')).digest('hex'),
+              proofBoundary: 'Offline Node and Stripe source-contract checks only; no Playwright, provider delivery, Supabase, payment or deployment proof',
             }, null, 2) + '\n');
             NODE
       - store_artifacts:
