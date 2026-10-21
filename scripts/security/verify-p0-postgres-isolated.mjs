@@ -126,8 +126,14 @@ try {
  await seed();await db.exec('update organization_usage set active_members=active_members+1');
  await check('Manual reconciliation rejects two drifting tenants that still have membership rows',async()=>{const before=await snapshot();await assert.rejects(()=>manualAttempt(),/expected two drifting organizations without membership rows/);assert.equal(await snapshot(),before);});
  await seed();await db.exec('delete from organization_members');
+ await check('Manual reconciliation rejects changed aggregate drift fingerprint with two orphaned tenants',async()=>{const before=await snapshot();await assert.rejects(()=>manualAttempt(),/aggregate drift fingerprint changed/);assert.equal(await snapshot(),before);});
+ async function seedApprovedOrphanDrift() {
+  await seed();await db.exec('delete from organization_members');
+  await q('update organization_usage set active_members=case when organization_id=$1 then 2 else 1 end,full_users=case when organization_id=$1 then 2 else 1 end,active_admins=1,participants=0,viewers=0',[A]);
+ }
+ await seedApprovedOrphanDrift();
  await check('Manual reconciliation repairs exactly two membership-free synthetic rows and records two logs',async()=>{await manualAttempt();await counters(A);await counters(B);assert.equal(await scalar("select count(*)::int from audit_logs where action='enterprise.membership_usage_reconciled'"),2);});
- await seed();await db.exec('delete from organization_members');
+ await seedApprovedOrphanDrift();
  await check('Manual repair fully rolls back both counters if administrative audit fails',async()=>{await db.exec("alter table audit_logs add constraint synthetic_repair_reject check(action <> 'enterprise.membership_usage_reconciled');");const before=await snapshot();try{await assert.rejects(()=>manualAttempt(),/synthetic_repair_reject/);assert.equal(await snapshot(),before);}finally{await db.exec('alter table audit_logs drop constraint synthetic_repair_reject');}});
  await seed();await check('Admission admits only schema candidate with all six migrations and retired legacy writers',async()=>{await db.exec("do $$ declare t record; begin for t in select tablename from pg_tables where schemaname='public' loop execute format('alter table public.%I enable row level security',t.tablename);execute format('alter table public.%I force row level security',t.tablename);end loop;end $$;");const r=(await q(readFileSync('scripts/supabase/p0-membership-release-admission.sql','utf8')))[0];assert.equal(r.schema_admission,'SCHEMA_CANDIDATE_REQUIRES_RUNTIME_ACCEPTANCE');assert.equal(r.applied_count,6);assert.equal(r.drifted_usage_organizations,0);});
   const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
