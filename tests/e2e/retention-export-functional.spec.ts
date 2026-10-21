@@ -22,6 +22,10 @@ test.describe('paid owner retention export: live UI and MFA boundary', () => {
       return target.protocol === 'https:' && !target.username && !target.password &&
         !target.port && target.pathname === '/' && !target.search && !target.hash &&
         hostname !== 'risckcomply.com' && !hostname.endsWith('.risckcomply.com') &&
+        hostname !== 'eurocomply-saas.vercel.app' &&
+        hostname !== 'eurocomply-saas-renanescola40-afks-projects.vercel.app' &&
+        hostname !== 'eurocomply-saas-git-main-renanescola40-afks-projects.vercel.app' &&
+        hostname !== 'eurocomply-saas-o6ws7qrp2-renanescola40-afks-projects.vercel.app' &&
         db.protocol === 'https:' && !db.username && !db.password && !db.port &&
         db.pathname === '/' && !db.search && !db.hash &&
         /^[a-z0-9]+\.supabase\.co$/i.test(dbHost) &&
