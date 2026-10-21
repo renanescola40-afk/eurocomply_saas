@@ -34,7 +34,6 @@ def start(suffix):
 evidence={"scope":"SYNTHETIC_ONLY","image":IMAGE,"production_credentials_used":False,
           "customer_rows_exported":False,"production_writes":False,"production_recovery":"NOT_TESTED"}
 try:
-    run(["docker","pull",IMAGE],text=True,timeout=300)
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
     scope={"json":json,"re":re,"subprocess":subprocess,"ENV":ENV,"REPORT":{},"ACTIVE":[]}
@@ -90,6 +89,11 @@ try:
         scope["run"]=original_run
         scope["REPORT"].clear()
     evidence["extension_owner_profile_unit_cases"]=len(variations)
+    if "--unit-only" in sys.argv:
+        evidence["status"]="PASS_OFFLINE_UNIT_ONLY"
+        raise SystemExit(0)
+    stage="pull"
+    run(["docker","pull",IMAGE],text=True,timeout=300)
     stage="source_start"
     source=start("-source")
     stage="synthetic_role_bootstrap"
