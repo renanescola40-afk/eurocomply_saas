@@ -137,8 +137,11 @@ def create_owned_extension(target, database, extension, version, namespace, owne
     # original setting in finally, and keep role elevation uncommitted.
     original = run(command+["SELECT current_setting('supautils.superuser')"],text=True).strip()
     REPORT["isolated_extension_delegation_profile"] = original if original in {"postgres","supabase_admin",""} else "unreviewed_role"
+    legacy_original = run(command+["SELECT current_setting('supautils.privileged_extensions_superuser')"],text=True).strip()
     if original != "supabase_admin":
         raise RuntimeError("ISOLATED_EXTENSION_DELEGATION_PROFILE_REJECTED")
+    if legacy_original not in {"supabase_admin","postgres",""}:
+        raise RuntimeError("ISOLATED_EXTENSION_LEGACY_DELEGATION_PROFILE_REJECTED")
     guard = "DO $guard$ BEGIN IF current_user <> 'supabase_admin' OR NOT (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) OR (SELECT rolsuper FROM pg_roles WHERE rolname='postgres') THEN RAISE EXCEPTION 'ISOLATED_ROLE_PROFILE_REJECTED'; END IF; END $guard$;"
     statement = "BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s'; "+guard
     if owner == "postgres":
@@ -156,14 +159,19 @@ def create_owned_extension(target, database, extension, version, namespace, owne
                 return
             if attempt == 0:
                 __import__('time').sleep(0.1)
+        REPORT["isolated_extension_reload_settings"] = json.loads(run(command+["SELECT json_agg(json_build_object('name',name,'setting',CASE WHEN setting IN ('','postgres','supabase_admin') THEN setting ELSE 'unreviewed_role' END,'source',source,'context',context,'pending_restart',pending_restart)) FROM pg_settings WHERE name IN ('supautils.superuser','supautils.privileged_extensions_superuser')"],text=True))
         raise RuntimeError("ISOLATED_EXTENSION_DELEGATION_RELOAD_FAILED")
     if owner == "postgres":
         try:
             run(command+["ALTER SYSTEM SET supautils.superuser='postgres'"])
+            # Both names share the same C backing variable in Supautils.
+            # Reloading only one lets the deprecated alias overwrite it.
+            run(command+["ALTER SYSTEM SET supautils.privileged_extensions_superuser='postgres'"])
             reload_as("postgres")
             run(command+[statement])
         finally:
             run(command+["ALTER SYSTEM SET supautils.superuser='supabase_admin'"])
+            run(command+["ALTER SYSTEM SET supautils.privileged_extensions_superuser='"+legacy_original+"'"])
             reload_as(original)
     else:
         run(command+[statement])

@@ -422,6 +422,8 @@ except Exception as error:
         evidence["failure_code"]=str(error)
     if "scope" in locals() and "isolated_extension_delegation_profile" in scope["REPORT"]:
         evidence["isolated_extension_delegation_profile"]=scope["REPORT"]["isolated_extension_delegation_profile"]
+    if "scope" in locals() and "isolated_extension_reload_settings" in scope["REPORT"]:
+        evidence["isolated_extension_reload_settings"]=scope["REPORT"]["isolated_extension_reload_settings"]
     evidence["status"]="FAILED_SYNTHETIC_TARGET_ONLY"
     evidence["failure_stage"]=stage
 finally:
