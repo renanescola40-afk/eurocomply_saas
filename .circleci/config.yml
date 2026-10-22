@@ -145,6 +145,245 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  actionlint-narrow-g1-1:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Narrow Actionlint g1-1
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/actionlint.yml' \
+              '.github/workflows/enterprise-break-glass-governance.yml' \
+              '.github/workflows/enterprise-runtime-evidence-closeout.yml' \
+              '.github/workflows/lockfile-regeneration-artifact.yml' \
+              '.github/workflows/performance-isolated-benchmark.yml' \
+              '.github/workflows/semgrep.yml' \
+              '.github/workflows/supabase-forward-production-reattestation.yml'
+
+  actionlint-narrow-g1-2:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Narrow Actionlint g1-2
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/beagle-exact-target-open-on-main.yml' \
+              '.github/workflows/enterprise-dast.yml' \
+              '.github/workflows/eu-ai-act-product-coverage.yml' \
+              '.github/workflows/p0-progress.yml' \
+              '.github/workflows/pr-autopilot.yml' \
+              '.github/workflows/senior-agent-self-heal.yml' \
+              '.github/workflows/supabase-migration-drift-audit.yml'
+
+  actionlint-narrow-g1-3:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Narrow Actionlint g1-3
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/codeql.yml' \
+              '.github/workflows/enterprise-final-closeout-dashboard.yml' \
+              '.github/workflows/fix-vercel-production-provider-envs.yml' \
+              '.github/workflows/p1-dast-baseline.yml' \
+              '.github/workflows/public-claims-guard.yml' \
+              '.github/workflows/stripe-entitlement-runtime.yml' \
+              '.github/workflows/supabase-migration-release-control-plane.yml'
+
+  actionlint-narrow-g1-4:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Narrow Actionlint g1-4
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/dependency-vulnerability-proof.yml' \
+              '.github/workflows/enterprise-readiness-scorecard.yml' \
+              '.github/workflows/internetnl-live-assurance.yml' \
+              '.github/workflows/p1-identity-access.yml' \
+              '.github/workflows/recovery-resilience-proof.yml' \
+              '.github/workflows/stripe-test-runtime-preflight.yml' \
+              '.github/workflows/supabase-production-rls-reconciliation.yml'
+
+  actionlint-narrow-g7-1:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Narrow Actionlint g7-1
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/auth-onboarding-billing-runtime-proof.yml' \
+              '.github/workflows/enterprise-conversation-runtime-closeout-contract.yml' \
+              '.github/workflows/ephemeral-supabase-restore-smoke.yml' \
+              '.github/workflows/p0-lockfile-plan.yml' \
+              '.github/workflows/platform-provider-transaction-evidence.yml' \
+              '.github/workflows/senior-agent-health.yml' \
+              '.github/workflows/supabase-migration-absence-closure-evidence.yml'
+
+  actionlint-narrow-g7-2:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Narrow Actionlint g7-2
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/ci.yml' \
+              '.github/workflows/enterprise-evidence-tests.yml' \
+              '.github/workflows/final-runtime-assurance.yml' \
+              '.github/workflows/p1-audit-chain.yml' \
+              '.github/workflows/prohibited-practices-runtime-proof.yml' \
+              '.github/workflows/stripe-commercial-catalog-proof.yml' \
+              '.github/workflows/supabase-migration-reconciliation-decision-gate.yml'
+
+  actionlint-narrow-g7-3:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Narrow Actionlint g7-3
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/dataguard-buyer-room-offline-audit.yml' \
+              '.github/workflows/enterprise-production-gate.yml' \
+              '.github/workflows/identity-access-lifecycle-proof.yml' \
+              '.github/workflows/p1-final-evidence-gate.yml' \
+              '.github/workflows/qualified-review-package-readiness.yml' \
+              '.github/workflows/stripe-runtime-proof-contract.yml' \
+              '.github/workflows/supabase-production-migration-dry-run.yml'
+
+  actionlint-narrow-g7-4:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Narrow Actionlint g7-4
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/enterprise-100-final-authority.yml' \
+              '.github/workflows/enterprise-runtime-closeout-campaign.yml' \
+              '.github/workflows/legal-rules-runtime-validation.yml' \
+              '.github/workflows/pentest-synthetic-matrix.yml' \
+              '.github/workflows/secret-scanning.yml' \
+              '.github/workflows/supabase-enterprise-data-plane-qa.yml'
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +396,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +403,48 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+
+  actionlint-narrow-v15a:
+    jobs:
+      - actionlint-narrow-g1-1:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-narrow-v15a-20261022
+      - actionlint-narrow-g1-2:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-narrow-v15a-20261022
+      - actionlint-narrow-g1-3:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-narrow-v15a-20261022
+      - actionlint-narrow-g1-4:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-narrow-v15a-20261022
+      - actionlint-narrow-g7-1:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-narrow-v15a-20261022
+      - actionlint-narrow-g7-2:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-narrow-v15a-20261022
+      - actionlint-narrow-g7-3:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-narrow-v15a-20261022
+      - actionlint-narrow-g7-4:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-narrow-v15a-20261022
