@@ -14,6 +14,7 @@ jobs:
       E2E_BASE_URL: ${{ vars.E2E_QA_BASE_URL }}
       NEXT_PUBLIC_APP_URL: ${{ vars.E2E_QA_BASE_URL }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_QA_SUPABASE_URL }}
+      E2E_QA_APPROVED_SUPABASE_REF: ${{ vars.E2E_QA_APPROVED_SUPABASE_REF }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_QA_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_QA_SUPABASE_SERVICE_ROLE_KEY }}
       STRIPE_SECRET_KEY: ${{ secrets.E2E_QA_STRIPE_SECRET_KEY }}
@@ -58,6 +59,12 @@ jobs:
               !/^[a-z0-9]+\.supabase\.co$/i.test(db.hostname) ||
               db.hostname.toLowerCase().startsWith('tganhbbhfxcpblmgqprg.')) {
             throw new Error('qa_runtime_requires_nonproduction_supabase');
+          }
+
+          const approvedProjectRef = process.env.E2E_QA_APPROVED_SUPABASE_REF?.trim();
+          if (!approvedProjectRef || !/^[a-z0-9]{20}$/.test(approvedProjectRef) ||
+              db.hostname.toLowerCase() !== `${approvedProjectRef}.supabase.co`) {
+            throw new Error('qa_runtime_approved_supabase_ref_mismatch');
           }
 
           if (!process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') ||
