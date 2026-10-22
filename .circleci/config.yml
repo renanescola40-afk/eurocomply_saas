@@ -179,4 +179,4 @@ workflows:
           filters:
             branches:
               only:
-                - /ci\/verify-g1-.*/
+                - g1/enterprise-scope-v1-freeze-20261022
