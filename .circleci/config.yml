@@ -145,6 +145,112 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  actionlint-equivalent:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify isolated exact-SHA scanner lane
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/verify-security-equivalence-v15a-20261022"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+            test "${CIRCLE_SHA1}" != "70d3545f414d063379d481fd238aed563e05edda" || true
+      - run:
+          name: Install pinned actionlint 1.7.7 with checksum
+          command: |
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Actionlint equivalent required scan
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/security-equivalence
+            /tmp/actionlint -color=never 2>&1 | tee artifacts/security-equivalence/actionlint.log
+      - store_artifacts:
+          path: artifacts/security-equivalence/actionlint.log
+          destination: security-equivalence/actionlint.log
+
+  gitleaks-equivalent:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify isolated exact-SHA scanner lane and full history
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/verify-security-equivalence-v15a-20261022"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+            if test "$(git rev-parse --is-shallow-repository)" = "true"; then
+              git fetch --unshallow --tags
+            else
+              git fetch --tags
+            fi
+      - run:
+          name: Install pinned Gitleaks 8.30.1 with repository-approved checksum
+          command: |
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+            /tmp/gitleaks version
+      - run:
+          name: Gitleaks full-history equivalent required scan
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/security-equivalence
+            /tmp/gitleaks git --redact --no-banner . 2>&1 | tee artifacts/security-equivalence/gitleaks.log
+      - store_artifacts:
+          path: artifacts/security-equivalence/gitleaks.log
+          destination: security-equivalence/gitleaks.log
+
+  semgrep-equivalent:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: medium
+    working_directory: ~/project
+    environment:
+      SEMGREP_VERSION: "1.97.0"
+    steps:
+      - checkout
+      - run:
+          name: Verify isolated exact-SHA scanner lane
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/verify-security-equivalence-v15a-20261022"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+      - run:
+          name: Install pinned Semgrep
+          command: |
+            set -euo pipefail
+            python -m pip install --disable-pip-version-check --no-input --retries 5 --timeout 60 "setuptools<81" "semgrep==${SEMGREP_VERSION}"
+            test "$(semgrep --version | head -n 1 | tr -d '[:space:]')" = "${SEMGREP_VERSION}"
+      - run:
+          name: Semgrep equivalent required SAST scan
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/security-equivalence
+            semgrep scan --config p/owasp-top-ten --config p/typescript --config p/javascript --severity ERROR --error --metrics off src 2>&1 | tee artifacts/security-equivalence/semgrep.log
+      - store_artifacts:
+          path: artifacts/security-equivalence/semgrep.log
+          destination: security-equivalence/semgrep.log
+
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -168,3 +274,21 @@ workflows:
                 - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+
+  security-equivalence-v15a:
+    jobs:
+      - actionlint-equivalent:
+          filters:
+            branches:
+              only:
+                - ci/verify-security-equivalence-v15a-20261022
+      - gitleaks-equivalent:
+          filters:
+            branches:
+              only:
+                - ci/verify-security-equivalence-v15a-20261022
+      - semgrep-equivalent:
+          filters:
+            branches:
+              only:
+                - ci/verify-security-equivalence-v15a-20261022
