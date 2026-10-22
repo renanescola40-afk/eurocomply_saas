@@ -344,3 +344,4 @@ workflows:
             branches:
               only:
                 - ci/verify-gitleaks-groups-v15a-20261022
+# V15-A retrigger: classify exact-target redacted Gitleaks findings
