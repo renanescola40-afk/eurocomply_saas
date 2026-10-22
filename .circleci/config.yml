@@ -178,8 +178,9 @@ jobs:
           name: G1 formal acceptance source proof (no runtime secrets)
           command: |
             set -euo pipefail
-            node --test tests/release/g1-enterprise-scope-acceptance.test.mjs
+            node --test tests/release/g1-enterprise-scope-acceptance.test.mjs tests/release/g1-product-ready-24-gates.test.mjs
             node scripts/release/verify-g1-enterprise-scope.mjs
+            node scripts/release/score-g1-product-ready.mjs
 
 workflows:
   verificacao-isolada:
