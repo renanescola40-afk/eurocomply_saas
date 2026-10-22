@@ -62,7 +62,8 @@ jobs:
           }
 
           const approvedProjectRef = process.env.E2E_QA_APPROVED_SUPABASE_REF?.trim();
-          if (!approvedProjectRef || !/^[a-z0-9]{20}$/.test(approvedProjectRef) ||
+          const provisionedQaProjectRef = 'zrxrrfbllsxtleyxjpsz';
+          if (approvedProjectRef !== provisionedQaProjectRef || !/^[a-z0-9]{20}$/.test(approvedProjectRef) ||
               db.hostname.toLowerCase() !== `${approvedProjectRef}.supabase.co`) {
             throw new Error('qa_runtime_approved_supabase_ref_mismatch');
           }
