@@ -39,7 +39,7 @@ if (Date.parse(decisions.reviewedAt) > Date.now() || Date.parse(decisions.approv
 const sourceItems = Array.isArray(inventory?.items) ? inventory.items : [];
 const sourceByKey = new Map(sourceItems.map((item) => [`${item.version ?? 'invalid'}:${item.filename}`, item]));
 if (sourceByKey.size !== sourceItems.length) errors.push('duplicate inventory item');
-if (new Set(sourceItems.map((item) => item.sha256)).size !== sourceItems.length && sourceItems.some((item) => !isDigest(item.sha256))) errors.push('invalid inventory file digest');
+if (sourceItems.some((item) => !isDigest(item.sha256))) errors.push('invalid inventory file digest');
 const seen = new Set();
 const accepted = [];
 for (const item of decisions.items ?? []) {
