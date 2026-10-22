@@ -30,6 +30,8 @@ test.describe('paid owner retention export: live UI and MFA boundary', () => {
         db.pathname === '/' && !db.search && !db.hash &&
         /^[a-z0-9]+\.supabase\.co$/i.test(dbHost) &&
         dbHost !== 'tganhbbhfxcpblmgqprg.supabase.co' &&
+        /^[a-z0-9]{20}$/.test(process.env.E2E_QA_APPROVED_SUPABASE_REF ?? '') &&
+        dbHost === `${process.env.E2E_QA_APPROVED_SUPABASE_REF}.supabase.co` &&
         process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') === true &&
         process.env.E2E_QA_MAIL_SINK_CONFIRMED === 'true';
     } catch {
