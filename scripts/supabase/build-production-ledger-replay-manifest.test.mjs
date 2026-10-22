@@ -85,6 +85,24 @@ test('supports reviewed consolidation as ordered ledger entries sharing one sour
   assert.equal(manifest.provider_only_hotfixes[0].safe_for_automatic_execution, false);
 });
 
+test('classifies every migration and never treats source-only duplicates as replay-safe', () => {
+  const duplicateA = 'supabase/migrations/20261001000000_legacy_a.sql';
+  const duplicateB = 'supabase/migrations/20261001000000_legacy_b.sql';
+  const ledger = 'supabase/migrations/20261002000000_current.sql';
+  const manifest = buildProductionLedgerReplayManifest({
+    sourceSnapshotSha: 'a'.repeat(40),
+    crosswalk: crosswalk([entry(1, '20261002000000', ledger)]),
+    migrationFiles: [migration('20261001000000_legacy_a.sql', sha('a')), migration('20261001000000_legacy_b.sql', sha('b')), migration('20261002000000_current.sql', sha('c'))],
+  });
+
+  assert.equal(manifest.migrations.length, 3);
+  assert.ok(manifest.migrations.every((item) => item.safe_for_replay === false));
+  assert.equal(manifest.migrations.find((item) => item.file === ledger).in_production_ledger, true);
+  assert.equal(manifest.migrations.find((item) => item.file === duplicateA).classification, 'SOURCE_ONLY_DUPLICATE_UNRESOLVED');
+  assert.equal(manifest.migrations.find((item) => item.file === duplicateB).classification, 'SOURCE_ONLY_DUPLICATE_UNRESOLVED');
+  assert.equal(manifest.migrations.find((item) => item.file === duplicateA).conflicting, true);
+});
+
 test('blocks missing mapped source and non-contiguous production order', () => {
   const entries = [entry(2, '20261001000000', 'supabase/migrations/20261001000000_missing.sql')];
   const manifest = buildProductionLedgerReplayManifest({

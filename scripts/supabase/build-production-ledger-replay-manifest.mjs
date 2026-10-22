@@ -75,6 +75,49 @@ export function buildProductionLedgerReplayManifest({ sourceSnapshotSha, crosswa
   }
 
   const productionSourceSet = new Set(uniqueReplaySources.keys());
+  const ledgerRowsBySource = new Map();
+  for (const row of crosswalk?.entries ?? []) {
+    const rows = ledgerRowsBySource.get(row.source) ?? [];
+    rows.push(row);
+    ledgerRowsBySource.set(row.source, rows);
+  }
+  const allMigrations = (migrationFiles ?? []).map((item) => {
+    const version = path.posix.basename(item.path).match(/^(\d+)_/)?.[1] ?? null;
+    const ledgerRows = ledgerRowsBySource.get(item.path) ?? [];
+    const mappings = [...new Set(ledgerRows.map((row) => row.mapping))];
+    const duplicateGroup = duplicateVersionByPath.get(item.path) ?? null;
+    const superseded = mappings.includes('superseded_by_forward_reconciliation');
+    const providerHotfix = mappings.includes('provider_record_to_canonical_source') || superseded;
+    const canonical = mappings.some((mapping) => [
+      'exact_version',
+      'canonical_name_match',
+      'provider_record_to_canonical_source',
+      'superseded_by_forward_reconciliation',
+    ].includes(mapping));
+    const inProductionLedger = ledgerRows.length > 0;
+    return {
+      version,
+      file: item.path,
+      source_sha256: item.sha256,
+      in_production_ledger: inProductionLedger,
+      production_versions: ledgerRows.map((row) => row.production_version),
+      mapping: mappings,
+      duplicate_group: duplicateGroup,
+      canonical,
+      superseded,
+      provider_hotfix: providerHotfix,
+      conflicting: Boolean(duplicateGroup) || mappings.length > 1,
+      safe_for_replay: false,
+      classification: inProductionLedger
+        ? superseded ? 'PRODUCTION_LEDGER_SOURCE_SUPERSEDED_PROVIDER_HOTFIX' : 'PRODUCTION_LEDGER_SOURCE_MAPPED'
+        : duplicateGroup ? 'SOURCE_ONLY_DUPLICATE_UNRESOLVED' : 'SOURCE_ONLY_NOT_IN_PRODUCTION_LEDGER',
+      classification_blocker: inProductionLedger
+        ? 'provider_statement_digest_and_schema_postcondition_not_bound_per_ledger_entry'
+        : duplicateGroup
+          ? 'duplicate_historical_version_has_no_production_ledger_canonical_source'
+          : 'source_file_not_referenced_by_production_crosswalk',
+    };
+  });
   const sourceOnly = (migrationFiles ?? [])
     .filter((item) => !productionSourceSet.has(item.path))
     .map((item) => ({
@@ -118,8 +161,10 @@ export function buildProductionLedgerReplayManifest({ sourceSnapshotSha, crosswa
       duplicate_groups_selected_for_replay: duplicateReplayConflicts.length,
       provider_hotfix_ledger_entries: productionEntries.filter((entry) => entry.provider_hotfix).length,
       provider_statement_records_with_digest: hotfixRecords.length,
+      per_migration_classifications: allMigrations.length,
     },
     production_ledger_entries: productionEntries,
+    migrations: allMigrations,
     replay_order: replayOrder,
     source_only_migrations: sourceOnly,
     unresolved_duplicate_groups: duplicateGroups.map((group) => ({
