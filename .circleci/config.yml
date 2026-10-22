@@ -145,6 +145,42 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  gitleaks-full-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout:
+          method: full
+      - run:
+          name: Verify exact full-history source
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/verify-gitleaks-full-v15a-20261022"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+            test "$(git rev-parse --is-shallow-repository)" = "false"
+      - run:
+          name: Install pinned Gitleaks 8.30.1
+          command: |
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+            /tmp/gitleaks version
+      - run:
+          name: Gitleaks required full-history scan
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/gitleaks-full-v15a
+            /tmp/gitleaks git --redact --no-banner . 2>&1 | tee artifacts/gitleaks-full-v15a/gitleaks.log
+      - store_artifacts:
+          path: artifacts/gitleaks-full-v15a/gitleaks.log
+          destination: gitleaks-full-v15a/gitleaks.log
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +193,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +200,12 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+  gitleaks-full-v15a-verification:
+    jobs:
+      - gitleaks-full-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-full-v15a-20261022
