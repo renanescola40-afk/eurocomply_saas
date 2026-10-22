@@ -145,6 +145,30 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  gitleaks-tree-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+            /tmp/gitleaks version
+      - run:
+          name: Scan current working tree
+          command: |
+            set -euo pipefail
+            /tmp/gitleaks dir --redact --no-banner .
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +181,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +188,12 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+  gitleaks-tree-v15a-verification:
+    jobs:
+      - gitleaks-tree-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-tree-v15a-20261022
