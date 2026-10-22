@@ -39,7 +39,8 @@ try {
   assert.equal(identity.db, 'risck_synthetic');
   assert.equal(identity.usr, 'risck_synthetic');
   assert.ok(identity.ver >= 170000 && identity.ver < 180000, 'Need PostgreSQL 17');
-  assert.ok(identity.addr && /^(127\.|::1|10\.|172\.|192\.)/.test(identity.addr), 'Disallow public network database server');
+  const address = identity.addr?.replace(/^::ffff:/, '') ?? '';
+  assert.ok(/^(127\.|::1|10\.|172\.|192\.)/.test(address), 'Disallow public network database server');
   assert.equal(Number((await q("SELECT count(*)::int AS n FROM pg_tables WHERE schemaname='public'")).rows[0].n),0,
     'Synthetic fixture database unexpectedly contains existing tables');
   await check('PG17-native-synthetic-boundary', async () => {
