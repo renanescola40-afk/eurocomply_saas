@@ -238,7 +238,7 @@ begin
   definition := pg_get_functiondef(rpc);
   if position('on conflict on constraint organization_usage_pkey do nothing' in lower(definition)) = 0
      or position('update public.organization_usage as usage_row set' in lower(definition)) = 0
-     or position('where usage_row.organization_id = p_organization_id' in lower(definition)) = 0 then
+     or position('where usage_row.organization_id=p_organization_id' in lower(definition)) = 0 then
     raise exception 'Enterprise contract provision RPC ambiguity fixes not present';
   end if;
 end
