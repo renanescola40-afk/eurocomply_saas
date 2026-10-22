@@ -145,6 +145,40 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  actionlint-latest-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact isolated source
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/verify-actionlint-latest-v15a-20261022"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+      - run:
+          name: Install current actionlint latest with official release digest
+          command: |
+            set -euo pipefail
+            version=1.7.12
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            test "$(/tmp/actionlint -version | head -n1 | tr -d '[:space:]')" = "1.7.12"
+      - run:
+          name: Actionlint current-latest required scan
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/actionlint-latest-v15a
+            /tmp/actionlint -no-color 2>&1 | tee artifacts/actionlint-latest-v15a/actionlint.log
+      - store_artifacts:
+          path: artifacts/actionlint-latest-v15a/actionlint.log
+          destination: actionlint-latest-v15a/actionlint.log
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +191,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +198,12 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+  actionlint-latest-v15a-verification:
+    jobs:
+      - actionlint-latest-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-latest-v15a-20261022
