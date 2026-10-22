@@ -9,7 +9,7 @@
 B2B SaaS for AI inventory, assessment, governance decisions, evidence, audit trail, documentation, billing and data/privacy operations using Next.js/Vercel/Supabase/Stripe. This defines *necessary* acceptance for the marketed core, not perfection or external certification. Current legacy Enterprise 100 controls remain independently effective and cannot be silently bypassed by this register.
 
 ## Acceptance logic
-Every applicable **A** criterion must have current reproducible evidence and a named approving reviewer. A failed/unknown/unverified item counts **0**. No P0 or material unaccepted P1 is compatible with `PASS`. A version update must disclose reason, risk and review, not reclassify a risk to improve the percentage. B is customer-specific, C optional, D requires a reason. Current statuses are deliberately NOT_VERIFIED until evidence is independently attached and reviewed; this is not a statement that no existing work has been done.
+Every applicable **A** criterion must have current reproducible evidence and a named approving reviewer. A failed/unknown/unverified item counts **0**. No P0 or material unaccepted P1 is compatible with `PASS`. A version update must disclose reason, risk and review, not reclassify a risk to improve the percentage. B is customer-specific, C optional, D requires a reason. The register began with all criteria NOT_VERIFIED; as reproducible exact-SHA provider evidence is reviewed on the isolated G1 branch, individual criteria may be marked PASS without implying full Enterprise release acceptance.
 
 ## Mandatory atomic criteria (38)
 
@@ -90,4 +90,4 @@ Every applicable **A** criterion must have current reproducible evidence and a n
 ## Governance of status changes
 A criterion becomes PASS only by a reviewed commit updating evidence refs, exact SHA/environment, time and reviewer; evidence must survive independent re-read. The calculation is `PASS A criteria / 38`. Report missing evidence separately from a verified failed test. Record blockers by P0/P1 without inferring exact counts where not exhaustively assessed.
 
-**Current candidate tally:** 0/38 newly evidence-accepted in this register. Previously documented technical work may qualify on review; 0% is an evidence-ledger initialization value, not an engineering maturity estimate.
+**Current candidate tally (2026-10-22, isolated PR #2563):** **1/38 evidence-accepted (2.63%)** — OPS-01, based on provider readbacks resolving `www.risckcomply.com` to Vercel production deployment `dpl_CmyiHWky6g41su26PE1nyGwwCS1f` (`READY`) on exact current GitHub main SHA `70d3545f414d063379d481fd238aed563e05edda`. The explicit provider evidence is in `docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json`. Other 37 A criteria remain NOT_VERIFIED. This scope is still candidate on an isolated branch pending governed integration; this number is **not** a production Enterprise 100 PASS.
