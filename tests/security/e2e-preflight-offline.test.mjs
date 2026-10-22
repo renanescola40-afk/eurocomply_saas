@@ -22,6 +22,7 @@ const script = workflow.slice(start + startTag.length, end).split('\n')
 const fixtures = Object.freeze({
   E2E_BASE_URL: 'https://isolated-qa.example.invalid',
   NEXT_PUBLIC_SUPABASE_URL: 'https://disposableisolatedqa.supabase.co',
+  E2E_QA_APPROVED_SUPABASE_REF: 'disposableisolatedqa',
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'synthetic-anon',
   SUPABASE_SERVICE_ROLE_KEY: 'synthetic-role',
   STRIPE_SECRET_KEY: 'sk_test_synthetic',
@@ -71,6 +72,10 @@ const denialCases = [
   ['Supabase URL with query', { NEXT_PUBLIC_SUPABASE_URL: 'https://disposableisolatedqa.supabase.co/?redirect=https://example.invalid' }, 'qa_runtime_requires_nonproduction_supabase'],
   ['Supabase URL with fragment', { NEXT_PUBLIC_SUPABASE_URL: 'https://disposableisolatedqa.supabase.co/#key' }, 'qa_runtime_requires_nonproduction_supabase'],
   ['Supabase URL with nonstandard port', { NEXT_PUBLIC_SUPABASE_URL: 'https://disposableisolatedqa.supabase.co:4443' }, 'qa_runtime_requires_nonproduction_supabase'],
+  ['missing approved QA project ref', { E2E_QA_APPROVED_SUPABASE_REF: null }, 'qa_runtime_approved_supabase_ref_mismatch'],
+  ['wrong QA project ref', { E2E_QA_APPROVED_SUPABASE_REF: 'anotherisolatedqa123' }, 'qa_runtime_approved_supabase_ref_mismatch'],
+  ['different Supabase hostname', { NEXT_PUBLIC_SUPABASE_URL: 'https://elsewhereexample1234.supabase.co' }, 'qa_runtime_approved_supabase_ref_mismatch'],
+  ['attempt approval of production project', { E2E_QA_APPROVED_SUPABASE_REF: 'tganhbbhfxcpblmgqprg', NEXT_PUBLIC_SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co' }, 'qa_runtime_requires_nonproduction_supabase'],
   ['live Stripe secret', { STRIPE_SECRET_KEY: 'sk_live_synthetic' }, 'qa_runtime_requires_stripe_test_keys'],
   ['owner password missing', { E2E_OWNER_PASSWORD: null }, 'qa_runtime_missing_configuration'],
   ['mail-sink not attested', { E2E_QA_MAIL_SINK_CONFIRMED: 'false' }, 'qa_runtime_mail_sink_not_confirmed'],
