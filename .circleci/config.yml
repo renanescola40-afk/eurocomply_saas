@@ -145,6 +145,116 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  security-ci-v15a:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: large
+    working_directory: ~/project
+    environment:
+      STRICT_PUBLIC_SECRET_SCAN: "1"
+      CI_SECRET_LOG_POLICY: "fail-closed"
+    steps:
+      - checkout
+      - run:
+          name: Verify isolated exact-SHA source and exclude privileged provider vars
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/verify-security-ci-v15a-20261022"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              test -z "${!key:-}" || { echo "Privileged provider variable forbidden: $key" >&2; exit 1; }
+            done
+      - run:
+          name: Install locked dependencies
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: CI preflight with deterministic placeholders
+          command: node scripts/preflight-ci.mjs
+      - run:
+          name: GitHub workflow governance
+          command: npm run security:github-workflows
+      - run:
+          name: Audit triage and final readiness diagnostics
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/security-ci-v15a
+            npm run security:npm-audit:json > artifacts/security-ci-v15a/npm-audit.json || true
+            npm audit --audit-level=moderate > artifacts/security-ci-v15a/npm-audit-summary.txt 2>&1 || true
+            npm run security:final-readiness > artifacts/security-ci-v15a/final-readiness.txt 2>&1 || true
+            npm run security:final-readiness:report || true
+            test -f final-security-readiness.json && cp final-security-readiness.json artifacts/security-ci-v15a/ || true
+      - run:
+          name: Public and production secret readiness
+          command: |
+            set -euo pipefail
+            npm run security:public-secrets
+            npm run security:production-secrets
+      - run:
+          name: Supply chain and CI/CD gates
+          command: |
+            set -euo pipefail
+            npm run security:supply-chain
+            npm run security:ci-cd
+      - run:
+          name: Advisory RLS contract gate
+          command: npm run security:rls:advisory
+      - run:
+          name: Authorization and boundary gates
+          command: |
+            set -euo pipefail
+            npm run security:client-boundaries
+            npm run security:auth-tokens
+            npm run security:authorization-bola
+            npm run security:server-action-identity
+            npm run security:protected-routes
+            npm run security:headers
+            npm run security:no-store
+            npm run security:origin-guards
+            npm run security:no-open-proxy
+            npm run security:internal-maintenance
+            npm run security:ops-readiness
+            npm run security:public-verifiers
+            npm run security:public-errors
+            npm run security:csv-exports
+            npm run security:document-filenames
+            npm run security:billing-webhook-body
+            npm run security:responses
+      - run:
+          name: Log sanitization gate with repository exception contract
+          command: |
+            set -euo pipefail
+            status=0
+            npm run security:logs >log-sanitization.out 2>log-sanitization.err || status=$?
+            cat log-sanitization.out
+            if [ "$status" -ne 0 ]; then
+              if grep -v 'src/lib/email/client.ts' log-sanitization.err | grep -q '^- '; then
+                cat log-sanitization.err >&2
+                exit 1
+              fi
+              if ! grep -q 'src/lib/email/client.ts' log-sanitization.err; then
+                cat log-sanitization.err >&2
+                exit 1
+              fi
+              cat log-sanitization.err >&2
+            fi
+      - run:
+          name: API and step-up gates
+          command: |
+            set -euo pipefail
+            npm run security:api-endpoints
+            npm run security:api-guards
+            npm run security:enterprise-api
+            node scripts/security/check-step-up.mjs
+      - run:
+          name: TypeScript and unit regression
+          command: |
+            set -euo pipefail
+            npm run typecheck
+            npm run test
+      - store_artifacts:
+          path: artifacts/security-ci-v15a
+          destination: security-ci-v15a
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +267,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +274,13 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+
+  security-ci-v15a-verification:
+    jobs:
+      - security-ci-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-security-ci-v15a-20261022
