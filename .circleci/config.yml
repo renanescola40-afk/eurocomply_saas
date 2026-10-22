@@ -135,6 +135,33 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  g1-rls-pg17-proof:
+    docker:
+      - image: cimg/node:22.16.0
+      - image: postgres:17.6
+        environment:
+          POSTGRES_DB: risck_synthetic
+          POSTGRES_USER: risck_synthetic
+          POSTGRES_PASSWORD: synthetic-local-only
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact G1 source SHA and forbid remote credentials
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI SHA}"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD STRIPE_SECRET_KEY VERCEL_TOKEN; do
+              test -z "${!key:-}" || { echo "Privileged variable forbidden: $key" >&2; exit 1; }
+            done
+      - run:
+          name: Install lockfile-pinned synthetic PostgreSQL driver
+          command: npm ci --prefix tests/fixtures/p0-postgres-runtime --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Native PostgreSQL 17 canonical RLS historical replay regression
+          command: timeout 100s node scripts/supabase/test-g1-historical-rls-replay-pg17.mjs
+
   g1-scope-proof:
     docker:
       - image: cimg/node:22.16.0
@@ -175,6 +202,11 @@ workflows:
                 - main
                 - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
+      - g1-rls-pg17-proof:
+          filters:
+            branches:
+              only:
+                - g1/enterprise-scope-v1-freeze-20261022
       - g1-scope-proof:
           filters:
             branches:
