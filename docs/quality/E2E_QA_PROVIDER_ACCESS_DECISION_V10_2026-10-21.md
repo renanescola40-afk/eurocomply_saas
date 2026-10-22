@@ -136,3 +136,22 @@ PRODUCTION_WRITES=0
 LIVE_PAYMENTS_CREATED=0
 UNAPPROVED_SPEND=0
 ```
+
+
+## V15-C — isolated QA provisioning decision (22 October 2026)
+
+**Provider-verified facts, read-only:** the RISCK COMPLY Supabase organization currently reports plan `free` with one `ACTIVE_HEALTHY` production project and six other `INACTIVE` projects. The provider `get_cost(type=project)` response for this exact organization was `amount: 0`, `recurrence: monthly`. This is a point-in-time cost quote, **not** an approval to provision or a guarantee that over-quota usage or future plan changes cannot incur cost.
+
+**Selected safest path (pending owner confirmation of this cost quote):** create a **new** project strictly for disposable V15-C QA, rather than resume or repurpose old project `pqlnibgfdkqmdbeigcpd` or attach to any project holding protected data. No Supabase project/branch was created or restored in this decision. The user must confirm the quoted `0/month` provisioning before it is initiated, per the provider's cost-confirmation requirement.
+
+**Before turning on any synthetic-write test:**
+
+- Verify project ref and empty/disposable status from Supabase provider; never equate a new hostname alone with approval.
+- Configure `E2E_QA_APPROVED_SUPABASE_REF` as a **GitHub Actions repository variable**, pointing to this confirmed disposable project (only the 20-character project ref, no URL, no keys). Match `E2E_QA_SUPABASE_URL` to `https://<approved-ref>.supabase.co` in the GitHub secret store. Main/prod ref `tganhbbhfxcpblmgqprg` remains forbidden.
+- Configure QA-only Supabase anon and service-role secrets, Stripe `sk_test_` and newly generated TEST webhook signing secret, and a verified mail sink. Never store tokens, bypass URLs or disposable passwords in issues, docs or chat.
+- Create a protected preview/runtime only after actual provider costs/access policies are checked; no fallback to a production origin or production DB. Bind the preview deployment to the exact QA PR SHA and require authenticated Playwright → API → QA database → reload plus tenant A/B negative coverage.
+- Keep GitHub required checks/review and independent security acceptance separate; an isolated QA run cannot mark `ENTERPRISE_100` or `PAID_PILOT_GO` accepted on its own.
+
+**Source hardening this V15-C branch:** the GitHub E2E preflight, Playwright synthetic-write guard, payment-first database negative probe and paid-owner retention suite now all require an explicit matching approved 20-character QA project ref. No application behavior changed in production.
+
+**Actual current status:** `QA_PROJECT_CREATED=NO`, `VERCEL_QA_DEPLOYMENT=NO`, `AUTHENTICATED_E2E=NO_PASS`, `STRIPE_TEST_RUNTIME=NO_PASS`, `EMAILS_SENT=0`, `PRODUCTION_WRITES=0`, `LIVE_PAYMENTS_CREATED=0`, `UNAPPROVED_SPENDING=0`.
