@@ -179,4 +179,4 @@ workflows:
           filters:
             branches:
               only:
-                - /ci\\/verify-g1-.*/
+                - /ci\/verify-g1-.*/
