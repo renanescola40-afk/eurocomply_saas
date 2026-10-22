@@ -18,11 +18,11 @@ const plainGuard = typedGuard
   .replace('let db: URL;', 'let db;');
 const assertIsolatedQaRuntime = runInNewContext(
   plainGuard + '\nassertIsolatedQaRuntime',
-  { URL, process: { env: { E2E_QA_APPROVED_SUPABASE_REF: 'disposableisolatedqa' } } },
+  { URL, process: { env: { E2E_QA_APPROVED_SUPABASE_REF: 'zrxrrfbllsxtleyxjpsz' } } },
 );
 
 const app = 'https://disposable-qa.example.invalid';
-const db = 'https://disposableisolatedqa.supabase.co';
+const db = 'https://zrxrrfbllsxtleyxjpsz.supabase.co';
 
 test('disposable HTTPS app and nonproduction Supabase origin pass the guard', () => {
   assert.doesNotThrow(() => assertIsolatedQaRuntime(app, db));
@@ -45,13 +45,13 @@ for (const [name, appURL, dbURL] of [
   ['application fragment', 'https://disposable-qa.example.invalid/#dashboard', db],
   ['production Supabase', app, 'https://tganhbbhfxcpblmgqprg.supabase.co'],
   ['untrusted database domain', app, 'https://disposable.example.invalid'],
-  ['nested database hostname', app, 'https://sub.disposableisolatedqa.supabase.co'],
-  ['database credentials', app, 'https://bad@disposableisolatedqa.supabase.co'],
-  ['database HTTP', app, 'http://disposableisolatedqa.supabase.co'],
-  ['database path', app, 'https://disposableisolatedqa.supabase.co/rest/v1'],
-  ['database query', app, 'https://disposableisolatedqa.supabase.co/?s=1'],
-  ['database fragment', app, 'https://disposableisolatedqa.supabase.co/#secret'],
-  ['database nonstandard port', app, 'https://disposableisolatedqa.supabase.co:444'],
+  ['nested database hostname', app, 'https://sub.zrxrrfbllsxtleyxjpsz.supabase.co'],
+  ['database credentials', app, 'https://bad@zrxrrfbllsxtleyxjpsz.supabase.co'],
+  ['database HTTP', app, 'http://zrxrrfbllsxtleyxjpsz.supabase.co'],
+  ['database path', app, 'https://zrxrrfbllsxtleyxjpsz.supabase.co/rest/v1'],
+  ['database query', app, 'https://zrxrrfbllsxtleyxjpsz.supabase.co/?s=1'],
+  ['database fragment', app, 'https://zrxrrfbllsxtleyxjpsz.supabase.co/#secret'],
+  ['database nonstandard port', app, 'https://zrxrrfbllsxtleyxjpsz.supabase.co:444'],
   ['missing app', '', db],
   ['missing database', app, ''],
 ]) {
