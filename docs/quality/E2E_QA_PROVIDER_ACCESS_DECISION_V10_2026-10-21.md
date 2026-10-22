@@ -155,3 +155,33 @@ UNAPPROVED_SPEND=0
 **Source hardening this V15-C branch:** the GitHub E2E preflight, Playwright synthetic-write guard, payment-first database negative probe and paid-owner retention suite now all require an explicit matching approved 20-character QA project ref. No application behavior changed in production.
 
 **Actual current status:** `QA_PROJECT_CREATED=NO`, `VERCEL_QA_DEPLOYMENT=NO`, `AUTHENTICATED_E2E=NO_PASS`, `STRIPE_TEST_RUNTIME=NO_PASS`, `EMAILS_SENT=0`, `PRODUCTION_WRITES=0`, `LIVE_PAYMENTS_CREATED=0`, `UNAPPROVED_SPENDING=0`.
+
+
+## V15-C — actual isolated QA provisioning and integration boundary (22 October 2026)
+
+**This section supersedes the earlier owner-approval/pending-creation entries.** The owner explicitly accepted the quoted Supabase `0/month` project cost, the provider `confirm_cost` returned an authorization ID, and the provider `create_project` completed successfully.
+
+| Exact observed fact | Provider result / evidence boundary |
+| --- | --- |
+| QA project name | `risck-comply-v15c-isolated-qa-20261022` |
+| **Approved new QA Supabase project ref** | `zrxrrfbllsxtleyxjpsz` |
+| Organization, region | Existing RISCK COMPLY Supabase organization, `eu-west-1` |
+| Cost quote | `amount=0`, `recurrence=monthly`; no plan upgrade approved |
+| Creation and status | Created 22 October 2026; follow-up `get_project`: `ACTIVE_HEALTHY`, PostgreSQL 17.11 |
+| Current database | `list_tables(public)=0`; `list_migrations=0`; security-advisor lint list empty on new project |
+| Production baseline for schema reconciliation | Production migration metadata contains 137 entries through `20261018190000`; do **not** copy production data |
+| Vercel QA suitability | Existing Vercel project reports preview/production-scoped variables for Supabase, email and other services. Effective decrypted Preview values were not available for provider verification. **Do not deploy writing QA against these potentially shared bindings**. |
+| Application E2E | Not executed; empty QA database has no application schema |
+| CI | GitHub required status checks still blocked; no exact-head acceptance |
+
+**Pinned QA scope:** V15-C QA branch's GitHub E2E preflight, Playwright synthetic-write guard, paid-owner browser suite and payment-first negative write setup require `E2E_QA_APPROVED_SUPABASE_REF=zrxrrfbllsxtleyxjpsz`, matched to `https://zrxrrfbllsxtleyxjpsz.supabase.co`. This is *not* a secret and does not confer any database privileges. Do not substitute any historic inactive project. The true service-role key must remain in a protected provider secret store and must never be copied into tracked code.
+
+**Next safe completion sequence (unperformed):**
+1. Build a provenance-checked **schema-only**, no-customer-data migration/replay plan from the tracked canonical migrations and their dependencies; run only against new QA. Verify all expected application objects and RLS/privilege policies on the QA project, including Auth/Storage configuration as applicable. A project with zero migrations cannot earn E2E acceptance.
+2. Establish a separate protected Vercel QA deployment bound to the exact QA commit, with QA-only Supabase and a confirmed **mail sink**. Audit inherited Preview environment bindings before enabling write tests; never allow production database URLs, shared live service-role tokens, production email tokens or LIVE Stripe keys.
+3. Add approved disposable QA owner, second tenant, paid business test entitlement, and deterministic test data **only after schema and secret isolation**.
+4. Configure and test a new QA-specific signed **Stripe TEST** webhook destination; do not enable the historical disabled endpoint or use bypass query tokens. Validate real sandbox event delivery, replay/idempotency, database persistence and entitlement state.
+5. Run authenticated Playwright positive/negative tenant, MFA and billing journeys against this specific isolated environment; retain provider/deployment SHA evidence and a zero-skipped final report.
+6. Keep required GitHub checks, qualified independent review, enterprise legal publication and buyer acceptance as separate release gates. Do not fake completed evidence.
+
+`SUPABASE_QA_PROJECT_CREATED=YES` · `QA_PROJECT_ACTIVE_HEALTHY=YES` · `QA_SCHEMA_MIGRATED=NO` · `QA_PREVIEW_DEPLOYED=NO` · `QA_AUTHENTICATED_E2E=NO_PASS` · `STRIPE_TEST_RUNTIME=NO_PASS` · `PRODUCTION_WRITES=0` · `EMAILS_SENT=0` · `LIVE_PAYMENTS_CREATED=0`.
