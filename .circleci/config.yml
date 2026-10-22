@@ -135,6 +135,25 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  g1-scope-proof:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: G1 exact checkout SHA (isolated, no providers)
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI SHA}"
+      - run:
+          name: G1 formal acceptance source proof (no runtime secrets)
+          command: |
+            set -euo pipefail
+            node --test tests/release/g1-enterprise-scope-acceptance.test.mjs
+            node scripts/release/verify-g1-enterprise-scope.mjs
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -156,3 +175,8 @@ workflows:
                 - main
                 - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
+      - g1-scope-proof:
+          filters:
+            branches:
+              only:
+                - /ci\\/verify-g1-.*/
