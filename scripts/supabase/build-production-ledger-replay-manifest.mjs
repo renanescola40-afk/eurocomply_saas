@@ -36,6 +36,7 @@ export function buildProductionLedgerReplayManifest({ sourceSnapshotSha, crosswa
 
   const productionEntries = [];
   const uniqueReplaySources = new Map();
+  const postLedgerForwardReconciliations = new Map();
   const providerRecordByVersion = new Map((providerRecords ?? []).map((record) => [record.version, record]));
   for (const [index, row] of (crosswalk?.entries ?? []).entries()) {
     if (row.order !== index + 1) blockers.push(`production_ledger_order_not_contiguous:${row.production_version}`);
@@ -61,20 +62,39 @@ export function buildProductionLedgerReplayManifest({ sourceSnapshotSha, crosswa
       replay_blocker: 'provider_statement_digest_and_schema_postcondition_not_bound_per_ledger_entry',
     };
     productionEntries.push(record);
-    if (source && !uniqueReplaySources.has(source.path)) {
-      uniqueReplaySources.set(source.path, {
-        first_production_order: row.order,
-        file: source.path,
-        source_sha256: source.sha256,
-        production_versions: [],
-        safe_for_replay: false,
-        replay_blocker: record.replay_blocker,
-      });
+    if (source && row.mapping === 'superseded_by_forward_reconciliation') {
+      if (!postLedgerForwardReconciliations.has(source.path)) {
+        postLedgerForwardReconciliations.set(source.path, {
+          first_production_order: row.order,
+          file: source.path,
+          source_sha256: source.sha256,
+          production_versions: [],
+          execution_order: 'AFTER_PRODUCTION_LEDGER_REPLAY',
+          safe_for_replay: false,
+          replay_blocker: record.replay_blocker,
+        });
+      }
+      postLedgerForwardReconciliations.get(source.path).production_versions.push(row.production_version);
+    } else if (source) {
+      if (!uniqueReplaySources.has(source.path)) {
+        uniqueReplaySources.set(source.path, {
+          first_production_order: row.order,
+          file: source.path,
+          source_sha256: source.sha256,
+          production_versions: [],
+          safe_for_replay: false,
+          replay_blocker: record.replay_blocker,
+        });
+      }
+      uniqueReplaySources.get(source.path).production_versions.push(row.production_version);
     }
-    if (source) uniqueReplaySources.get(source.path).production_versions.push(row.production_version);
   }
 
-  const productionSourceSet = new Set(uniqueReplaySources.keys());
+  const productionSourceSet = new Set([
+    ...uniqueReplaySources.keys(),
+    ...postLedgerForwardReconciliations.keys(),
+  ]);
+  const declaredConsolidatedSources = new Set((crosswalk?.consolidated_sources ?? []).map((item) => item.source));
   const ledgerRowsBySource = new Map();
   for (const row of crosswalk?.entries ?? []) {
     const rows = ledgerRowsBySource.get(row.source) ?? [];
@@ -106,7 +126,8 @@ export function buildProductionLedgerReplayManifest({ sourceSnapshotSha, crosswa
       canonical,
       superseded,
       provider_hotfix: providerHotfix,
-      conflicting: Boolean(duplicateGroup) || mappings.length > 1,
+      conflicting: Boolean(duplicateGroup)
+        || (mappings.length > 1 && !declaredConsolidatedSources.has(item.path)),
       safe_for_replay: false,
       classification: inProductionLedger
         ? superseded ? 'PRODUCTION_LEDGER_SOURCE_SUPERSEDED_PROVIDER_HOTFIX' : 'PRODUCTION_LEDGER_SOURCE_MAPPED'
@@ -166,6 +187,7 @@ export function buildProductionLedgerReplayManifest({ sourceSnapshotSha, crosswa
     production_ledger_entries: productionEntries,
     migrations: allMigrations,
     replay_order: replayOrder,
+    post_ledger_forward_reconciliations: [...postLedgerForwardReconciliations.values()].sort((left, right) => left.first_production_order - right.first_production_order),
     source_only_migrations: sourceOnly,
     unresolved_duplicate_groups: duplicateGroups.map((group) => ({
       ...group,

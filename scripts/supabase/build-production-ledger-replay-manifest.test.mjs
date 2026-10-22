@@ -82,6 +82,7 @@ test('supports reviewed consolidation as ordered ledger entries sharing one sour
   assert.deepEqual(manifest.replay_order[0].production_versions, ['20261003111111', '20261003122222']);
   assert.equal(manifest.counts.production_ledger_identities, 2);
   assert.equal(manifest.counts.production_unique_sources, 1);
+  assert.equal(manifest.migrations[0].conflicting, false);
   assert.equal(manifest.provider_only_hotfixes[0].safe_for_automatic_execution, false);
 });
 
@@ -101,6 +102,25 @@ test('classifies every migration and never treats source-only duplicates as repl
   assert.equal(manifest.migrations.find((item) => item.file === duplicateA).classification, 'SOURCE_ONLY_DUPLICATE_UNRESOLVED');
   assert.equal(manifest.migrations.find((item) => item.file === duplicateB).classification, 'SOURCE_ONLY_DUPLICATE_UNRESOLVED');
   assert.equal(manifest.migrations.find((item) => item.file === duplicateA).conflicting, true);
+});
+
+test('keeps a superseded provider hotfix out of ledger replay order', () => {
+  const forward = 'supabase/migrations/20261022100000_forward_reconciliation.sql';
+  const later = 'supabase/migrations/20261015090000_later_source.sql';
+  const entries = [
+    entry(1, '20261013133323', forward, 'superseded_by_forward_reconciliation'),
+    entry(2, '20261015205458', later, 'exact_version'),
+  ];
+  const manifest = buildProductionLedgerReplayManifest({
+    sourceSnapshotSha: 'a'.repeat(40),
+    crosswalk: crosswalk(entries),
+    migrationFiles: [migration('20261022100000_forward_reconciliation.sql', sha('f')), migration('20261015090000_later_source.sql', sha('e'))],
+  });
+
+  assert.deepEqual(manifest.replay_order.map((item) => item.file), [later]);
+  assert.equal(manifest.post_ledger_forward_reconciliations.length, 1);
+  assert.equal(manifest.post_ledger_forward_reconciliations[0].file, forward);
+  assert.equal(manifest.post_ledger_forward_reconciliations[0].safe_for_replay, false);
 });
 
 test('blocks missing mapped source and non-contiguous production order', () => {
