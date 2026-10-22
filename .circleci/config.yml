@@ -145,6 +145,445 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  actionlint-install-smoke:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact diagnostic source
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/verify-actionlint-groups-v15a-20261022"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+      - run:
+          name: Install and self-test pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+
+  actionlint-group-1:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Lint workflow group 1
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/actionlint.yml' \
+              '.github/workflows/beagle-exact-target-open-on-main.yml' \
+              '.github/workflows/codeql.yml' \
+              '.github/workflows/dependency-vulnerability-proof.yml' \
+              '.github/workflows/enterprise-break-glass-governance.yml' \
+              '.github/workflows/enterprise-dast.yml' \
+              '.github/workflows/enterprise-final-closeout-dashboard.yml' \
+              '.github/workflows/enterprise-readiness-scorecard.yml' \
+              '.github/workflows/enterprise-runtime-evidence-closeout.yml' \
+              '.github/workflows/eu-ai-act-product-coverage.yml' \
+              '.github/workflows/fix-vercel-production-provider-envs.yml' \
+              '.github/workflows/internetnl-live-assurance.yml' \
+              '.github/workflows/lockfile-regeneration-artifact.yml' \
+              '.github/workflows/p0-progress.yml' \
+              '.github/workflows/p1-dast-baseline.yml' \
+              '.github/workflows/p1-identity-access.yml' \
+              '.github/workflows/performance-isolated-benchmark.yml' \
+              '.github/workflows/pr-autopilot.yml' \
+              '.github/workflows/public-claims-guard.yml' \
+              '.github/workflows/recovery-resilience-proof.yml' \
+              '.github/workflows/semgrep.yml' \
+              '.github/workflows/senior-agent-self-heal.yml' \
+              '.github/workflows/stripe-entitlement-runtime.yml' \
+              '.github/workflows/stripe-test-runtime-preflight.yml' \
+              '.github/workflows/supabase-forward-production-reattestation.yml' \
+              '.github/workflows/supabase-migration-drift-audit.yml' \
+              '.github/workflows/supabase-migration-release-control-plane.yml' \
+              '.github/workflows/supabase-production-rls-reconciliation.yml'
+
+  actionlint-group-2:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Lint workflow group 2
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/article-50-control-plane.yml' \
+              '.github/workflows/beagle-isolated-remote-replay.yml' \
+              '.github/workflows/codex-autofix.yml' \
+              '.github/workflows/deployment-health-proof.yml' \
+              '.github/workflows/enterprise-closeout-orchestrator.yml' \
+              '.github/workflows/enterprise-documents-runtime-proof.yml' \
+              '.github/workflows/enterprise-final-closeout.yml' \
+              '.github/workflows/enterprise-reconciliation-operations.yml' \
+              '.github/workflows/enterprise-safe-promotion-scorecard.yml' \
+              '.github/workflows/eu-ai-act-runtime-evidence-campaign.yml' \
+              '.github/workflows/free-online-trust-signals.yml' \
+              '.github/workflows/internetnl-mail-assurance.yml' \
+              '.github/workflows/ma-asset-manifest-safety.yml' \
+              '.github/workflows/p0-provider-plan.yml' \
+              '.github/workflows/p1-dast.yml' \
+              '.github/workflows/p1-progress-dashboard.yml' \
+              '.github/workflows/platform-deployment-provenance.yml' \
+              '.github/workflows/procurement-trust-runtime-proof.yml' \
+              '.github/workflows/public-commercial-production.yml' \
+              '.github/workflows/release-final-validation.yml' \
+              '.github/workflows/senior-agent-autofix.yml' \
+              '.github/workflows/senior-agent-triage.yml' \
+              '.github/workflows/stripe-entitlement-stored-event-recovery.yml' \
+              '.github/workflows/supabase-auth-email-documents-runtime-integrity.yml' \
+              '.github/workflows/supabase-forward-reconciliation-dry-run.yml' \
+              '.github/workflows/supabase-migration-evidence-bootstrap.yml' \
+              '.github/workflows/supabase-migration-review-context.yml' \
+              '.github/workflows/supabase-production-schema-evidence.yml'
+
+  actionlint-group-3:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Lint workflow group 3
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/article-50-runtime-evidence.yml' \
+              '.github/workflows/beagle-publish-reviewed-bundle.yml' \
+              '.github/workflows/contract-counsel-pack-readiness.yml' \
+              '.github/workflows/distributed-rate-limit-runtime-proof.yml' \
+              '.github/workflows/enterprise-closeout-plan.yml' \
+              '.github/workflows/enterprise-entitlement-billing-reconciliation.yml' \
+              '.github/workflows/enterprise-final-decision.yml' \
+              '.github/workflows/enterprise-recovery-drill.yml' \
+              '.github/workflows/enterprise-safe-runtime-bootstrap.yml' \
+              '.github/workflows/eu-ai-act-safe-runtime-promotion.yml' \
+              '.github/workflows/full-security-suite.yml' \
+              '.github/workflows/isolated-enterprise-fria-db-proof.yml' \
+              '.github/workflows/p0-branch-protection-evidence.yml' \
+              '.github/workflows/p0-runtime-evidence.yml' \
+              '.github/workflows/p1-edge-protection.yml' \
+              '.github/workflows/p1-rate-limit.yml' \
+              '.github/workflows/platform-evidence-drift.yml' \
+              '.github/workflows/product-fria-ephemeral-qa.yml' \
+              '.github/workflows/public-production-final.yml' \
+              '.github/workflows/saml-sso-runtime-proof.yml' \
+              '.github/workflows/senior-agent-ci-rescue.yml' \
+              '.github/workflows/senior-agent-watchdog.yml' \
+              '.github/workflows/stripe-live-account-bootstrap.yml' \
+              '.github/workflows/supabase-bounded-production-change.yml' \
+              '.github/workflows/supabase-forward-reconciliation-production-promotion.yml' \
+              '.github/workflows/supabase-migration-evidence-latest-main-guard.yml' \
+              '.github/workflows/supabase-migration-review-dossiers.yml' \
+              '.github/workflows/supabase-staging-rehearsal.yml'
+
+  actionlint-group-4:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Lint workflow group 4
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/audit-chain-runtime-proof.yml' \
+              '.github/workflows/beagle-reviewed-replay-bundle.yml' \
+              '.github/workflows/conversation-final-enterprise-closeout.yml' \
+              '.github/workflows/e2e.yml' \
+              '.github/workflows/enterprise-closeout-watchdog.yml' \
+              '.github/workflows/enterprise-evidence-closure.yml' \
+              '.github/workflows/enterprise-integrations-runtime-proof.yml' \
+              '.github/workflows/enterprise-recovery-preflight.yml' \
+              '.github/workflows/enterprise-scorecard-promotion.yml' \
+              '.github/workflows/external-security-assurance.yml' \
+              '.github/workflows/gitleaks.yml' \
+              '.github/workflows/legacy-required-statuses.yml' \
+              '.github/workflows/p0-commit-lockfile.yml' \
+              '.github/workflows/p0-runtime-gap-report.yml' \
+              '.github/workflows/p1-enterprise-security.yml' \
+              '.github/workflows/p1-restore-test.yml' \
+              '.github/workflows/platform-final-release-evidence.yml' \
+              '.github/workflows/production-edge-assurance.yml' \
+              '.github/workflows/qualified-review-assurance.yml' \
+              '.github/workflows/scan-repository-for-accidental-secret-exposure.yml' \
+              '.github/workflows/senior-agent-daily-handoff.yml' \
+              '.github/workflows/step-up-runtime-proof.yml' \
+              '.github/workflows/stripe-provider-proof.yml' \
+              '.github/workflows/supabase-current-owner-review-ledger-diagnostic.yml' \
+              '.github/workflows/supabase-forward-reconciliation-rehearsal.yml' \
+              '.github/workflows/supabase-migration-execution-plan.yml' \
+              '.github/workflows/supabase-migration-semantic-evidence.yml' \
+              '.github/workflows/upload-security-ci.yml'
+
+  actionlint-group-5:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Lint workflow group 5
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/audit-chain-synthetic-recovery.yml' \
+              '.github/workflows/billing-lifecycle-runtime-proof.yml' \
+              '.github/workflows/counsel-review-efficiency.yml' \
+              '.github/workflows/enable-public-paid-ga.yml' \
+              '.github/workflows/enterprise-conversation-final-closeout-contract.yml' \
+              '.github/workflows/enterprise-evidence-intake.yml' \
+              '.github/workflows/enterprise-owner-execution-packets.yml' \
+              '.github/workflows/enterprise-release-decision.yml' \
+              '.github/workflows/enterprise-seat-concurrency.yml' \
+              '.github/workflows/final-billing-product-live-closeout.yml' \
+              '.github/workflows/google-oauth-provider-proof.yml' \
+              '.github/workflows/legal-rules-runtime-capture.yml' \
+              '.github/workflows/p0-external-review-plan.yml' \
+              '.github/workflows/p0-supabase-rls-plan.yml' \
+              '.github/workflows/p1-evidence-gap.yml' \
+              '.github/workflows/p1-sbom-attestation.yml' \
+              '.github/workflows/platform-provider-interoperability.yml' \
+              '.github/workflows/production-provider-runtime-proof.yml' \
+              '.github/workflows/qualified-review-execution.yml' \
+              '.github/workflows/scim-runtime-proof.yml' \
+              '.github/workflows/senior-agent-dispatch.yml' \
+              '.github/workflows/storage-recovery-proof.yml' \
+              '.github/workflows/stripe-runtime-evidence-promotion-contract.yml' \
+              '.github/workflows/supabase-current-production-state-read-only.yml' \
+              '.github/workflows/supabase-live-rls-validation.yml' \
+              '.github/workflows/supabase-migration-lineage-fingerprint-delta.yml' \
+              '.github/workflows/supabase-migration-staging-rehearsal.yml' \
+              '.github/workflows/vercel-production.yml'
+
+  actionlint-group-6:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Lint workflow group 6
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/auth-onboarding-billing-runtime-proof-contract.yml' \
+              '.github/workflows/branch-protection-runtime-proof.yml' \
+              '.github/workflows/data-governance-runtime-proof.yml' \
+              '.github/workflows/enterprise-100-closure.yml' \
+              '.github/workflows/enterprise-conversation-final-closeout.yml' \
+              '.github/workflows/enterprise-evidence-manifest.yml' \
+              '.github/workflows/enterprise-privileged-access-governance.yml' \
+              '.github/workflows/enterprise-restore-drill-evidence.yml' \
+              '.github/workflows/ephemeral-supabase-project-smoke.yml' \
+              '.github/workflows/final-legal-publication-gate.yml' \
+              '.github/workflows/high-risk-provider-runtime-evidence.yml' \
+              '.github/workflows/legal-rules-runtime-promotion.yml' \
+              '.github/workflows/p0-final-release-gate.yml' \
+              '.github/workflows/p1-admin-mfa.yml' \
+              '.github/workflows/p1-evidence-index.yml' \
+              '.github/workflows/p1-step-up.yml' \
+              '.github/workflows/platform-provider-readiness.yml' \
+              '.github/workflows/production-runtime-proof.yml' \
+              '.github/workflows/qualified-review-operations-handoff.yml' \
+              '.github/workflows/scorecard.yml' \
+              '.github/workflows/senior-agent-functionality-guard.yml' \
+              '.github/workflows/stripe-billing-portal-bootstrap.yml' \
+              '.github/workflows/stripe-runtime-evidence-promotion.yml' \
+              '.github/workflows/supabase-enterprise-assurance.yml' \
+              '.github/workflows/supabase-live-schema-evidence.yml' \
+              '.github/workflows/supabase-migration-object-evidence.yml' \
+              '.github/workflows/supabase-owner-review-ledger-guard.yml'
+
+  actionlint-group-7:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Lint workflow group 7
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/auth-onboarding-billing-runtime-proof.yml' \
+              '.github/workflows/ci.yml' \
+              '.github/workflows/dataguard-buyer-room-offline-audit.yml' \
+              '.github/workflows/enterprise-100-final-authority.yml' \
+              '.github/workflows/enterprise-conversation-runtime-closeout-contract.yml' \
+              '.github/workflows/enterprise-evidence-tests.yml' \
+              '.github/workflows/enterprise-production-gate.yml' \
+              '.github/workflows/enterprise-runtime-closeout-campaign.yml' \
+              '.github/workflows/ephemeral-supabase-restore-smoke.yml' \
+              '.github/workflows/final-runtime-assurance.yml' \
+              '.github/workflows/identity-access-lifecycle-proof.yml' \
+              '.github/workflows/legal-rules-runtime-validation.yml' \
+              '.github/workflows/p0-lockfile-plan.yml' \
+              '.github/workflows/p1-audit-chain.yml' \
+              '.github/workflows/p1-final-evidence-gate.yml' \
+              '.github/workflows/pentest-synthetic-matrix.yml' \
+              '.github/workflows/platform-provider-transaction-evidence.yml' \
+              '.github/workflows/prohibited-practices-runtime-proof.yml' \
+              '.github/workflows/qualified-review-package-readiness.yml' \
+              '.github/workflows/secret-scanning.yml' \
+              '.github/workflows/senior-agent-health.yml' \
+              '.github/workflows/stripe-commercial-catalog-proof.yml' \
+              '.github/workflows/stripe-runtime-proof-contract.yml' \
+              '.github/workflows/supabase-enterprise-data-plane-qa.yml' \
+              '.github/workflows/supabase-migration-absence-closure-evidence.yml' \
+              '.github/workflows/supabase-migration-reconciliation-decision-gate.yml' \
+              '.github/workflows/supabase-production-migration-dry-run.yml'
+
+  actionlint-group-8:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install pinned actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Lint workflow group 8
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color               '.github/workflows/auth-rbac-runtime-proof.yml' \
+              '.github/workflows/code-review.yml' \
+              '.github/workflows/dependency-review.yml' \
+              '.github/workflows/enterprise-access-release-final-closeout.yml' \
+              '.github/workflows/enterprise-conversation-runtime-closeout.yml' \
+              '.github/workflows/enterprise-final-assurance-proof.yml' \
+              '.github/workflows/enterprise-readiness-scorecard-stabilizer.yml' \
+              '.github/workflows/enterprise-runtime-closeout.yml' \
+              '.github/workflows/eu-ai-act-final-runtime-closeout.yml' \
+              '.github/workflows/final-technical-controls-proof.yml' \
+              '.github/workflows/incident-continuity-runtime-proof.yml' \
+              '.github/workflows/legal-truth-audit.yml' \
+              '.github/workflows/p0-progress-comment.yml' \
+              '.github/workflows/p1-centralized-logging.yml' \
+              '.github/workflows/p1-final-gate.yml' \
+              '.github/workflows/performance-clean-replay-proof.yml' \
+              '.github/workflows/platform-providers-runtime-proof.yml' \
+              '.github/workflows/protected-rollback-runtime-proof.yml' \
+              '.github/workflows/recovery-postgresql-client-smoke.yml' \
+              '.github/workflows/security-ci.yml' \
+              '.github/workflows/senior-agent-pr-guard.yml' \
+              '.github/workflows/stripe-entitlement-runtime-proof.yml' \
+              '.github/workflows/stripe-runtime-proof.yml' \
+              '.github/workflows/supabase-forward-production-acceptance.yml' \
+              '.github/workflows/supabase-migration-column-metadata-evidence.yml' \
+              '.github/workflows/supabase-migration-reconciliation.yml' \
+              '.github/workflows/supabase-production-migrations.yml'
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +596,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +603,53 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+
+  actionlint-group-diagnostic-v15a:
+    jobs:
+      - actionlint-install-smoke:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
+      - actionlint-group-1:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
+      - actionlint-group-2:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
+      - actionlint-group-3:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
+      - actionlint-group-4:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
+      - actionlint-group-5:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
+      - actionlint-group-6:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
+      - actionlint-group-7:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
+      - actionlint-group-8:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-groups-v15a-20261022
