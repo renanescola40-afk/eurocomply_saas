@@ -31,7 +31,12 @@ export function validateStripeRuntimeEvidence(
     if (ageMs > maxAgeMs) failures.push(`generatedAt is older than ${maxAgeDays} days`);
   }
 
-  if (evidence?.status !== 'Complete') return failures;
+  // Do not treat fresh, parseable but still OPEN evidence as an accepted runtime proof.
+  // Some downstream consumers take an empty failure array to mean PASS.
+  if (evidence?.status !== 'Complete') {
+    failures.push('status must be Complete');
+    return failures;
+  }
 
   if (!['passed', 'Pass', 'PASS'].includes(evidence?.validationStatus ?? evidence?.outcome)) {
     failures.push('Complete evidence validationStatus must be passed');
