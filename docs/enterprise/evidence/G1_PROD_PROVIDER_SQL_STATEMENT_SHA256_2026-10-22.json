@@ -1528,5 +1528,15 @@
     "Provider statement content and source file bytes are distinct possible representations; non-match is provenance evidence, not a claim that current production is faulty.",
     "A matching hash proves byte-level identity only when statement_count=1; multi-statement join digest is informational.",
     "Replay postconditions, dependency handling, migration-apply order and signed integration tests remain separately required."
-  ]
+  ],
+  "replayRootCause": {
+    "version": "20260812225906",
+    "providerStrictGuardDetected": true,
+    "providerRevisedGuardDetected": false,
+    "providerPartialMaterializationLogicDetected": false,
+    "sourceMainHistoricalGuard": "canonical RLS policy missing after partial materialization",
+    "observedBranchFailure": "canonical RLS policy missing after consolidation: 12",
+    "conclusion": "CONFIRMED: provider history stores legacy all-or-nothing RLS guard, while reviewed repository source has a 0/N versus partial-materialization fail-closed guard; cannot safely rely on unchanged provider-ledger branch cloning.",
+    "productionStatementBodyExported": false
+  }
 }
