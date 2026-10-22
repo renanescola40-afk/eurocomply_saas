@@ -145,6 +145,41 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  actionlint-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact isolated source
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/verify-actionlint-v15a-20261022"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+      - run:
+          name: Install pinned actionlint 1.7.7
+          command: |
+            set -euo pipefail
+            version=1.7.7
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+      - run:
+          name: Actionlint required workflow scan
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/actionlint-v15a
+            /tmp/actionlint -no-color 2>&1 | tee artifacts/actionlint-v15a/actionlint.log
+      - store_artifacts:
+          path: artifacts/actionlint-v15a/actionlint.log
+          destination: actionlint-v15a/actionlint.log
+
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -168,3 +203,11 @@ workflows:
                 - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+
+  actionlint-v15a-verification:
+    jobs:
+      - actionlint-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-v15a-20261022
