@@ -24,8 +24,13 @@ export function verifyPaidOwnerPlaywrightProof(report) {
     throw new Error('qa_paid_owner_proof_failed_skipped_or_flaky');
   }
   const stats = report.stats;
-  if (!stats || (stats.unexpected ?? 0) > 0 || (stats.flaky ?? 0) > 0) {
-    throw new Error('qa_playwright_suite_has_unexpected_or_flaky_tests');
+  // A passing target is insufficient if the same run skipped other tests,
+  // or if the aggregate Playwright result counts are absent or malformed.
+  if (!stats || !Number.isInteger(stats.expected) || stats.expected < 1 ||
+      !Number.isInteger(stats.skipped) || stats.skipped !== 0 ||
+      !Number.isInteger(stats.unexpected) || stats.unexpected !== 0 ||
+      !Number.isInteger(stats.flaky) || stats.flaky !== 0) {
+    throw new Error('qa_playwright_suite_has_unexpected_flaky_or_skipped_tests');
   }
   return Object.freeze({
     result: 'PAID_OWNER_MFA_NEGATIVE_BOUNDARY_BROWSER_EXECUTED',
