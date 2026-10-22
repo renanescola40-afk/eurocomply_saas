@@ -30,5 +30,6 @@
     "databaseModified": false,
     "migrationHistoryModified": false,
     "productionPushAuthorized": false
-  }
+  },
+  "inventorySha256": "REPLACE_WITH_EXACT_INVENTORY_SHA256"
 }
