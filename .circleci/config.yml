@@ -145,6 +145,33 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  actionlint-ubuntu24-enterprise-dast:
+    docker:
+      - image: ubuntu:24.04
+    resource_class: small
+    working_directory: /root/project
+    steps:
+      - checkout
+      - run:
+          name: Reproduce GitHub runner lint environment
+          command: |
+            set -euo pipefail
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl xz-utils shellcheck ca-certificates
+            test "$(shellcheck --version | awk '/^version:/ {print $2}')" = "0.9.0"
+            version=1.7.12
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            test "$(/tmp/actionlint -version | tr -d '[:space:]')" = "1.7.12"
+      - run:
+          name: Lint enterprise-dast with GitHub-compatible ShellCheck
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color '.github/workflows/enterprise-dast.yml'
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +184,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +191,12 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+  actionlint-ubuntu24-v15a:
+    jobs:
+      - actionlint-ubuntu24-enterprise-dast:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-ubuntu24-v15a-20261022
