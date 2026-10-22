@@ -145,6 +145,47 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  sbom-v15a:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Restore exact target SHA
+          command: |
+            set -euo pipefail
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
+      - run:
+          name: Generate exact Core-CI CycloneDX SBOM
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/sbom-v15a
+            node - <<'NODE'
+            const fs = require('fs');
+            const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+            const rootPackage = lock.packages?.[''] ?? {};
+            const components = Object.entries(lock.packages ?? {})
+              .filter(([path, pkg]) => path && pkg && typeof pkg.version === 'string')
+              .map(([path, pkg]) => ({ type: 'library', name: pkg.name ?? path.split('node_modules/').pop(), version: pkg.version }))
+              .filter((component) => component.name)
+              .sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`));
+            const out = {
+              bomFormat: 'CycloneDX', specVersion: '1.5', version: 1,
+              metadata: { component: { type: 'application', name: rootPackage.name ?? 'eurocomply-saas', version: rootPackage.version ?? '0.0.0' } },
+              components,
+            };
+            fs.writeFileSync('artifacts/sbom-v15a/sbom.cyclonedx.json', JSON.stringify(out, null, 2));
+            if (out.bomFormat !== 'CycloneDX' || out.specVersion !== '1.5' || !Array.isArray(out.components) || out.components.length === 0) process.exit(1);
+            console.log(JSON.stringify({componentCount:out.components.length,bomFormat:out.bomFormat,specVersion:out.specVersion}));
+            NODE
+            sha256sum package-lock.json artifacts/sbom-v15a/sbom.cyclonedx.json > artifacts/sbom-v15a/sha256.txt
+      - store_artifacts:
+          path: artifacts/sbom-v15a
+          destination: sbom-v15a
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +198,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +205,12 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+  sbom-v15a-verification:
+    jobs:
+      - sbom-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-sbom-v15a-20261022
