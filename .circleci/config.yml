@@ -145,6 +145,78 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  actionlint-mode-structural:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.12
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Structural and semantic lint without external linters
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color -shellcheck '' -pyflakes '' '.github/workflows/enterprise-dast.yml'
+
+  actionlint-mode-no-pyflakes:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.12
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Actionlint with ShellCheck but without Pyflakes
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color -pyflakes '' '.github/workflows/enterprise-dast.yml'
+
+  actionlint-mode-no-shellcheck:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install actionlint
+          command: |
+
+            set -euo pipefail
+            version=1.7.12
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+      - run:
+          name: Actionlint with Pyflakes but without ShellCheck
+          command: |
+            set -euo pipefail
+            /tmp/actionlint -no-color -shellcheck '' '.github/workflows/enterprise-dast.yml'
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +229,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +236,22 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+  actionlint-mode-v15a:
+    jobs:
+      - actionlint-mode-structural:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-mode-v15a-20261022
+      - actionlint-mode-no-pyflakes:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-mode-v15a-20261022
+      - actionlint-mode-no-shellcheck:
+          filters:
+            branches:
+              only:
+                - ci/verify-actionlint-mode-v15a-20261022
