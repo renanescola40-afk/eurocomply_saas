@@ -32,6 +32,13 @@ function assertSyntheticWriteQaEnvironment(env: NodeJS.ProcessEnv) {
   ) {
     throw new Error('synthetic_write_requires_explicit_isolated_qa_origins');
   }
+  // A different Supabase hostname is not evidence of an approved disposable tenant.
+  // Bind the QA runtime to the exact owner-approved project ref, not just to a suffix.
+  const approvedRef = env.E2E_QA_APPROVED_SUPABASE_REF?.trim();
+  if (!approvedRef || !/^[a-z0-9]{20}$/.test(approvedRef) ||
+      dbHost !== `${approvedRef}.supabase.co`) {
+    throw new Error('synthetic_write_requires_approved_qa_database_ref');
+  }
   if (!env.STRIPE_SECRET_KEY?.startsWith('sk_test_') ||
       !env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) {
     throw new Error('synthetic_write_requires_stripe_test_credentials');
