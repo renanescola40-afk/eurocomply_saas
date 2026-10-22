@@ -272,10 +272,13 @@
       "criterion": "Publicly committed plans map to existing correctly configured Stripe prices and intended access limits",
       "evidenceRequired": "Redacted Stripe product/price IDs and offer-to-entitlement mapping",
       "dependencies": [],
-      "status": "NOT_VERIFIED",
-      "evidenceRefs": [],
-      "acceptedBy": null,
-      "acceptedAt": null
+      "status": "PASS",
+      "evidenceRefs": [
+        "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json"
+      ],
+      "acceptedBy": "G1 Engineering, owner-authorized acceptance (independent Stripe LIVE + Vercel provider readbacks; governed PR integration pending)",
+      "acceptedAt": "2026-10-22T21:03:16.517Z",
+      "acceptanceNotes": "BIL-01 provider/source catalog only: 6/6 correct active LIVE products and Prices with exact Production Vercel bindings and main SHA; code-described plan limits and sales-led contract boundaries. Does not credit checkout, signed webhooks, entitlements persistence or authorization (BIL-02/03/04/05)."
     },
     {
       "id": "BIL-02",
