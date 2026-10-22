@@ -59,3 +59,21 @@ test('expired incomplete proof reports freshness and incomplete state', () => {
   assert.ok(issues.some((issue) => issue.startsWith('generatedAt is older than')));
   assert.ok(issues.includes('status must be Complete'));
 });
+
+for (const badRunId of ['', 'abc', '123abc', '123\nfoo']) {
+  test(`legacy proof rejects invalid provider run ID ${JSON.stringify(badRunId)}`, () => {
+    const proof = completeRuntimeProof();
+    proof.runtimeProof.runId = badRunId;
+    assert.ok(validateStripeRuntimeEvidence(proof, { now, expectedCommitSha: sha })
+      .includes('runtimeProof.runId must be numeric'));
+  });
+}
+
+for (const badDigest of ['', 'sha256:', 'sha256:abc', `sha256:${'g'.repeat(64)}`, `sha256:${'a'.repeat(63)}`]) {
+  test(`legacy proof rejects invalid full SHA-256 digest (${badDigest.length} chars)`, () => {
+    const proof = completeRuntimeProof();
+    proof.runtimeProof.artifactDigest = badDigest;
+    assert.ok(validateStripeRuntimeEvidence(proof, { now, expectedCommitSha: sha })
+      .includes('runtimeProof.artifactDigest must be a full sha256 digest'));
+  });
+}
