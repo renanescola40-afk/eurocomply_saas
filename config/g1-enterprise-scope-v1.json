@@ -483,10 +483,13 @@
       "criterion": "The current production deployment is READY, its exact SHA is known and release acceptance uses that SHA",
       "evidenceRequired": "Live Vercel deployment ID/commit SHA and domain assignment verification",
       "dependencies": [],
-      "status": "NOT_VERIFIED",
-      "evidenceRefs": [],
-      "acceptedBy": null,
-      "acceptedAt": null
+      "status": "PASS",
+      "evidenceRefs": [
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+      ],
+      "acceptedBy": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
+      "acceptedAt": "2026-10-22T20:52:14.027Z",
+      "acceptanceNotes": "OPS-01 only: production READY deployment, exact Git SHA, verified domain and hostname resolution cross-checked with Vercel and GitHub; evidence frozen at baseline SHA. Does not imply full release gate or product QA."
     },
     {
       "id": "OPS-02",
