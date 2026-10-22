@@ -5,11 +5,14 @@
   "repo": "renanescola40-afk/eurocomply_saas",
   "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
   "freezeState": "CANDIDATE_ON_ISOLATED_BRANCH_PENDING_GOVERNED_REVIEW",
-  "scopePrinciple": "Finite mandatory criteria for the committed general B2B SaaS offering; no external certificate claimed.",
+  "scopePrinciple": "Finite mandatory criteria for the committed general B2B SaaS offering; no external certificate claimed. Primary owner-defined A gate metric is 24 groups; original 38 atomic criteria remain mandatory and unchanged as child proofs. Six B, five C and three D remain existing separate category references.",
   "scoring": {
     "denominator": 38,
-    "rule": "An A criterion counts as PASS only with fresh reproducible required evidence bound to applicable exact SHA/runtime and authorized approval; unknown counts 0. All applicable A must PASS; any material risk invalidates final approval.",
-    "allDomainsMustPass": true
+    "rule": "Owner-governed Product Ready is accepted Category A gates / 24 (see exact 38-atomic-to-24 A grouping). Every underlying atomic technical control remains mandatory inside its A gate. Previous 2/38 figure is a secondary atomic-source or 38-item overall completion reference, not Product Ready. Unknown and unapproved items count zero.",
+    "allDomainsMustPass": true,
+    "primaryEnterpriseProductReadyDenominator": 24,
+    "primaryEnterpriseProductReadyProjection": "config/g1-product-ready-24-gates.json",
+    "denominatorMeaning": "Legacy mandatory atomic technical subcontrols, NOT primary Product Ready category A items"
   },
   "categories": {
     "B": [
