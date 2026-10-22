@@ -19,7 +19,7 @@ test('G1 compiler requires immutable approved input and no unresolved split revi
   assert.match(script, /target SHA mismatch/);
   assert.match(script, /split review unresolved/);
   assert.match(script, /remote migration ledger versions missing/);
-  assert.match(workflow, /TARGET_SHA: \\$\\{\\{ inputs\\.target_sha \\}\\}/);
+  assert.ok(workflow.includes('TARGET_SHA: ${{ inputs.target_sha }}'));
 });
 
 test('compiler never authorizes production writes', () => {
