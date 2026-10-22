@@ -145,6 +145,94 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  gitleaks-install-smoke-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout:
+          method: full
+      - run:
+          name: Install and verify pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+            /tmp/gitleaks version
+            test "$(git rev-parse --is-shallow-repository)" = "false"
+
+  gitleaks-working-tree-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout:
+          method: full
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Scan current working tree without Git history
+          command: |
+            set -euo pipefail
+            /tmp/gitleaks dir --redact --no-banner .
+
+  gitleaks-history-classify-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout:
+          method: full
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify full-history findings without leaking values
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/gitleaks-diagnostic
+            /tmp/gitleaks git --redact --no-banner --exit-code 0 --report-format json --report-path artifacts/gitleaks-diagnostic/report.json .
+            node - <<'NODE'
+            const fs=require('fs');
+            const p='artifacts/gitleaks-diagnostic/report.json';
+            const data=JSON.parse(fs.readFileSync(p,'utf8'));
+            const rows=Array.isArray(data)?data:[];
+            const files=[...new Set(rows.map(x=>x.File).filter(Boolean))].sort();
+            const commits=[...new Set(rows.map(x=>x.Commit).filter(Boolean))];
+            const summary={findingCount:rows.length,fileCount:files.length,commitCount:commits.length,files};
+            fs.writeFileSync('artifacts/gitleaks-diagnostic/summary.json',JSON.stringify(summary,null,2)+'\n');
+            console.log(JSON.stringify({findingCount:rows.length,fileCount:files.length,commitCount:commits.length}));
+            process.exit(rows.length===0?0:3);
+            NODE
+      - store_artifacts:
+          path: artifacts/gitleaks-diagnostic/summary.json
+          destination: gitleaks-diagnostic/summary.json
+
 workflows:
   verificacao-isolada:
     jobs:
@@ -157,7 +245,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -165,6 +252,22 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+  gitleaks-diagnostic-v15a:
+    jobs:
+      - gitleaks-install-smoke-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-diagnostic-v15a-20261022
+      - gitleaks-working-tree-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-diagnostic-v15a-20261022
+      - gitleaks-history-classify-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-diagnostic-v15a-20261022
