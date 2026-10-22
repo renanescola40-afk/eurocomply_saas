@@ -53,7 +53,8 @@ function assertIsolatedQaRuntime(baseURL: string, supabaseURL: string) {
   }
   // A valid Supabase hostname alone is not proof of a disposable test database.
   const approvedRef = process.env.E2E_QA_APPROVED_SUPABASE_REF?.trim();
-  if (!approvedRef || !/^[a-z0-9]{20}$/.test(approvedRef) ||
+  const provisionedQaProjectRef = 'zrxrrfbllsxtleyxjpsz';
+  if (approvedRef !== provisionedQaProjectRef || !/^[a-z0-9]{20}$/.test(approvedRef) ||
       dbHost !== `${approvedRef}.supabase.co`) {
     throw new Error('payment_first_runtime_requires_approved_qa_database_ref');
   }
