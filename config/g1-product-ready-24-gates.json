@@ -1,0 +1,254 @@
+{
+  "schema": "risck-comply.g1-product-ready-scoring.v1",
+  "dated": "2026-10-22",
+  "referenceRegistry": "config/g1-enterprise-scope-v1.json",
+  "referenceRegistrySourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+  "scoringContract": {
+    "A_MANDATORY": 24,
+    "B_CUSTOMER_SPECIFIC": 6,
+    "C_ENHANCEMENTS": 5,
+    "D_CONDITIONAL_OR_NOT_APPLICABLE": 3,
+    "TOTAL_SCOPE_ITEMS": 38,
+    "PRODUCT_READY_DENOMINATOR": 24,
+    "ATOMIC_REQUIRED_SOURCE_CHECKS": 38
+  },
+  "truthBoundary": "This is a grouping projection over existing G1 atomic acceptance controls, not a deletion/reclassification/waiver. A gate passes only if ALL member atomic criteria independently PASS and satisfy original cross-dependencies. Existing B/C/D labels and their actual conditional applicability remain documented in the original registry.",
+  "groups": [
+    {
+      "id": "A-01",
+      "label": "Authentication lifecycle",
+      "category": "A",
+      "atomicCriteria": [
+        "SEC-01"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-02",
+      "label": "Server-side role and privileged principal authorization",
+      "category": "A",
+      "atomicCriteria": [
+        "SEC-02",
+        "SEC-04"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-03",
+      "label": "Tenant isolation, critical risk and audit integrity",
+      "category": "A",
+      "atomicCriteria": [
+        "SEC-03",
+        "SEC-06"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-04",
+      "label": "Secrets, encryption and client disclosure protection",
+      "category": "A",
+      "atomicCriteria": [
+        "SEC-05"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-05",
+      "label": "Workspace signup and onboarding",
+      "category": "A",
+      "atomicCriteria": [
+        "FUN-01"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-06",
+      "label": "AI inventory, risk and accountable governance persistence",
+      "category": "A",
+      "atomicCriteria": [
+        "FUN-02",
+        "FUN-03"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-07",
+      "label": "Evidence, reporting, export and access control",
+      "category": "A",
+      "atomicCriteria": [
+        "FUN-04"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-08",
+      "label": "Privacy administration and truthful customer product experience",
+      "category": "A",
+      "atomicCriteria": [
+        "FUN-05",
+        "FUN-06"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-09",
+      "label": "Canonical Stripe prices and product plan catalog",
+      "category": "A",
+      "atomicCriteria": [
+        "BIL-01"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-10",
+      "label": "Signed Stripe TEST webhook and persisted Checkout",
+      "category": "A",
+      "atomicCriteria": [
+        "BIL-02",
+        "BIL-03"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-11",
+      "label": "Subscription lifecycle and authorized entitlements",
+      "category": "A",
+      "atomicCriteria": [
+        "BIL-04",
+        "BIL-05"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-12",
+      "label": "Reviewed canonical migration replay to isolated QA",
+      "category": "A",
+      "atomicCriteria": [
+        "DAT-01"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-13",
+      "label": "Atomic membership counters and durable transaction state",
+      "category": "A",
+      "atomicCriteria": [
+        "DAT-02",
+        "DAT-03"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-14",
+      "label": "Recovery and live database/RLS parity",
+      "category": "A",
+      "atomicCriteria": [
+        "DAT-04",
+        "DAT-05"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-15",
+      "label": "Complete required source, regression and security CI",
+      "category": "A",
+      "atomicCriteria": [
+        "QAT-01"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-16",
+      "label": "Authenticated browser, tenant and billing E2E",
+      "category": "A",
+      "atomicCriteria": [
+        "QAT-02",
+        "QAT-03"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-17",
+      "label": "Exact-SHA test and deployed artifact provenance",
+      "category": "A",
+      "atomicCriteria": [
+        "QAT-04"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-18",
+      "label": "Current production exact-SHA deployment identity",
+      "category": "A",
+      "atomicCriteria": [
+        "OPS-01"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-19",
+      "label": "Enforced governance and required release checks",
+      "category": "A",
+      "atomicCriteria": [
+        "OPS-02"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-20",
+      "label": "Live smoke, monitoring, support and incident response",
+      "category": "A",
+      "atomicCriteria": [
+        "OPS-03",
+        "OPS-04"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-21",
+      "label": "Rollback and environment credential isolation",
+      "category": "A",
+      "atomicCriteria": [
+        "OPS-05",
+        "OPS-06"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-22",
+      "label": "Contracting entity, rights and applicable legal acceptance",
+      "category": "A",
+      "atomicCriteria": [
+        "TRU-01",
+        "TRU-06"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-23",
+      "label": "Legal, privacy, DPA, transfer and retention truth",
+      "category": "A",
+      "atomicCriteria": [
+        "TRU-02",
+        "TRU-03"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    },
+    {
+      "id": "A-24",
+      "label": "AI assurance claims and customer procurement commitments",
+      "category": "A",
+      "atomicCriteria": [
+        "TRU-04",
+        "TRU-05"
+      ],
+      "acceptance": "ALL_ATOMIC_CRITERIA_PASS"
+    }
+  ],
+  "nonBlocking": {
+    "B": "Only becomes mandatory on signed customer-specific obligation; contract proof required.",
+    "C": "Nonblocking unless verified material risk forces formal revision to A; then product score denominator must be versioned.",
+    "D": "Nonblocking with written inapplicability rationale; reopen on statutory/legal applicability."
+  },
+  "scopeFreezeState": "OWNER_DIRECTED_SCORING_PROJECTION_PENDING_GOVERNED_REVIEW"
+}
