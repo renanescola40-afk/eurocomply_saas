@@ -1,6 +1,6 @@
 # Temporary Dependency Risk Decision — GHSA-vfj7-8cjw-p6xm
 
-**Status:** `OWNER_DECISION_REQUIRED`  
+**Status:** `OWNER_DECISION_REQUIRED`
 **Decision:** Not approved by this document. Keep the dependency audit gate blocked unless the owner records a separate, attributable decision.
 
 ## Finding
