@@ -359,10 +359,19 @@
       "acceptedAt": null,
       "blockerEvidenceRefs": [
         "docs/enterprise/G1_P0B_RLS_REPLAY_DIAGNOSTIC_2026-10-22.md",
-        "docs/enterprise/evidence/G1_PROD_PROVIDER_SQL_STATEMENT_SHA256_2026-10-22.json"
+        "docs/enterprise/evidence/G1_PROD_PROVIDER_SQL_STATEMENT_SHA256_2026-10-22.json",
+        "docs/enterprise/evidence/G1_QA_REPLAY_047_POLICY_GAPS_2026-10-22.json"
       ],
-      "blockedReason": "Historical Supabase provider ledger migration 20260812225906 uses strict catalog that requires 12 policies before creation; disposable branch failed after 26/137. Canonical source correction passed rollback-only positive and negative PostgreSQL 17 QA tests, but the full 137/137 reviewed replay manifest remains CANDIDATE_NOT_EXECUTABLE. No schema bootstrap acceptance.",
-      "lastObservedOn": "2026-10-22"
+      "blockedReason": "QA PostgreSQL rollback-only canonical source replay verified through step 47/137 (using explicitly guarded source-only historical overlays for #18,#19,#37,#39); step 48 fails closed on 20/28 required RLS policies missing across 8 tables. This is a source/provenance pre-materialization defect; original production provider ledger and migrations unmodified. Isolated QA has ZERO durably applied migration entries. DAT-01 remains BLOCKED until source-bound, reviewed full 137/137 replay and durable QA postcondition readback.",
+      "lastObservedOn": "2026-10-22",
+      "replayProgress": {
+        "transactionalDryRunThrough": 47,
+        "blockedAt": 48,
+        "totalLedger": 137,
+        "persistedInQA": 0,
+        "missingPoliciesAt48": 20,
+        "missingPolicyTables": 8
+      }
     },
     {
       "id": "DAT-02",
