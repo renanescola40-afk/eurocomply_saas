@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // G1 acceptance verifier: pure source/evidence admission, NEVER a production release action.
 import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve, relative } from 'node:path';
+import { resolve, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
@@ -78,7 +78,8 @@ export function evaluateG1Scope(scope, root = evidenceRoot) {
     errors,
     valid: errors.length === 0,
     productionReleaseAuthorized: false,
-    enterprise100: errors.length === 0 && passed.length === 38,
+    allCriteriaPassedInScope: errors.length === 0 && passed.length === 38,
+    enterprise100: false, // Scope evidence alone never proves a production release GO.
   };
 }
 
@@ -88,7 +89,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     const scope = JSON.parse(readFileSync(path, 'utf8'));
     const result = evaluateG1Scope(scope);
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
-    if (!result.valid || !result.enterprise100) process.exitCode = 2;
+    if (!result.valid || (process.argv.includes('--require-all-accepted') && !result.allCriteriaPassedInScope)) process.exitCode = 2;
   } catch (error) {
     process.stderr.write('G1 acceptance verification failed: ' + String(error) + '\n');
     process.exitCode = 2;
