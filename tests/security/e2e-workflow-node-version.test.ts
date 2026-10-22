@@ -26,7 +26,8 @@ function extractQaPreflight() {
 const qaPreflight = extractQaPreflight();
 const qaDefaults: Record<string, string> = {
   E2E_BASE_URL: 'https://qa.example.invalid',
-  NEXT_PUBLIC_SUPABASE_URL: 'https://isolateddisposableqa.supabase.co',
+  NEXT_PUBLIC_SUPABASE_URL: 'https://zrxrrfbllsxtleyxjpsz.supabase.co',
+  E2E_QA_APPROVED_SUPABASE_REF: 'zrxrrfbllsxtleyxjpsz',
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-fixture',
   SUPABASE_SERVICE_ROLE_KEY: 'test-role-fixture',
   STRIPE_SECRET_KEY: 'sk_test_fake_fixture',
