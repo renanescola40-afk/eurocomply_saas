@@ -18,7 +18,7 @@ const plainGuard = typedGuard
   .replace('let db: URL;', 'let db;');
 const assertIsolatedQaRuntime = runInNewContext(
   plainGuard + '\nassertIsolatedQaRuntime',
-  { URL },
+  { URL, process: { env: { E2E_QA_APPROVED_SUPABASE_REF: 'disposableqasandbox' } } },
 );
 
 const app = 'https://disposable-qa.example.invalid';
@@ -62,6 +62,12 @@ for (const [name, appURL, dbURL] of [
     );
   });
 }
+
+test('payment-first probe refuses mismatched or missing approved QA project refs', () => {
+  assert.throws(() => assertIsolatedQaRuntime(app, 'https://differenttenantqa123.supabase.co'),
+    /payment_first_runtime_requires_approved_qa_database_ref/);
+  assert.match(source, /E2E_QA_APPROVED_SUPABASE_REF/);
+});
 
 test('runtime guard executes before any Playwright browser or provider request', () => {
   const call = source.indexOf('  assertIsolatedQaRuntime(baseURL, supabaseUrl);');
