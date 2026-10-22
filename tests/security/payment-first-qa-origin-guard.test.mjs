@@ -18,11 +18,11 @@ const plainGuard = typedGuard
   .replace('let db: URL;', 'let db;');
 const assertIsolatedQaRuntime = runInNewContext(
   plainGuard + '\nassertIsolatedQaRuntime',
-  { URL, process: { env: { E2E_QA_APPROVED_SUPABASE_REF: 'disposableqasandbox' } } },
+  { URL, process: { env: { E2E_QA_APPROVED_SUPABASE_REF: 'disposableisolatedqa' } } },
 );
 
 const app = 'https://disposable-qa.example.invalid';
-const db = 'https://disposableqasandbox.supabase.co';
+const db = 'https://disposableisolatedqa.supabase.co';
 
 test('disposable HTTPS app and nonproduction Supabase origin pass the guard', () => {
   assert.doesNotThrow(() => assertIsolatedQaRuntime(app, db));
@@ -45,13 +45,13 @@ for (const [name, appURL, dbURL] of [
   ['application fragment', 'https://disposable-qa.example.invalid/#dashboard', db],
   ['production Supabase', app, 'https://tganhbbhfxcpblmgqprg.supabase.co'],
   ['untrusted database domain', app, 'https://disposable.example.invalid'],
-  ['nested database hostname', app, 'https://sub.disposableqasandbox.supabase.co'],
-  ['database credentials', app, 'https://bad@disposableqasandbox.supabase.co'],
-  ['database HTTP', app, 'http://disposableqasandbox.supabase.co'],
-  ['database path', app, 'https://disposableqasandbox.supabase.co/rest/v1'],
-  ['database query', app, 'https://disposableqasandbox.supabase.co/?s=1'],
-  ['database fragment', app, 'https://disposableqasandbox.supabase.co/#secret'],
-  ['database nonstandard port', app, 'https://disposableqasandbox.supabase.co:444'],
+  ['nested database hostname', app, 'https://sub.disposableisolatedqa.supabase.co'],
+  ['database credentials', app, 'https://bad@disposableisolatedqa.supabase.co'],
+  ['database HTTP', app, 'http://disposableisolatedqa.supabase.co'],
+  ['database path', app, 'https://disposableisolatedqa.supabase.co/rest/v1'],
+  ['database query', app, 'https://disposableisolatedqa.supabase.co/?s=1'],
+  ['database fragment', app, 'https://disposableisolatedqa.supabase.co/#secret'],
+  ['database nonstandard port', app, 'https://disposableisolatedqa.supabase.co:444'],
   ['missing app', '', db],
   ['missing database', app, ''],
 ]) {
