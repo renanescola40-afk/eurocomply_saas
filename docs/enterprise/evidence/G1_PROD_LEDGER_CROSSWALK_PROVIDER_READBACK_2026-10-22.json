@@ -1,0 +1,19 @@
+{
+  "schema": "risck-comply.g1-production-migration-ledger-observation.v1",
+  "observedOn": "2026-10-22",
+  "productionProjectRef": "tganhbbhfxcpblmgqprg",
+  "productionMainShaAtObservation": "70d3545f414d063379d481fd238aed563e05edda",
+  "source": "Supabase list_migrations read-only",
+  "sourceCrosswalkRef": "review/v15b-provider-ledger-provenance-20261022",
+  "providerCount": 137,
+  "crosswalkCount": 137,
+  "exactOrderedMatches": 137,
+  "duplicateProviderVersions": 0,
+  "mismatches": [],
+  "decision": "PROVIDER_IDENTITIES_MATCH_CROSSWALK_ONLY_NOT_SQL_REPLAY",
+  "notes": [
+    "Names/versions are provider metadata; provider SQL statement bodies and postconditions are not certified.",
+    "This artifact does not authorize production writes or QA replay.",
+    "The connected provider readback is point-in-time and must be revalidated before release."
+  ]
+}
