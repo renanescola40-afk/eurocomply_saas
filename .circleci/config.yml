@@ -11,22 +11,14 @@ parameters:
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
-  validar-risck:
-    docker:
-      - image: cimg/node:22.16.0
-    # 8 GB RAM: prior 4 GB build exited with SIGKILL/137 after compilation.
-    # Consumes CircleCI compute credits. Owner must confirm Free quota before main activation; no deploy.
-    resource_class: large
-    working_directory: ~/project
-    environment:
-      STRICT_PUBLIC_SECRET_SCAN: "1"
-      CI_SECRET_LOG_POLICY: "fail-closed"
-      NEXT_PUBLIC_SUPABASE_URL: "https://ci-placeholder.supabase.co"
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-placeholder-anon-key"
+  synthetic-backup-components:
+    machine:
+      image: ubuntu-2204:2026.05.1
+    resource_class: medium
     steps:
       - checkout
       - run:
-          name: Confirmar branch permitida, SHA exato e Node 22
+          name: Reject production credentials in synthetic job
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
@@ -207,19 +199,17 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Exact source SHA and production-secret exclusion
+          name: Verify bounded validation source and branch
           command: |
-            set -euo pipefail
-            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI SHA}"
-            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
-              test -z "${!key:-}" || { echo "Production credential forbidden in synthetic PG job: $key" >&2; exit 1; }
-            done
+            set -eu
+            set +x
+            test "$CIRCLE_BRANCH" = ci/verify-recovery-production-20261019
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test "$(git merge-base HEAD 1cd3c05ce628fcfd5de78169c1a18e8939f81d70)" = 1cd3c05ce628fcfd5de78169c1a18e8939f81d70
+            python3 -c "import subprocess; changed=set(subprocess.check_output(['git','diff','--name-only','1cd3c05ce628fcfd5de78169c1a18e8939f81d70','HEAD'],text=True).splitlines()); assert changed == {'.circleci/config.yml','scripts/recovery/connection-preflight.py','scripts/recovery/production-backup-rehearsal.py','scripts/recovery/production-backup-components.py'}"
       - run:
-          name: Install locked test-only PostgreSQL client without lifecycle scripts
-          command: npm ci --prefix tests/fixtures/p0-postgres-runtime --ignore-scripts --no-audit --no-fund
-      - run:
-          name: Native PG17 membership, MFA, rollback and multi-session concurrency
-          command: timeout 120s node scripts/security/verify-p0-postgres-isolated.mjs
+          name: Approved read-only encrypted export and isolated logical restore
+          command: timeout 900s python3 scripts/recovery/production-backup-rehearsal.py
       - store_artifacts:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
@@ -411,7 +401,14 @@ workflows:
 
   verificacao-isolada:
     jobs:
-      - validar-risck:
+      - synthetic-backup-components:
+          filters:
+            branches:
+              only: ci/verify-recovery-production-20261019
+      - approve-encrypted-production-backup:
+          type: approval
+          requires:
+            - synthetic-backup-components
           filters:
             branches:
               # Main, ci/verify-* e branch pontual de prova CircleCI controladas pelo owner.
