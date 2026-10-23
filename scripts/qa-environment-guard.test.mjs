@@ -21,3 +21,7 @@ test('real outbound email API fails',()=>assert.ok(validateQaEnvironment({...bas
 test('real SMTP fails',()=>assert.ok(validateQaEnvironment({...base,SMTP_HOST:'smtp.example.com'}).errors.length));
 test('production app origin fails',()=>assert.ok(validateQaEnvironment({...base,NEXT_PUBLIC_APP_URL:'https://www.risckcomply.com'}).errors.length));
 test('production build unchanged',()=>assert.equal(validateQaEnvironment({VERCEL_ENV:'production'}).checked,false));
+
+test('inherited privileged service-role key fails even when opaque',()=>assert.ok(validateQaEnvironment({...base,SUPABASE_SERVICE_ROLE_KEY:'opaque_inherited_credential'}).errors.length));
+test('inherited admin key fails',()=>assert.ok(validateQaEnvironment({...base,SUPABASE_ADMIN_KEY:'opaque_inherited_credential'}).errors.length));
+test('restricted Stripe key fails',()=>assert.ok(validateQaEnvironment({...base,STRIPE_RESTRICTED_KEY:'rk_live_synthetic'}).errors.length));
