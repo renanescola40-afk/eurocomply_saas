@@ -5,6 +5,9 @@ on:
       - audit/g5-02-p0f-readonly-drift-20261023
     paths:
       - .github/workflows/g5-02-buildkite-replay.yml
+      - scripts/diagnostics/g5-02-*.py
+      - scripts/diagnostics/g5-02-*.json
+      - supabase/migrations/**
 jobs:
   isolated-replay:
     runs-on: ubuntu-24.04
@@ -56,6 +59,9 @@ jobs:
           psql -X -Atqc "select current_setting('server_version')"
           psql -X -Atqc "select current_database()"
           test "$(psql -X -Atqc "select current_database()")" = "risck_synthetic"
+      - name: Discover historical SQL sources (offline)
+        shell: bash
+        run: python3 scripts/diagnostics/g5-02-source-discovery.py
       - name: Replay canonical migration source (fail closed)
         shell: bash
         run: python3 scripts/diagnostics/g5-02-canonical-replay.py
