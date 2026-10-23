@@ -1,14 +1,33 @@
 """Synthetic-only Supabase PG17 target compatibility probe. No production access."""
-import json, os, subprocess, tempfile, time, hashlib, ast, re, selectors
+import json, os, subprocess, tempfile, time, hashlib, ast, re, selectors, sys
 from pathlib import Path
 IMAGE = "supabase/postgres:17.6.1.127"
 REQUIRED = {"plpgsql": "1.0", "pg_stat_statements": "1.11", "uuid-ossp": "1.1",
             "pgcrypto": "1.3", "supabase_vault": "0.3.1", "wrappers": "0.6.1"}
+# Verified from production in a read-only query on 2026-10-21. This exact
+# synthetic fixture is deliberately invalidated by any source-owner drift.
+LIVE_EXTENSION_CONTRACT = (
+    ("pg_stat_statements", "1.11", "extensions", "postgres"),
+    ("pgcrypto", "1.3", "extensions", "postgres"),
+    ("plpgsql", "1.0", "pg_catalog", "supabase_admin"),
+    ("supabase_vault", "0.3.1", "vault", "supabase_admin"),
+    ("uuid-ossp", "1.1", "extensions", "postgres"),
+    ("wrappers", "0.6.1", "extensions", "supabase_admin"),
+)
+def matches_live_extension_contract(profile):
+    if not isinstance(profile,list):
+        return False
+    try:
+        normalized=[tuple(row) for row in profile]
+        return len(normalized)==len(LIVE_EXTENSION_CONTRACT) and sorted(normalized)==sorted(LIVE_EXTENSION_CONTRACT)
+    except (TypeError,ValueError):
+        return False
 ENV = {k: os.environ[k] for k in ("PATH", "HOME") if k in os.environ}
 PREFIX = "risck-synthetic-target-" + str(os.getpid())
 containers = []
 stage = "pull"
 snapshot_process = None
+privilege_probe = None
 OWNER_RECIPIENT = "age1d8zgu9c38njefxj528kfucns2e2pxu0zqyzcjrjj475l9652afxs8xfcqy"
 def run(args, **kw):
     result = subprocess.run(args, env=ENV, capture_output=True, timeout=kw.pop("timeout", 90), **kw)
@@ -17,8 +36,8 @@ def run(args, **kw):
             evidence["synthetic_setup_error"] = result.stderr.decode(errors="replace")[:1200] if isinstance(result.stderr,bytes) else result.stderr[:1200]
         raise RuntimeError("NATIVE_STEP_FAILED")
     return result.stdout
-def sql(container, query, database="postgres"):
-    return run(["docker","exec",container,"psql","-X","-qAt","-U","supabase_admin","-d",database,"-v","ON_ERROR_STOP=1","-c",query],text=True)
+def sql(container, query, database="postgres", user="supabase_admin"):
+    return run(["docker","exec",container,"psql","-X","-qAt","-U",user,"-d",database,"-v","ON_ERROR_STOP=1","-c",query],text=True)
 def start(suffix):
     name=PREFIX+suffix
     run(["docker","run","-d","--name",name,"--network","none",
@@ -33,16 +52,80 @@ def start(suffix):
 evidence={"scope":"SYNTHETIC_ONLY","image":IMAGE,"production_credentials_used":False,
           "customer_rows_exported":False,"production_writes":False,"production_recovery":"NOT_TESTED"}
 try:
-    run(["docker","pull",IMAGE],text=True,timeout=300)
     stage="load_production_components"
     tree=ast.parse(Path("scripts/recovery/production-backup-rehearsal.py").read_text())
-    scope={"json":json,"re":re}
-    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners")]
+    scope={"json":json,"re":re,"subprocess":subprocess,"ENV":ENV,"REPORT":{},"ACTIVE":[]}
+    selected=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in ("qident","canonical","fingerprints","catalog_difference_summary","align_existing_schema_owners","failure_diagnostic","run","piped","creator_privileges","schema_restore_lists","create_owned_extension","verify_isolated_extension_owner_profile","restore_predata_with_owned_schemas","restore_isolated_acl_equivalence")]
     for n in tree.body:
         if isinstance(n,ast.Assign):
             for target in n.targets:
                 if isinstance(target,ast.Name) and target.id in ("TABLES_SQL","CATALOG_SQL"):scope[target.id]=ast.literal_eval(n.value)
     exec(compile(ast.Module(body=selected,type_ignores=[]),"reviewed-production-components","exec"),scope)
+    # No database, Docker or network access: verify diagnostics from both failures.
+    stage="dual_pipeline_failure_diagnostic"
+    try:
+        scope["piped"](
+            [sys.executable,"-c","import sys; sys.stderr.write('permission denied'); sys.exit(9)"],
+            [sys.executable,"-c","import sys; sys.stdin.read(); sys.stderr.write('input file is too short'); sys.exit(10)"],
+            timeout=20)
+    except RuntimeError as error:
+        if str(error)!="STREAM_PIPE_FAILED":raise
+    else:
+        raise RuntimeError("EXPECTED_PIPELINE_FAILURE_NOT_REJECTED")
+    both=scope["REPORT"].get("pipeline_failure_diagnostics",{})
+    if (set(both)!={"encrypted_producer","restore_consumer"}
+            or both["encrypted_producer"]["category"]!="permission_denied"
+            or both["restore_consumer"]["category"]!="archive_truncated"
+            or scope["REPORT"].get("failure_diagnostic")!=both["encrypted_producer"]):
+        raise RuntimeError("DUAL_PIPELINE_DIAGNOSTIC_NOT_PRESERVED")
+    evidence["both_failure_diagnostics_sanitized"]=True
+    scope["REPORT"].clear()
+    # Zero-provider, zero-Docker negative tests for the new fail-closed gate.
+    stage="extension_owner_profile_unit"
+    profile={"extensions":[["pgcrypto","1.3","extensions","postgres"]]}
+    variations=[
+        ([["pgcrypto","1.3","extensions","postgres"]],True),
+        ([["pgcrypto","1.3","extensions","supabase_admin"]],False),
+        ([["pgcrypto","9.9","extensions","postgres"]],False),
+        ([["pgcrypto","1.3","public","postgres"]],False),
+        ([],False)
+    ]
+    original_run=scope["run"]
+    try:
+        for rows,should_pass in variations:
+            scope["run"]=lambda *_args, _rows=rows, **_kwargs: json.dumps(_rows)
+            try:
+                accepted=scope["verify_isolated_extension_owner_profile"](
+                    "risck-synthetic-target-unit","recovery_destination",profile)
+            except RuntimeError as error:
+                if should_pass or str(error)!="ISOLATED_EXTENSION_OWNER_PROFILE_MISMATCH":
+                    raise
+            else:
+                if not should_pass or not accepted:
+                    raise RuntimeError("EXTENSION_OWNER_PREFLIGHT_FALSE_ACCEPT")
+    finally:
+        scope["run"]=original_run
+        scope["REPORT"].clear()
+    evidence["extension_owner_profile_unit_cases"]=len(variations)
+    stage="live_extension_contract_unit"
+    valid=[list(item) for item in LIVE_EXTENSION_CONTRACT]
+    deviations=[
+        valid,
+        valid[:-1],
+        valid + [valid[0]],
+        [list(x) if i else ["pg_stat_statements","1.11","extensions","supabase_admin"] for i,x in enumerate(valid)],
+        [list(x) if i else ["pg_stat_statements","9.9","extensions","postgres"] for i,x in enumerate(valid)],
+        [list(x) if i else ["pg_stat_statements","1.11","public","postgres"] for i,x in enumerate(valid)]
+    ]
+    for i,fixture in enumerate(deviations):
+        if matches_live_extension_contract(fixture)!=(i==0):
+            raise RuntimeError("LIVE_EXTENSION_CONTRACT_UNIT_FAILED")
+    evidence["live_extension_contract_unit_cases"]=len(deviations)
+    if "--unit-only" in sys.argv:
+        evidence["status"]="PASS_OFFLINE_UNIT_ONLY"
+        raise SystemExit(0)
+    stage="pull"
+    run(["docker","pull",IMAGE],text=True,timeout=300)
     stage="source_start"
     source=start("-source")
     stage="synthetic_role_bootstrap"
@@ -55,14 +138,41 @@ try:
         raise RuntimeError("REQUIRED_EXTENSION_VERSION_UNAVAILABLE")
     stage="synthetic_setup"
     sql(source,"CREATE DATABASE recovery_source")
+    sql(source,"GRANT CREATE ON DATABASE recovery_source TO postgres")
     sql(source,'''CREATE SCHEMA IF NOT EXISTS extensions; CREATE SCHEMA IF NOT EXISTS vault; CREATE SCHEMA IF NOT EXISTS auth;
 DROP EXTENSION IF EXISTS pg_stat_statements, "uuid-ossp", pgcrypto CASCADE;
-SET ROLE postgres;
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA extensions VERSION '1.11';
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions VERSION '1.1';
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions VERSION '1.3';
-RESET ROLE;
-CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
+GRANT USAGE,CREATE ON SCHEMA extensions TO postgres;''',"recovery_source")
+    stage="transactional_bootstrap_isolation"
+    privilege_probe=subprocess.Popen(["docker","exec","-i",source,"psql","-X","-qAt","-U","supabase_admin","-d","recovery_source","-v","ON_ERROR_STOP=1"],env=ENV,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    privilege_probe.stdin.write("BEGIN; ALTER ROLE postgres SUPERUSER; SELECT 'bootstrap_ready';\n");privilege_probe.stdin.flush()
+    with selectors.DefaultSelector() as selector:
+        selector.register(privilege_probe.stdout,selectors.EVENT_READ)
+        if not selector.select(timeout=20) or privilege_probe.stdout.readline().strip()!="bootstrap_ready":
+            raise RuntimeError("BOOTSTRAP_ISOLATION_PROBE_FAILED")
+    evidence["uncommitted_bootstrap_invisible_to_other_session"] = json.loads(sql(source,"SELECT json_build_object('not_superuser',NOT rolsuper) FROM pg_roles WHERE rolname='postgres'","recovery_source"))["not_superuser"]
+    privilege_probe.stdin.write("ROLLBACK;\n");privilege_probe.stdin.close();privilege_probe.wait(timeout=20)
+    if privilege_probe.returncode:raise RuntimeError("BOOTSTRAP_PROBE_ROLLBACK_FAILED")
+    privilege_probe=None
+    evidence["failed_bootstrap_role_rollback_verified"] = json.loads(sql(source,"SELECT json_build_object('not_superuser',NOT rolsuper) FROM pg_roles WHERE rolname='postgres'","recovery_source"))["not_superuser"]
+    if not all(evidence[k] for k in ("uncommitted_bootstrap_invisible_to_other_session","failed_bootstrap_role_rollback_verified")):
+        raise RuntimeError("BOOTSTRAP_ROLE_VISIBILITY_OR_ROLLBACK_FAILED")
+    stage="synthetic_setup"
+    for extension in ("pg_stat_statements","uuid-ossp","pgcrypto"):
+        scope["create_owned_extension"](source,"recovery_source",extension,REQUIRED[extension],"extensions","postgres")
+    stage="extension_bootstrap_failure_rollback"
+    try:
+        scope["create_owned_extension"](source,"recovery_source","risck_synthetic_missing_extension","1.0","extensions","postgres")
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED" or scope["REPORT"].get("failure_diagnostic",{}).get("category")!="extension_unavailable":
+            raise
+    else:
+        raise RuntimeError("MISSING_EXTENSION_UNEXPECTEDLY_CREATED")
+    evidence["failed_extension_delegation_and_role_restored"]=json.loads(sql(source,"SELECT json_build_object('restored',current_setting('supautils.superuser')='supabase_admin' AND (SELECT NOT rolsuper FROM pg_roles WHERE rolname='postgres'))","recovery_source"))["restored"]
+    if not evidence["failed_extension_delegation_and_role_restored"]:
+        raise RuntimeError("FAILED_EXTENSION_BOOTSTRAP_STATE_LEAK")
+    scope["REPORT"].clear()
+    stage="synthetic_setup"
+    sql(source,'''CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault VERSION '0.3.1';
 CREATE EXTENSION IF NOT EXISTS wrappers WITH SCHEMA extensions VERSION '0.6.1';
 ALTER SCHEMA public OWNER TO postgres;
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
@@ -80,7 +190,21 @@ GRANT SELECT ON public.synthetic_items TO anon;
 CREATE FUNCTION public.synthetic_security() RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $$SELECT true$$;
 ALTER FUNCTION public.synthetic_security() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.synthetic_security() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"recovery_source")
+GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;
+CREATE SCHEMA synthetic_database_owned AUTHORIZATION pg_database_owner;
+CREATE TABLE synthetic_database_owned.synthetic_probe(id int PRIMARY KEY);
+INSERT INTO synthetic_database_owned.synthetic_probe VALUES(1);
+GRANT USAGE,CREATE ON SCHEMA auth TO supabase_auth_admin;
+SET SESSION AUTHORIZATION supabase_auth_admin;
+CREATE TYPE auth.synthetic_member_state AS ENUM ('active','inactive');
+RESET SESSION AUTHORIZATION;
+GRANT CREATE ON SCHEMA public TO authenticated;
+SET SESSION AUTHORIZATION authenticated;
+CREATE FUNCTION public.synthetic_owned_no_create() RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $$SELECT 7$$;
+RESET SESSION AUTHORIZATION;
+REVOKE CREATE ON SCHEMA public FROM authenticated;
+REVOKE ALL ON FUNCTION public.synthetic_owned_no_create() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.synthetic_owned_no_create() TO anon;''',"recovery_source")
     stage="export_consistent_synthetic_snapshot"
     snapshot_process=subprocess.Popen(["docker","exec","-i",source,"psql","-X","-qAt","-U","supabase_admin","-d","recovery_source","-v","ON_ERROR_STOP=1"],env=ENV,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     snapshot_process.stdin.write("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SELECT pg_export_snapshot();\n");snapshot_process.stdin.flush()
@@ -93,6 +217,13 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         return json.loads(sql(source,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET TRANSACTION SNAPSHOT '"+snapshot+"'; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;","recovery_source"))
     before_rows=scope["fingerprints"](src_query)
     before_catalog=src_query(scope["CATALOG_SQL"])
+    stage="synthetic_source_extension_contract"
+    evidence["synthetic_source_exact_extension_contract"]=matches_live_extension_contract(before_catalog["extensions"])
+    if not evidence["synthetic_source_exact_extension_contract"]:
+        # Public extension metadata from synthetic data only; never tenant data.
+        evidence["synthetic_extension_contract_observed"]=before_catalog["extensions"]
+        raise RuntimeError("SYNTHETIC_LIVE_EXTENSION_CONTRACT_MISMATCH")
+    evidence["source_postgres_extension_owners_verified"]=True
     sql(source,"INSERT INTO public.synthetic_items VALUES(2,'00000000-0000-0000-0000-000000000001')","recovery_source")
     stage="destination_start"
     dest=start("-dest")
@@ -100,6 +231,50 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         sql(dest,"DO $r$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='"+role+"') THEN CREATE ROLE "+role+" NOLOGIN; END IF; END $r$;")
     sql(dest,"CREATE DATABASE recovery_destination WITH TEMPLATE template0")
     sql(dest,"GRANT CREATE ON DATABASE recovery_destination TO postgres,anon,authenticated")
+    stage="negative_database_owner_bootstrap"
+    try:
+        scope["run"](["docker","exec",dest,"psql","-X","-qAt","-U","supabase_admin",
+                      "-d","recovery_destination","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose",
+                      "-c","SET SESSION AUTHORIZATION pg_database_owner; CREATE SCHEMA synthetic_unprepared;"])
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED":raise
+    else:
+        raise RuntimeError("UNPREPARED_DATABASE_OWNER_UNEXPECTEDLY_SUCCEEDED")
+    failure=scope["REPORT"].get("failure_diagnostic",{})
+    if failure.get("sqlstate")!="42501" or failure.get("object_kind")!="database":
+        raise RuntimeError("DATABASE_OWNER_REGRESSION_NOT_REPRODUCED")
+    evidence["unprepared_database_owner_create_rejected"]=True
+    stage="negative_schema_acl_order"
+    try:
+        scope["run"](["docker","exec",dest,"psql","-X","-qAt","-U","supabase_admin",
+                      "-d","recovery_destination","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose",
+                      "-c","BEGIN; CREATE SCHEMA synthetic_acl_probe; SET SESSION AUTHORIZATION supabase_auth_admin; CREATE TYPE synthetic_acl_probe.synthetic_state AS ENUM ('active'); ROLLBACK;"])
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED":raise
+    else:
+        raise RuntimeError("MISSING_SCHEMA_ACL_UNEXPECTEDLY_SUCCEEDED")
+    failure=scope["REPORT"].get("failure_diagnostic",{})
+    if failure.get("sqlstate")!="42501" or failure.get("object_kind")!="schema":
+        raise RuntimeError("SCHEMA_ACL_ORDER_REGRESSION_NOT_REPRODUCED")
+    evidence["unprepared_schema_type_create_rejected"]=True
+    sql(dest,"BEGIN; CREATE SCHEMA synthetic_acl_probe; GRANT USAGE,CREATE ON SCHEMA synthetic_acl_probe TO supabase_auth_admin; SET SESSION AUTHORIZATION supabase_auth_admin; CREATE TYPE synthetic_acl_probe.synthetic_state AS ENUM ('active'); RESET SESSION AUTHORIZATION; ROLLBACK;","recovery_destination")
+    evidence["original_schema_acl_allows_type_creation"]=True
+    stage="negative_historical_function_owner"
+    try:
+        scope["run"](["docker","exec",dest,"psql","-X","-qAt","-U","supabase_admin",
+                      "-d","recovery_destination","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose",
+                      "-c","SET SESSION AUTHORIZATION authenticated; CREATE FUNCTION public.synthetic_unprepared_function() RETURNS integer LANGUAGE sql AS 'SELECT 7';"])
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED":raise
+    else:
+        raise RuntimeError("HISTORICAL_FUNCTION_OWNER_UNEXPECTEDLY_SUCCEEDED")
+    failure=scope["REPORT"].get("failure_diagnostic",{})
+    if failure.get("sqlstate")!="42501" or failure.get("object_kind")!="schema":
+        raise RuntimeError("HISTORICAL_FUNCTION_OWNER_REGRESSION_NOT_REPRODUCED")
+    evidence["session_owned_function_without_create_rejected"]=True
+    # Keep the failing owner's database CREATE absent. The alternative must
+    # restore its schema AND ownership without expanding that privilege.
+    evidence["database_owner_create_not_granted"] = True
     scope["align_existing_schema_owners"](lambda query:sql(dest,query,"recovery_destination"),before_catalog)
     stage="synthetic_dump_restore"
     with tempfile.TemporaryDirectory(prefix="risck-encrypted-synthetic-") as tmp:
@@ -158,10 +333,13 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
         evidence["tampered_ciphertext_rejected"] = tampered.returncode != 0
         if not evidence["wrong_key_rejected"] or not evidence["tampered_ciphertext_rejected"]:raise RuntimeError("NEGATIVE_DECRYPTION_FAILED")
         stage = "stream_decrypt_restore"
-        for section in ("pre-data","data","post-data"):
+        stage="synthetic_restore_pre-data"
+        scope["REPORT"].clear()
+        decrypt=common+["age","-d","-i","/work/identity","/work/backup.dump.age"]
+        evidence["schemas_restored_with_original_owners"] = scope["restore_predata_with_owned_schemas"](decrypt,dest,work,before_catalog)
+        for section in ("data","post-data"):
             stage="synthetic_restore_"+section
             restore=["docker","exec","-i",dest,"pg_restore","-U","supabase_admin","-d","recovery_destination","--exit-on-error","--section="+section]
-            if section=="pre-data":restore.append("--use-set-session-authorization")
             decryptor = subprocess.Popen(common+["age","-d","-i","/work/identity","/work/backup.dump.age"],env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             restorer = subprocess.Popen(restore,env=ENV,stdin=decryptor.stdout,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
             try:
@@ -177,11 +355,23 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
                 raise RuntimeError("DECRYPT_RESTORE_PIPE_FAILED")
         evidence["plaintext_dump_file_written"] = False
     evidence["synthetic_ciphertext_and_keys_removed"] = not work.exists()
+    sql(dest,"REVOKE CREATE ON DATABASE recovery_destination FROM pg_database_owner")
+    revoked=json.loads(sql(dest,"SELECT json_build_object('revoked',NOT has_database_privilege('pg_database_owner',current_database(),'CREATE'))","recovery_destination"))["revoked"]
+    evidence["temporary_database_owner_create_revoked"]=revoked
+    if not revoked:raise RuntimeError("TEMPORARY_RESTORE_PRIVILEGE_NOT_REVOKED")
     stage="verify_production_integrity_components"
     def dst_query(query):
         return json.loads(sql(dest,"BEGIN READ ONLY; SET LOCAL timezone='UTC'; SET LOCAL search_path=pg_catalog; "+query+"; COMMIT;","recovery_destination"))
     after_rows=scope["fingerprints"](dst_query)
     after_catalog=dst_query(scope["CATALOG_SQL"])
+    # Reproduce omitted/extra ACL drift using only synthetic fixture objects.
+    sql(dest,"REVOKE USAGE ON SCHEMA public FROM anon; REVOKE SELECT ON TABLE public.synthetic_items FROM anon;","recovery_destination")
+    acl_drift=dst_query(scope["CATALOG_SQL"])
+    evidence["isolated_acl_objects_restored"]=scope["restore_isolated_acl_equivalence"](dest,before_catalog,acl_drift)
+    if evidence["isolated_acl_objects_restored"]!=2:
+        raise RuntimeError("SYNTHETIC_ACL_DRIFT_NOT_REPRODUCED")
+    after_catalog=dst_query(scope["CATALOG_SQL"])
+    evidence["acl_comparison"]="canonical_acl_with_postgresql_defaults_and_original_grantors"
     evidence["snapshot_row_integrity_matches"]=before_rows==after_rows
     evidence["catalog_owner_acl_rls_matches"]=before_catalog==after_catalog
     evidence["catalog_sections_match"]={k:before_catalog[k]==after_catalog.get(k) for k in before_catalog}
@@ -197,21 +387,56 @@ GRANT EXECUTE ON FUNCTION public.synthetic_security() TO authenticated;''',"reco
     evidence["security_catalog_changes_rejected"]=negative_checks
     if not all(negative_checks.values()):raise RuntimeError("SECURITY_CATALOG_NEGATIVE_CHECK_FAILED")
 
+    stage="negative_failure_diagnostic"
+    try:
+        scope["run"](["docker","exec",dest,"psql","-X","-qAt","-U","supabase_admin",
+                      "-d","recovery_destination","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose",
+                      "-c","SET ROLE anon; CREATE TABLE public.synthetic_forbidden_diagnostic(id int);"])
+    except RuntimeError as error:
+        if str(error)!="NATIVE_STEP_FAILED":raise
+    else:
+        raise RuntimeError("EXPECTED_PERMISSION_FAILURE_NOT_REJECTED")
+    diagnostic=scope["REPORT"].get("failure_diagnostic",{})
+    if diagnostic.get("category")!="permission_denied" or diagnostic.get("sqlstate")!="42501":
+        raise RuntimeError("NATIVE_SQLSTATE_DIAGNOSTIC_NOT_CAPTURED")
+    if set(diagnostic)!={"category","component","returncode","sqlstate","object_kind"}:
+        raise RuntimeError("UNEXPECTED_DIAGNOSTIC_FIELDS")
+    if "synthetic_forbidden_diagnostic" in json.dumps(diagnostic):
+        raise RuntimeError("DIAGNOSTIC_EXPOSED_OBJECT_NAME")
+    if diagnostic["object_kind"]!="schema":raise RuntimeError("NATIVE_PERMISSION_SCOPE_NOT_CAPTURED")
+    evidence["native_permission_failure_sanitized"]=True
+    evidence["native_failure_sqlstate"]=diagnostic["sqlstate"]
+
     stage="verify_restore"
     result=json.loads(sql(dest,'''SELECT json_build_object(
 'row_counts',(SELECT count(*)=1 FROM public.synthetic_items) AND (SELECT count(*)=1 FROM auth.synthetic_users),
 'cross_schema_fk',(SELECT count(*)=1 FROM pg_constraint WHERE conrelid='public.synthetic_items'::regclass AND contype='f'),
 'force_rls',(SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid='public.synthetic_items'::regclass),
 'policy',(SELECT count(*)=1 FROM pg_policy WHERE polrelid='public.synthetic_items'::regclass),
+'enum_owner',(SELECT pg_get_userbyid(t.typowner)='supabase_auth_admin' FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='auth' AND t.typname='synthetic_member_state'),
+'enum_labels',(SELECT array_agg(e.enumlabel::text ORDER BY e.enumsortorder)=ARRAY['active','inactive'] FROM pg_enum e WHERE e.enumtypid='auth.synthetic_member_state'::regtype),
+'historical_function_owner',(SELECT pg_get_userbyid(proowner)='authenticated' AND prosecdef AND proconfig=ARRAY['search_path=pg_catalog'] FROM pg_proc WHERE oid='public.synthetic_owned_no_create()'::regprocedure),
+'historical_owner_not_escalated',NOT has_schema_privilege('authenticated','public','CREATE'),
+'extension_owner_not_escalated',(SELECT NOT rolsuper FROM pg_roles WHERE rolname='postgres'),
 'extension_versions',(SELECT count(*)=6 FROM pg_extension WHERE (extname,extversion) IN (('plpgsql','1.0'),('pg_stat_statements','1.11'),('uuid-ossp','1.1'),('pgcrypto','1.3'),('supabase_vault','0.3.1'),('wrappers','0.6.1'))))''',"recovery_destination"))
     evidence["restored_assertions"]=result
     if not all(result.values()):raise RuntimeError("RESTORE_ASSERTION_FAILED")
     evidence["status"]="PASS_PRODUCTION_BACKUP_COMPONENTS_SYNTHETIC_ONLY"
 except Exception as error:
+    if "scope" in locals() and scope["REPORT"].get("failure_diagnostic"):
+        evidence["synthetic_restore_diagnostic"] = scope["REPORT"]["failure_diagnostic"]
     evidence["failure_type"]=type(error).__name__
+    if isinstance(error,RuntimeError) and re.fullmatch(r"[A-Z][A-Z0-9_]{1,95}",str(error)):
+        evidence["failure_code"]=str(error)
+    if "scope" in locals() and "isolated_extension_delegation_profile" in scope["REPORT"]:
+        evidence["isolated_extension_delegation_profile"]=scope["REPORT"]["isolated_extension_delegation_profile"]
+    if "scope" in locals() and "isolated_extension_reload_settings" in scope["REPORT"]:
+        evidence["isolated_extension_reload_settings"]=scope["REPORT"]["isolated_extension_reload_settings"]
     evidence["status"]="FAILED_SYNTHETIC_TARGET_ONLY"
     evidence["failure_stage"]=stage
 finally:
+    if privilege_probe is not None and privilege_probe.poll() is None:
+        privilege_probe.kill();privilege_probe.communicate()
     if snapshot_process is not None and snapshot_process.poll() is None:
         snapshot_process.kill();snapshot_process.communicate()
     cleanup=True
@@ -224,3 +449,5 @@ finally:
     Path("artifacts/supabase-target-probe.json").write_text(json.dumps(evidence,indent=2)+"\n")
     print(json.dumps(evidence))
 raise SystemExit(0 if evidence["status"]=="PASS_PRODUCTION_BACKUP_COMPONENTS_SYNTHETIC_ONLY" else 1)
+
+
