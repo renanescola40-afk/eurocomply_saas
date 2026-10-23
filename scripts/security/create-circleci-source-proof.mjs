@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Source-only CircleCI proof. This does not authorize production deployment.
- * Only the last successful step of validar-risck is allowed to emit it.
+ * Only the last successful step of a source-only allowlisted CircleCI job may emit it.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -13,15 +13,25 @@ const FILE = fileURLToPath(import.meta.url);
 
 export function makeSourceOnlyProof({ env, gitSha, timestamp }) {
   if (env.CIRCLECI !== 'true') throw new Error('circleci_runner_required');
-  if (env.CIRCLE_JOB !== 'validar-risck') throw new Error('validar_risck_job_required');
+  const legacyJob = env.CIRCLE_JOB === 'validar-risck';
+  const sourceOnlyJob = env.CIRCLE_JOB === 'synthetic-backup-components';
+  if (!legacyJob && !sourceOnlyJob) throw new Error('approved_source_job_required');
   if (!FULL_SHA.test(gitSha || '') || !FULL_SHA.test(env.CIRCLE_SHA1 || '')) {
     throw new Error('exact_sha_required');
   }
   if (gitSha !== env.CIRCLE_SHA1) throw new Error('checkout_sha_mismatch');
   const branch = env.CIRCLE_BRANCH || '';
-  if (!(branch === 'main' || /^ci\/verify-[A-Za-z0-9._/-]+$/.test(branch) || branch === 'fix/p0-forward-manifest-v44-20261019' || branch === 'fix/circleci-source-evidence-v17-20261021')) {
-    throw new Error('disallowed_circleci_branch');
-  }
+  // Keep the old verifier contract for historical artifacts, but bind the
+  // current job to the exact branches listed in .circleci/config.yml.
+  const permitted = sourceOnlyJob
+    ? (branch === 'main'
+      || branch === 'ci/verify-recovery-production-20261019'
+      || branch === 'qa/fix-e2e-node22-20261021')
+    : (branch === 'main'
+      || /^ci\/verify-[A-Za-z0-9._/-]+$/.test(branch)
+      || branch === 'fix/p0-forward-manifest-v44-20261019'
+      || branch === 'fix/circleci-source-evidence-v17-20261021');
+  if (!permitted) throw new Error('disallowed_circleci_branch');
   for (const name of [
     'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ACCESS_TOKEN', 'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET', 'VERCEL_TOKEN', 'DATABASE_URL', 'DIRECT_URL',
@@ -38,7 +48,7 @@ export function makeSourceOnlyProof({ env, gitSha, timestamp }) {
     sourceCommitSha: gitSha,
     circleci: {
       provider: 'CircleCI',
-      job: 'validar-risck',
+      job: env.CIRCLE_JOB,
       branch,
       buildNumber: buildNum,
     },

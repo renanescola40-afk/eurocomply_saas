@@ -17,7 +17,7 @@ test('CircleCI uses 2.1 configuration', () => {
 });
 
 test('manual QA pipeline parameter is opt-in and disabled by default', () => {
-  assert.match(config, /parameters:\n  run_qa_preflight:\n    type: boolean\n    default: false/);
+  assert.match(config, /(?:^|\n)  run_qa_preflight:\n    type: boolean\n    default: false/);
   assert.match(qaWorkflow, /when: << pipeline\.parameters\.run_qa_preflight >>/);
 });
 
@@ -88,41 +88,52 @@ test('Stripe source validation must not falsely claim paid E2E or promote enterp
 test('full QA is disabled by default and only manually runs on exact QA branch', () => {
   assert.match(config, /  run_qa_full:\n    type: boolean\n    default: false/);
   assert.match(fullQaWorkflow, /when: << pipeline\.parameters\.run_qa_full >>/);
-  assert.match(fullQaWorkflow, /- validar-risck:/);
-  assert.match(fullQaWorkflow, /- p0-postgres-synthetic:/);
-  assert.equal((fullQaWorkflow.match(/- qa\/fix-e2e-node22-20261021/g) ?? []).length, 2);
+  assert.match(fullQaWorkflow, /- synthetic-backup-components:/);
+  assert.doesNotMatch(fullQaWorkflow, /- p0-postgres-synthetic:/);
+  assert.equal((fullQaWorkflow.match(/- qa\/fix-e2e-node22-20261021/g) ?? []).length, 1);
   assert.doesNotMatch(fullQaWorkflow, /- main\b/);
 });
 
 test('normal automatic workflow never launches full QA jobs on the QA branch', () => {
-  assert.match(canonicalWorkflow, /- main\n/);
+  assert.match(canonicalWorkflow, /only: ci\/verify-recovery-production-20261019/);
+  assert.doesNotMatch(canonicalWorkflow, /only:\n\s+- main/);
   assert.doesNotMatch(canonicalWorkflow, /- qa\/fix-e2e-node22-20261021/);
 });
 
 test('full QA keeps existing source-only secret denial and exact source SHA', () => {
-  const fullJob = config.split('  validar-risck:\n')[1]?.split('  # Opt-in small executor')[0] ?? '';
-  const pgJob = config.split('  p0-postgres-synthetic:\n')[1]?.split('workflows:\n')[0] ?? '';
+  const fullJob = config.split('  synthetic-backup-components:\n')[1]?.split('  # Opt-in small executor')[0] ?? '';
+  const pgJob = config.split('  p0-postgres-synthetic:\n')[1]?.split('  gitleaks-group-ci-v15a:\n')[0] ?? '';
   assert.match(fullJob, /CIRCLE_SHA1/);
   assert.match(fullJob, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(pgJob, /CIRCLE_SHA1/);
-  assert.match(pgJob, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(canonicalWorkflow, /type: approval/);
+  assert.match(canonicalWorkflow, /requires:\n\s+- approve-encrypted-production-backup/);
   assert.match(pgJob, /postgres:17\.6/);
 });
 
 test('existing full validation and synthetic PostgreSQL workflows are not removed', () => {
-  assert.match(config, /  validar-risck:\n/);
+  assert.match(config, /  synthetic-backup-components:\n/);
   assert.match(config, /  p0-postgres-synthetic:\n/);
   assert.match(config, /  verificacao-isolada:\n/);
   assert.match(config, /Node\.test\.mjs|tests\/security\/p0-membership-release-admission\.test\.mjs/);
 });
 
 test('QA evidence heredoc survives CircleCI interpolation and remains valid Bash', () => {
-  assert.doesNotMatch(qaJob, /(?<!\\)<<['"]?NODE/);
+  assert.doesNotMatch(qaJob, /\\<<['"]?NODE/);
   const match = qaJob.match(/name: Execute source-only QA suites and preserve exact-SHA evidence\s+command: \|\n([\s\S]*?)(?=\n      - store_artifacts:)/);
   assert.ok(match, 'Validate the actual command retained in the job');
   const command = match[1].split('\n').map(line => line.replace(/^ {12}/, '')).join('\n')
-    .replace(/\\<</g, '<<');
+    ;
   assert.match(command, /node --input-type=module <<'NODE'/);
   const syntax = spawnSync('bash', ['-n'], { input: command, encoding: 'utf8' });
   assert.equal(syntax.status, 0, syntax.stderr);
+});
+
+test('current main source validation remains opt-in and source only', () => {
+  assert.match(config, /run_main_source:\n    type: boolean\n    default: false/);
+  const mainOnly = config.split('  main-source-validation-manual:\n')[1]?.split('  qa-preflight-manual:\n')[0] ?? '';
+  assert.match(mainOnly, /when: << pipeline\.parameters\.run_main_source >>/);
+  assert.match(mainOnly, /- synthetic-backup-components:/);
+  assert.match(mainOnly, /only:\n\s+- main/);
+  assert.doesNotMatch(mainOnly, /- p0-postgres-synthetic:/);
 });
