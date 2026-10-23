@@ -11,6 +11,9 @@ parameters:
   run_qa_full:
     type: boolean
     default: false
+  run_g5_02_pg_replay:
+    type: boolean
+    default: false
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
@@ -373,7 +376,60 @@ jobs:
             process.exit(hit.length===0?0:3);
             NODE
 
+  g5-02-postgres17-canonical-replay:
+    docker:
+      - image: cimg/node:22.16.0
+      - image: postgres:17.6
+        environment:
+          POSTGRES_DB: risck_synthetic
+          POSTGRES_USER: risck_synthetic
+          POSTGRES_PASSWORD: synthetic-local-only
+    resource_class: small
+    working_directory: ~/project
+    environment:
+      PGHOST: 127.0.0.1
+      PGDATABASE: risck_synthetic
+      PGUSER: risck_synthetic
+      PGPASSWORD: synthetic-local-only
+    steps:
+      - checkout
+      - run:
+          name: Verify isolated branch and reject production credentials
+          command: |
+            set -eu
+            test "${CIRCLE_BRANCH:-}" = "audit/g5-02-p0f-readonly-drift-20261023"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing_sha}"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN VERCEL_TOKEN STRIPE_SECRET_KEY; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "Forbidden production-capable environment variable: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Install PostgreSQL client and verify synthetic service
+          command: |
+            set -eu
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+            pg_isready -h 127.0.0.1 -U risck_synthetic -d risck_synthetic
+      - run:
+          name: Canonical migration replay (fail closed, no provider connection)
+          command: python3 scripts/diagnostics/g5-02-canonical-replay.py
+      - store_artifacts:
+          path: artifacts/g5-02-pg17
+          destination: g5-02-pg17-exact-sha-replay
+
 workflows:
+  g5-02-pg-replay-manual:
+    # Owner approved G5-02 run on 2026-10-23; branch-scoped, no provider credentials.
+    # CircleCI can run on this branch's push; no automated retries configured.
+    jobs:
+      - g5-02-postgres17-canonical-replay:
+          filters:
+            branches:
+              only:
+                - audit/g5-02-p0f-readonly-drift-20261023
+
   main-source-validation-manual:
     # Explicit trigger only. No automatic main build, production writes or secrets.
     when: << pipeline.parameters.run_main_source >>
@@ -433,27 +489,6 @@ workflows:
                 - ci/verify-recovery-production-20261019
           requires:
             - approve-encrypted-production-backup
-  gitleaks-groups-v15a:
-    jobs:
-      - gitleaks-group-ci-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-gitleaks-groups-v15a-20261022
-      - gitleaks-group-app-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-gitleaks-groups-v15a-20261022
-      - gitleaks-group-assurance-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-gitleaks-groups-v15a-20261022
-      - gitleaks-group-other-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-gitleaks-groups-v15a-20261022
-# V15-A retrigger: classify exact-target redacted Gitleaks findings
-# V15-A retrigger 2: classify redacted Gitleaks findings after Checks activation
+# G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
+# it is not called from this isolated DB replay branch because CircleCI rejected
+# that unrelated workflow during pipeline compilation.
