@@ -221,6 +221,162 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
+  gitleaks-group-ci-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Restore exact target SHA
+          command: |
+            set -euo pipefail
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for ci
+          command: |
+            set -euo pipefail
+            report="/tmp/gitleaks-ci.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(\.github|\.circleci)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'ci',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
+
+  gitleaks-group-app-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Restore exact target SHA
+          command: |
+            set -euo pipefail
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for app
+          command: |
+            set -euo pipefail
+            report="/tmp/gitleaks-app.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(src|scripts)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'app',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
+
+  gitleaks-group-assurance-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Restore exact target SHA
+          command: |
+            set -euo pipefail
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for assurance
+          command: |
+            set -euo pipefail
+            report="/tmp/gitleaks-assurance.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(docs|supabase|tests)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'assurance',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
+
+  gitleaks-group-other-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Restore exact target SHA
+          command: |
+            set -euo pipefail
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for other
+          command: |
+            set -euo pipefail
+            report="/tmp/gitleaks-other.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>{const f=String(x.File||''); return !/^(\.github|\.circleci|src|scripts|docs|supabase|tests)\//.test(f);});
+            console.log(JSON.stringify({group:'other',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
+
 workflows:
   qa-preflight-manual:
     # A code push alone does not launch this job or incur executor credits.
@@ -261,7 +417,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -269,6 +424,29 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
+  gitleaks-groups-v15a:
+    jobs:
+      - gitleaks-group-ci-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-app-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-assurance-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-other-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-groups-v15a-20261022
+# V15-A retrigger: classify exact-target redacted Gitleaks findings
+# V15-A retrigger 2: classify redacted Gitleaks findings after Checks activation
