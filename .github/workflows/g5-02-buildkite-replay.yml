@@ -85,6 +85,7 @@ jobs:
         if: always()
         env:
           G5_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          G5_PR_NUMBER: "2575"
         shell: bash
         run: python3 scripts/diagnostics/g5-02-publish-pr-evidence.py
       - name: Fail closed after evidence collection
