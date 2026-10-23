@@ -382,18 +382,13 @@ workflows:
                 - qa/fix-e2e-node22-20261021
 
   qa-full-manual:
-    # Full lint/typecheck/unit/security/build + synthetic PG17 acceptance.
+    # Source-only lint/typecheck/unit/security/build; native PG is NOT included.
     # Disabled by default and scoped only to the QA branch. This can consume
     # significant CircleCI credits. Trigger ONLY after explicit free-credit
     # confirmation; never retry blindly or use production credentials.
     when: << pipeline.parameters.run_qa_full >>
     jobs:
-      - validar-risck:
-          filters:
-            branches:
-              only:
-                - qa/fix-e2e-node22-20261021
-      - p0-postgres-synthetic:
+      - synthetic-backup-components:
           filters:
             branches:
               only:
@@ -416,16 +411,14 @@ workflows:
               # Branches ci/verify-* sao intencionalmente restritas para testes
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
-                - main
-                - fix/p0-forward-manifest-v44-20261019
-                - fix/circleci-source-evidence-v17-20261021
+                - ci/verify-recovery-production-20261019
       - p0-postgres-synthetic:
           filters:
             branches:
               only:
-                - main
-                - fix/p0-forward-manifest-v44-20261019
-                - fix/circleci-source-evidence-v17-20261021
+                - ci/verify-recovery-production-20261019
+          requires:
+            - approve-encrypted-production-backup
   gitleaks-groups-v15a:
     jobs:
       - gitleaks-group-ci-v15a:
