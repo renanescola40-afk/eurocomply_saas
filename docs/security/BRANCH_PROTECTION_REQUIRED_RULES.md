@@ -1,5 +1,18 @@
 # Branch Protection Required Rules
 
+## Current verified state (2026-10-23) — release-blocking exception
+
+This section supersedes **current-tense interpretations** of earlier branch-protection claims, but does not rewrite historical evidence or the required policy below.
+
+- GitHub REST branch metadata for `renanescola40-afk/eurocomply_saas` on `main` returned `protected: false`, exact main SHA `70d3545f414d063379d481fd238aed563e05edda`. This is direct observed state, **not** a passing protected-branch configuration.
+- `docs/security/evidence/runtime/branch-protection-main.json` records a **dated 2026-06-16** `Complete` historical human settings review. It is **not current evidence** of enforced branch rules on 2026-10-23.
+- `docs/security/evidence/runtime/branch-protection-required-checks.json` remains `status: Exception`, captured 2026-07-14 with an explicit exception expiry on **2026-07-20**. Its stated protection flags are policy/intended configuration, not a fresh GitHub readback proving enforcement. Do not renew, mark `Complete`, or reset expiry without new verified provider evidence and approval.
+- GitHub may also enforce repository/organization rulesets separately from the branch `protected` field; this readback alone must not be used to claim that **no compensating rule exists**. However **no passing, current, complete required-review + required-check enforcement bundle has been established** for active Enterprise release admission. Record `OPS-02/A-19=NOT_VERIFIED/BLOCKED_RELEASE` until such proof and approved governance exists.
+- The active legacy release contract `config/enterprise-100-closure.json` remains binding. Do not equate Vercel `READY`, a CircleCI source status, historic June `Complete` evidence, or an open PR with current enforced release admission.
+
+**Allowed next action:** the authorized repository/release administrator must obtain current branch + repository/organization ruleset/required-check enforcement readback, reconcile actual plan restrictions, and configure supported enforcement or obtain a documented owner-approved **auditable equivalent that demonstrably prevents unauthorized promotion**. Verify exact-head CI and independent approval before any main merge or production promotion. A paper-only manual checklist does not prove technical enforcement. No paid-plan upgrade or controls waiver without specific owner approval.
+
+
 This document is the canonical branch protection policy for RISCK COMPLY `main` and every production or enterprise release branch.
 
 A pull request, deployment, or release **must not** be described as enterprise-ready unless the Full Security Suite is green, the repository-side required-check validation is green, and the branch protection evidence in `docs/security/evidence/runtime/branch-protection-required-checks.json` validates successfully.
