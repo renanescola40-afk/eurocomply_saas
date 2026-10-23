@@ -25,7 +25,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|qa/fix-e2e-node22-20261021) ;;
+              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|qa/fix-e2e-node22-20261021|fix/g1-qa48-canonical-rls-precondition-20261023) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -396,7 +396,7 @@ workflows:
 
   qa-full-manual:
     # Source-only lint/typecheck/unit/security/build; native PG is NOT included.
-    # Disabled by default and scoped only to the QA branch. This can consume
+    # Disabled by default and scoped only to reviewed QA or candidate branches. This can consume
     # significant CircleCI credits. Trigger ONLY after explicit free-credit
     # confirmation; never retry blindly or use production credentials.
     when: << pipeline.parameters.run_qa_full >>
@@ -406,6 +406,7 @@ workflows:
             branches:
               only:
                 - qa/fix-e2e-node22-20261021
+                - fix/g1-qa48-canonical-rls-precondition-20261023
 
   verificacao-isolada:
     jobs:
