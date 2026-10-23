@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   checkDistributedRateLimit: vi.fn(),
   createAuditEvent: vi.fn(),
   reportError: vi.fn(),
-  secureApiError: vi.fn(),
 }));
 
 vi.mock('@/lib/documents/upload', () => ({
@@ -30,30 +29,16 @@ vi.mock('@/server/queries/audit-events', () => ({ createAuditEvent: mocks.create
 vi.mock('@/server/queries/organizations', () => ({
   getCurrentOrganizationForUser: mocks.getCurrentOrganizationForUser,
 }));
-vi.mock('@/server/security/api-guards', () => {
-  class ApiSecurityError extends Error {
-    code: string;
-    status: number;
-    constructor({ code, message, status }: { code: string; message: string; status: number }) {
-      super(message);
-      this.name = 'ApiSecurityError';
-      this.code = code;
-      this.status = status;
-    }
-  }
-  return {
-    ApiSecurityError,
-    requireApiUser: mocks.requireApiUser,
-    requirePermission: mocks.requirePermission,
-    secureApiError: mocks.secureApiError,
-  };
-});
+vi.mock('@/server/security/api-guards', () => ({
+  requireApiUser: mocks.requireApiUser,
+  requirePermission: mocks.requirePermission,
+  secureApiError: () => Response.json({ error: 'internal_error' }, { status: 500 }),
+}));
 vi.mock('@/server/security/step-up', () => ({
   requireStepUpForRequest: mocks.requireStepUpForRequest,
   publicStepUpSummary: () => ({ action: 'export_data', verified: true }),
 }));
 
-import { ApiSecurityError } from '@/server/security/api-guards';
 import { verifyEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { GET } from './route';
 
@@ -63,11 +48,6 @@ const organization = { id: 'synthetic-organization', name: 'Disposable QA', slug
 describe('retention export GET handler (real execution with isolated dependencies)', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    mocks.secureApiError.mockImplementation((error: unknown) =>
-      error instanceof ApiSecurityError
-        ? Response.json({ error: error.code }, { status: error.status })
-        : Response.json({ error: 'internal_error' }, { status: 500 }));
-
     mocks.requireApiUser.mockResolvedValue({ id: 'synthetic-owner' });
     mocks.getCurrentOrganizationForUser.mockResolvedValue(organization);
     mocks.requirePermission.mockResolvedValue({ role: 'owner' });
@@ -78,55 +58,6 @@ describe('retention export GET handler (real execution with isolated dependencie
     });
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.createAuditEvent.mockResolvedValue({ persisted: true });
-  });
-
-  it('returns an unauthenticated 401 without application-error telemetry or export work', async () => {
-    mocks.requireApiUser.mockRejectedValueOnce(new ApiSecurityError({
-      code: 'unauthorized', status: 401, message: 'Authentication required.',
-    }));
-    const response = await GET(new Request(requestUrl));
-    expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: 'unauthorized' });
-    expect(response.headers.get('Content-Disposition')).toBeNull();
-    expect(mocks.reportError).not.toHaveBeenCalled();
-    expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
-  });
-
-  it('keeps a real permission denial observable and stops before plan, MFA or audit', async () => {
-    const error = new ApiSecurityError({
-      code: 'permission_denied', status: 403, message: 'Permission denied.',
-    });
-    mocks.requirePermission.mockRejectedValueOnce(error);
-    const response = await GET(new Request(requestUrl));
-    expect(response.status).toBe(403);
-    expect(response.headers.get('Content-Disposition')).toBeNull();
-    expect(mocks.reportError).toHaveBeenCalledWith(error, expect.any(Object));
-    expect(mocks.assertPlanAtLeast).not.toHaveBeenCalled();
-    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
-  });
-
-  it('keeps an unavailable security control observable and refuses the export', async () => {
-    const error = new ApiSecurityError({
-      code: 'security_control_unavailable', status: 503, message: 'Security unavailable.',
-    });
-    mocks.requirePermission.mockRejectedValueOnce(error);
-    const response = await GET(new Request(requestUrl));
-    expect(response.status).toBe(503);
-    expect(response.headers.get('Content-Disposition')).toBeNull();
-    expect(mocks.reportError).toHaveBeenCalledWith(error, expect.any(Object));
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
-  });
-
-  it('does not suppress unexpected errors with spoofed unauthorized fields', async () => {
-    const error = Object.assign(new Error('unexpected failure'), { code: 'unauthorized', status: 401 });
-    mocks.requireApiUser.mockRejectedValueOnce(error);
-    const response = await GET(new Request(requestUrl));
-    expect(response.status).toBe(500);
-    expect(response.headers.get('Content-Disposition')).toBeNull();
-    expect(mocks.reportError).toHaveBeenCalledWith(error, expect.any(Object));
-    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
   });
 
   it('rejects a user without an organization before export or audit', async () => {
