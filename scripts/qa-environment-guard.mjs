@@ -38,6 +38,12 @@ export function validateQaEnvironment(e) {
   }
   if (!String(e.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY||'').startsWith('pk_test_')) errors.push('Clerk publishable key must be test');
   if (!String(e.CLERK_SECRET_KEY||'').startsWith('sk_test_')) errors.push('Clerk secret key must be test');
+  // Until an independent credential-to-project attestation exists, do not allow any
+  // inherited privileged Supabase credential into Preview, even if it is opaque.
+  for (const name of ['SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','SUPABASE_ADMIN_KEY','SUPABASE_SECRET_KEY']) {
+    if (e[name]) errors.push(name + ' must be absent from QA');
+  }
+  if (e.STRIPE_RESTRICTED_KEY) errors.push('STRIPE_RESTRICTED_KEY unsupported in QA');
   if (e.RESEND_API_KEY) errors.push('RESEND_API_KEY must be absent in QA');
   if (e.SMTP_PASSWORD || e.SMTP_HOST || e.SENDGRID_API_KEY || e.MAILGUN_API_KEY) errors.push('Real outbound email provider configured in QA');
   if (e.REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY !== 'false') errors.push('QA transactional email must be disabled');
