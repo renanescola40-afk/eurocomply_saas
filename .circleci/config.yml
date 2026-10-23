@@ -2,6 +2,9 @@ version: 2.1
 
 # Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
 parameters:
+  run_main_source:
+    type: boolean
+    default: false
   run_qa_preflight:
     type: boolean
     default: false
@@ -371,6 +374,16 @@ jobs:
             NODE
 
 workflows:
+  main-source-validation-manual:
+    # Explicit trigger only. No automatic main build, production writes or secrets.
+    when: << pipeline.parameters.run_main_source >>
+    jobs:
+      - synthetic-backup-components:
+          filters:
+            branches:
+              only:
+                - main
+
   qa-preflight-manual:
     # A code push alone does not launch this job or incur executor credits.
     when: << pipeline.parameters.run_qa_preflight >>
