@@ -24,8 +24,9 @@ out={
   "missing_count":len(missing),
   "found_outside_canonical_directory":{v:paths for v,paths in candidates.items() if paths},
   "still_unresolved":[v for v,paths in candidates.items() if not paths],
+  "candidate_sha256":{v:[{"path":p,"sha256":hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()} for p in paths] for v,paths in candidates.items() if paths},
   "note":"Identical timestamp does not prove SQL equivalence; verify origin and SHA256 before replay."
 }
 pathlib.Path("artifacts/g5-02-pg17").mkdir(parents=True,exist_ok=True)
 pathlib.Path("artifacts/g5-02-pg17/source-discovery.json").write_text(json.dumps(out,indent=2)+"\n")
-print(json.dumps({k:v for k,v in out.items() if k not in ("found_outside_canonical_directory",)},indent=2))
+print(json.dumps({"missing_count":len(missing),"candidate_versions":sum(bool(v) for v in candidates.values()),"still_unresolved":out["still_unresolved"],"artifact":"artifacts/g5-02-pg17/source-discovery.json"},indent=2))
