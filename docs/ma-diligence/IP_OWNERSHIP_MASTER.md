@@ -104,7 +104,7 @@ COUNSEL_REVIEW_REQUIRED=YES
 
 ## Source access / security history
 
-Source is maintained in GitHub with protected `main`, required security/quality checks and documented production release controls. For M&A, export:
+Source is maintained in GitHub. **Live GitHub branch metadata checked on 2026-10-23 reports `main.protected=false`**, so this document must NOT represent native branch protection, required checks or independent approval as presently enforced. Existing CircleCI/Vercel statuses and written release processes are evidence inputs, not automatic substitutes for a verified protected or owner-approved compensating release gate. This contradicts the prior historical statement in this file and remains open under `OPS-02`/Product Ready `A-19`. Repository API reference: `GET /repos/renanescola40-afk/eurocomply_saas/branches/main`; observed main SHA `70d3545f414d063379d481fd238aed563e05edda`. For M&A, export:
 1. current repository owner/admin list;
 2. branch protection/rules evidence;
 3. transaction cut-off SHA;
