@@ -24,7 +24,11 @@ for f in files:
 missing=[v for v in versions if v not in by_version]
 multiple=[v for v in versions if len(by_version.get(v,[]))>1]
 if missing or multiple:
+    # Version strings and filenames are source metadata, not customer data.
+    # Emit the exact unresolved versions for deterministic root-cause review.
     report.update(missing_versions=missing,multiple_versions=multiple)
+    print("G5_02_MISSING_LEDGER_VERSIONS=" + ",".join(missing), file=sys.stderr, flush=True)
+    print("G5_02_DUPLICATE_LEDGER_VERSIONS=" + ",".join(multiple), file=sys.stderr, flush=True)
     fail("SOURCE_LEDGER_MISMATCH",f"missing_versions={len(missing)} duplicate_versions={len(multiple)}; see replay.json artifact")
 report["manifest_sha256"]=hashlib.sha256(pathlib.Path("scripts/diagnostics/g5-02-prod-ledger-versions.json").read_bytes()).hexdigest()
 report["files"]=[]
