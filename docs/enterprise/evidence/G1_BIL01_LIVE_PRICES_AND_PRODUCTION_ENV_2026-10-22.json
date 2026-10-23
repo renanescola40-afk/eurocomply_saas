@@ -1,0 +1,180 @@
+{
+  "schema": "risck-comply.g1-billing-catalog-live-prices.v1",
+  "observedAt": "2026-10-22T21:03:16.517Z",
+  "subject": "BIL-01",
+  "scope": "Six existing Stripe LIVE canonical Essential/Professional/Business monthly and annual prices and exact production Vercel environment bindings, reconciled to the public service catalog and source SHA; Enterprise is contract-priced.",
+  "stripeContext": "acct_1U6IuJGt3cgjPOtq",
+  "stripeMode": "LIVE",
+  "productionProjectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+  "productionDeploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+  "productionDeploymentSha": "70d3545f414d063379d481fd238aed563e05edda",
+  "productionDomain": "www.risckcomply.com",
+  "currency": "EUR",
+  "publicCommercialCatalog": "config/billing-commercial-catalog.json",
+  "publicPlanLimitsSources": [
+    "src/lib/billing/plans.ts",
+    "src/server/billing/plans.ts",
+    "src/lib/billing/feature-gates.ts",
+    "src/app/[locale]/pricing/page.tsx",
+    "src/app/api/billing/catalog/route.ts"
+  ],
+  "checks": {
+    "allSixLivePricesActiveAndCatalogMatched": true,
+    "allSixProductsActive": true,
+    "allSixCanonicalProductionBindingsMatch": true,
+    "allBindingsSetBeforeReadyDeployment": true,
+    "enterpriseHasNoFixedPublicPrice": true,
+    "businessSalesLed": true,
+    "authenticCheckoutAndStripeWebhooksVerified": false
+  },
+  "rows": [
+    {
+      "publicPlan": "essential",
+      "interval": "month",
+      "environmentVariable": "STRIPE_PRICE_ESSENTIAL_MONTHLY",
+      "environmentVariableTargets": [
+        "production"
+      ],
+      "stripePriceId": "price_1U6wnYGt3cgjPOtqIATM8DeH",
+      "stripeProductId": "prod_V7B9TKop4XFVZD",
+      "lookupKey": "risk_comply_essential_monthly",
+      "amountCents": 4900,
+      "expectedAmountCents": 4900,
+      "currency": "eur",
+      "priceActive": true,
+      "productActive": true,
+      "livemode": true,
+      "environmentExactMatch": true,
+      "environmentUpdatedBeforeDeployed": true,
+      "admitted": true
+    },
+    {
+      "publicPlan": "essential",
+      "interval": "year",
+      "environmentVariable": "STRIPE_PRICE_ESSENTIAL_ANNUAL",
+      "environmentVariableTargets": [
+        "production"
+      ],
+      "stripePriceId": "price_1U6wnjGt3cgjPOtqAgMbZdQa",
+      "stripeProductId": "prod_V7B9TKop4XFVZD",
+      "lookupKey": "risk_comply_essential_annual",
+      "amountCents": 49000,
+      "expectedAmountCents": 49000,
+      "currency": "eur",
+      "priceActive": true,
+      "productActive": true,
+      "livemode": true,
+      "environmentExactMatch": true,
+      "environmentUpdatedBeforeDeployed": true,
+      "admitted": true
+    },
+    {
+      "publicPlan": "professional",
+      "interval": "month",
+      "environmentVariable": "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
+      "environmentVariableTargets": [
+        "production"
+      ],
+      "stripePriceId": "price_1U6wnpGt3cgjPOtqmL7HoPDw",
+      "stripeProductId": "prod_V7B9MSMOjw6ScY",
+      "lookupKey": "risk_comply_professional_monthly",
+      "amountCents": 14900,
+      "expectedAmountCents": 14900,
+      "currency": "eur",
+      "priceActive": true,
+      "productActive": true,
+      "livemode": true,
+      "environmentExactMatch": true,
+      "environmentUpdatedBeforeDeployed": true,
+      "admitted": true
+    },
+    {
+      "publicPlan": "professional",
+      "interval": "year",
+      "environmentVariable": "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
+      "environmentVariableTargets": [
+        "production"
+      ],
+      "stripePriceId": "price_1U6wnuGt3cgjPOtqdWopnIyX",
+      "stripeProductId": "prod_V7B9MSMOjw6ScY",
+      "lookupKey": "risk_comply_professional_annual",
+      "amountCents": 149000,
+      "expectedAmountCents": 149000,
+      "currency": "eur",
+      "priceActive": true,
+      "productActive": true,
+      "livemode": true,
+      "environmentExactMatch": true,
+      "environmentUpdatedBeforeDeployed": true,
+      "admitted": true
+    },
+    {
+      "publicPlan": "business",
+      "interval": "month",
+      "environmentVariable": "STRIPE_PRICE_BUSINESS_MONTHLY",
+      "environmentVariableTargets": [
+        "production"
+      ],
+      "stripePriceId": "price_1U6wo2Gt3cgjPOtqOr91hofs",
+      "stripeProductId": "prod_V7B9xkn8ud8f1d",
+      "lookupKey": "risk_comply_plan_399_monthly",
+      "amountCents": 39900,
+      "expectedAmountCents": 39900,
+      "currency": "eur",
+      "priceActive": true,
+      "productActive": true,
+      "livemode": true,
+      "environmentExactMatch": true,
+      "environmentUpdatedBeforeDeployed": true,
+      "admitted": true
+    },
+    {
+      "publicPlan": "business",
+      "interval": "year",
+      "environmentVariable": "STRIPE_PRICE_BUSINESS_ANNUAL",
+      "environmentVariableTargets": [
+        "production"
+      ],
+      "stripePriceId": "price_1U6wo9Gt3cgjPOtqa8vSvgaM",
+      "stripeProductId": "prod_V7B9xkn8ud8f1d",
+      "lookupKey": "risk_comply_plan_399_annual",
+      "amountCents": 399000,
+      "expectedAmountCents": 399000,
+      "currency": "eur",
+      "priceActive": true,
+      "productActive": true,
+      "livemode": true,
+      "environmentExactMatch": true,
+      "environmentUpdatedBeforeDeployed": true,
+      "admitted": true
+    }
+  ],
+  "planCapacitySummary": {
+    "essential": {
+      "users": 3,
+      "documents": 100
+    },
+    "professional": {
+      "users": 15,
+      "documents": 1000
+    },
+    "business": {
+      "users": 75,
+      "documents": 10000
+    },
+    "enterprise": "Contract-authorized capacity; do not interpret code MAX_SAFE_INTEGER as granted unlimited access absent contract"
+  },
+  "nonCreditingBoundaries": [
+    "Actual Stripe TEST signed webhook processing and persistence are NOT verified (BIL-02/03).",
+    "Server authorization and anti-self-upgrade negative runtime tests are NOT verified (BIL-05).",
+    "Annual self-serve checkout is not currently advertised/enabled despite annual live Price objects.",
+    "This artifact is price/config source mapping, not a payment, proof of LIVE charge, or customer enrollment."
+  ],
+  "security": {
+    "customerDataRead": false,
+    "secretKeysRead": false,
+    "productionWritten": false,
+    "environmentValuesChanged": false,
+    "billingChangesMade": false
+  }
+}

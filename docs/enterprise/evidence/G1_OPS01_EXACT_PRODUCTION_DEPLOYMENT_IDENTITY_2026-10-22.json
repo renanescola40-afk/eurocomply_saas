@@ -1,0 +1,45 @@
+{
+  "schema": "risck-comply.g1.ops01-exact-production-deployment.v1",
+  "observedAt": "2026-10-22T20:52:14.027Z",
+  "subject": "OPS-01",
+  "source": "Live authenticated Vercel (project/deployment/domain) and GitHub main branch provider readback",
+  "acceptanceScope": "Deployment readiness, exact source SHA and verified production domain identity ONLY",
+  "vercel": {
+    "teamId": "team_wu3LZI6ReFxO16xipv73GLwG",
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "deploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "domain": "www.risckcomply.com",
+    "domainVerified": true,
+    "domainResolvedToThisDeployment": true,
+    "state": "READY",
+    "readyState": "READY",
+    "target": "production",
+    "gitRef": "main",
+    "gitSha": "70d3545f414d063379d481fd238aed563e05edda"
+  },
+  "github": {
+    "repo": "renanescola40-afk/eurocomply_saas",
+    "mainSha": "70d3545f414d063379d481fd238aed563e05edda"
+  },
+  "checks": {
+    "providerDeploymentReady": true,
+    "sourceShaMatchesMain": true,
+    "customDomainVerified": true,
+    "domainResolvesToExactDeployment": true,
+    "sourceShaRecordedInAcceptance": true
+  },
+  "evidenceDecision": "PASS_OPS01_AT_OBSERVED_SHA",
+  "stillUnverified": [
+    "Authenticated SaaS E2E (OPS-03)",
+    "Protected releases and required check gating (OPS-02)",
+    "Recovery/rollback evidence (OPS-05)",
+    "Configuration/environment isolation (OPS-06)",
+    "Enterprise 100 overall"
+  ],
+  "safeguard": {
+    "productionWritten": false,
+    "mainMerged": false,
+    "deployTriggered": false,
+    "customerDataRead": false
+  }
+}
