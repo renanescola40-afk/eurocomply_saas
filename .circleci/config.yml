@@ -421,8 +421,8 @@ jobs:
 
 workflows:
   g5-02-pg-replay-manual:
-    # Explicit opt-in. Uses included CircleCI credits; never accesses production.
-    when: << pipeline.parameters.run_g5_02_pg_replay >>
+    # Owner approved G5-02 run on 2026-10-23; branch-scoped, no provider credentials.
+    # CircleCI can run on this branch's push; no automated retries configured.
     jobs:
       - g5-02-postgres17-canonical-replay:
           filters:
