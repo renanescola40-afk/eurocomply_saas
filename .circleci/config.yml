@@ -1,5 +1,13 @@
-
 version: 2.1
+
+# Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
+parameters:
+  run_qa_preflight:
+    type: boolean
+    default: false
+  run_qa_full:
+    type: boolean
+    default: false
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
@@ -22,7 +30,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019) ;;
+              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|qa/fix-e2e-node22-20261021) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -103,6 +111,74 @@ jobs:
           name: Verificar rotas
           command: npm run quality:routes
 
+  # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
+  qa-preflight-offline:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact QA checkout and refuse provider secrets
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "qa/fix-e2e-node22-20261021" || {
+              echo "CircleCI QA job cannot run on other branches" >&2
+              exit 1
+            }
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?CircleCI source SHA missing}" || {
+              echo "CircleCI checkout must match pipeline SHA" >&2
+              exit 1
+            }
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              if [ -n "${!key:-}" ]; then
+                echo "Provider credential forbidden in offline QA: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Execute source-only QA suites and preserve exact-SHA evidence
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/qa-preflight
+            node --test --test-reporter=tap \
+              tests/security/e2e-preflight-offline.test.mjs \
+              tests/security/payment-first-qa-origin-guard.test.mjs \
+              tests/security/playwright-synthetic-write-qa-gate.test.mjs \
+              tests/security/paid-owner-playwright-proof.test.mjs \
+              tests/security/circleci-qa-manual-gate.test.mjs \
+              2>&1 | tee artifacts/qa-preflight/tests.tap
+            # No external provider call, install, payment or runtime mutation.
+            node scripts/security/check-stripe-webhook-contract.mjs \
+              2>&1 | tee artifacts/qa-preflight/stripe-webhook-contract.txt
+            node scripts/security/run-stripe-runtime-validation.mjs \
+              2>&1 | tee artifacts/qa-preflight/stripe-runtime-source-only.json
+            node --input-type=module \<<'NODE'
+            import { writeFileSync } from 'node:fs';
+            import { createHash } from 'node:crypto';
+            import { readFileSync } from 'node:fs';
+            import { execFileSync } from 'node:child_process';
+            const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            if (sha !== process.env.CIRCLE_SHA1) throw new Error('qa_evidence_sha_mismatch');
+            const tap = readFileSync('artifacts/qa-preflight/tests.tap');
+            writeFileSync('artifacts/qa-preflight/evidence.json', JSON.stringify({
+              kind: 'RISCK_CIRCLECI_QA_SOURCE_PROOF',
+              checkedOutSha: sha,
+              pipelineSha: process.env.CIRCLE_SHA1,
+              branch: process.env.CIRCLE_BRANCH,
+              workflow: 'qa-preflight-manual',
+              result: 'PASS',
+              testReportSha256: createHash('sha256').update(tap).digest('hex'),
+              stripeWebhookContractSha256: createHash('sha256').update(readFileSync('artifacts/qa-preflight/stripe-webhook-contract.txt')).digest('hex'),
+              stripeRuntimeSourceOnlySha256: createHash('sha256').update(readFileSync('artifacts/qa-preflight/stripe-runtime-source-only.json')).digest('hex'),
+              proofBoundary: 'Offline Node and Stripe source-contract checks only; no Playwright, provider delivery, Supabase, payment or deployment proof',
+            }, null, 2) + '\n');
+            NODE
+      - store_artifacts:
+          path: artifacts/qa-preflight
+          destination: qa-preflight-exact-sha
+
   # Native PG service is disposable and contains ONLY synthetic fixtures.
   # Free-plan included quota verified 2026-10-18 before activation.
   p0-postgres-synthetic:
@@ -136,6 +212,34 @@ jobs:
           destination: p0-postgres-synthetic
 
 workflows:
+  qa-preflight-manual:
+    # A code push alone does not launch this job or incur executor credits.
+    when: << pipeline.parameters.run_qa_preflight >>
+    jobs:
+      - qa-preflight-offline:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+
+  qa-full-manual:
+    # Full lint/typecheck/unit/security/build + synthetic PG17 acceptance.
+    # Disabled by default and scoped only to the QA branch. This can consume
+    # significant CircleCI credits. Trigger ONLY after explicit free-credit
+    # confirmation; never retry blindly or use production credentials.
+    when: << pipeline.parameters.run_qa_full >>
+    jobs:
+      - validar-risck:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+      - p0-postgres-synthetic:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+
   verificacao-isolada:
     jobs:
       - validar-risck:
