@@ -2,6 +2,9 @@ version: 2.1
 
 # Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
 parameters:
+  run_main_source:
+    type: boolean
+    default: false
   run_qa_preflight:
     type: boolean
     default: false
@@ -22,7 +25,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|qa/fix-e2e-node22-20261021) ;;
+              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|qa/fix-e2e-node22-20261021|fix/g1-qa48-canonical-rls-precondition-20261023) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -159,7 +162,7 @@ jobs:
               2>&1 | tee artifacts/qa-preflight/stripe-webhook-contract.txt
             node scripts/security/run-stripe-runtime-validation.mjs \
               2>&1 | tee artifacts/qa-preflight/stripe-runtime-source-only.json
-            node --input-type=module \<<'NODE'
+            node --input-type=module <<'NODE'
             import { writeFileSync } from 'node:fs';
             import { createHash } from 'node:crypto';
             import { readFileSync } from 'node:fs';
@@ -371,6 +374,16 @@ jobs:
             NODE
 
 workflows:
+  main-source-validation-manual:
+    # Explicit trigger only. No automatic main build, production writes or secrets.
+    when: << pipeline.parameters.run_main_source >>
+    jobs:
+      - synthetic-backup-components:
+          filters:
+            branches:
+              only:
+                - main
+
   qa-preflight-manual:
     # A code push alone does not launch this job or incur executor credits.
     when: << pipeline.parameters.run_qa_preflight >>
@@ -383,7 +396,7 @@ workflows:
 
   qa-full-manual:
     # Source-only lint/typecheck/unit/security/build; native PG is NOT included.
-    # Disabled by default and scoped only to the QA branch. This can consume
+    # Disabled by default and scoped only to reviewed QA or candidate branches. This can consume
     # significant CircleCI credits. Trigger ONLY after explicit free-credit
     # confirmation; never retry blindly or use production credentials.
     when: << pipeline.parameters.run_qa_full >>
@@ -393,6 +406,7 @@ workflows:
             branches:
               only:
                 - qa/fix-e2e-node22-20261021
+                - fix/g1-qa48-canonical-rls-precondition-20261023
 
   verificacao-isolada:
     jobs:
