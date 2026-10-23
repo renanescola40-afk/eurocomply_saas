@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "next dev --turbopack -H 0.0.0.0",
     "dev:debug": "NODE_OPTIONS='--inspect' next dev -H 0.0.0.0",
-    "prebuild": "npm run security:zod-compat",
+    "prebuild": "node scripts/check-qa-environment.mjs && npm run security:zod-compat",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "lint": "eslint .",
@@ -162,7 +162,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "production:smoke": "node scripts/release/public-production-smoke-wrapper.mjs",
-    "procurement:buyer-readiness": "node scripts/procurement/check-enterprise-buyer-readiness.mjs"
+    "procurement:buyer-readiness": "node scripts/procurement/check-enterprise-buyer-readiness.mjs",
+    "qa:guard:test": "node --test scripts/qa-environment-guard.test.mjs"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "1.4.0",
