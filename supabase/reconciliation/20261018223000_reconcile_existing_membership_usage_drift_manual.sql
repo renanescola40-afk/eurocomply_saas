@@ -9,6 +9,9 @@
 -- Operator must bind these TWO settings in the same privileged DB session:
 --   SET risck.p0f_reconcile_confirmation = 'APPROVED_MANUAL_P0F_REPAIR';
 --   SET risck.p0f_release_sha = '<reviewed 40-character exact production SHA>';
+--   SET risck.p0f_expected_drift_fingerprint = '<64-character reviewed target SHA256>';
+-- Digest is derived via SELECT-only before maintenance approval and binds
+-- tenant identity plus the five pre-repair values. It is NOT consent.
 -- These settings are safety prompts, NOT cryptographic human approval proof.
 -- The protected release controller must independently verify those assertions.
 \set ON_ERROR_STOP on
@@ -22,7 +25,8 @@ declare
 begin
   if current_setting('risck.p0f_reconcile_confirmation', true)
        is distinct from 'APPROVED_MANUAL_P0F_REPAIR'
-     or v_release_sha is null or v_release_sha !~ '^[a-f0-9]{40}$' then
+     or v_release_sha is null or v_release_sha !~ '^[a-f0-9]{40}$'
+     or coalesce(current_setting('risck.p0f_expected_drift_fingerprint',true),'') !~ '^[a-f0-9]{64}$' then
     raise exception 'P0-F manual owner authorization and exact release SHA are required';
   end if;
 
@@ -83,6 +87,17 @@ declare
   v_release_sha text := current_setting('risck.p0f_release_sha', true);
   v_missing_usage integer;
   v_drift integer;
+  v_drift_with_member_rows integer;
+  v_reviewed_type_a integer;
+  v_reviewed_type_b integer;
+  v_delta_members integer;
+  v_delta_full integer;
+  v_delta_participants integer;
+  v_delta_viewers integer;
+  v_delta_admins integer;
+  v_null_counters integer;
+  v_target_fingerprint text;
+  v_expected_target_fingerprint text := current_setting('risck.p0f_expected_drift_fingerprint',true);
   v_remaining integer;
   v_updated integer := 0;
   v_affected integer;
@@ -100,6 +115,7 @@ begin
 
   with actual as (
     select organization_id,
+      count(*)::integer member_rows,
       count(*) filter(where status='active')::integer active_members,
       count(*) filter(where status='active' and seat_type='full')::integer full_users,
       count(*) filter(where status='active' and seat_type='participant')::integer participants,
@@ -107,7 +123,30 @@ begin
       count(*) filter(where status='active' and lower(coalesce(role,'')) in ('owner','admin'))::integer active_admins
     from public.organization_members group by organization_id
   )
-  select count(*)::integer into v_drift
+  select count(*)::integer,
+    count(*) filter(where coalesce(a.member_rows,0) > 0)::integer,
+    count(*) filter(where a.organization_id is null and
+      (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
+        = (2,2,0,0,1))::integer,
+    count(*) filter(where a.organization_id is null and
+      (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
+        = (1,1,0,0,1))::integer,
+    coalesce(sum(coalesce(u.active_members,0)-coalesce(a.active_members,0)),0)::integer,
+    coalesce(sum(coalesce(u.full_users,0)-coalesce(a.full_users,0)),0)::integer,
+    coalesce(sum(coalesce(u.participants,0)-coalesce(a.participants,0)),0)::integer,
+    coalesce(sum(coalesce(u.viewers,0)-coalesce(a.viewers,0)),0)::integer,
+    coalesce(sum(coalesce(u.active_admins,0)-coalesce(a.active_admins,0)),0)::integer,
+    count(*) filter (where u.active_members is null or u.full_users is null
+      or u.participants is null or u.viewers is null or u.active_admins is null)::integer,
+    encode(sha256(convert_to(coalesce(string_agg(
+      format('%s|%s|%s|%s|%s|%s',u.organization_id::text,
+        coalesce(u.active_members::text,'NULL'),coalesce(u.full_users::text,'NULL'),
+        coalesce(u.participants::text,'NULL'),coalesce(u.viewers::text,'NULL'),
+        coalesce(u.active_admins::text,'NULL')),
+      ';' order by u.organization_id),''),'UTF8')),'hex')
+    into v_drift,v_drift_with_member_rows,v_reviewed_type_a,v_reviewed_type_b,
+      v_delta_members,v_delta_full,v_delta_participants,v_delta_viewers,
+      v_delta_admins,v_null_counters,v_target_fingerprint
   from public.organization_usage u left join actual a on a.organization_id=u.organization_id
   where (u.active_members,u.full_users,u.participants,u.viewers,u.active_admins)
     is distinct from
@@ -118,6 +157,31 @@ begin
   -- If another number of tenants is affected, stop and re-review the plan.
   if v_drift <> 2 then
     raise exception 'P0-F expected exactly two drifting organizations; observed %',v_drift;
+  end if;
+  -- Observed LIVE subtype: both drifted organizations have zero members
+  -- of ANY status (including suspended). Both relations are DML-locked.
+  -- Fail closed if either drifts into a new operational scenario.
+  if v_drift_with_member_rows <> 0 then
+    raise exception 'P0-F unexpected member-linked drift: %',v_drift_with_member_rows;
+  end if;
+  -- Preserve #2549's explicit aggregate/NULL guard alongside the narrower
+  -- per-organization distribution check. Both run under the same DML locks.
+  if v_null_counters <> 0 or
+     (v_delta_members,v_delta_full,v_delta_participants,v_delta_viewers,v_delta_admins)
+       is distinct from (3,3,0,0,2) then
+    raise exception 'P0-F reviewed aggregate drift fingerprint changed; abort manual repair';
+  end if;
+  -- Both drifted rows must match the reviewed 2026-10-21 distribution,
+  -- not merely the same aggregate totals: (+2 full/members,+1 admin) and
+  -- (+1 full/members,+1 admin), with no participant/viewer drift.
+  -- No tenant identifiers are embedded in, or exposed by, this guard.
+  if v_reviewed_type_a <> 1 or v_reviewed_type_b <> 1 then
+    raise exception 'P0-F reviewed per-organization drift fingerprint changed';
+  end if;
+  -- The same count histogram is insufficient if an unrelated tenant replaced a target.
+  -- This check runs under both exclusive DML locks before the first UPDATE.
+  if v_target_fingerprint is distinct from v_expected_target_fingerprint then
+    raise exception 'P0-F reviewed target fingerprint changed; abort manual repair';
   end if;
 
   for v_target in
@@ -141,6 +205,7 @@ begin
        is distinct from
       (coalesce(a.active_members,0),coalesce(a.full_users,0),
        coalesce(a.participants,0),coalesce(a.viewers,0),coalesce(a.active_admins,0))
+      and a.organization_id is null
     order by u.organization_id
   loop
     update public.organization_usage

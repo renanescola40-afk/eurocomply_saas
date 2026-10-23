@@ -12,7 +12,7 @@ Not currently certified. The product may be designed to support security review,
 
 ## What is your third-party security review status?
 
-Not currently claimed as complete. Any future review should be referenced only with approved evidence and scope.
+A third-party, unauthenticated black-box web application assessment was completed on 12 September 2026, with an attributable confidential report retained outside the public repository. The original TLS High findings have subsequent technical remediation evidence. A clean independent terminal retest remains open; the black-box assessment does not prove authenticated tenant isolation, a clean pentest outcome, or acceptance of a newer deployment. Share report details only through controlled, approved diligence channels. This answer must be revalidated against the actual release before customer use.
 
 ## How is authentication handled?
 
