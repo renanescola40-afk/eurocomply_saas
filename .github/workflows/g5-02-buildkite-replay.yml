@@ -2,7 +2,7 @@ name: G5-02 PostgreSQL 17.6 Canonical Replay
 on:
   push:
     branches:
-      - audit/g5-02-p0f-readonly-drift-20261023
+      - fix/g5-02-evidence-failclosed-20261023
     paths:
       - .github/workflows/g5-02-buildkite-replay.yml
       - scripts/diagnostics/g5-02-*.py
@@ -45,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$GITHUB_REF_NAME" = "audit/g5-02-p0f-readonly-drift-20261023"
+          test "$GITHUB_REF_NAME" = "fix/g5-02-evidence-failclosed-20261023"
           for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN VERCEL_TOKEN STRIPE_SECRET_KEY; do
             if printenv "$key" >/dev/null 2>&1; then
               echo "Forbidden production-capable env: $key" >&2
@@ -64,9 +64,16 @@ jobs:
       - name: Discover historical SQL sources (offline)
         shell: bash
         run: python3 scripts/diagnostics/g5-02-source-discovery.py
-      - name: Replay canonical migration source (fail closed)
+      - name: Replay canonical migration source (retain failure for evidence)
+        id: replay
+        continue-on-error: true
         shell: bash
-        run: python3 scripts/diagnostics/g5-02-canonical-replay.py
+        run: |
+          set +e
+          python3 scripts/diagnostics/g5-02-canonical-replay.py
+          rc=$?
+          printf 'replay_exit_code=%s\n' "$rc" >> "$GITHUB_OUTPUT"
+          exit "$rc"
       - name: Publish synthetic evidence as Buildkite artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,9 +81,25 @@ jobs:
           name: g5-02-evidence
           path: artifacts/g5-02-pg17/
           if-no-files-found: warn
-      - name: Report sanitized summary to GitHub PR 2574
+      - name: Report sanitized summary to GitHub PR
         if: always()
         env:
           G5_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: python3 scripts/diagnostics/g5-02-publish-pr-evidence.py
+      - name: Fail closed after evidence collection
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,sys
+          p=pathlib.Path("artifacts/g5-02-pg17/replay.json")
+          if not p.is_file():
+              print("G5_02_ACCEPTANCE=FAIL missing replay evidence")
+              sys.exit(1)
+          data=json.loads(p.read_text())
+          accepted=(data.get("status")=="PASS" and data.get("completed")==137)
+          print("G5_02_ACCEPTANCE="+("PASS" if accepted else "FAIL"))
+          sys.exit(0 if accepted else 1)
+          PY
