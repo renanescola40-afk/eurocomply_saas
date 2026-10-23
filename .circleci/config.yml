@@ -1,5 +1,13 @@
-
 version: 2.1
+
+# Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
+parameters:
+  run_qa_preflight:
+    type: boolean
+    default: false
+  run_qa_full:
+    type: boolean
+    default: false
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
@@ -22,7 +30,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019) ;;
+              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|qa/fix-e2e-node22-20261021) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -102,6 +110,84 @@ jobs:
       - run:
           name: Verificar rotas
           command: npm run quality:routes
+      - run:
+          name: Emitir prova CircleCI de testes SOURCE-ONLY sem GO
+          command: |
+            set -euo pipefail
+            node --test tests/security/circleci-source-proof.test.mjs tests/security/verify-circleci-source-proof.test.mjs
+            node scripts/security/create-circleci-source-proof.mjs
+            node scripts/security/verify-circleci-source-proof.mjs
+      - store_artifacts:
+          path: artifacts/circleci-source-validation
+          destination: source-only-exact-sha-evidence
+
+  # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
+  qa-preflight-offline:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact QA checkout and refuse provider secrets
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "qa/fix-e2e-node22-20261021" || {
+              echo "CircleCI QA job cannot run on other branches" >&2
+              exit 1
+            }
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?CircleCI source SHA missing}" || {
+              echo "CircleCI checkout must match pipeline SHA" >&2
+              exit 1
+            }
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              if [ -n "${!key:-}" ]; then
+                echo "Provider credential forbidden in offline QA: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Execute source-only QA suites and preserve exact-SHA evidence
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/qa-preflight
+            node --test --test-reporter=tap \
+              tests/security/e2e-preflight-offline.test.mjs \
+              tests/security/payment-first-qa-origin-guard.test.mjs \
+              tests/security/playwright-synthetic-write-qa-gate.test.mjs \
+              tests/security/paid-owner-playwright-proof.test.mjs \
+              tests/security/circleci-qa-manual-gate.test.mjs \
+              2>&1 | tee artifacts/qa-preflight/tests.tap
+            # No external provider call, install, payment or runtime mutation.
+            node scripts/security/check-stripe-webhook-contract.mjs \
+              2>&1 | tee artifacts/qa-preflight/stripe-webhook-contract.txt
+            node scripts/security/run-stripe-runtime-validation.mjs \
+              2>&1 | tee artifacts/qa-preflight/stripe-runtime-source-only.json
+            node --input-type=module \<<'NODE'
+            import { writeFileSync } from 'node:fs';
+            import { createHash } from 'node:crypto';
+            import { readFileSync } from 'node:fs';
+            import { execFileSync } from 'node:child_process';
+            const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            if (sha !== process.env.CIRCLE_SHA1) throw new Error('qa_evidence_sha_mismatch');
+            const tap = readFileSync('artifacts/qa-preflight/tests.tap');
+            writeFileSync('artifacts/qa-preflight/evidence.json', JSON.stringify({
+              kind: 'RISCK_CIRCLECI_QA_SOURCE_PROOF',
+              checkedOutSha: sha,
+              pipelineSha: process.env.CIRCLE_SHA1,
+              branch: process.env.CIRCLE_BRANCH,
+              workflow: 'qa-preflight-manual',
+              result: 'PASS',
+              testReportSha256: createHash('sha256').update(tap).digest('hex'),
+              stripeWebhookContractSha256: createHash('sha256').update(readFileSync('artifacts/qa-preflight/stripe-webhook-contract.txt')).digest('hex'),
+              stripeRuntimeSourceOnlySha256: createHash('sha256').update(readFileSync('artifacts/qa-preflight/stripe-runtime-source-only.json')).digest('hex'),
+              proofBoundary: 'Offline Node and Stripe source-contract checks only; no Playwright, provider delivery, Supabase, payment or deployment proof',
+            }, null, 2) + '\n');
+            NODE
+      - store_artifacts:
+          path: artifacts/qa-preflight
+          destination: qa-preflight-exact-sha
 
   # Native PG service is disposable and contains ONLY synthetic fixtures.
   # Free-plan included quota verified 2026-10-18 before activation.
@@ -135,85 +221,232 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
-  g1-rls-pg17-proof:
+  gitleaks-group-ci-v15a:
     docker:
-      - image: cimg/node:22.16.0
-      - image: postgres:17.6
-        environment:
-          POSTGRES_DB: risck_synthetic
-          POSTGRES_USER: risck_synthetic
-          POSTGRES_PASSWORD: synthetic-local-only
+      - image: cimg/base:stable
     resource_class: small
     working_directory: ~/project
     steps:
       - checkout
       - run:
-          name: Verify exact G1 source SHA and forbid remote credentials
+          name: Restore exact target SHA
           command: |
             set -euo pipefail
-            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI SHA}"
-            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD STRIPE_SECRET_KEY VERCEL_TOKEN; do
-              test -z "${!key:-}" || { echo "Privileged variable forbidden: $key" >&2; exit 1; }
-            done
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
       - run:
-          name: Install lockfile-pinned synthetic PostgreSQL driver
-          command: npm ci --prefix tests/fixtures/p0-postgres-runtime --ignore-scripts --no-audit --no-fund
-      - run:
-          name: Native PostgreSQL 17 canonical RLS historical replay regression
-          command: timeout 100s node scripts/supabase/test-g1-historical-rls-replay-pg17.mjs
+          name: Install pinned Gitleaks
+          command: |
 
-  g1-scope-proof:
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for ci
+          command: |
+            set -euo pipefail
+            report="/tmp/gitleaks-ci.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(\.github|\.circleci)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'ci',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
+
+  gitleaks-group-app-v15a:
     docker:
-      - image: cimg/node:22.16.0
+      - image: cimg/base:stable
     resource_class: small
     working_directory: ~/project
     steps:
       - checkout
       - run:
-          name: G1 exact checkout SHA (isolated, no providers)
+          name: Restore exact target SHA
           command: |
             set -euo pipefail
-            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI SHA}"
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
       - run:
-          name: G1 formal acceptance source proof (no runtime secrets)
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for app
           command: |
             set -euo pipefail
-            node --test tests/release/g1-enterprise-scope-acceptance.test.mjs tests/release/g1-product-ready-24-gates.test.mjs
-            node scripts/release/verify-g1-enterprise-scope.mjs
-            node scripts/release/score-g1-product-ready.mjs
+            report="/tmp/gitleaks-app.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(src|scripts)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'app',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
+
+  gitleaks-group-assurance-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Restore exact target SHA
+          command: |
+            set -euo pipefail
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for assurance
+          command: |
+            set -euo pipefail
+            report="/tmp/gitleaks-assurance.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(docs|supabase|tests)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'assurance',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
+
+  gitleaks-group-other-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Restore exact target SHA
+          command: |
+            set -euo pipefail
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for other
+          command: |
+            set -euo pipefail
+            report="/tmp/gitleaks-other.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>{const f=String(x.File||''); return !/^(\.github|\.circleci|src|scripts|docs|supabase|tests)\//.test(f);});
+            console.log(JSON.stringify({group:'other',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
 
 workflows:
+  qa-preflight-manual:
+    # A code push alone does not launch this job or incur executor credits.
+    when: << pipeline.parameters.run_qa_preflight >>
+    jobs:
+      - qa-preflight-offline:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+
+  qa-full-manual:
+    # Full lint/typecheck/unit/security/build + synthetic PG17 acceptance.
+    # Disabled by default and scoped only to the QA branch. This can consume
+    # significant CircleCI credits. Trigger ONLY after explicit free-credit
+    # confirmation; never retry blindly or use production credentials.
+    when: << pipeline.parameters.run_qa_full >>
+    jobs:
+      - validar-risck:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+      - p0-postgres-synthetic:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+
   verificacao-isolada:
     jobs:
       - validar-risck:
           filters:
             branches:
-              # Apenas main e branches ci/verify-* controladas pelo owner.
+              # Main, ci/verify-* e branch pontual de prova CircleCI controladas pelo owner.
               # CircleCI usa creditos incluidos; nenhum deploy/segredo de producao.
               # Branches ci/verify-* sao intencionalmente restritas para testes
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
+                - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
           filters:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
-      # Native PG17 test is intentionally held off the G1 docs branch while
-      # its four FAILED attempts lack step-level diagnostics; see
-      # docs/enterprise/G1_P0B_RLS_REPLAY_DIAGNOSTIC_2026-10-22.md.
-      # Rerun only on a separately reviewed ci/verify-g1-native-pg17 branch.
-      - g1-rls-pg17-proof:
+                - fix/circleci-source-evidence-v17-20261021
+  gitleaks-groups-v15a:
+    jobs:
+      - gitleaks-group-ci-v15a:
           filters:
             branches:
               only:
-                - ci/verify-g1-native-pg17
-      - g1-scope-proof:
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-app-v15a:
           filters:
             branches:
               only:
-                - g1/enterprise-scope-v1-freeze-20261022
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-assurance-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-other-v15a:
+          filters:
+            branches:
+              only:
+                - ci/verify-gitleaks-groups-v15a-20261022
+# V15-A retrigger: classify exact-target redacted Gitleaks findings
+# V15-A retrigger 2: classify redacted Gitleaks findings after Checks activation
