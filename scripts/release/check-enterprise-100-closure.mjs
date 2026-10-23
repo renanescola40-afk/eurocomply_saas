@@ -26,6 +26,44 @@ function normalise(value) {
   return String(value ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
 }
 
+// A positive decision must never override an explicit failed state or synthetic placeholder.
+function hasExplicitFailure(document) {
+  if (document?.evidenceIntegrity?.placeholderOnly === true || document?.placeholderOnly === true) return true;
+  // An explicit false is a failed assertion, not an absent assertion.
+  if ([
+    document?.success,
+    document?.passed,
+    document?.accepted,
+    document?.ok,
+    document?.summary?.passed,
+    document?.evidenceIntegrity?.exactShaBound,
+  ].some((value) => value === false)) return true;
+  if (Array.isArray(document?.blockers) && document.blockers.length > 0) return true;
+  if (Array.isArray(document?.summary?.blockers) && document.summary.blockers.length > 0) return true;
+
+  const failedStates = new Set([
+    'FAIL', 'FAILED', 'FAILURE', 'ERROR', 'OPEN', 'BLOCKED', 'NO_GO',
+    'NO_PASS', 'REJECTED', 'DENIED', 'CANCELLED', 'CANCELED',
+    'WAITING_EXTERNAL', 'PENDING', 'NOT_TESTED', 'UNVERIFIED',
+    'INCOMPLETE', 'IN_PROGRESS', 'SKIPPED',
+  ]);
+  return [
+    // Every competing decision/result is an assertion that can veto a positive status.
+    document?.status,
+    document?.outcome,
+    document?.validationStatus,
+    document?.publicationStatus,
+    document?.finalDecision,
+    document?.releaseDecision,
+    document?.decision,
+    document?.result,
+    document?.summary?.status,
+    document?.summary?.outcome,
+    document?.summary?.decision,
+    document?.summary?.result,
+  ].some((value) => typeof value === 'string' && failedStates.has(normalise(value)));
+}
+
 function findStatus(document) {
   const decisionCandidates = [
     document?.publicationStatus,
@@ -194,13 +232,14 @@ export function evaluateEnterpriseClosure({
     const selected = exact[0];
     const acceptedStatuses = (control.acceptedStatuses ?? []).map(normalise);
     const statusAccepted = selected.status !== null && acceptedStatuses.includes(selected.status);
+    const explicitFailure = hasExplicitFailure(selected.value);
     const semanticFailures = control.id === 'external-security-assurance'
       ? validateExternalSecurityReviewEvidence(selected.value, {
           expectedCommitSha: expectedSha,
           now: new Date(),
         })
       : [];
-    const accepted = statusAccepted && semanticFailures.length === 0;
+    const accepted = statusAccepted && !explicitFailure && semanticFailures.length === 0;
 
     return {
       id: control.id,
@@ -213,9 +252,11 @@ export function evaluateEnterpriseClosure({
       sha: selected.sha,
       shaSource: selected.shaSource,
       shaMatches: true,
-      accepted: statusAccepted && semanticFailures.length === 0,
+      accepted,
       reason: accepted
         ? null
+        : statusAccepted && explicitFailure
+          ? 'explicit_failure_or_placeholder_evidence'
         : semanticFailures.length > 0
           ? 'semantic_evidence_contract_failed'
           : 'status_not_accepted',
@@ -292,3 +333,4 @@ if (enforcement === 'internal') {
 } else if (!result.passed) {
   process.exitCode = 1;
 }
+
