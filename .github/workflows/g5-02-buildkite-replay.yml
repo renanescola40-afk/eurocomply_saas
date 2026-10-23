@@ -8,11 +8,13 @@ on:
       - scripts/diagnostics/g5-02-*.py
       - scripts/diagnostics/g5-02-*.json
       - supabase/migrations/**
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   isolated-replay:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
     services:
       postgres:
         image: postgres:17.6
@@ -65,3 +67,16 @@ jobs:
       - name: Replay canonical migration source (fail closed)
         shell: bash
         run: python3 scripts/diagnostics/g5-02-canonical-replay.py
+      - name: Publish synthetic evidence as Buildkite artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g5-02-evidence
+          path: artifacts/g5-02-pg17/
+          if-no-files-found: warn
+      - name: Report sanitized summary to GitHub PR 2574
+        if: always()
+        env:
+          G5_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: python3 scripts/diagnostics/g5-02-publish-pr-evidence.py
