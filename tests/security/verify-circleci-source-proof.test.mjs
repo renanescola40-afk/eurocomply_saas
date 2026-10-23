@@ -24,6 +24,17 @@ test('accepts valid exact-SHA source-only evidence without accepting Enterprise'
   assert.deepEqual(verify(proof), []);
   assert.equal(proof.enterpriseRelease.accepted, false);
 });
+test('accepts current source-only job proof on main without Enterprise GO', () => {
+  const trusted = {...env(), CIRCLE_JOB: 'synthetic-backup-components', CIRCLE_BRANCH: 'main'};
+  const proof = makeSourceOnlyProof({env: trusted, gitSha: SHA, timestamp: '2026-10-21T13:40:00.000Z'});
+  assert.deepEqual(verify(proof, trusted), []);
+  assert.equal(proof.circleci.job, 'synthetic-backup-components');
+  assert.equal(proof.enterpriseRelease.accepted, false);
+});
+test('rejects current source-only job outside reviewed workflow branches', () => {
+  const unsafe = {...env(), CIRCLE_JOB: 'synthetic-backup-components', CIRCLE_BRANCH: 'ci/verify-unlisted'};
+  assert.ok(verify(valid(), unsafe).includes('trusted_circleci_source_job_required'));
+});
 test('rejects mismatched trusted source SHA', () =>
   assert.ok(verify(valid(), {...env(), CIRCLE_SHA1: '8'.repeat(40)}).includes('proof_source_sha_mismatch')));
 test('rejects mismatched CircleCI build number', () =>
