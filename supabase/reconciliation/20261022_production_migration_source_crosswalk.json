@@ -1,0 +1,993 @@
+{
+  "schema": "risck-comply.production-migration-source-crosswalk.v1",
+  "generated_on": "2026-10-22",
+  "production_project": "tganhbbhfxcpblmgqprg",
+  "production_main_sha": "70d3545f414d063379d481fd238aed563e05edda",
+  "source_branch": "review/v15b-provider-ledger-provenance-20261022",
+  "purpose": "Map each production migration identity to a reviewed repository source for isolated QA/recovery planning. This is not an executable migration runner.",
+  "execution_boundary": "Do not blindly apply this file. Preserve production-ledger order, respect apply-once consolidation, and verify dependency/RLS postconditions in isolated QA before any release use.",
+  "summary": {
+    "production_migration_identities": 137,
+    "mapped": 137,
+    "unresolved": 0,
+    "unique_source_files": 135,
+    "consolidated_source_groups": 2
+  },
+  "consolidated_sources": [
+    {
+      "source": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+      "production_versions": [
+        "20260831115851",
+        "20260902193810"
+      ]
+    },
+    {
+      "source": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+      "production_versions": [
+        "20261013133323",
+        "20261013133341"
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "order": 1,
+      "production_version": "20260605190000",
+      "production_name": "organizations",
+      "source": "supabase/migrations/20260605190000_organizations.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 2,
+      "production_version": "20260605190100",
+      "production_name": "organization_members",
+      "source": "supabase/migrations/20260605190100_organization_members.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 3,
+      "production_version": "20260605190200",
+      "production_name": "audit_logs",
+      "source": "supabase/migrations/20260605190200_audit_logs.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 4,
+      "production_version": "20260605190300",
+      "production_name": "profiles",
+      "source": "supabase/migrations/20260605190300_profiles.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 5,
+      "production_version": "20260605190400",
+      "production_name": "subscriptions",
+      "source": "supabase/migrations/20260605190400_subscriptions.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 6,
+      "production_version": "20260605190500",
+      "production_name": "basic_rls_policies",
+      "source": "supabase/migrations/20260605190500_basic_rls_policies.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 7,
+      "production_version": "20260605190600",
+      "production_name": "rbac",
+      "source": "supabase/migrations/20260605190600_rbac.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 8,
+      "production_version": "20260605190700",
+      "production_name": "rbac_helpers",
+      "source": "supabase/migrations/20260605190700_rbac_helpers.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 9,
+      "production_version": "20260605190800",
+      "production_name": "admin_rls_policies",
+      "source": "supabase/migrations/20260605190800_admin_rls_policies.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 10,
+      "production_version": "20260605190900",
+      "production_name": "compliance_tasks",
+      "source": "supabase/migrations/20260605190900_compliance_tasks.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 11,
+      "production_version": "20260605191000",
+      "production_name": "documents",
+      "source": "supabase/migrations/20260605191000_documents.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 12,
+      "production_version": "20260605191100",
+      "production_name": "vendors",
+      "source": "supabase/migrations/20260605191100_vendors.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 13,
+      "production_version": "20260605191200",
+      "production_name": "risks",
+      "source": "supabase/migrations/20260605191200_risks.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 14,
+      "production_version": "20260605211500",
+      "production_name": "invitations",
+      "source": "supabase/migrations/20260605211500_invitations.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 15,
+      "production_version": "20260605220000",
+      "production_name": "document_storage",
+      "source": "supabase/migrations/20260605220000_document_storage.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 16,
+      "production_version": "20260605222000",
+      "production_name": "stripe_webhook_events",
+      "source": "supabase/migrations/20260605222000_stripe_webhook_events.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 17,
+      "production_version": "20260726070000",
+      "production_name": "permissions_catalog_rls_hotfix",
+      "source": "supabase/migrations/20260726070000_permissions_catalog_rls_hotfix.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 18,
+      "production_version": "20260804224915",
+      "production_name": "live_security_definer_acl_hardening",
+      "source": "supabase/migrations/20260804224915_live_security_definer_acl_hardening.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 19,
+      "production_version": "20260804230433",
+      "production_name": "move_rls_helpers_to_private_schema",
+      "source": "supabase/migrations/20260804230433_move_rls_helpers_to_private_schema.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 20,
+      "production_version": "20260805223500",
+      "production_name": "remove_permissive_tenant_rls_bypasses",
+      "source": "supabase/migrations/20260805223500_remove_permissive_tenant_rls_bypasses.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 21,
+      "production_version": "20260807091341",
+      "production_name": "reconcile_membership_rls_and_remove_permissive_bypasses",
+      "source": "supabase/migrations/20260807091341_reconcile_membership_rls_and_remove_permissive_bypasses.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 22,
+      "production_version": "20260812160405",
+      "production_name": "harden_security_definer_search_paths",
+      "source": "supabase/migrations/20260812160405_harden_security_definer_search_paths.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 23,
+      "production_version": "20260812164435",
+      "production_name": "lock_stripe_events_processed_backend_only",
+      "source": "supabase/migrations/20260812164435_lock_stripe_events_processed_backend_only.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 24,
+      "production_version": "20260812213753",
+      "production_name": "guard_enterprise_entitlement_snapshots_against_stale_observations",
+      "source": "supabase/migrations/20260812213753_guard_enterprise_entitlement_snapshots_against_stale_observations.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 25,
+      "production_version": "20260812221912",
+      "production_name": "reconcile_billing_lifecycle_requests_runtime",
+      "source": "supabase/migrations/20260812221912_reconcile_billing_lifecycle_requests_runtime.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 26,
+      "production_version": "20260812224650",
+      "production_name": "tighten_permissions_catalog_authenticated_grants",
+      "source": "supabase/migrations/20260812224650_tighten_permissions_catalog_authenticated_grants.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 27,
+      "production_version": "20260812225906",
+      "production_name": "consolidate_canonical_rls_and_client_grants",
+      "source": "supabase/migrations/20260812225906_consolidate_canonical_rls_and_client_grants.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 28,
+      "production_version": "20260812230229",
+      "production_name": "optimize_ai_incidents_rls_and_deduplicate_ai_systems_index",
+      "source": "supabase/migrations/20260812230229_optimize_ai_incidents_rls_and_deduplicate_ai_systems_index.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 29,
+      "production_version": "20260812230541",
+      "production_name": "add_missing_foreign_key_covering_indexes",
+      "source": "supabase/migrations/20260812230541_add_missing_foreign_key_covering_indexes.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 30,
+      "production_version": "20260812230911",
+      "production_name": "tighten_monitoring_preferences_horizontal_read_isolation",
+      "source": "supabase/migrations/20260812230911_tighten_monitoring_preferences_horizontal_read_isolation.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 31,
+      "production_version": "20260813102900",
+      "production_name": "add_durable_billing_lifecycle_replay_contract",
+      "source": "supabase/migrations/20260813102900_add_durable_billing_lifecycle_replay_contract.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 32,
+      "production_version": "20260813102951",
+      "production_name": "harden_remaining_public_security_definer_search_paths",
+      "source": "supabase/migrations/20260813102951_harden_remaining_public_security_definer_search_paths.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 33,
+      "production_version": "20260813124224",
+      "production_name": "reconcile_organization_add_ons",
+      "source": "supabase/migrations/20260813124224_reconcile_organization_add_ons.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 34,
+      "production_version": "20260822120617",
+      "production_name": "atomic_vendor_risk_quota_mutations",
+      "source": "supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 35,
+      "production_version": "20260822123538",
+      "production_name": "v19_optimize_organization_add_ons_rls_initplan",
+      "source": "supabase/migrations/20260822123538_v19_optimize_organization_add_ons_rls_initplan.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 36,
+      "production_version": "20260822123540",
+      "production_name": "v19_reconcile_step_up_challenges_runtime",
+      "source": "supabase/migrations/20260822123540_v19_reconcile_step_up_challenges_runtime.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 37,
+      "production_version": "20260822123542",
+      "production_name": "v19_reconcile_subscription_schema_defaults",
+      "source": "supabase/migrations/20260822123542_v19_reconcile_subscription_schema_defaults.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 38,
+      "production_version": "20260822123544",
+      "production_name": "v19_reconcile_controlled_document_storage",
+      "source": "supabase/migrations/20260822123544_v19_reconcile_controlled_document_storage.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 39,
+      "production_version": "20260822123546",
+      "production_name": "v19_force_tasks_rls",
+      "source": "supabase/migrations/20260822123546_v19_force_tasks_rls.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 40,
+      "production_version": "20260822123548",
+      "production_name": "v19_reconcile_enterprise_break_glass_governance",
+      "source": "supabase/migrations/20260822123548_v19_reconcile_enterprise_break_glass_governance.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 41,
+      "production_version": "20260822123550",
+      "production_name": "v19_reconcile_enterprise_licensing_control_plane",
+      "source": "supabase/migrations/20260822123550_v19_reconcile_enterprise_licensing_control_plane.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 42,
+      "production_version": "20260822123552",
+      "production_name": "v19_reconcile_enterprise_integrations_scim",
+      "source": "supabase/migrations/20260822123552_v19_reconcile_enterprise_integrations_scim.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 43,
+      "production_version": "20260822123554",
+      "production_name": "v19_harden_scim_identity_connection_delete_boundary",
+      "source": "supabase/migrations/20260822123554_v19_harden_scim_identity_connection_delete_boundary.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 44,
+      "production_version": "20260822123556",
+      "production_name": "v19_bridge_enterprise_contract_mode_compatibility",
+      "source": "supabase/migrations/20260822123556_v19_bridge_enterprise_contract_mode_compatibility.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 45,
+      "production_version": "20260822123558",
+      "production_name": "v19_reconcile_enterprise_billing_lifecycle",
+      "source": "supabase/migrations/20260822123558_v19_reconcile_enterprise_billing_lifecycle.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 46,
+      "production_version": "20260822123600",
+      "production_name": "v19_finalize_enterprise_contract_mode_compatibility",
+      "source": "supabase/migrations/20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 47,
+      "production_version": "20260822123602",
+      "production_name": "v19_reconcile_enterprise_contract_control_rpcs",
+      "source": "supabase/migrations/20260822123602_v19_reconcile_enterprise_contract_control_rpcs.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 48,
+      "production_version": "20260822123604",
+      "production_name": "v19_reconcile_enterprise_core_active_runtime",
+      "source": "supabase/migrations/20260822123604_v19_reconcile_enterprise_core_active_runtime.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 49,
+      "production_version": "20260822123606",
+      "production_name": "v19_reconcile_live_rls_validation_inventory_privileges",
+      "source": "supabase/migrations/20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 50,
+      "production_version": "20260822123608",
+      "production_name": "v19_reconcile_new_organization_compatibility_envelope",
+      "source": "supabase/migrations/20260822123608_v19_reconcile_new_organization_compatibility_envelope.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 51,
+      "production_version": "20260822123610",
+      "production_name": "v19_reconcile_enterprise_invitation_seat_authority",
+      "source": "supabase/migrations/20260822123610_v19_reconcile_enterprise_invitation_seat_authority.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 52,
+      "production_version": "20260822123612",
+      "production_name": "v19_harden_enterprise_invitation_actor_boundary",
+      "source": "supabase/migrations/20260822123612_v19_harden_enterprise_invitation_actor_boundary.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 53,
+      "production_version": "20260822123614",
+      "production_name": "v19_preserve_completed_onboarding_state",
+      "source": "supabase/migrations/20260822123614_v19_preserve_completed_onboarding_state.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 54,
+      "production_version": "20260822123616",
+      "production_name": "v19_reconcile_active_onboarding_runtime",
+      "source": "supabase/migrations/20260822123616_v19_reconcile_active_onboarding_runtime.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 55,
+      "production_version": "20260822123618",
+      "production_name": "v19_harden_active_onboarding_enterprise_boundaries",
+      "source": "supabase/migrations/20260822123618_v19_harden_active_onboarding_enterprise_boundaries.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 56,
+      "production_version": "20260822123620",
+      "production_name": "v19_guard_compliance_task_browser_mutations",
+      "source": "supabase/migrations/20260822123620_v19_guard_compliance_task_browser_mutations.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 57,
+      "production_version": "20260822123622",
+      "production_name": "v19_reconcile_gap_remediation_persistence",
+      "source": "supabase/migrations/20260822123622_v19_reconcile_gap_remediation_persistence.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 58,
+      "production_version": "20260822123624",
+      "production_name": "v19_harden_gap_personal_task_write_boundary",
+      "source": "supabase/migrations/20260822123624_v19_harden_gap_personal_task_write_boundary.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 59,
+      "production_version": "20260822123626",
+      "production_name": "v19_reconcile_enterprise_evidence_vault",
+      "source": "supabase/migrations/20260822123626_v19_reconcile_enterprise_evidence_vault.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 60,
+      "production_version": "20260823123000",
+      "production_name": "payment_first_commercial_data_plane",
+      "source": "supabase/migrations/20260823123000_payment_first_commercial_data_plane.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 61,
+      "production_version": "20260823131500",
+      "production_name": "payment_first_gap_analysis_and_storage",
+      "source": "supabase/migrations/20260823131500_payment_first_gap_analysis_and_storage.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 62,
+      "production_version": "20260824185900",
+      "production_name": "prepare_enterprise_trusted_access_legacy_compatibility",
+      "source": "supabase/migrations/20260824185900_prepare_enterprise_trusted_access_legacy_compatibility.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 63,
+      "production_version": "20260824190000",
+      "production_name": "reconcile_enterprise_trusted_access_runtime",
+      "source": "supabase/migrations/20260824190000_reconcile_enterprise_trusted_access_runtime.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 64,
+      "production_version": "20260824190100",
+      "production_name": "finalize_enterprise_trusted_access_operation_contract",
+      "source": "supabase/migrations/20260824190100_finalize_enterprise_trusted_access_operation_contract.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 65,
+      "production_version": "20260824190200",
+      "production_name": "harden_enterprise_trusted_access_runtime_contract",
+      "source": "supabase/migrations/20260824190200_harden_enterprise_trusted_access_runtime_contract.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 66,
+      "production_version": "20260825092500",
+      "production_name": "atomic_document_commercial_quota",
+      "source": "supabase/migrations/20260825092500_atomic_document_commercial_quota.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 67,
+      "production_version": "20260825171500",
+      "production_name": "harden_active_membership_rls_authority",
+      "source": "supabase/migrations/20260825171500_harden_active_membership_rls_authority.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 68,
+      "production_version": "20260831115851",
+      "production_name": "deterministic_commercial_contract_source_precedence",
+      "source": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+      "mapping": "provider_record_to_canonical_source"
+    },
+    {
+      "order": 69,
+      "production_version": "20260902193810",
+      "production_name": "reconcile_deterministic_commercial_contract_source_precedence",
+      "source": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 70,
+      "production_version": "20260902193849",
+      "production_name": "reconcile_enterprise_sso_production_runtime",
+      "source": "supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 71,
+      "production_version": "20260902202558",
+      "production_name": "reconcile_linkedin_marketing_queue_runtime",
+      "source": "supabase/migrations/20260902162000_linkedin_marketing_queue.sql",
+      "mapping": "provider_record_to_canonical_source"
+    },
+    {
+      "order": 72,
+      "production_version": "20260903090000",
+      "production_name": "verify_v28_provider_ledger_reconciliation",
+      "source": "supabase/migrations/20260903090000_verify_v28_provider_ledger_reconciliation.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 73,
+      "production_version": "20260903100000",
+      "production_name": "reconcile_enterprise_step_up_runtime",
+      "source": "supabase/migrations/20260903100000_reconcile_enterprise_step_up_runtime.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 74,
+      "production_version": "20260903114500",
+      "production_name": "reconcile_onboarding_atomic_text_arrays",
+      "source": "supabase/migrations/20260903114500_reconcile_onboarding_atomic_text_arrays.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 75,
+      "production_version": "20260904065919",
+      "production_name": "reconcile_ai_governance_runtime_schema_20260904",
+      "source": "supabase/migrations/20260904065919_reconcile_ai_governance_runtime_schema_20260904.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 76,
+      "production_version": "20260904065952",
+      "production_name": "reconcile_ai_system_atomic_rpcs_20260904",
+      "source": "supabase/migrations/20260904065952_reconcile_ai_system_atomic_rpcs_20260904.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 77,
+      "production_version": "20260905075429",
+      "production_name": "fail_fast_audit_chain_advisory_contention",
+      "source": "supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 78,
+      "production_version": "20260907142133",
+      "production_name": "p0_audit_chain_fail_closed_nonretryable_conflicts_20260907",
+      "source": "supabase/migrations/20260907142133_p0_audit_chain_fail_closed_nonretryable_conflicts_20260907.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 79,
+      "production_version": "20260908000000",
+      "production_name": "reconcile_final_public_release_payment_storage_hardening",
+      "source": "supabase/migrations/20260908000000_reconcile_final_public_release_payment_storage_hardening.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 80,
+      "production_version": "20260908003000",
+      "production_name": "billing_ai_system_commercial_quota",
+      "source": "supabase/migrations/20260908003000_billing_ai_system_commercial_quota.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 81,
+      "production_version": "20260908003500",
+      "production_name": "billing_self_serve_member_capacity",
+      "source": "supabase/migrations/20260908003500_billing_self_serve_member_capacity.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 82,
+      "production_version": "20260908004000",
+      "production_name": "billing_document_storage_quota",
+      "source": "supabase/migrations/20260908004000_billing_document_storage_quota.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 83,
+      "production_version": "20260908004500",
+      "production_name": "billing_entitlement_catalog_truth",
+      "source": "supabase/migrations/20260908004500_billing_entitlement_catalog_truth.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 84,
+      "production_version": "20260908005000",
+      "production_name": "billing_initial_checkout_singleflight",
+      "source": "supabase/migrations/20260908005000_billing_initial_checkout_singleflight.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 85,
+      "production_version": "20260908006000",
+      "production_name": "billing_completed_checkout_authority_guard",
+      "source": "supabase/migrations/20260908006000_billing_completed_checkout_authority_guard.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 86,
+      "production_version": "20260908006400",
+      "production_name": "reconcile_paid_governance_runtime_foundations",
+      "source": "supabase/migrations/20260908006400_reconcile_paid_governance_runtime_foundations.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 87,
+      "production_version": "20260908006500",
+      "production_name": "billing_professional_task_plan_isolation",
+      "source": "supabase/migrations/20260908006500_billing_professional_task_plan_isolation.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 88,
+      "production_version": "20260908006600",
+      "production_name": "billing_business_feature_plan_isolation",
+      "source": "supabase/migrations/20260908006600_billing_business_feature_plan_isolation.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 89,
+      "production_version": "20260908006700",
+      "production_name": "billing_governance_workflow_plan_isolation",
+      "source": "supabase/migrations/20260908006700_billing_governance_workflow_plan_isolation.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 90,
+      "production_version": "20260908006800",
+      "production_name": "harden_cross_tenant_reference_integrity",
+      "source": "supabase/migrations/20260908006800_harden_cross_tenant_reference_integrity.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 91,
+      "production_version": "20260909006900",
+      "production_name": "harden_security_advisor_rpc_surface",
+      "source": "supabase/migrations/20260909006900_harden_security_advisor_rpc_surface.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 92,
+      "production_version": "20260909230946",
+      "production_name": "reconcile_data_governance_enterprise_foundation",
+      "source": "supabase/migrations/20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 93,
+      "production_version": "20260909231011",
+      "production_name": "harden_data_subject_request_lifecycle",
+      "source": "supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 94,
+      "production_version": "20260909232229",
+      "production_name": "finalize_backend_only_force_rls_and_trigger_acl",
+      "source": "supabase/migrations/20260909144000_finalize_backend_only_force_rls_and_trigger_acl.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 95,
+      "production_version": "20260910113000",
+      "production_name": "reconcile_fria_operational_runtime_v43",
+      "source": "supabase/migrations/20260910113000_reconcile_fria_operational_runtime_v43.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 96,
+      "production_version": "20260910113500",
+      "production_name": "article5_policy_replay_compatibility_v43",
+      "source": "supabase/migrations/20260910113500_article5_policy_replay_compatibility_v43.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 97,
+      "production_version": "20260910114000",
+      "production_name": "reconcile_prohibited_practices_runtime_v43",
+      "source": "supabase/migrations/20260910114000_reconcile_prohibited_practices_runtime_v43.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 98,
+      "production_version": "20260910115000",
+      "production_name": "atomic_data_subject_request_lifecycle_audit_v43",
+      "source": "supabase/migrations/20260910115000_atomic_data_subject_request_lifecycle_audit_v43.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 99,
+      "production_version": "20260920101246",
+      "production_name": "reconcile_sales_console_production_runtime",
+      "source": "supabase/migrations/20260920101246_reconcile_sales_console_production_runtime.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 100,
+      "production_version": "20260920172552",
+      "production_name": "restore_sales_console_admin_actor_scope",
+      "source": "supabase/migrations/20260920172552_restore_sales_console_admin_actor_scope.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 101,
+      "production_version": "20260922112154",
+      "production_name": "reconcile_transactional_email_delivery_logs_v1",
+      "source": "supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 102,
+      "production_version": "20260922112907",
+      "production_name": "harden_transactional_email_delivery_log_policies_v1",
+      "source": "supabase/migrations/20260922112907_harden_transactional_email_delivery_log_policies_v1.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 103,
+      "production_version": "20260922203500",
+      "production_name": "reconcile_team_membership_runtime_rpcs",
+      "source": "supabase/migrations/20260922203500_reconcile_team_membership_runtime_rpcs.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 104,
+      "production_version": "20260924141739",
+      "production_name": "tenant_wide_mfa_terminal",
+      "source": "supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 105,
+      "production_version": "20260924142553",
+      "production_name": "tenant_mfa_app_private_rls_authority",
+      "source": "supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 106,
+      "production_version": "20260924143358",
+      "production_name": "tenant_mfa_public_rpc_acl_hardening",
+      "source": "supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 107,
+      "production_version": "20260929101551",
+      "production_name": "optimize_rls_auth_initplan_terminal",
+      "source": "supabase/migrations/20260929101551_optimize_rls_auth_initplan_terminal.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 108,
+      "production_version": "20260929101638",
+      "production_name": "add_critical_fk_indexes_terminal",
+      "source": "supabase/migrations/20260929101638_add_critical_fk_indexes_terminal.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 109,
+      "production_version": "20260929102134",
+      "production_name": "consolidate_compliance_tasks_select_policies_terminal",
+      "source": "supabase/migrations/20260929102134_consolidate_compliance_tasks_select_policies_terminal.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 110,
+      "production_version": "20261003115056",
+      "production_name": "add_subscriptions_billing_interval_for_stripe_runtime",
+      "source": "supabase/migrations/20261003115056_add_subscriptions_billing_interval_for_stripe_runtime.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 111,
+      "production_version": "20261003134528",
+      "production_name": "fix_ai_system_text_array_rpc_contract",
+      "source": "supabase/migrations/20261003134528_fix_ai_system_text_array_rpc_contract.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 112,
+      "production_version": "20261003171225",
+      "production_name": "reconcile_risk_schema_contract",
+      "source": "supabase/migrations/20261003171225_reconcile_risk_schema_contract.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 113,
+      "production_version": "20261003173930",
+      "production_name": "reconcile_ai_incident_atomic_rpc",
+      "source": "supabase/migrations/20261003173930_reconcile_ai_incident_atomic_rpc.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 114,
+      "production_version": "20261003205557",
+      "production_name": "fix_team_invitation_persistence_42702",
+      "source": "supabase/migrations/20261003205557_fix_team_invitation_persistence_42702.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 115,
+      "production_version": "20261003220421",
+      "production_name": "fix_team_invitation_acceptance_42702",
+      "source": "supabase/migrations/20261003221000_fix_team_invitation_acceptance_42702.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 116,
+      "production_version": "20261003220519",
+      "production_name": "fix_team_invitation_membership_conflict_42702",
+      "source": "supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 117,
+      "production_version": "20261004082501",
+      "production_name": "validate_audit_logs_actor_user_fk",
+      "source": "supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 118,
+      "production_version": "20261004103137",
+      "production_name": "force_rls_sales_console_backend_only",
+      "source": "supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 119,
+      "production_version": "20261004110936",
+      "production_name": "add_sales_lead_email_templates",
+      "source": "supabase/migrations/20261004110936_add_sales_lead_email_templates.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 120,
+      "production_version": "20261005001641",
+      "production_name": "harden_sync_legacy_risk_score_trigger_acl",
+      "source": "supabase/migrations/20261005001641_harden_sync_legacy_risk_score_trigger_acl.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 121,
+      "production_version": "20261006125506",
+      "production_name": "20260721180000_annex_iv_technical_documentation_governance",
+      "source": "supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 122,
+      "production_version": "20261006125509",
+      "production_name": "20260721180100_annex_iv_package_section_integrity",
+      "source": "supabase/migrations/20260721180100_annex_iv_package_section_integrity.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 123,
+      "production_version": "20261006125511",
+      "production_name": "20260722200000_annex_iv_operational_workflow",
+      "source": "supabase/migrations/20260722200000_annex_iv_operational_workflow.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 124,
+      "production_version": "20261006125514",
+      "production_name": "20260803133000_article_50_product_integration",
+      "source": "supabase/migrations/20260803133000_article_50_product_integration.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 125,
+      "production_version": "20261006125518",
+      "production_name": "20260803133100_article_50_claim_evidence_constraints",
+      "source": "supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 126,
+      "production_version": "20261006125623",
+      "production_name": "20261006140000_harden_annex_iv_trigger_function_acl",
+      "source": "supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 127,
+      "production_version": "20261006130430",
+      "production_name": "20261006140500_reconcile_gap_task_reference_integrity",
+      "source": "supabase/migrations/20261006140500_reconcile_gap_task_reference_integrity.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 128,
+      "production_version": "20261010075142",
+      "production_name": "harden_active_membership_governance_read",
+      "source": "supabase/migrations/20261009210000_harden_active_membership_governance_read.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 129,
+      "production_version": "20261013133323",
+      "production_name": "fix_enterprise_provision_usage_conflict_ambiguity",
+      "source": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+      "mapping": "superseded_by_forward_reconciliation"
+    },
+    {
+      "order": 130,
+      "production_version": "20261013133341",
+      "production_name": "fix_enterprise_provision_usage_update_ambiguity",
+      "source": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+      "mapping": "superseded_by_forward_reconciliation"
+    },
+    {
+      "order": 131,
+      "production_version": "20261015205458",
+      "production_name": "enterprise_entitlement_v3_compatibility",
+      "source": "supabase/migrations/20261015090000_enterprise_entitlement_v3_compatibility.sql",
+      "mapping": "canonical_name_match"
+    },
+    {
+      "order": 132,
+      "production_version": "20261015235500",
+      "production_name": "enterprise_private_membership_mfa_gate",
+      "source": "supabase/migrations/20261015235500_enterprise_private_membership_mfa_gate.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 133,
+      "production_version": "20261018023000",
+      "production_name": "guard_last_active_owner_removal",
+      "source": "supabase/migrations/20261018023000_guard_last_active_owner_removal.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 134,
+      "production_version": "20261018113000",
+      "production_name": "atomic_member_removal_with_chained_audit",
+      "source": "supabase/migrations/20261018113000_atomic_member_removal_with_chained_audit.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 135,
+      "production_version": "20261018160000",
+      "production_name": "atomic_member_role_change_with_chained_audit",
+      "source": "supabase/migrations/20261018160000_atomic_member_role_change_with_chained_audit.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 136,
+      "production_version": "20261018183000",
+      "production_name": "guard_last_active_owner_seat_release",
+      "source": "supabase/migrations/20261018183000_guard_last_active_owner_seat_release.sql",
+      "mapping": "exact_version"
+    },
+    {
+      "order": 137,
+      "production_version": "20261018190000",
+      "production_name": "reconcile_audited_membership_usage_counters",
+      "source": "supabase/migrations/20261018190000_reconcile_audited_membership_usage_counters.sql",
+      "mapping": "exact_version"
+    }
+  ]
+}
