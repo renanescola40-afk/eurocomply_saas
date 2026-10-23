@@ -489,27 +489,6 @@ workflows:
                 - ci/verify-recovery-production-20261019
           requires:
             - approve-encrypted-production-backup
-  gitleaks-groups-v15a:
-    jobs:
-      - gitleaks-group-ci-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-gitleaks-groups-v15a-20261022
-      - gitleaks-group-app-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-gitleaks-groups-v15a-20261022
-      - gitleaks-group-assurance-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-gitleaks-groups-v15a-20261022
-      - gitleaks-group-other-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-gitleaks-groups-v15a-20261022
-# V15-A retrigger: classify exact-target redacted Gitleaks findings
-# V15-A retrigger 2: classify redacted Gitleaks findings after Checks activation
+# G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
+# it is not called from this isolated DB replay branch because CircleCI rejected
+# that unrelated workflow during pipeline compilation.
