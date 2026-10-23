@@ -1,0 +1,266 @@
+{
+  "schema": "risck-comply.g2-04.legacy16-to-owner24-compatibility.v1",
+  "asOf": "2026-10-23",
+  "evidenceMainSha": "70d3545f414d063379d481fd238aed563e05edda",
+  "ownerDirectedScore": "A_PASS / 24 * 100",
+  "ownerOverallInventory": "A=24,B=6,C=5,D=3; total=38 grouping items",
+  "atomicTechnicalProposals": "Draft PR #2563 contains 38 mandatory atomic technical subcontrols mapped onto 24 A gates; 38 atomic A subcontrols are NOT the same inventory as owner 24A+6B+5C+3D=38.",
+  "scopeApproval": "PR #2563 DRAFT, no auto-replacement of active production 16-control contract",
+  "observedAcceptedA": [
+    "A-09/BIL-01",
+    "A-18/OPS-01"
+  ],
+  "observedProductReadyPercent": 8.33,
+  "observedRemainingPercent": 91.67,
+  "observedCandidateQABlock": "DAT-01/A-12, rollback-only 47/137 last reported, no durable QA migrations",
+  "legacyControlCount": 16,
+  "policy": "Compatibility mapping only; NO new acceptance register or waiver. No evidence path existence, checker code, structural provider status or draft document constitutes legacy PASS on its own.",
+  "mapping": [
+    {
+      "LEGACY_16_CONTROL": "repository-quality",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-15",
+        "A-17"
+      ],
+      "EVIDENCE": "release-validation/repository-quality.json",
+      "APPLICABILITY": "SOURCE_EXACT_SHA_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Required source checks must pass on the exact admitted SHA; source-only CircleCI is not end-to-end runtime.",
+      "PRODUCTION_GO_EFFECT": "Do not release without all required CI and governed review.",
+      "CONFLICT": "No same-SHA full required-check acceptance independently established.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "production-deployment",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-18"
+      ],
+      "EVIDENCE": "release-validation/production-deployment.json",
+      "APPLICABILITY": "SOURCE_DEPLOYMENT_MATCH",
+      "PRODUCT_READY_EFFECT": "A-18 / OPS-01 has referenced READY deployment evidence at main SHA 70d3545f...; this does not credit runtime acceptance.",
+      "PRODUCTION_GO_EFFECT": "Exact promoted deployment identity must be checked at release admission.",
+      "CONFLICT": "READY alone is not authenticated smoke or an automatic production GO.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "production-smoke",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-20"
+      ],
+      "EVIDENCE": "release-validation/production-smoke.json",
+      "APPLICABILITY": "LIVE_RUNTIME_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Requires OPS-03 critical public and authenticated runtime smoke.",
+      "PRODUCTION_GO_EFFECT": "Blocks production promotion without runtime evidence.",
+      "CONFLICT": "Deployment READY does not prove authenticated smoke.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "enterprise-runtime-closeout",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-16",
+        "A-17",
+        "A-20"
+      ],
+      "EVIDENCE": "enterprise-runtime-closeout.json",
+      "APPLICABILITY": "LIVE_RUNTIME_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Requires current-source authenticated journeys plus traceable build and deployed runtime evidence.",
+      "PRODUCTION_GO_EFFECT": "Active legacy runtime closeout remains separately binding.",
+      "CONFLICT": "Historical or source-only tests cannot replace final runtime acceptance.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "production-provider-runtime",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-04",
+        "A-21"
+      ],
+      "EVIDENCE": "production-secrets-provider-stores.json",
+      "APPLICABILITY": "PRODUCTION_CONFIGURATION_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Provider config/secret readiness supports SEC-05 and OPS-06 only within evidenced scope.",
+      "PRODUCTION_GO_EFFECT": "Credential/environment admission needed before promotion.",
+      "CONFLICT": "Provider-secret status does not prove bundle scanning or test/live isolation.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "supabase-rls-reconciliation",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-03",
+        "A-14"
+      ],
+      "EVIDENCE": "release-validation/supabase-rls-reconciliation.json",
+      "APPLICABILITY": "DATABASE_SECURITY_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Production 115/115 public RLS + FORCE RLS is structural evidence, not tenant A/B denial.",
+      "PRODUCTION_GO_EFFECT": "Security release gate remains active until proof.",
+      "CONFLICT": "RLS structural status alone does not prove API/RPC/Storage tenancy isolation.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "tenant-isolation-live",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-03",
+        "A-16"
+      ],
+      "EVIDENCE": "release-validation/tenant-isolation-live.json",
+      "APPLICABILITY": "AUTHENTICATED_SECURITY_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Authenticated Tenant A/B read/write/export/download deny tests required.",
+      "PRODUCTION_GO_EFFECT": "Blocks release if unproved or failing.",
+      "CONFLICT": "Structural RLS alone is insufficient.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "supabase-production-acceptance",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-12",
+        "A-14"
+      ],
+      "EVIDENCE": "production-acceptance.json",
+      "APPLICABILITY": "DATABASE_AND_QA_REQUIRED",
+      "PRODUCT_READY_EFFECT": "137 production migration ledger rows are documented; QA clean replay remains DAT-01 BLOCKED.",
+      "PRODUCTION_GO_EFFECT": "No production admission until database/QA parity and grants accepted.",
+      "CONFLICT": "Production migration count is not clean QA bootstrap proof.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "backup-restore",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-14"
+      ],
+      "EVIDENCE": "release-validation/backup-restore.json",
+      "APPLICABILITY": "RECOVERY_SCOPE_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Historic CircleCI #180 proves bounded logical PostgreSQL recovery, not platform-wide restore.",
+      "PRODUCTION_GO_EFFECT": "Release recovery contract must be separately accepted.",
+      "CONFLICT": "Auth settings, Storage bytes and full app recovery excluded from historical logical proof.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "rollback-rehearsal",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-21"
+      ],
+      "EVIDENCE": "release-validation/rollback-rehearsal.json",
+      "APPLICABILITY": "RELEASE_RECOVERY_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Requires staged/isolated known-good release rollback proof.",
+      "PRODUCTION_GO_EFFECT": "Blocks GO unless active release policy expressly and properly revised.",
+      "CONFLICT": "Database logical restore is not app rollback rehearsal.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "observability-runtime",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-20"
+      ],
+      "EVIDENCE": "release-validation/observability-runtime.json",
+      "APPLICABILITY": "OPERATIONS_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Requires monitoring/alert checks, incident drill and support route.",
+      "PRODUCTION_GO_EFFECT": "Operations GO evidence required.",
+      "CONFLICT": "Documentation alone cannot establish live alert routing.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "billing-product-live-closure",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-09",
+        "A-10",
+        "A-11"
+      ],
+      "EVIDENCE": "final-billing-product-live-closeout.json",
+      "APPLICABILITY": "BILLING_RUNTIME_REQUIRED",
+      "PRODUCT_READY_EFFECT": "BIL-01 product/price catalog PASS is separate from signed TEST events, checkout, and subscription/entitlement lifecycles.",
+      "PRODUCTION_GO_EFFECT": "No GO for committed billing without authenticated payment lifecycle acceptance.",
+      "CONFLICT": "Do not turn price catalog PASS into checkout/webhook PASS.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "product-commercial-qa",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-06",
+        "A-07",
+        "A-08",
+        "A-16"
+      ],
+      "EVIDENCE": "fria-runtime-evidence.json",
+      "APPLICABILITY": "PRODUCT_E2E_REQUIRED",
+      "PRODUCT_READY_EFFECT": "Requires evidence-backed FRIA/governance, files and reports, advertised functionality and authenticated E2E.",
+      "PRODUCTION_GO_EFFECT": "Core product must match committed customer journey.",
+      "CONFLICT": "Source routes and documents cannot replace runtime user journeys.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "legal-publication",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-22",
+        "A-23",
+        "A-24"
+      ],
+      "EVIDENCE": "artifacts/legal-review/legal-launch-gate.json",
+      "APPLICABILITY": "EFFECTIVE_LEGAL_PUBLICATION_REQUIRED",
+      "PRODUCT_READY_EFFECT": "TRU-01..06 need authoritative seller/IP facts, versioned legal documents and qualified acceptance where required.",
+      "PRODUCTION_GO_EFFECT": "Active legal-publication launch contract remains blocking until genuine acceptance.",
+      "CONFLICT": "Draft Privacy/DPA/Terms are not executed or effective publication.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "external-security-assurance",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-03",
+        "A-24"
+      ],
+      "EVIDENCE": "external-security-assurance-decision.json",
+      "APPLICABILITY": "CONDITIONAL_PRODUCT_READY_ACTIVE_LEGACY_RELEASE",
+      "PRODUCT_READY_EFFECT": "For general Product Ready, additional independent assurance is requirement-based; do not exclude material security risk. B-04 becomes applicable upon binding buyer obligation.",
+      "PRODUCTION_GO_EFFECT": "The existing release contract includes this control; do not waive it merely by applying the 24-gate Product Ready denominator.",
+      "CONFLICT": "Third-party black-box assessment exists; clean independent terminal retest is open, and active release effect needs owner-governed decision.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    },
+    {
+      "LEGACY_16_CONTROL": "final-go-no-go",
+      "PLOST_PRODUCT_READY_CRITERION": [
+        "A-01",
+        "A-02",
+        "A-03",
+        "A-04",
+        "A-05",
+        "A-06",
+        "A-07",
+        "A-08",
+        "A-09",
+        "A-10",
+        "A-11",
+        "A-12",
+        "A-13",
+        "A-14",
+        "A-15",
+        "A-16",
+        "A-17",
+        "A-18",
+        "A-19",
+        "A-20",
+        "A-21",
+        "A-22",
+        "A-23",
+        "A-24"
+      ],
+      "EVIDENCE": "release-validation/final-go-no-go.json",
+      "APPLICABILITY": "ALWAYS_ACTIVE_RELEASE_DECISION",
+      "PRODUCT_READY_EFFECT": "All applicable 24 mandatory groups must independently PASS before general Product Ready PASS.",
+      "PRODUCTION_GO_EFFECT": "Production GO requires release authority and all applicable legacy security/legal/release gates, separately from Product Ready.",
+      "CONFLICT": "A percentage is not an authorisation to deploy.",
+      "APPROVAL_REQUIRED": "G2-04 evidence review and qualified criterion acceptance; active policy exceptions and final production release require documented owner/release authority.",
+      "LEGACY_PASS_STATUS": "NOT_ASSERTED_BY_THIS_CROSSWALK"
+    }
+  ]
+}

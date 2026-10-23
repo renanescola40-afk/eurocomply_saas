@@ -6,7 +6,7 @@ Last factual reconciliation: `2026-09-24`.
 
 ## Procurement checklist
 
-See `docs/trust/PROCUREMENT_CHECKLIST.md` for the working checklist and `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-12.md` for the controlled data-room index. Confirm the public Trust Center, current release evidence, provider facts, data-handling boundaries, service commitments and responsible contact immediately before sharing enterprise answers.
+See `docs/trust/PROCUREMENT_CHECKLIST.md` for the working checklist and `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-24.md` for the controlled data-room index. Confirm the public Trust Center, current release evidence, provider facts, data-handling boundaries, service commitments and responsible contact immediately before sharing enterprise answers.
 
 Provider and configuration facts are tracked in `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md`; stale release-specific facts must not be promoted into customer disclosures.
 
@@ -93,7 +93,7 @@ No owner decision, AI analysis or internal review may be described as qualified 
 - `docs/trust/SUBPROCESSORS.md`
 - `docs/trust/SECURITY_FAQ.md`
 - `docs/trust/PROCUREMENT_CHECKLIST.md`
-- `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-12.md`
+- `docs/trust/FINAL_DATA_ROOM_INDEX_2026-09-24.md`
 - `docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md`
 - `docs/trust/PROCUREMENT_LEGAL_PRIVACY_CLOSURE_2026-09-24.md`
 - `docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md`

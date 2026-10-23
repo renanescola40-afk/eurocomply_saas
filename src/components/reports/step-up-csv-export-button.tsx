@@ -21,7 +21,7 @@ async function errorMessage(response: Response) {
   const body = (await response.json().catch(() => ({}))) as ExportErrorBody;
   if (response.status === 403 && body.error === 'step_up_required') return 'Security verification expired. Verify again to export.';
   if (response.status === 403) return 'You do not have permission to export this report.';
-  if (response.status === 402) return body.message ?? 'Your current plan does not include CSV exports.';
+  if (response.status === 402) return body.message ?? 'Your current plan does not include this export.';
   if (response.status === 429) return 'Too many export attempts. Wait a moment and try again.';
   return body.message ?? 'The report could not be exported. Try again.';
 }
@@ -70,7 +70,7 @@ export function StepUpCsvExportButton({ endpoint, filename, label = 'Export CSV'
           disabled={loading}
           onClick={() => { setError(null); setDialogOpen(true); }}
         >
-          {loading ? 'Preparing CSV…' : label}
+          {loading ? 'Preparing export…' : label}
         </button>
         <p className="max-w-xs text-xs text-rose-500" role="status" aria-live="polite">{error}</p>
       </div>
@@ -78,10 +78,11 @@ export function StepUpCsvExportButton({ endpoint, filename, label = 'Export CSV'
         action="export_data"
         open={dialogOpen}
         title="Verify before exporting"
-        description="CSV reports contain organization data. Complete MFA or enterprise identity verification to continue."
+        description="Exports contain organization data. Complete MFA or enterprise identity verification to continue."
         onCancel={() => setDialogOpen(false)}
         onToken={(token) => { setDialogOpen(false); void download(token); }}
       />
     </>
   );
 }
+

@@ -1,0 +1,127 @@
+{
+  "schema": "risck-comply.g1.qa-historical-migration-replay-critical-path.v1",
+  "observedAt": "2026-10-22T22:32:37.669Z",
+  "sourceBaselineMainSha": "70d3545f414d063379d481fd238aed563e05edda",
+  "qaProjectRef": "zrxrrfbllsxtleyxjpsz",
+  "qaMode": "READ_ONLY_SOURCE_REFS_PLUS_SYNTHETIC_ROLLBACK_SQL_EXECUTION",
+  "approvedScopes": {
+    "qaWritesTemporarilyTransactional": true,
+    "productionWrites": false,
+    "customerDataReads": false,
+    "newResources": false
+  },
+  "steps": {
+    "latestRollbackOnlyPass": 47,
+    "firstFailingStep": 48,
+    "totalProductionLedgerEntries": 137,
+    "qaPersistentMigrationRows": 0,
+    "historicSupabaseProDisposableBranchApplied": 26,
+    "historicBranchDeleted": true,
+    "sourceRollbacks": [
+      "1-5",
+      "1-10",
+      "1-16",
+      "1-18 with guarded source",
+      "1-19 with guarded private helpers",
+      "1-26",
+      "1-27 with revised RLS guard",
+      "1-30",
+      "1-37 with subscription reconciliation",
+      "1-40 with canonical tasks",
+      "1-42",
+      "1-45",
+      "1-48 FAIL"
+    ]
+  },
+  "step48": {
+    "source": "supabase/migrations/20260822123604_v19_reconcile_enterprise_core_active_runtime.sql",
+    "originalFailure": "42P01 relation public.ai_incidents does not exist",
+    "qaStructuralPrerequisite": "docs/enterprise/replay/G1_QA_MIGRATION_048_AI_STRUCTURAL_PREREQUISITE.sql",
+    "afterVerifiedStructuralPrerequisite": {
+      "sourceUpToOriginalGuardExecuted": true,
+      "expectedCanonicalRlsPolicies": 28,
+      "presentPolicies": 8,
+      "missingPolicies": 20,
+      "missingPolicyGroups": {
+        "ai_systems": [
+          "rls_ai_systems_delete_admin",
+          "rls_ai_systems_insert_writer",
+          "rls_ai_systems_select_member",
+          "rls_ai_systems_update_writer"
+        ],
+        "audit_events": [
+          "rls_audit_events_insert_backend_only",
+          "rls_audit_events_select_member"
+        ],
+        "invitations": [
+          "rls_invitations_insert_backend_only",
+          "rls_invitations_select_member"
+        ],
+        "monitoring_preferences": [
+          "rls_monitoring_preferences_select_self_or_admin",
+          "rls_monitoring_preferences_update_self_or_admin"
+        ],
+        "notifications": [
+          "rls_notifications_insert_backend_only",
+          "rls_notifications_select_recipient"
+        ],
+        "onboarding_activation_runs": [
+          "rls_onboarding_activation_runs_insert_writer",
+          "rls_onboarding_activation_runs_select_member"
+        ],
+        "regulatory_updates": [
+          "rls_regulatory_updates_insert_backend_only",
+          "rls_regulatory_updates_select_authenticated"
+        ],
+        "subscriptions": [
+          "rls_subscriptions_delete_backend_only",
+          "rls_subscriptions_insert_backend_only",
+          "rls_subscriptions_select_member",
+          "rls_subscriptions_update_backend_only"
+        ]
+      },
+      "exactErrorPrefix": "P0001 G1_QA48_MISSING_CANONICAL_POLICY_COUNT=20"
+    },
+    "rule": "Never synthesize permissive RLS or bypass source checks. Reconstruct each missing canonical policy from previously-reviewed source and pair with corresponding function/tenant preconditions."
+  },
+  "qaReplaySources": {
+    "rollbackBundles": [
+      "docs/enterprise/replay/G1_QA_REPLAY_001_016_ROLLBACK_ONLY.sql",
+      "docs/enterprise/replay/G1_QA_REPLAY_001_019_ROLLBACK_ONLY.sql",
+      "docs/enterprise/replay/G1_QA_REPLAY_001_027_ROLLBACK_ONLY.sql",
+      "docs/enterprise/replay/G1_QA_REPLAY_001_036_ROLLBACK_ONLY.sql",
+      "docs/enterprise/replay/G1_QA_REPLAY_001_037_ROLLBACK_ONLY.sql",
+      "docs/enterprise/replay/G1_QA_REPLAY_001_040_ROLLBACK_ONLY.sql",
+      "docs/enterprise/replay/G1_QA_REPLAY_001_042_ROLLBACK_ONLY.sql",
+      "docs/enterprise/replay/G1_QA_REPLAY_001_045_ROLLBACK_ONLY.sql"
+    ],
+    "guardedQaOnlyOverlays": [
+      "docs/enterprise/replay/G1_QA_MIGRATION_018_ABSENT_FUNCTIONS_FAIL_CLOSED.sql",
+      "docs/enterprise/replay/G1_QA_MIGRATION_019_SAFE_PRIVATE_HELPERS.sql",
+      "docs/enterprise/replay/G1_QA_MIGRATION_037_SUBSCRIPTION_COLUMN_RECONCILIATION.sql",
+      "docs/enterprise/replay/G1_QA_MIGRATION_039_TASKS_SOURCE_PREREQUISITE.sql",
+      "docs/enterprise/replay/G1_QA_MIGRATION_048_AI_STRUCTURAL_PREREQUISITE.sql"
+    ]
+  },
+  "guardrails": {
+    "allTestTransactionsRolledBack": true,
+    "qaPublicApplicationTablesAfterFailure": 0,
+    "qaAuthUsersAfterFailure": 0,
+    "qaStorageObjectsAfterFailure": 0,
+    "productionMigrationLedgerModified": false,
+    "sourceMigrationFilesModified": false,
+    "sourcePR2559Untouched": true,
+    "ciOrAuthenticatedBrowserRuntimeClaimed": false
+  },
+  "ownerScoring": {
+    "A_TOTAL": 24,
+    "A_PASS": 2,
+    "A_BLOCKED": 1,
+    "A_PARTIAL": 0,
+    "ENTERPRISE_PRODUCT_READY_PERCENT": 8.33,
+    "OVERALL_SCOPE_TOTAL": 38,
+    "OVERALL_SCOPE_CLOSED": 2,
+    "OVERALL_SCOPE_COMPLETION_PERCENT": 5.26
+  },
+  "nextExecutableAction": "Under PR2559, source-map the 20 missing policy prerequisites from approved historical source migrations and missing eight table creators, build QA-only fail-closed RLS materialization with explicit per-table deny/write, then rerun source48 in rollback and continue 49-137. Only after full verified replay may schema be durably bootstrapped in a protected QA project. No production ledger repair."
+}

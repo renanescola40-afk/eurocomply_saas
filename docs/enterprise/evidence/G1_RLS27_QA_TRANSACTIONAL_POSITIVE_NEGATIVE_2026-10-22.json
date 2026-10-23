@@ -1,0 +1,63 @@
+{
+  "schema": "risck-comply.g1-rls27-supabase-qa-positive-negative.v1",
+  "observedAt": "2026-10-22T21:43:07.113Z",
+  "sourceMigration": "supabase/migrations/20260812225906_consolidate_canonical_rls_and_client_grants.sql",
+  "sourceBlobSha": "2636809f1c8824b859ce021bf42095db46a5135a",
+  "productionLedgerVersion": "20260812225906",
+  "isolatedQAProject": "zrxrrfbllsxtleyxjpsz",
+  "dbEngine": "17.11",
+  "method": "Provider Supabase execute_sql on existing independent isolated QA; BEGIN + synthetic public table/policy fixtures + original reviewed migration body WITHOUT its outer BEGIN/COMMIT + assertions + ROLLBACK. Separate positive and negative calls, zero real user data.",
+  "tablesSynthesized": [
+    "subscriptions",
+    "audit_logs",
+    "invitations",
+    "organization_members",
+    "organizations"
+  ],
+  "initiallyExistingCanonicalPolicies": {
+    "subscriptions": 0,
+    "audit_logs": 0,
+    "invitations": 0,
+    "organization_members": 4,
+    "organizations": 2
+  },
+  "tests": [
+    {
+      "id": "HISTORICAL_ZERO_POLICY_STATE",
+      "expected": "succeeds only when 0/4 catalogs absent and existing org/member policies complete",
+      "actual": "succeeded",
+      "result": "PASS",
+      "confirmed": "5/5 public tables FORCE RLS; no permissive target policies produced; transaction rolled back"
+    },
+    {
+      "id": "PARTIAL_POLICY_STATE",
+      "expected": "fail closed with 1/4 subscriptions canonical policies",
+      "actual": "ERROR P0001 canonical RLS policy missing after partial materialization: 3",
+      "result": "PASS",
+      "confirmed": "SQL rejected, transaction aborted and no public app tables persisted"
+    },
+    {
+      "id": "QA_CLEAN_AFTER_ROLLBACK",
+      "expected": "no app tables/users/objects/migration ledger remains after both cases",
+      "actual": {
+        "postgres_version": "17.11",
+        "app_public_tables": 0,
+        "auth_users": 0,
+        "storage_objects": 0,
+        "has_ledger": false
+      },
+      "result": "PASS"
+    }
+  ],
+  "rootCause": "Previous 26 production provider ledger statements include names of the four canonical org-member policies and two org policies, but contain no references to all 12 canonical policies for subscriptions (4), audit_logs (4) and invitations (4). Original stored provider migration guard demands 12 too early; reviewed source permits 0/N but detects partial materialization.",
+  "invariants": {
+    "qaPublicTables": 0,
+    "authUsers": 0,
+    "storageObjects": 0,
+    "qaMigrationLedgerInitialized": false,
+    "productionWritten": false,
+    "replayReaches137": false
+  },
+  "classification": "HISTORICAL_RLS_GUARD_SOURCE_FIX_VALIDATED_ON_QA_NOT_FULL_REPLAY",
+  "remainingGate": "DAT-01 requires ordered, source-bound 137/137 schema replay, cross-dependency and RLS/grant proof; unchanged Supabase provider ledger branch cloning still fails."
+}

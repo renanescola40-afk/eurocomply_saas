@@ -13,14 +13,33 @@ const decisionsRaw = await readFile(decisionsPath, 'utf8');
 const inventory = JSON.parse(inventoryRaw);
 const decisions = JSON.parse(decisionsRaw);
 const errors = [];
+const isDigest = (value) => /^(?:sha256:)?[a-f0-9]{64}$/i.test(String(value ?? ''));
+const normalizedDigest = (value) => String(value ?? '').replace(/^sha256:/i, '').toLowerCase();
+const isMeaningful = (value) => typeof value === 'string' && value.trim().length > 0 && !/^(?:REPLACE_WITH|TBD|TODO|UNKNOWN)/i.test(value.trim());
+const expectedSha = String(process.env.TARGET_SHA ?? '').toLowerCase().trim();
+const actualInventoryDigest = sha256(inventoryRaw);
+
+if (inventory?.schema !== 'risck-comply.supabase-migration-reconciliation-inventory.v1') errors.push('invalid inventory schema');
+if (!Array.isArray(inventory?.items) || inventory.items.length === 0) errors.push('inventory.items must be non-empty');
+if (!Array.isArray(inventory?.remoteVersions) || inventory.remoteVersions.length === 0) errors.push('remote migration ledger versions missing');
+if (!/^[a-f0-9]{40}$/.test(expectedSha)) errors.push('TARGET_SHA must be exact 40-character release SHA');
+if (String(decisions?.targetSha ?? '').toLowerCase() !== expectedSha) errors.push('target SHA mismatch');
+if (!isDigest(decisions?.inventorySha256) || normalizedDigest(decisions.inventorySha256) !== actualInventoryDigest) errors.push('inventory digest mismatch');
+if (!isDigest(decisions?.productionSchemaDumpDigest)) errors.push('production schema dump digest missing');
+if (!isDigest(decisions?.remoteMigrationListDigest)) errors.push('remote migration ledger digest missing');
+if (!isMeaningful(decisions?.productionProjectRef)) errors.push('production project ref missing');
 
 if (decisions.schema !== 'risck-comply.supabase-migration-reconciliation-decisions.v1') errors.push('invalid decisions schema');
 if (!Array.isArray(decisions.items)) errors.push('decisions.items must be an array');
 if (!decisions.targetSha || !/^[a-f0-9]{40}$/.test(decisions.targetSha)) errors.push('targetSha must be a full commit SHA');
-if (!decisions.reviewedBy || !decisions.approvedBy || decisions.reviewedBy === decisions.approvedBy) errors.push('reviewer and approver must be distinct');
-if (!decisions.reviewedAt || !decisions.approvedAt) errors.push('review timestamps are required');
+if (!isMeaningful(decisions.reviewedBy) || !isMeaningful(decisions.approvedBy) || decisions.reviewedBy.trim().toLowerCase() === decisions.approvedBy.trim().toLowerCase()) errors.push('reviewer and approver must be distinct');
+if (!Number.isFinite(Date.parse(decisions.reviewedAt)) || !Number.isFinite(Date.parse(decisions.approvedAt))) errors.push('review timestamps are required');
+if (Date.parse(decisions.reviewedAt) > Date.now() || Date.parse(decisions.approvedAt) > Date.now()) errors.push('review timestamps must not be future');
 
-const sourceByKey = new Map(inventory.items.map((item) => [`${item.version ?? 'invalid'}:${item.filename}`, item]));
+const sourceItems = Array.isArray(inventory?.items) ? inventory.items : [];
+const sourceByKey = new Map(sourceItems.map((item) => [`${item.version ?? 'invalid'}:${item.filename}`, item]));
+if (sourceByKey.size !== sourceItems.length) errors.push('duplicate inventory item');
+if (sourceItems.some((item) => !isDigest(item.sha256))) errors.push('invalid inventory file digest');
 const seen = new Set();
 const accepted = [];
 for (const item of decisions.items ?? []) {
@@ -29,18 +48,20 @@ for (const item of decisions.items ?? []) {
   if (!source) { errors.push(`decision not present in inventory: ${key}`); continue; }
   if (seen.has(key)) { errors.push(`duplicate decision: ${key}`); continue; }
   seen.add(key);
-  if (item.sha256 !== source.sha256) errors.push(`digest mismatch: ${key}`);
+  if (!isDigest(item.sha256) || !isDigest(source.sha256) || normalizedDigest(item.sha256) !== normalizedDigest(source.sha256)) errors.push(`digest mismatch: ${key}`);
   if (!allowed.has(item.classification)) errors.push(`invalid classification: ${key}`);
   if (!item.rationale || item.rationale.length < 20) errors.push(`insufficient rationale: ${key}`);
-  if (!item.schemaEvidenceReference) errors.push(`missing schema evidence: ${key}`);
-  if (!item.reviewer || !item.reviewedAt) errors.push(`missing item review attribution: ${key}`);
-  if (item.classification === 'PENDING_DEPLOYMENT' && (!item.stagingRunReference || !item.rollbackReference || !Number.isInteger(item.deployOrder))) errors.push(`pending deployment lacks staged execution plan: ${key}`);
-  if (item.classification === 'SUPERSEDED' && !item.replacementDigest) errors.push(`superseded item lacks replacement digest: ${key}`);
-  if (item.classification === 'ALREADY_PRESENT_IN_SCHEMA' && !item.objectProofDigest) errors.push(`already-present item lacks object proof digest: ${key}`);
+  if (!isMeaningful(item.schemaEvidenceReference)) errors.push(`missing schema evidence: ${key}`);
+  if (!isMeaningful(item.reviewer) || !Number.isFinite(Date.parse(item.reviewedAt))) errors.push(`missing item review attribution: ${key}`);
+  if (item.classification === 'PENDING_DEPLOYMENT' && (!isMeaningful(item.stagingRunReference) || !isMeaningful(item.rollbackReference) || !Number.isInteger(item.deployOrder) || item.deployOrder < 1)) errors.push(`pending deployment lacks staged execution plan: ${key}`);
+  if (item.classification === 'SUPERSEDED' && !isDigest(item.replacementDigest)) errors.push(`superseded item lacks replacement digest: ${key}`);
+  if (item.classification === 'ALREADY_PRESENT_IN_SCHEMA' && !isDigest(item.objectProofDigest)) errors.push(`already-present item lacks object proof digest: ${key}`);
+  if (item.classification === 'REQUIRES_SPLIT_REVIEW') errors.push(`split review unresolved: ${key}`);
   accepted.push({ ...item, sourceReasons: source.classificationReasons });
 }
 
 for (const key of sourceByKey.keys()) if (!seen.has(key)) errors.push(`unclassified inventory item: ${key}`);
+if (accepted.length !== sourceByKey.size) errors.push('decision count differs from source inventory');
 const pending = accepted.filter((item) => item.classification === 'PENDING_DEPLOYMENT').sort((a,b) => a.deployOrder - b.deployOrder);
 const duplicateOrders = pending.filter((item, index) => index > 0 && item.deployOrder === pending[index - 1].deployOrder).map((item) => item.deployOrder);
 if (duplicateOrders.length) errors.push(`duplicate deployOrder values: ${[...new Set(duplicateOrders)].join(', ')}`);
@@ -51,7 +72,7 @@ const result = {
   generatedAt,
   status,
   targetSha: decisions.targetSha ?? null,
-  inventoryDigest: sha256(inventoryRaw),
+  inventoryDigest: actualInventoryDigest,
   decisionsDigest: sha256(decisionsRaw),
   counts: {
     inventoryItems: sourceByKey.size,

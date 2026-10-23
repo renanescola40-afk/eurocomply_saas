@@ -1,0 +1,25 @@
+{
+  "schema": "risck-comply.g1.p0f-production-usage-drift-readback.v1",
+  "observedAt": "2026-10-22T21:25:05.269Z",
+  "source": "Supabase Pro production READ-ONLY aggregate SQL over public.organization_usage and public.organization_members",
+  "productionProjectRef": "tganhbbhfxcpblmgqprg",
+  "applicationMainShaAtLastVerification": "70d3545f414d063379d481fd238aed563e05edda",
+  "count": {
+    "usageRows": 265,
+    "membershipRows": 208,
+    "driftOrgs": 2,
+    "storedMinusActualActiveMembers": 3,
+    "storedMinusActualFullUsers": 3,
+    "storedMinusActualActiveAdmins": 2
+  },
+  "method": "Compare per-org persisted active_members, full_users and active_admins to active membership records grouped by org, counting missing-member orgs as zero; report only aggregate differences. Pure SELECT/CTE.",
+  "underlyingOrganizationIdentifiersIncluded": false,
+  "blocker": "P0-F drift not zero; transactional repair and P0-F authenticated writer not validated. Do not call DAT-02 or DAT-05 PASS.",
+  "ownerPR": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2556",
+  "next": "Owner-governed acceptance of reviewed P0-F repair; synthetic PG17 multi-session tests against current exact source SHA; separately authorized production repair with post-write audit only after cutover.",
+  "safety": {
+    "productionWritten": false,
+    "personalDataExported": false,
+    "otherOrgIdentifiersRead": false
+  }
+}

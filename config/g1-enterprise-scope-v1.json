@@ -1,0 +1,682 @@
+{
+  "schema": "risck-comply.g1-enterprise-scope.v1",
+  "version": "1.0.0",
+  "dated": "2026-10-22",
+  "repo": "renanescola40-afk/eurocomply_saas",
+  "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+  "freezeState": "CANDIDATE_ON_ISOLATED_BRANCH_PENDING_GOVERNED_REVIEW",
+  "scopePrinciple": "Finite mandatory criteria for the committed general B2B SaaS offering; no external certificate claimed. Primary owner-defined A gate metric is 24 groups; original 38 atomic criteria remain mandatory and unchanged as child proofs. Six B, five C and three D remain existing separate category references.",
+  "scoring": {
+    "denominator": 38,
+    "rule": "Owner-governed Product Ready is accepted Category A gates / 24 (see exact 38-atomic-to-24 A grouping). Every underlying atomic technical control remains mandatory inside its A gate. Previous 2/38 figure is a secondary atomic-source or 38-item overall completion reference, not Product Ready. Unknown and unapproved items count zero.",
+    "allDomainsMustPass": true,
+    "primaryEnterpriseProductReadyDenominator": 24,
+    "primaryEnterpriseProductReadyProjection": "config/g1-product-ready-24-gates.json",
+    "denominatorMeaning": "Legacy mandatory atomic technical subcontrols, NOT primary Product Ready category A items"
+  },
+  "categories": {
+    "B": [
+      [
+        "B-01",
+        "SAML/SCIM/SSO or bespoke IdP if specifically contracted"
+      ],
+      [
+        "B-02",
+        "Regional/dedicated residency or custom hosting"
+      ],
+      [
+        "B-03",
+        "Customer-specific SLA, 24x7 support and RTO/RPO"
+      ],
+      [
+        "B-04",
+        "Customer-mandated SOC 2/ISO 27001 or external authenticated pentest"
+      ],
+      [
+        "B-05",
+        "Custom integration, data-export spec or security assessment"
+      ],
+      [
+        "B-06",
+        "Public sector sector-specific accreditation, if contracted"
+      ]
+    ],
+    "C": [
+      [
+        "C-01",
+        "Noncritical cosmetic refinements and expanded UI variants"
+      ],
+      [
+        "C-02",
+        "Advanced analytics beyond marketed/reporting core"
+      ],
+      [
+        "C-03",
+        "Kubernetes or multi-cloud for hypothetical future scale"
+      ],
+      [
+        "C-04",
+        "Broad additional integrations not contracted"
+      ],
+      [
+        "C-05",
+        "Index tuning without measured material operating impact"
+      ]
+    ],
+    "D": [
+      [
+        "D-01",
+        "Conformity assessment for a customer-operated high-risk AI system: not performed by SaaS supplier unless itself legally assigned such role"
+      ],
+      [
+        "D-02",
+        "Payment institution authorization: app uses Stripe and does not itself provide regulated payment services"
+      ],
+      [
+        "D-03",
+        "Medical-device software certification for an offering that is not a medical device"
+      ]
+    ]
+  },
+  "acceptanceRules": [
+    "Material critical/high issues cannot be excluded from A without documented risk and applicability review.",
+    "A PASS requires reproducible provider/runtime/test evidence, exact-SHA binding where applicable and a reviewer/approver.",
+    "No blanket-equivalence: source tests are not runtime tests; READY does not prove customer flow; Stripe live price does not prove TEST lifecycle.",
+    "B becomes blocking only when an affected customer commitment is made. C never blocks unless reclassified for verified material risk. D requires rationale.",
+    "Freeze changes require an identified new applicable material risk, documented rationale and owner approval.",
+    "This scope does not auto-override the existing config/enterprise-100-closure.json or weaken active release/security policies."
+  ],
+  "mandatory": [
+    {
+      "id": "SEC-01",
+      "domain": "Security",
+      "owner": "security",
+      "classification": "A",
+      "criterion": "Session authentication, recovery and logout reject expired/revoked sessions in authenticated browser/API tests",
+      "evidenceRequired": "Authenticated run logs, replayable negative session fixtures",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "SEC-02",
+      "domain": "Security",
+      "owner": "security",
+      "classification": "A",
+      "criterion": "Every mandatory read and mutation is authorized server-side by active membership and role, including deny tests",
+      "evidenceRequired": "Role/permission matrix plus negative API integration evidence",
+      "dependencies": [
+        "SEC-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "SEC-03",
+      "domain": "Security",
+      "owner": "security",
+      "classification": "A",
+      "criterion": "Tenant A cannot read, mutate, export or download tenant B records via API, RLS and Storage",
+      "evidenceRequired": "Tenant A/B authenticated runtime and SQL/RLS/Storage results",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "SEC-04",
+      "domain": "Security",
+      "owner": "security",
+      "classification": "A",
+      "criterion": "Privileged SQL functions, elevated writers, files and webhooks are restricted to intended principals",
+      "evidenceRequired": "Production grants/policy readback and unauthorized-invocation tests",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "SEC-05",
+      "domain": "Security",
+      "owner": "security",
+      "classification": "A",
+      "criterion": "Secrets never reach client bundles or logs; TLS and at-rest protection are appropriately configured",
+      "evidenceRequired": "Secret scanner, deployed configuration attestation, transport/storage checks",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "SEC-06",
+      "domain": "Security",
+      "owner": "security",
+      "classification": "A",
+      "criterion": "No known unaccepted material high/critical issue in committed flows; privileged actions have durable audit events",
+      "evidenceRequired": "Risk register, vulnerability dispositions, event replay and audit outputs",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "FUN-01",
+      "domain": "Functional product",
+      "owner": "product",
+      "classification": "A",
+      "criterion": "A legitimate user signs up, authenticates and creates/joins the intended workspace",
+      "evidenceRequired": "Authenticated signup/onboarding E2E and durable DB readback",
+      "dependencies": [
+        "SEC-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "FUN-02",
+      "domain": "Functional product",
+      "owner": "product",
+      "classification": "A",
+      "criterion": "AI inventory create/view/update and risk assessment persist with correct tenant and ownership",
+      "evidenceRequired": "Authenticated E2E plus persisted record and isolation evidence",
+      "dependencies": [
+        "FUN-01",
+        "SEC-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "FUN-03",
+      "domain": "Functional product",
+      "owner": "product",
+      "classification": "A",
+      "criterion": "Governance workflow records accountable owner, decision, timestamps, review state and supporting evidence",
+      "evidenceRequired": "Multi-role approval/deny E2E and durable audit trail",
+      "dependencies": [
+        "FUN-02",
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "FUN-04",
+      "domain": "Functional product",
+      "owner": "product",
+      "classification": "A",
+      "criterion": "Evidence uploads/downloads, audit trail, mandatory reporting and document export work with access controls",
+      "evidenceRequired": "Authenticated browser/API tests, generated file inspection and data readback",
+      "dependencies": [
+        "FUN-03",
+        "SEC-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "FUN-05",
+      "domain": "Functional product",
+      "owner": "product",
+      "classification": "A",
+      "criterion": "Administration, retention/deletion/export and privacy request workflows fulfill the published offering",
+      "evidenceRequired": "Role-specific E2E, data deletion/retention and export evidence",
+      "dependencies": [
+        "FUN-01",
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "FUN-06",
+      "domain": "Functional product",
+      "owner": "product",
+      "classification": "A",
+      "criterion": "Navigation and actual product contracts match what is marketed; incomplete optional flows are not sold as complete",
+      "evidenceRequired": "Release-scoped product route inventory and marketing/contract mismatch review",
+      "dependencies": [
+        "FUN-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "BIL-01",
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "classification": "A",
+      "criterion": "Publicly committed plans map to existing correctly configured Stripe prices and intended access limits",
+      "evidenceRequired": "Redacted Stripe product/price IDs and offer-to-entitlement mapping",
+      "dependencies": [],
+      "status": "PASS",
+      "evidenceRefs": [
+        "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json"
+      ],
+      "acceptedBy": "G1 Engineering, owner-authorized acceptance (independent Stripe LIVE + Vercel provider readbacks; governed PR integration pending)",
+      "acceptedAt": "2026-10-22T21:03:16.517Z",
+      "acceptanceNotes": "BIL-01 provider/source catalog only: 6/6 correct active LIVE products and Prices with exact Production Vercel bindings and main SHA; code-described plan limits and sales-led contract boundaries. Does not credit checkout, signed webhooks, entitlements persistence or authorization (BIL-02/03/04/05)."
+    },
+    {
+      "id": "BIL-02",
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "classification": "A",
+      "criterion": "Signed Stripe TEST webhooks reject invalid signatures and replay/duplicates safely",
+      "evidenceRequired": "Genuine Stripe test event, webhook delivery IDs and idempotency readback",
+      "dependencies": [
+        "BIL-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "BIL-03",
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "classification": "A",
+      "criterion": "A genuine test Checkout creates and persists the expected organization entitlement in isolated QA",
+      "evidenceRequired": "Exact-SHA Stripe TEST event linked to QA durable DB state and app entitlement",
+      "dependencies": [
+        "BIL-02",
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "BIL-04",
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "classification": "A",
+      "criterion": "Plan changes, nonpayment and cancellation converge on durable, safe subscription states",
+      "evidenceRequired": "Genuine Stripe TEST lifecycle events plus authenticated UI/backend assertions",
+      "dependencies": [
+        "BIL-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "BIL-05",
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "classification": "A",
+      "criterion": "Access checks and billing modifications are authorized server-side; customer cannot self-grant a paid tier",
+      "evidenceRequired": "Negative API tests and tenant-isolated entitlement query evidence",
+      "dependencies": [
+        "SEC-02",
+        "BIL-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "DAT-01",
+      "domain": "Database and continuity",
+      "owner": "database",
+      "classification": "A",
+      "criterion": "An ordered, reconciled and reviewed migration manifest bootstraps isolated QA without version collisions",
+      "evidenceRequired": "Approved replay manifest, migration hashes, SQL replay log and schema parity check",
+      "dependencies": [],
+      "status": "BLOCKED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null,
+      "blockerEvidenceRefs": [
+        "docs/enterprise/G1_P0B_RLS_REPLAY_DIAGNOSTIC_2026-10-22.md",
+        "docs/enterprise/evidence/G1_PROD_PROVIDER_SQL_STATEMENT_SHA256_2026-10-22.json",
+        "docs/enterprise/evidence/G1_QA_REPLAY_047_POLICY_GAPS_2026-10-22.json"
+      ],
+      "blockedReason": "QA PostgreSQL rollback-only canonical source replay verified through step 47/137 (using explicitly guarded source-only historical overlays for #18,#19,#37,#39); step 48 fails closed on 20/28 required RLS policies missing across 8 tables. This is a source/provenance pre-materialization defect; original production provider ledger and migrations unmodified. Isolated QA has ZERO durably applied migration entries. DAT-01 remains BLOCKED until source-bound, reviewed full 137/137 replay and durable QA postcondition readback.",
+      "lastObservedOn": "2026-10-22",
+      "replayProgress": {
+        "transactionalDryRunThrough": 47,
+        "blockedAt": 48,
+        "totalLedger": 137,
+        "persistedInQA": 0,
+        "missingPoliciesAt48": 20,
+        "missingPolicyTables": 8
+      }
+    },
+    {
+      "id": "DAT-02",
+      "domain": "Database and continuity",
+      "owner": "database",
+      "classification": "A",
+      "criterion": "Concurrent membership changes and usage quotas preserve critical invariants or fail atomically",
+      "evidenceRequired": "Native PostgreSQL concurrent-session tests and repeatable invariant queries",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "DAT-03",
+      "domain": "Database and continuity",
+      "owner": "database",
+      "classification": "A",
+      "criterion": "High-value decisions, audit-chain and billing state survive transaction failure/retry without untracked divergence",
+      "evidenceRequired": "Rollback/atomicity negative cases, constraint assertions and audit-chain validation",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "DAT-04",
+      "domain": "Database and continuity",
+      "owner": "database",
+      "classification": "A",
+      "criterion": "A bounded isolated restoration proves DB and relevant Auth/Storage/application recovery boundaries",
+      "evidenceRequired": "Restore transcript, data integrity diff, Auth/Storage scope and recovery limitation log",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "DAT-05",
+      "domain": "Database and continuity",
+      "owner": "database",
+      "classification": "A",
+      "criterion": "Production migrations, RLS/FORCE RLS, RPC grants and data boundaries match the approved release",
+      "evidenceRequired": "Version-scoped provider SQL readback, function ACL and grant tests",
+      "dependencies": [
+        "DAT-01",
+        "SEC-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "QAT-01",
+      "domain": "Quality assurance",
+      "owner": "qa",
+      "classification": "A",
+      "criterion": "Mandatory application/unit/integration and security regression suites complete without failing checks",
+      "evidenceRequired": "Exact-SHA test logs and results for full required suites",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "QAT-02",
+      "domain": "Quality assurance",
+      "owner": "qa",
+      "classification": "A",
+      "criterion": "Real authenticated browser tests cover core user journeys and tenant A/B access denies",
+      "evidenceRequired": "Exact-SHA Playwright logs, artifacts sanitized of private data",
+      "dependencies": [
+        "FUN-04",
+        "SEC-03",
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "QAT-03",
+      "domain": "Quality assurance",
+      "owner": "qa",
+      "classification": "A",
+      "criterion": "Billing plus error, retries, persistence, cancellations and degraded behavior pass application/runtime E2E",
+      "evidenceRequired": "Exact-SHA runtime/Stripe sandbox QA report",
+      "dependencies": [
+        "BIL-04",
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "QAT-04",
+      "domain": "Quality assurance",
+      "owner": "qa",
+      "classification": "A",
+      "criterion": "Test source SHA, build, QA environment and deployed tested artifact are traceable; no synthetic substitution",
+      "evidenceRequired": "Signed or otherwise independently verifiable check IDs, exact-SHA provenance",
+      "dependencies": [
+        "QAT-01",
+        "OPS-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "OPS-01",
+      "domain": "Production operations",
+      "owner": "platform",
+      "classification": "A",
+      "criterion": "The current production deployment is READY, its exact SHA is known and release acceptance uses that SHA",
+      "evidenceRequired": "Live Vercel deployment ID/commit SHA and domain assignment verification",
+      "dependencies": [],
+      "status": "PASS",
+      "evidenceRefs": [
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+      ],
+      "acceptedBy": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
+      "acceptedAt": "2026-10-22T20:52:14.027Z",
+      "acceptanceNotes": "OPS-01 only: production READY deployment, exact Git SHA, verified domain and hostname resolution cross-checked with Vercel and GitHub; evidence frozen at baseline SHA. Does not imply full release gate or product QA."
+    },
+    {
+      "id": "OPS-02",
+      "domain": "Production operations",
+      "owner": "platform",
+      "classification": "A",
+      "criterion": "Protected or equivalently controlled merges/releases require approved review, trustworthy checks and explicit release decision",
+      "evidenceRequired": "Readback of native rule enforcement or documented audited equivalent controls",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "OPS-03",
+      "domain": "Production operations",
+      "owner": "platform",
+      "classification": "A",
+      "criterion": "Public critical routes and an authenticated core workflow pass deployment-specific smoke checks",
+      "evidenceRequired": "Runtime smoke results and health/endpoints with exact deployment identity",
+      "dependencies": [
+        "OPS-01",
+        "QAT-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "OPS-04",
+      "domain": "Production operations",
+      "owner": "platform",
+      "classification": "A",
+      "criterion": "Production monitoring, alert routing, incident response and support contact operate and are documented",
+      "evidenceRequired": "Provider alert check, incident drill, runbook and support route",
+      "dependencies": [
+        "OPS-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "OPS-05",
+      "domain": "Production operations",
+      "owner": "platform",
+      "classification": "A",
+      "criterion": "A governed rollback/recovery exercise verifies safe restore of a known-good release without customer-data mutation",
+      "evidenceRequired": "Isolated/staged rehearsal log, rollback target SHA and acceptance record",
+      "dependencies": [
+        "OPS-01",
+        "DAT-04"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "OPS-06",
+      "domain": "Production operations",
+      "owner": "platform",
+      "classification": "A",
+      "criterion": "QA, live, preview and production configuration and credentials stay isolated and fail closed",
+      "evidenceRequired": "Environment provenance matrix, safe negative-cross-environment tests",
+      "dependencies": [
+        "SEC-05",
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "TRU-01",
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "classification": "A",
+      "criterion": "Operator/contracting entity and software rights are identified and supported by appropriate corporate evidence",
+      "evidenceRequired": "Authoritative supplier/ownership records, reviewed identity statement",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "TRU-02",
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "classification": "A",
+      "criterion": "Product terms, privacy notice and applicable DPA are accurate, accessible and reviewed for the target service",
+      "evidenceRequired": "Versioned terms/privacy/DPA, legal approver identity, effective dates",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "TRU-03",
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "classification": "A",
+      "criterion": "Subprocessors, retention/deletion, transfers and GDPR role allocation match operating reality",
+      "evidenceRequired": "Verified vendor list and data flow, retention schedule and legal/privacy sign-off",
+      "dependencies": [
+        "TRU-02",
+        "FUN-05"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "TRU-04",
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "classification": "A",
+      "criterion": "AI Act and independent-assurance marketing statements are scoped, current and do not imply false certification",
+      "evidenceRequired": "Fact/legal review checklist and approved claim inventory",
+      "dependencies": [
+        "TRU-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "TRU-05",
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "classification": "A",
+      "criterion": "Customer-ready security questionnaire, disclosure/contact route, support and incident commitments are truthful",
+      "evidenceRequired": "Evidence-indexed procurement packet, tested contact path and approved commitments",
+      "dependencies": [
+        "OPS-04",
+        "TRU-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    },
+    {
+      "id": "TRU-06",
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "classification": "A",
+      "criterion": "All legal obligations applicable to the offered scope have a documented qualified acceptance or bounded unresolved decision",
+      "evidenceRequired": "Applicable-obligation matrix, legal reviewer conclusions and approved exceptions",
+      "dependencies": [
+        "TRU-01",
+        "TRU-03",
+        "TRU-04"
+      ],
+      "status": "NOT_VERIFIED",
+      "evidenceRefs": [],
+      "acceptedBy": null,
+      "acceptedAt": null
+    }
+  ]
+}

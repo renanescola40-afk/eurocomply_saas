@@ -45,10 +45,54 @@ test('Only confirmed drifting derived membership counters can change', () => {
     assert.doesNotMatch(sql,new RegExp('set\\s+'+key+'\\s*=','i'));
   }
 });
+test('Manual repair requires both drifting organizations to have zero members of ANY status under DML locks', () => {
+  const membersLock=sql.indexOf('lock table public.organization_members');
+  const memberRows=sql.indexOf('count(*)::integer member_rows');
+  const guard=sql.indexOf('if v_drift_with_member_rows <> 0');
+  const mutation=sql.indexOf('for v_target in');
+  assert.ok(membersLock > 0 && memberRows > membersLock && guard > memberRows && mutation > guard);
+  assert.match(sql,/count\(\*\) filter\(where coalesce\(a\.member_rows,0\) > 0\)::integer/);
+  assert.match(sql,/P0-F unexpected member-linked drift/);
+});
+test('Manual repair rejects a changed per-organization distribution even when aggregate totals match', () => {
+  assert.match(sql, /v_reviewed_type_a integer/);
+  assert.match(sql, /v_reviewed_type_b integer/);
+  assert.match(sql, /\(2,2,0,0,1\)/);
+  assert.match(sql, /\(1,1,0,0,1\)/);
+  assert.match(sql, /v_reviewed_type_a <> 1 or v_reviewed_type_b <> 1/);
+  assert.match(sql, /reviewed per-organization drift fingerprint changed/);
+  const memberLock = sql.indexOf('lock table public.organization_members');
+  const patternGuard = sql.indexOf('if v_reviewed_type_a <> 1');
+  const firstUpdate = sql.indexOf('for v_target in');
+  assert.ok(memberLock < patternGuard && patternGuard < firstUpdate);
+});
+test('Exact-target precondition binds tenant identities and counter values under locks', () => {
+  assert.ok(sql.includes("p0f_expected_drift_fingerprint"));
+  assert.ok(sql.includes("!~ '^[a-f0-9]{64}$'"));
+  assert.match(sql,/sha256\(convert_to/);
+  assert.ok(sql.includes("u.organization_id::text"));
+  assert.ok(sql.includes("';' order by u.organization_id"));
+  const lock = sql.indexOf('lock table public.organization_members');
+  const hash = sql.indexOf('if v_target_fingerprint is distinct from');
+  const write = sql.indexOf('for v_target in');
+  assert.ok(lock > 0 && hash > lock && write > hash);
+});
+
 test('Correction writes attributable legacy audit log and no tenant details to query output', () => {
   assert.match(sql, /insert into public.audit_logs/);
   assert.match(sql, /enterprise\.membership_usage_reconciled/);
   assert.match(sql, /reviewed_manual_p0f_reconciliation/);
   assert.doesNotMatch(sql,/select\s+\*\s+from\s+public\.(organization_members|organizations)/i);
   assert.doesNotMatch(sql, /insert into public.audit_events/);
+});
+
+test('Consolidated repair preserves aggregate, NULL and final orphan target guards', () => {
+  assert.match(sql, /v_null_counters <> 0/);
+  assert.match(sql, /is distinct from \(3,3,0,0,2\)/);
+  assert.match(sql, /and a\.organization_id is null\s+order by u\.organization_id/);
+  const locks = sql.indexOf('lock table public.organization_members');
+  const aggregate = sql.indexOf('if v_null_counters <> 0');
+  const histogram = sql.indexOf('if v_reviewed_type_a <> 1');
+  const mutation = sql.indexOf('for v_target in');
+  assert.ok(locks < aggregate && aggregate < histogram && histogram < mutation);
 });

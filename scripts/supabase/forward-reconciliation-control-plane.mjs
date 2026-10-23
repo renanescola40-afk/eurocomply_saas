@@ -93,7 +93,11 @@ export async function compileForwardReconciliationManifest({
     }
     assert(!sql.includes('\0'), `selected migration contains NUL bytes: ${item.filename}`);
     const trimmed = sql.trim();
-    assert(/^begin\s*;/i.test(trimmed), `selected migration must start an explicit transaction: ${item.filename}`);
+    // SQL migration comments do not affect the mandatory BEGIN/COMMIT contract.
+    // Preserve the original bytes for SHA-256; only strip leading line comments
+    // when checking the first executable statement.
+    const firstExecutable = trimmed.replace(/^(?:--[^\r\n]*(?:\r?\n|$)\s*)*/, '');
+    assert(/^begin\s*;/i.test(firstExecutable), `selected migration must start an explicit transaction: ${item.filename}`);
     assert(/commit\s*;\s*$/i.test(trimmed), `selected migration must end an explicit transaction: ${item.filename}`);
 
     migrations.push({
