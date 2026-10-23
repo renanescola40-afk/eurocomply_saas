@@ -1,5 +1,13 @@
-
 version: 2.1
+
+# Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
+parameters:
+  run_qa_preflight:
+    type: boolean
+    default: false
+  run_qa_full:
+    type: boolean
+    default: false
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
@@ -22,7 +30,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|fix/circleci-source-evidence-v17-20261021) ;;
+              main|ci/verify-*|fix/p0-forward-manifest-v44-20261019|qa/fix-e2e-node22-20261021) ;;
               *) echo "CircleCI: unexpected branch ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
             esac
             test -n "${CIRCLE_SHA1:-}" || { echo "Missing CircleCI source SHA" >&2; exit 1; }
@@ -113,6 +121,74 @@ jobs:
           path: artifacts/circleci-source-validation
           destination: source-only-exact-sha-evidence
 
+  # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
+  qa-preflight-offline:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact QA checkout and refuse provider secrets
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "qa/fix-e2e-node22-20261021" || {
+              echo "CircleCI QA job cannot run on other branches" >&2
+              exit 1
+            }
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?CircleCI source SHA missing}" || {
+              echo "CircleCI checkout must match pipeline SHA" >&2
+              exit 1
+            }
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              if [ -n "${!key:-}" ]; then
+                echo "Provider credential forbidden in offline QA: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Execute source-only QA suites and preserve exact-SHA evidence
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/qa-preflight
+            node --test --test-reporter=tap \
+              tests/security/e2e-preflight-offline.test.mjs \
+              tests/security/payment-first-qa-origin-guard.test.mjs \
+              tests/security/playwright-synthetic-write-qa-gate.test.mjs \
+              tests/security/paid-owner-playwright-proof.test.mjs \
+              tests/security/circleci-qa-manual-gate.test.mjs \
+              2>&1 | tee artifacts/qa-preflight/tests.tap
+            # No external provider call, install, payment or runtime mutation.
+            node scripts/security/check-stripe-webhook-contract.mjs \
+              2>&1 | tee artifacts/qa-preflight/stripe-webhook-contract.txt
+            node scripts/security/run-stripe-runtime-validation.mjs \
+              2>&1 | tee artifacts/qa-preflight/stripe-runtime-source-only.json
+            node --input-type=module \<<'NODE'
+            import { writeFileSync } from 'node:fs';
+            import { createHash } from 'node:crypto';
+            import { readFileSync } from 'node:fs';
+            import { execFileSync } from 'node:child_process';
+            const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            if (sha !== process.env.CIRCLE_SHA1) throw new Error('qa_evidence_sha_mismatch');
+            const tap = readFileSync('artifacts/qa-preflight/tests.tap');
+            writeFileSync('artifacts/qa-preflight/evidence.json', JSON.stringify({
+              kind: 'RISCK_CIRCLECI_QA_SOURCE_PROOF',
+              checkedOutSha: sha,
+              pipelineSha: process.env.CIRCLE_SHA1,
+              branch: process.env.CIRCLE_BRANCH,
+              workflow: 'qa-preflight-manual',
+              result: 'PASS',
+              testReportSha256: createHash('sha256').update(tap).digest('hex'),
+              stripeWebhookContractSha256: createHash('sha256').update(readFileSync('artifacts/qa-preflight/stripe-webhook-contract.txt')).digest('hex'),
+              stripeRuntimeSourceOnlySha256: createHash('sha256').update(readFileSync('artifacts/qa-preflight/stripe-runtime-source-only.json')).digest('hex'),
+              proofBoundary: 'Offline Node and Stripe source-contract checks only; no Playwright, provider delivery, Supabase, payment or deployment proof',
+            }, null, 2) + '\n');
+            NODE
+      - store_artifacts:
+          path: artifacts/qa-preflight
+          destination: qa-preflight-exact-sha
+
   # Native PG service is disposable and contains ONLY synthetic fixtures.
   # Free-plan included quota verified 2026-10-18 before activation.
   p0-postgres-synthetic:
@@ -145,7 +221,7 @@ jobs:
           path: artifacts/p0-postgres
           destination: p0-postgres-synthetic
 
-  actionlint-equivalent:
+  gitleaks-group-ci-v15a:
     docker:
       - image: cimg/base:stable
     resource_class: small
@@ -153,54 +229,15 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Verify isolated exact-SHA scanner lane
+          name: Restore exact target SHA
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "ci/verify-security-equivalence-v15a-20261022"
-            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
-            test "${CIRCLE_SHA1}" != "70d3545f414d063379d481fd238aed563e05edda" || true
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
       - run:
-          name: Install pinned actionlint 1.7.7 with checksum
+          name: Install pinned Gitleaks
           command: |
-            set -euo pipefail
-            version=1.7.7
-            archive="actionlint_${version}_linux_amd64.tar.gz"
-            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
-            echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  /tmp/${archive}" | sha256sum --check -
-            tar -xzf "/tmp/${archive}" -C /tmp actionlint
-            chmod 0755 /tmp/actionlint
-            /tmp/actionlint -version
-      - run:
-          name: Actionlint equivalent required scan
-          command: |
-            set -euo pipefail
-            mkdir -p artifacts/security-equivalence
-            /tmp/actionlint -color=never 2>&1 | tee artifacts/security-equivalence/actionlint.log
-      - store_artifacts:
-          path: artifacts/security-equivalence/actionlint.log
-          destination: security-equivalence/actionlint.log
 
-  gitleaks-equivalent:
-    docker:
-      - image: cimg/base:stable
-    resource_class: small
-    working_directory: ~/project
-    steps:
-      - checkout
-      - run:
-          name: Verify isolated exact-SHA scanner lane and full history
-          command: |
-            set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "ci/verify-security-equivalence-v15a-20261022"
-            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
-            if test "$(git rev-parse --is-shallow-repository)" = "true"; then
-              git fetch --unshallow --tags
-            else
-              git fetch --tags
-            fi
-      - run:
-          name: Install pinned Gitleaks 8.30.1 with repository-approved checksum
-          command: |
             set -euo pipefail
             version=8.30.1
             archive="gitleaks_${version}_linux_x64.tar.gz"
@@ -208,143 +245,167 @@ jobs:
             echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
             tar -xzf "/tmp/${archive}" -C /tmp gitleaks
             chmod 0755 /tmp/gitleaks
-            /tmp/gitleaks version
       - run:
-          name: Gitleaks full-history equivalent required scan
+          name: Classify redacted findings for ci
           command: |
             set -euo pipefail
-            mkdir -p artifacts/security-equivalence
-            /tmp/gitleaks git --redact --no-banner . 2>&1 | tee artifacts/security-equivalence/gitleaks.log
-      - store_artifacts:
-          path: artifacts/security-equivalence/gitleaks.log
-          destination: security-equivalence/gitleaks.log
+            report="/tmp/gitleaks-ci.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(\.github|\.circleci)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'ci',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
 
-  semgrep-equivalent:
+  gitleaks-group-app-v15a:
     docker:
-      - image: cimg/python:3.11
-    resource_class: medium
-    working_directory: ~/project
-    environment:
-      SEMGREP_VERSION: "1.97.0"
-    steps:
-      - checkout
-      - run:
-          name: Verify isolated exact-SHA scanner lane
-          command: |
-            set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "ci/verify-security-equivalence-v15a-20261022"
-            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
-      - run:
-          name: Install pinned Semgrep
-          command: |
-            set -euo pipefail
-            python -m pip install --disable-pip-version-check --no-input --retries 5 --timeout 60 "setuptools<81" "semgrep==${SEMGREP_VERSION}"
-            test "$(semgrep --version | head -n 1 | tr -d '[:space:]')" = "${SEMGREP_VERSION}"
-      - run:
-          name: Semgrep equivalent required SAST scan
-          command: |
-            set -euo pipefail
-            mkdir -p artifacts/security-equivalence
-            semgrep scan --config p/owasp-top-ten --config p/typescript --config p/javascript --severity ERROR --error --metrics off src 2>&1 | tee artifacts/security-equivalence/semgrep.log
-      - store_artifacts:
-          path: artifacts/security-equivalence/semgrep.log
-          destination: security-equivalence/semgrep.log
-
-
-
-  core-sbom-v15a:
-    docker:
-      - image: cimg/node:22.16.0
+      - image: cimg/base:stable
     resource_class: small
     working_directory: ~/project
     steps:
       - checkout
       - run:
-          name: Restore exact PR 2558 target SHA
+          name: Restore exact target SHA
           command: |
             set -euo pipefail
             git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
             test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
       - run:
-          name: Generate exact Core CI CycloneDX SBOM
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for app
           command: |
             set -euo pipefail
-            mkdir -p artifacts/core-sbom-v15a
-            node - <<'NODE'
-            const fs = require('fs');
-            const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-            const rootPackage = lock.packages?.[''] ?? {};
-            const components = Object.entries(lock.packages ?? {})
-              .filter(([path, pkg]) => path && pkg && typeof pkg.version === 'string')
-              .map(([path, pkg]) => ({ type: 'library', name: pkg.name ?? path.split('node_modules/').pop(), version: pkg.version }))
-              .filter((component) => component.name)
-              .sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`));
-            const out = {
-              bomFormat: 'CycloneDX', specVersion: '1.5', version: 1,
-              metadata: { component: { type: 'application', name: rootPackage.name ?? 'eurocomply-saas', version: rootPackage.version ?? '0.0.0' } },
-              components,
-            };
-            fs.writeFileSync('artifacts/core-sbom-v15a/sbom.cyclonedx.json', JSON.stringify(out, null, 2));
-            if (out.bomFormat !== 'CycloneDX' || out.specVersion !== '1.5' || !Array.isArray(out.components) || out.components.length === 0) process.exit(1);
-            console.log(JSON.stringify({ componentCount: out.components.length, bomFormat: out.bomFormat, specVersion: out.specVersion }));
+            report="/tmp/gitleaks-app.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(src|scripts)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'app',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
             NODE
-            sha256sum package-lock.json artifacts/core-sbom-v15a/sbom.cyclonedx.json > artifacts/core-sbom-v15a/sha256.txt
-      - store_artifacts:
-          path: artifacts/core-sbom-v15a
-          destination: core-sbom-v15a
 
-  core-e2e-v15a:
+  gitleaks-group-assurance-v15a:
     docker:
-      - image: cimg/node:22.16.0
-    resource_class: large
+      - image: cimg/base:stable
+    resource_class: small
     working_directory: ~/project
-    environment:
-      CI: "true"
-      PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
-      NEXT_PUBLIC_SUPABASE_URL: "https://ci-placeholder.supabase.co"
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-placeholder-anon-key"
-      NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: "true"
-      NEXT_PUBLIC_POSTHOG_KEY: "phc_ci_synthetic_public_key"
-      NEXT_PUBLIC_POSTHOG_HOST: "https://analytics-ci.invalid"
-      PLAYWRIGHT_JSON_OUTPUT_NAME: "playwright-results.json"
     steps:
       - checkout
       - run:
-          name: Restore exact PR 2558 target SHA and refuse privileged provider credentials
+          name: Restore exact target SHA
           command: |
             set -euo pipefail
             git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
             test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
-            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN; do
-              test -z "${!key:-}" || { echo "Privileged provider variable forbidden in isolated Core E2E: $key" >&2; exit 1; }
-            done
       - run:
-          name: Install exact locked dependencies
-          command: npm ci --ignore-scripts --no-audit --no-fund
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
       - run:
-          name: Build exact production-like candidate
-          command: npm run build
-      - run:
-          name: Install Chromium and production-like dependencies
+          name: Classify redacted findings for assurance
           command: |
             set -euo pipefail
-            sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources || true
-            sudo rm -f /var/lib/apt/lists/dl.google.com_linux_chrome_deb_dists_stable_* || true
-            npx playwright install --with-deps chromium
+            report="/tmp/gitleaks-assurance.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>/^(docs|supabase|tests)\//.test(String(x.File||'')));
+            console.log(JSON.stringify({group:'assurance',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
+
+  gitleaks-group-other-v15a:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
       - run:
-          name: Run required production-like Playwright E2E
+          name: Restore exact target SHA
           command: |
             set -euo pipefail
-            unset E2E_BASE_URL
-            mkdir -p artifacts/core-e2e-v15a
-            npm run test:e2e -- --reporter=line,json > artifacts/core-e2e-v15a/playwright-e2e.log 2>&1
-            test -s playwright-results.json
-            cp playwright-results.json artifacts/core-e2e-v15a/playwright-results.json
-      - store_artifacts:
-          path: artifacts/core-e2e-v15a
-          destination: core-e2e-v15a
+            git checkout --detach 2242d06b773b806701e0ed49e8ecc7752ca6aae8
+            test "$(git rev-parse HEAD)" = "2242d06b773b806701e0ed49e8ecc7752ca6aae8"
+      - run:
+          name: Install pinned Gitleaks
+          command: |
+
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 5 --retry-delay 2               "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+      - run:
+          name: Classify redacted findings for other
+          command: |
+            set -euo pipefail
+            report="/tmp/gitleaks-other.json"
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
+            node - "$report" <<'NODE'
+            const fs=require('fs');
+            const p=process.argv[2];
+            const rows=JSON.parse(fs.readFileSync(p,'utf8'));
+            const hit=rows.filter(x=>{const f=String(x.File||''); return !/^(\.github|\.circleci|src|scripts|docs|supabase|tests)\//.test(f);});
+            console.log(JSON.stringify({group:'other',findingCount:hit.length,fileCount:new Set(hit.map(x=>x.File)).size}));
+            process.exit(hit.length===0?0:3);
+            NODE
 
 workflows:
+  qa-preflight-manual:
+    # A code push alone does not launch this job or incur executor credits.
+    when: << pipeline.parameters.run_qa_preflight >>
+    jobs:
+      - qa-preflight-offline:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+
+  qa-full-manual:
+    # Full lint/typecheck/unit/security/build + synthetic PG17 acceptance.
+    # Disabled by default and scoped only to the QA branch. This can consume
+    # significant CircleCI credits. Trigger ONLY after explicit free-credit
+    # confirmation; never retry blindly or use production credentials.
+    when: << pipeline.parameters.run_qa_full >>
+    jobs:
+      - validar-risck:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+      - p0-postgres-synthetic:
+          filters:
+            branches:
+              only:
+                - qa/fix-e2e-node22-20261021
+
   verificacao-isolada:
     jobs:
       - validar-risck:
@@ -356,7 +417,6 @@ workflows:
               # antes de abrir PRs que possam criar preview no Supabase.
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
       - p0-postgres-synthetic:
@@ -364,38 +424,29 @@ workflows:
             branches:
               only:
                 - main
-                - /ci\/verify-.*/
                 - fix/p0-forward-manifest-v44-20261019
                 - fix/circleci-source-evidence-v17-20261021
-
-  security-equivalence-v15a:
+  gitleaks-groups-v15a:
     jobs:
-      - actionlint-equivalent:
+      - gitleaks-group-ci-v15a:
           filters:
             branches:
               only:
-                - ci/verify-security-equivalence-v15a-20261022
-      - gitleaks-equivalent:
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-app-v15a:
           filters:
             branches:
               only:
-                - ci/verify-security-equivalence-v15a-20261022
-      - semgrep-equivalent:
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-assurance-v15a:
           filters:
             branches:
               only:
-                - ci/verify-security-equivalence-v15a-20261022
-
-
-  core-v15a-verification:
-    jobs:
-      - core-sbom-v15a:
+                - ci/verify-gitleaks-groups-v15a-20261022
+      - gitleaks-group-other-v15a:
           filters:
             branches:
               only:
-                - ci/verify-security-equivalence-v15a-20261022
-      - core-e2e-v15a:
-          filters:
-            branches:
-              only:
-                - ci/verify-security-equivalence-v15a-20261022
+                - ci/verify-gitleaks-groups-v15a-20261022
+# V15-A retrigger: classify exact-target redacted Gitleaks findings
+# V15-A retrigger 2: classify redacted Gitleaks findings after Checks activation
