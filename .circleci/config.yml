@@ -71,6 +71,9 @@ jobs:
           name: Testes unitarios
           command: npm run test
       - run:
+          name: G1 Migration Reconciliation exact-SHA fail-closed regression
+          command: node --test tests/release/g1-migration-reconciliation-runtime.test.mjs
+      - run:
           name: Contratos P0 PostgreSQL source-only (Node .test.mjs)
           command: |
             set -euo pipefail

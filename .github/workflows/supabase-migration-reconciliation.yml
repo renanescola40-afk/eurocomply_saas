@@ -105,6 +105,8 @@ jobs:
           NODE
 
       - name: Compile reviewed reconciliation
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
         run: node scripts/supabase/compile-migration-reconciliation.mjs
 
       - name: Assert no production mutation

@@ -14,6 +14,14 @@ test('compiler fails closed on missing or mismatched evidence', () => {
   assert.match(script, /pending deployment lacks staged execution plan/);
 });
 
+test('G1 compiler requires immutable approved input and no unresolved split review', () => {
+  assert.match(script, /inventory digest mismatch/);
+  assert.match(script, /target SHA mismatch/);
+  assert.match(script, /split review unresolved/);
+  assert.match(script, /remote migration ledger versions missing/);
+  assert.ok(workflow.includes('TARGET_SHA: ${{ inputs.target_sha }}'));
+});
+
 test('compiler never authorizes production writes', () => {
   assert.match(script, /productionPushAuthorized: false/);
   assert.match(script, /unrestrictedDbPushAllowed: false/);
