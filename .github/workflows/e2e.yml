@@ -9,15 +9,82 @@ permissions:
 jobs:
   playwright:
     runs-on: ubuntu-latest
+    env:
+      # Dedicated disposable QA target only. Never fall back to production.
+      E2E_BASE_URL: ${{ vars.E2E_QA_BASE_URL }}
+      NEXT_PUBLIC_APP_URL: ${{ vars.E2E_QA_BASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_QA_SUPABASE_URL }}
+      E2E_QA_APPROVED_SUPABASE_REF: ${{ vars.E2E_QA_APPROVED_SUPABASE_REF }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_QA_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_QA_SUPABASE_SERVICE_ROLE_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.E2E_QA_STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.E2E_QA_STRIPE_WEBHOOK_SECRET }}
+      E2E_OWNER_EMAIL: ${{ secrets.E2E_QA_OWNER_EMAIL }}
+      E2E_OWNER_PASSWORD: ${{ secrets.E2E_QA_OWNER_PASSWORD }}
+      E2E_QA_MAIL_SINK_CONFIRMED: ${{ vars.E2E_QA_MAIL_SINK_CONFIRMED }}
 
     steps:
+      - name: Fail closed unless isolated QA runtime is configured
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          const required = [
+            'E2E_BASE_URL', 'NEXT_PUBLIC_SUPABASE_URL',
+            'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY',
+            'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET',
+            'E2E_OWNER_EMAIL', 'E2E_OWNER_PASSWORD',
+          ];
+          const missing = required.filter((name) => !process.env[name]?.trim());
+          if (missing.length) throw new Error('qa_runtime_missing_configuration: ' + missing.join(', '));
+
+          const target = new URL(process.env.E2E_BASE_URL);
+          // Trailing DNS dots and unverified subdomains must not bypass the
+          // production boundary. Credentials embedded in a URL are forbidden.
+          const targetHost = target.hostname.toLowerCase().replace(/\.+$/, '');
+          if (target.protocol !== 'https:' || target.username || target.password ||
+              target.port || target.pathname !== '/' || target.search || target.hash ||
+              targetHost === 'risckcomply.com' || targetHost.endsWith('.risckcomply.com') ||
+              [
+                'eurocomply-saas.vercel.app',
+                'eurocomply-saas-renanescola40-afks-projects.vercel.app',
+                'eurocomply-saas-git-main-renanescola40-afks-projects.vercel.app',
+                'eurocomply-saas-o6ws7qrp2-renanescola40-afks-projects.vercel.app',
+              ].includes(targetHost)) {
+            throw new Error('qa_runtime_cannot_target_public_production');
+          }
+
+          const db = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL);
+          if (db.protocol !== 'https:' || db.username || db.password ||
+              db.port || db.pathname !== '/' || db.search || db.hash ||
+              !/^[a-z0-9]+\.supabase\.co$/i.test(db.hostname) ||
+              db.hostname.toLowerCase().startsWith('tganhbbhfxcpblmgqprg.')) {
+            throw new Error('qa_runtime_requires_nonproduction_supabase');
+          }
+
+          const approvedProjectRef = process.env.E2E_QA_APPROVED_SUPABASE_REF?.trim();
+          const provisionedQaProjectRef = 'zrxrrfbllsxtleyxjpsz';
+          if (approvedProjectRef !== provisionedQaProjectRef || !/^[a-z0-9]{20}$/.test(approvedProjectRef) ||
+              db.hostname.toLowerCase() !== `${approvedProjectRef}.supabase.co`) {
+            throw new Error('qa_runtime_approved_supabase_ref_mismatch');
+          }
+
+          if (!process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') ||
+              !process.env.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) {
+            throw new Error('qa_runtime_requires_stripe_test_keys');
+          }
+          if (process.env.E2E_QA_MAIL_SINK_CONFIRMED !== 'true') {
+            throw new Error('qa_runtime_mail_sink_not_confirmed');
+          }
+          console.log('Isolated E2E QA preflight passed (values redacted).');
+          NODE
+
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -26,12 +93,12 @@ jobs:
       - name: Install Playwright browsers
         run: bash scripts/quality/install-playwright-ci.sh
 
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run E2E tests with attributable JSON output
         env:
-          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/qa-customer-playwright.json
+        run: |
+          mkdir -p test-results
+          npm run test:e2e -- --reporter=json
+
+      - name: Refuse missing, skipped or flaky paid-owner acceptance
+        run: node scripts/quality/check-paid-owner-playwright-proof.mjs test-results/qa-customer-playwright.json

@@ -31,7 +31,12 @@ export function validateStripeRuntimeEvidence(
     if (ageMs > maxAgeMs) failures.push(`generatedAt is older than ${maxAgeDays} days`);
   }
 
-  if (evidence?.status !== 'Complete') return failures;
+  // Do not treat fresh, parseable but still OPEN evidence as an accepted runtime proof.
+  // Some downstream consumers take an empty failure array to mean PASS.
+  if (evidence?.status !== 'Complete') {
+    failures.push('status must be Complete');
+    return failures;
+  }
 
   if (!['passed', 'Pass', 'PASS'].includes(evidence?.validationStatus ?? evidence?.outcome)) {
     failures.push('Complete evidence validationStatus must be passed');
@@ -76,8 +81,8 @@ export function validateStripeRuntimeEvidence(
   }
 
   if (evidence?.runtimeProof?.headSha !== evidence?.commitSha) failures.push('runtimeProof.headSha must match commitSha');
-  if (!String(evidence?.runtimeProof?.runId ?? '').trim()) failures.push('runtimeProof.runId is required');
-  if (!String(evidence?.runtimeProof?.artifactDigest ?? '').startsWith('sha256:')) failures.push('runtimeProof.artifactDigest must be a sha256 digest');
+  if (!/^\d+$/.test(String(evidence?.runtimeProof?.runId ?? ''))) failures.push('runtimeProof.runId must be numeric');
+  if (!/^sha256:[a-f0-9]{64}$/i.test(String(evidence?.runtimeProof?.artifactDigest ?? ''))) failures.push('runtimeProof.artifactDigest must be a full sha256 digest');
 
   for (const [path, value] of [
     ['checkout.tested', evidence?.checkout?.tested],
