@@ -1,0 +1,61 @@
+name: G5-02 PostgreSQL 17.6 Canonical Replay
+on:
+  push:
+    branches:
+      - audit/g5-02-p0f-readonly-drift-20261023
+    paths:
+      - .github/workflows/g5-02-buildkite-replay.yml
+jobs:
+  isolated-replay:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_DB: risck_synthetic
+          POSTGRES_USER: risck_synthetic
+          POSTGRES_PASSWORD: synthetic-local-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U risck_synthetic -d risck_synthetic"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: risck_synthetic
+      PGUSER: risck_synthetic
+      PGPASSWORD: synthetic-local-only
+    steps:
+      - name: Checkout exact event SHA
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Reject unsafe provider variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF_NAME" = "audit/g5-02-p0f-readonly-drift-20261023"
+          for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN VERCEL_TOKEN STRIPE_SECRET_KEY; do
+            if printenv "$key" >/dev/null 2>&1; then
+              echo "Forbidden production-capable env: $key" >&2
+              exit 1
+            fi
+          done
+      - name: Install client and confirm synthetic PostgreSQL 17.6
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          psql -X -Atqc "select current_setting('server_version')"
+          psql -X -Atqc "select current_database()"
+          test "$(psql -X -Atqc "select current_database()")" = "risck_synthetic"
+      - name: Replay canonical migration source (fail closed)
+        shell: bash
+        run: python3 scripts/diagnostics/g5-02-canonical-replay.py
