@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Publish only synthetic G5-02 summary to PR #2574; no raw SQL or client data."""
+"""Publish only synthetic G5-02 summary to an explicitly supplied PR; no raw SQL or client data."""
 import json,os,pathlib,re,sys,urllib.request,urllib.error
 sha=os.getenv("GITHUB_SHA","")
 ref=os.getenv("GITHUB_REF_NAME","")
 token=os.getenv("G5_GITHUB_TOKEN","")
-if ref!="audit/g5-02-p0f-readonly-drift-20261023" or not re.fullmatch(r"[a-f0-9]{40}",sha):
+if ref!="fix/g5-02-evidence-failclosed-20261023" or not re.fullmatch(r"[a-f0-9]{40}",sha):
     sys.exit("invalid exact-SHA or branch for PR evidence")
 if not token:
     print("G5_02_PR_PUBLICATION=UNAVAILABLE_NO_TOKEN")
@@ -45,7 +45,11 @@ body=f"""## G5-02 synthetic replay — build evidence
 Detailed synthetic-only evidence stays in Buildkite build artifacts. Historical file matches are not proof of equivalent SQL.
 """
 payload=json.dumps({"body":body}).encode()
-url="https://api.github.com/repos/renanescola40-afk/eurocomply_saas/issues/2574/comments"
+pr_number=os.getenv("G5_PR_NUMBER","")
+if not re.fullmatch(r"[1-9][0-9]{0,7}",pr_number):
+    print("G5_02_PR_PUBLICATION=UNAVAILABLE_PR_NUMBER_NOT_SET")
+    sys.exit(0)
+url=f"https://api.github.com/repos/renanescola40-afk/eurocomply_saas/issues/{pr_number}/comments"
 req=urllib.request.Request(url,data=payload,method="POST",headers={
     "Authorization":"Bearer "+token,"Accept":"application/vnd.github+json",
     "Content-Type":"application/json","X-GitHub-Api-Version":"2022-11-28",
