@@ -34,7 +34,19 @@ const requiredChecks = Object.freeze([
 
 export function verifyCircleCISourceProof(proof, env, { now = new Date() } = {}) {
   const errors = [];
-  if (env?.CIRCLECI !== 'true' || env?.CIRCLE_JOB !== 'validar-risck') {
+  const branch = env?.CIRCLE_BRANCH || '';
+  const sourceOnlyJob = env?.CIRCLE_JOB === 'synthetic-backup-components';
+  const legacyJob = env?.CIRCLE_JOB === 'validar-risck';
+  const allowlistedSourceOnlyBranch = branch === 'main'
+    || branch === 'ci/verify-recovery-production-20261019'
+    || branch === 'qa/fix-e2e-node22-20261021';
+  const allowlistedLegacyBranch = branch === 'main'
+    || /^ci\/verify-[A-Za-z0-9._/-]+$/.test(branch)
+    || branch === 'fix/p0-forward-manifest-v44-20261019'
+    || branch === 'fix/circleci-source-evidence-v17-20261021';
+  if (env?.CIRCLECI !== 'true'
+    || !(sourceOnlyJob && allowlistedSourceOnlyBranch
+      || legacyJob && allowlistedLegacyBranch)) {
     errors.push('trusted_circleci_source_job_required');
   }
   if (!FULL_SHA.test(env?.CIRCLE_SHA1 || '') || !Number.isSafeInteger(Number(env?.CIRCLE_BUILD_NUM))
