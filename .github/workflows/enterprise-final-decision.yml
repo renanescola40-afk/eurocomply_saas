@@ -92,7 +92,7 @@ jobs:
           INPUT="$(find source-artifact -type f -name 'enterprise-final-decision-input.json' -print -quit)"
           test -n "$INPUT"
           node scripts/release/compile-enterprise-final-decision.mjs "$INPUT" artifacts/enterprise-final-decision --expected-sha="$TARGET_SHA"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: enterprise-final-decision-${{ env.TARGET_SHA }}
           path: artifacts/enterprise-final-decision

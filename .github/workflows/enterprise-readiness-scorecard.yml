@@ -92,7 +92,7 @@ jobs:
 
       - name: Retain distributed rate-limit proof test diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: distributed-rate-limit-proof-test-diagnostics-${{ env.ASSESSED_SHA }}
           path: artifacts/enterprise-readiness/distributed-rate-limit-proof-tests.log
@@ -116,7 +116,7 @@ jobs:
 
       - name: Retain release evidence diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-documentation-evidence-${{ env.ASSESSED_SHA }}
           path: |
@@ -142,7 +142,7 @@ jobs:
 
       - name: Retain administrative-client boundary diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: admin-boundary-diagnostics-${{ env.ASSESSED_SHA }}
           path: artifacts/enterprise-readiness/admin-boundary-diagnostics.json
@@ -157,7 +157,7 @@ jobs:
 
       - name: Retain repository control evidence diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: repository-control-evidence-${{ env.ASSESSED_SHA }}
           path: |
@@ -320,7 +320,7 @@ jobs:
 
       - name: Retain product provider identity tenancy and runtime evidence diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: product-provider-identity-tenancy-runtime-evidence-${{ env.ASSESSED_SHA }}
           path: |
@@ -362,7 +362,7 @@ jobs:
         run: cat artifacts/enterprise-readiness/enterprise-readiness-scorecard.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload scorecard artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: enterprise-readiness-scorecard-${{ env.ASSESSED_SHA }}
           path: |

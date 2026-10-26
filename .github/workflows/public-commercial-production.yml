@@ -163,7 +163,7 @@ jobs:
 
       - name: Upload Public GA preflight evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: public-ga-preflight-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/public-production-release-env-readiness.json
@@ -355,7 +355,7 @@ jobs:
             }' > artifacts/release/beagle-prechange-preservation.json
 
       - name: Upload Beagle pre-change preservation artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: beagle-prechange-preservation-${{ inputs.release_sha }}
           path: |
@@ -376,7 +376,7 @@ jobs:
 
       - name: Upload Public GA rollback resolution evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: public-ga-rollback-resolution-${{ inputs.release_sha }}
           path: artifacts/release/public-ga-rollback-resolution.json
@@ -401,7 +401,7 @@ jobs:
 
       - name: Upload Public GA smoke evidence
         if: always() && steps.rollback_resolver.outputs.validated == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: public-ga-smoke-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/deployment-smoke-validation.json
@@ -417,7 +417,7 @@ jobs:
 
       - name: Upload runtime SHA evidence
         if: always() && steps.production_smoke.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: public-ga-runtime-sha-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/runtime-release-sha-validation.json
