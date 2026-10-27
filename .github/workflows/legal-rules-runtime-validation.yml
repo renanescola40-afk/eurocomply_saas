@@ -204,7 +204,7 @@ jobs:
           node -e 'const fs=require("node:fs"); const p=process.env.OUTPUT_PATH; const v=JSON.parse(fs.readFileSync(p,"utf8")); if(v.status!=="PASS"||v.deploymentSha!==process.env.EXPECTED_DEPLOYMENT_SHA) process.exit(1)'
 
       - name: Upload immutable runtime evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: legal-rules-runtime-${{ inputs.expected_sha || github.event.deployment.sha }}
           path: artifacts/legal-rules-runtime

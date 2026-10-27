@@ -112,7 +112,7 @@ jobs:
         run: cat "$OUTPUT_ROOT/enterprise-readiness-scorecard.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload canonical promoted scorecard
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: enterprise-readiness-promoted-scorecard-${{ env.ASSESSED_SHA }}
           path: ${{ env.OUTPUT_ROOT }}/

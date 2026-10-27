@@ -335,7 +335,7 @@ jobs:
 
       - name: Upload sanitized FRIA failure diagnostics
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: product-fria-failure-${{ env.EXPECTED_HEAD_SHA }}
           path: ${{ runner.temp }}/fria-playwright-diagnostics.json
@@ -397,7 +397,7 @@ jobs:
           NODE
 
       - name: Upload sanitized final Product runtime evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: product-fria-runtime-${{ env.EXPECTED_HEAD_SHA }}
           path: ${{ runner.temp }}/fria-runtime-evidence.json

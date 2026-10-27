@@ -76,7 +76,7 @@ jobs:
           exit "$rc"
       - name: Publish synthetic evidence as Buildkite artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: g5-02-evidence
           path: artifacts/g5-02-pg17/
