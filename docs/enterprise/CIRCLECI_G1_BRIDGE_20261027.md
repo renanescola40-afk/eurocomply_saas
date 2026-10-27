@@ -18,6 +18,10 @@ Strict branch: `ci/circleci-enterprise-gates-20261027`. Exact source SHA checked
 4. Read CircleCI run ID, exact SHA, test exit statuses and redacted artifacts. Never infer QA runtime PASS from source-only CI or the Postgres synthetic replay.
 5. Compare exact SHA of test/artifacts against the GitLab release candidate and Vercel QA deployment; differences invalidate gate credit.
 
+## Source-version limitation (critical)
+
+The GitHub branch was created from GitHub `main`, not the more recent GitLab `work-master/integration-20261026`. It intentionally runs only checks available in that older GitHub tree. **These results do not satisfy current Work Master exact-SHA Enterprise acceptance.** The full new source-contract job is stored in the separate GitLab branch, which must be selected as CircleCI config and checkout source (or safely mirrored after review). Do not mark QAT-01 or DAT-01 PASS based on older GitHub runs.
+
 ## Closure gates
 
 - QAT-01: source suite is only one subset; requires every mandatory regression/security check PASS for the **exact approved release SHA**.
