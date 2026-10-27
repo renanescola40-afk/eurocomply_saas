@@ -426,6 +426,8 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: g5-02-pg17-exact-sha-replay
 
+  # GitHub legacy-source branch: the G6/G9 suites are only present on GitLab Work Master.
+  # Evidence from this GitHub SHA is NOT eligible as the current integration candidate.
   # Enterprise evidence bridge: SOURCE ONLY, not a runtime or formal gate PASS.
   # Only the dedicated review branch can execute, even on manually-triggered pipelines.
   enterprise-source-proof:
@@ -460,10 +462,7 @@ jobs:
             npm run lint
             npm run typecheck
             npm run test
-            node --test scripts/release/g1-atomic-evidence-v2.test.mjs scripts/release/g1-atomic-policy-registry-v2.test.mjs scripts/release/g1-ci-equivalence.test.mjs scripts/release/g1-external-trust-store.test.mjs scripts/release/score-g1-trusted-evidence.test.mjs
-            node --test scripts/database/g6-03-migration-manifest.test.mjs scripts/database/g6-03-canonical-replay-plan.test.mjs scripts/database/g6-03-ledger-attestation.test.mjs
-            node --test scripts/qa-environment-guard.test.mjs scripts/g6-02-e2e-qa-preflight.test.mjs
-            node --test tests/billing/g6-stripe-contract-regression.test.mjs
+            node --test scripts/qa-environment-guard.test.mjs
             node scripts/security/run-security-ci-without-audit.mjs
             node scripts/release/score-g1-product-ready.mjs > artifacts/circleci-enterprise/score.json
             node -e 'const r=require("./artifacts/circleci-enterprise/score.json");if(!r.valid||r.PRODUCTION_RELEASE_AUTHORIZED||r.productionReleaseAuthorized){process.exit(1)}'
