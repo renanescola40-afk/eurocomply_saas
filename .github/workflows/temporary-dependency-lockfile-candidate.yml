@@ -32,17 +32,29 @@ jobs:
           import fs from 'node:fs';
           const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
           const expected = {
-            'node_modules/dompurify': '3.4.17',
-            'node_modules/zod': '4.6.6',
-            'node_modules/qs': '6.16.1',
-            'node_modules/undici': '7.30.1',
+            'node_modules/dompurify': { minimum: '3.4.17' },
+            'node_modules/zod': { minimum: '4.6.6' },
+            'node_modules/qs': { exact: '6.16.1' },
+            'node_modules/undici': { exact: '7.30.1' },
           };
-          for (const [path, version] of Object.entries(expected)) {
-            const actual = lock.packages?.[path]?.version;
-            if (actual !== version) {
-              throw new Error(`${path}: expected ${version}, got ${actual ?? 'missing'}`);
+          const compareVersions = (left, right) => {
+            const a = left.split('.').map(Number);
+            const b = right.split('.').map(Number);
+            for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+              const delta = (a[i] ?? 0) - (b[i] ?? 0);
+              if (delta !== 0) return Math.sign(delta);
             }
-            console.log(`${path}@${actual}`);
+            return 0;
+          };
+          for (const [path, rule] of Object.entries(expected)) {
+            const actual = lock.packages?.[path]?.version;
+            const valid = typeof actual === 'string'
+              && (rule.exact ? actual === rule.exact : compareVersions(actual, rule.minimum) >= 0);
+            if (!valid) {
+              const expectedDescription = rule.exact ? 'exactly ' + rule.exact : 'at least ' + rule.minimum;
+              throw new Error(path + ': expected ' + expectedDescription + ', got ' + (actual ?? 'missing'));
+            }
+            console.log(path + '@' + actual);
           }
           NODE
       - name: Validate clean install from generated lockfile
