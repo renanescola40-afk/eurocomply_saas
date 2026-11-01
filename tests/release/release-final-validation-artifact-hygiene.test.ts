@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 const workflow = readFileSync('.github/workflows/release-final-validation.yml', 'utf8');
 const gitignore = readFileSync('.gitignore', 'utf8');
 
-const PINNED_UPLOAD_ARTIFACT = 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
+const PINNED_UPLOAD_ARTIFACT = 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9';
 
 describe('release final validation artifact hygiene', () => {
   it('keeps generated validation output out of source control and uploads nested current-run output', () => {
