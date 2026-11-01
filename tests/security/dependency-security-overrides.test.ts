@@ -18,11 +18,11 @@ const lockfile = JSON.parse(readFileSync('package-lock.json', 'utf8')) as {
 describe('patched minimatch and Sentry glob dependency graph', () => {
   it('pins all minimatch installations to the patched release', () => {
     expect(manifest.overrides.minimatch).toBe('file:vendor/minimatch-compat');
-    const installs = Object.entries(lockfile.packages)
-      .filter(([path]) => path === 'node_modules/minimatch' || path.endsWith('/node_modules/minimatch'));
-    expect(installs.length).toBeGreaterThan(0);
-    expect(installs).toHaveLength(1);
-    expect(installs[0][1].version).toBe('11.0.1');
+    const link = lockfile.packages['node_modules/minimatch'];
+    expect(link.link).toBe(true);
+    expect(link.resolved).toBe('vendor/minimatch-compat');
+    expect(lockfile.packages['vendor/minimatch-compat']?.version).toBe('11.0.1');
+    expect(lockfile.packages['node_modules/minimatch-core']?.version).toBe('11.0.1');
   });
 
   it('pins only the Sentry bundler glob edge to the patched compatible release', () => {
