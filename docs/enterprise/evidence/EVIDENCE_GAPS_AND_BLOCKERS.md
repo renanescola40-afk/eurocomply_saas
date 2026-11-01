@@ -18,7 +18,7 @@
 ## Confirmed provider blockers and warnings
 
 1. **DAT-01 — BLOCKED:** Supabase read-only migration version comparison: production has 137 versions; isolated QA has 7; shared versions are 0. All 137 production versions are absent from QA and all 7 QA versions are absent from production. Full canonical replay parity is not established. Do not write to production or bypass source review.
-2. **DAT-05 — NOT_VERIFIED:** Supabase security advisor reports 33 INFO findings for RLS-enabled tables without policies and 1 WARN for disabled leaked-password protection. The INFO findings do not alone prove exposure; inspect intended access, grants, FORCE RLS and RPC ACLs table by table.
+2. **DAT-05 — NOT_VERIFIED:** Supabase security advisor reports 33 INFO findings for RLS-enabled tables without policies and 1 WARN for disabled leaked-password protection. A follow-up read-only catalog query found 115/115 public base tables with RLS and FORCE RLS in both production and isolated QA; 33 tables in each have no policies, but neither `anon` nor `authenticated` has SELECT or write grants on those no-policy tables. This narrows the direct-grant concern but does not prove tenant isolation. Function EXECUTE grants, SECURITY DEFINER behavior, Storage policies, service_role boundaries and full schema parity remain unverified.
 3. **OPS-01 — source PASS preserved:** Vercel reports production READY on SHA `70d3545f414d063379d481fd238aed563e05edda`, matching the frozen G1 baseline and the existing OPS-01 acceptance SHA. Current main is newer, but that difference alone does not invalidate OPS-01. Runtime smoke/E2E remains unverified separately.
 
 ## Remaining control families
