@@ -1,16 +1,27 @@
 # RISCK COMPLY — Enterprise Evidence Master Report
 
-**Snapshot:** 2026-11-01T19:30:00.000Z  
+**Snapshot:** 2026-11-01  
 **Canonical repository:** `renanescola40-afk/eurocomply_saas`  
-**Source SHA:** `6b54e899ffd4edd7ce26883f4fc715a3fef098e0`  
+**Frozen G1 source baseline:** `70d3545f414d063379d481fd238aed563e05edda`  
+**Evidence Factory source snapshot:** `6b54e899ffd4edd7ce26883f4fc715a3fef098e0`  
 **Execution branch:** `enterprise/evidence-factory-v1-20261101`
 
-## Fixed scope
-- Mandatory atomic controls: **38/38**
-- Formal Category A gates: **24/24**
-- Denominators are immutable; each control maps to exactly one gate.
+## Official scoring
 
-## Source control status (preserved)
+The canonical G1 scope defines **24 Category A gates** as the primary Product Ready denominator. The 38 atomic controls remain mandatory child proofs.
+
+| Measure | Current source status | Percentage |
+|---|---:|---:|
+| Primary Product Ready gates | 2/24 PASS | **8.33%** |
+| Primary Product Ready remaining | 22/24 | **91.67%** |
+| Secondary atomic controls | 2/38 PASS | **5.26%** |
+| Secondary atomic controls remaining | 36/38 | **94.74%** |
+| Independent Evidence Factory gate acceptances | 0/24 | **0%** |
+
+The two existing source PASS controls are BIL-01 and OPS-01. Their owner-authorized acceptance metadata and evidence references are present in the canonical G1 scope. This is distinct from the new Evidence Factory's independent review/acceptance process.
+
+## Atomic source status
+
 | Status | Controls |
 |---|---:|
 | PASS | 2 |
@@ -18,25 +29,51 @@
 | NOT_VERIFIED | 35 |
 | Total | **38** |
 
-## Provider evidence captured
-| Evidence | Status | Key finding |
-|---|---|---|
-| DAT-01 — Supabase migration parity | BLOCKED | Production 137 migrations; isolated QA 7; difference 130 |
-| DAT-05 — Supabase security advisor | NOT_VERIFIED | 33 INFO RLS-enabled/no-policy findings; 1 WARN leaked-password protection disabled |
-| OPS-01 — Vercel deployment identity | NOT_VERIFIED | Production READY SHA 70d3545f... differs from GitHub main 6b54e899... |
+## Gate readiness snapshot
 
-- Provider evidence records generated: **3**
-- Artifact SHA-256 values recorded: **3**
-- Evidence records accepted independently: **0**
-- Formal gates eligible for review: **1** (A-09)
-- Gate A-18 requires reconciliation; its existing source PASS is preserved but current deployment/main SHA equality is not verified.
-- Gate A-12 remains BLOCKED.
+- A-09: eligible for independent review (BIL-01 source PASS).
+- A-18: eligible for independent review (OPS-01 source PASS).
+- A-12: BLOCKED (DAT-01).
+- Remaining 21 gates: NOT_ELIGIBLE.
+- Formal Evidence Factory independent acceptances: 0/24.
 
-## CI / PR
-- Draft PR: [#2588](https://github.com/renanescola40-afk/eurocomply_saas/pull/2588)
-- Evidence Tests workflow run: `41341793480` — **failure**
-- Job had no step records or retrievable logs; runner-level cause cannot be confirmed.
-- SHA-256 CI manifest generation is configured in the existing workflow; no separate job/runner was added.
+## Provider readbacks
+
+### DAT-01 — Supabase migration parity
+
+Fresh read-only comparison on 2026-11-01:
+- Production ledger: **137** versions.
+- Isolated QA ledger: **7** versions.
+- Shared migration versions: **0**.
+- All 137 production versions are absent from QA; all 7 QA versions are absent from production.
+
+This is not simply a 130-entry lag: the ledgers are disjoint. Full canonical replay parity remains unestablished. No database writes or migrations were performed.
+
+### DAT-05 — Supabase security diagnostics
+
+The production advisor snapshot reported:
+- 33 INFO findings: RLS enabled without policies.
+- 1 WARN: leaked-password protection disabled.
+
+The INFO findings are not proof of exposure. Table-by-table intended access, grants, FORCE RLS and RPC ACL review remains necessary.
+
+### OPS-01 — Vercel production identity
+
+Vercel reports production READY on SHA `70d3545f414d063379d481fd238aed563e05edda`, which matches the frozen G1 source baseline and the existing OPS-01 acceptance SHA. Current GitHub main is newer, but OPS-01 requires exact identity of the deployed release; it does not require production to track every main commit. The SHA difference alone does not invalidate the source PASS. Runtime smoke and customer journey evidence remain separate requirements.
+
+## Evidence Factory and CI
+
+- Provider readback records captured: **3**.
+- Records independently accepted: **0**.
+- Record validation status: **PENDING_CI_EXECUTION**.
+- Draft PR: [#2588](https://github.com/renanescola40-afk/eurocomply_saas/pull/2588).
+- Prior Enterprise Evidence Tests run `41341793480`: FAILURE.
+- Follow-up run `41342152434`: FAILURE.
+- Both failed job summaries exposed no step records; log download returned BlobNotFound. Root cause cannot be attributed without fresh runner diagnostics.
+- Latest changes include exact source-PASS provenance checks and a regression test. They have not yet been verified by a successful CI run.
 
 ## Decision
-**NO-GO for Enterprise 100%.** Provider evidence is captured, but the migration parity blocker, current deployment SHA drift, unreviewed security findings and remaining controls prevent formal closure.
+
+**NO-GO for Enterprise 100%.** DAT-01 remains blocked; 35 atomic controls remain NOT_VERIFIED; 21 gates are not eligible; independent acceptance and full runtime evidence are outstanding.
+
+No production writes, migrations, deployments, Stripe LIVE transactions, emails, destructive operations, force pushes or main merges were performed.
