@@ -12,13 +12,12 @@ export function validateEvidenceRecord(r,{expectedSha,now=new Date()}={}){
  const d=new Date(r.generated_at); if(!r.generated_at||Number.isNaN(d.getTime()))e.push('generated_at_invalid');else if(d>now)e.push('generated_at_in_future');
  if(r.workflow_run_id!==null&&r.workflow_run_id!==undefined&&!String(r.workflow_run_id).trim())e.push('workflow_run_id_invalid'); if(!Array.isArray(r.limitations))e.push('limitations_must_be_array');
  if(!['NOT_REVIEWED','IN_REVIEW','ACCEPTED','REJECTED'].includes(r.reviewer_status))e.push('reviewer_status_invalid');if(!['NOT_ACCEPTED','ACCEPTED','REJECTED'].includes(r.acceptance_status))e.push('acceptance_status_invalid');
- if(r.status==='PASS'){
-  if(r.reviewer_status!=='ACCEPTED'||r.acceptance_status!=='ACCEPTED'||!r.accepted_by||!r.accepted_at)e.push('pass_requires_independent_acceptance');
-  const artifactPath=path.resolve(ROOT,r.artifact_path||'');
-  if(!artifactPath.startsWith(ROOT+path.sep)||!fs.existsSync(artifactPath)||!fs.statSync(artifactPath).isFile())e.push('accepted_artifact_missing');
-  else if(crypto.createHash('sha256').update(fs.readFileSync(artifactPath)).digest('hex')!==r.artifact_sha256)e.push('accepted_artifact_sha256_mismatch');
-  if(/runtime|provider|live/i.test(r.evidence_type||'')&&!Number.isNaN(d.getTime())&&now.getTime()-d.getTime()>90*24*60*60*1000)e.push('runtime_evidence_stale');
-}
+ const artifactPath=path.resolve(ROOT,r.artifact_path||'');
+ if(!artifactPath.startsWith(ROOT+path.sep))e.push('artifact_path_outside_repository');
+ else if(!fs.existsSync(artifactPath)||!fs.statSync(artifactPath).isFile())e.push('artifact_missing');
+ else if(crypto.createHash('sha256').update(fs.readFileSync(artifactPath)).digest('hex')!==r.artifact_sha256)e.push('artifact_sha256_mismatch');
+ if(/runtime|provider|live/i.test(r.evidence_type||'')&&!Number.isNaN(d.getTime())&&(d>now||now.getTime()-d.getTime()>90*24*60*60*1000))e.push('runtime_evidence_stale');
+ if(r.status==='PASS'&&(r.reviewer_status!=='ACCEPTED'||r.acceptance_status!=='ACCEPTED'||!r.accepted_by||!r.accepted_at))e.push('pass_requires_independent_acceptance');
  if(r.status==='NOT_APPLICABLE'&&(!r.applicability_rationale||r.applicability_rationale.length<20||r.reviewer_status!=='ACCEPTED'||r.acceptance_status!=='ACCEPTED'))e.push('not_applicable_requires_approved_rationale');
  return e;
 }
