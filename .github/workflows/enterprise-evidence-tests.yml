@@ -42,6 +42,7 @@ jobs:
 
       - name: Generate exact-SHA SHA-256 evidence manifest
         env:
+          EVIDENCE_EXACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           EVIDENCE_SHA256_OUTPUT: artifacts/enterprise-readiness/EVIDENCE_SHA256_MANIFEST.json
         run: |
           node scripts/enterprise-evidence/generate-sha256-manifest.mjs \
