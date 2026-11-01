@@ -19,3 +19,12 @@ test('accepts a complete PASS record only when the artifact bytes match SHA-256'
  try { assert.deepEqual(validateEvidenceRecord(record,{expectedSha:sha,now:new Date('2026-11-01T12:00:00.000Z')}),[]); }
  finally { fs.rmSync(abs,{force:true}); }
 });
+
+test('does not promote a source PASS without accepted metadata and a referenced evidence file',()=>{
+ const mandatory=Array.from({length:38},(_,i)=>({id:'X-'+i,status:'NOT_VERIFIED',evidenceRefs:[],acceptedBy:null,acceptedAt:null}));
+ mandatory[0]={id:'SEC-01',status:'PASS',evidenceRefs:[],acceptedBy:null,acceptedAt:null};
+ const groups=Array.from({length:24},(_,i)=>({id:'A-'+String(i+1).padStart(2,'0'),atomicCriteria:[i===0?'SEC-01':'X-'+i]}));
+ const r=reconcile({scope:{mandatory},gates:{groups},index:{fixed_scope:{atomic_controls:38,formal_gates:24},evidence_records:[]}});
+ assert.equal(r.summary.controls_pass,0);
+ assert.equal(r.gates.find(g=>g.gate_id==='A-01').status,'NOT_ELIGIBLE');
+});
