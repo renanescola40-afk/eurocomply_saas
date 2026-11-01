@@ -228,7 +228,7 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": false,
       "acceptance_evidence_ref": null,
-      "notes": "Existing OPS-01 source PASS matches the frozen G1 baseline SHA and remains valid. Current main is newer, but OPS-01 does not require automatic deployment of every main commit. Independent Evidence Factory review remains pending."
+      "notes": "OPS-01 source PASS preserved. Vercel production deployment SHA matches the frozen G1 source baseline and the accepted OPS-01 evidence; newer main does not invalidate deployed release identity."
     },
     {
       "gate_id": "A-19",
