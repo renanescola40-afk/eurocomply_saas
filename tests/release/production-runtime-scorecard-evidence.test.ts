@@ -230,7 +230,11 @@ describe('production runtime scorecard evidence', () => {
     expect(workflow).toContain('environment: Production');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('contents: write');
-    expect(workflow).toContain('test "$MAIN_SHA" = "$TARGET_SHA"');
+        expect(workflow).toContain('GITHUB_TOKEN: ${{ github.token }}');
+        expect(workflow).toContain('Authorization: Bearer $GITHUB_TOKEN');
+        expect(workflow).toContain('$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/commits/main');
+        expect(workflow).toContain('test "$main_sha" = "$TARGET_SHA"');
+        expect(workflow).not.toContain('git ls-remote');
     expect(workflow).toContain(CANONICAL_PRODUCTION_URL);
     expect(smokeProof).toContain("const CANONICAL_HOST = 'www.risckcomply.com'");
     expect(smokeProof).toContain("const CANONICAL_LOCALE = 'en'");
