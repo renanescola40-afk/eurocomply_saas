@@ -1,0 +1,67 @@
+name: Temporary ESLint-compatible dependency lockfile candidate
+on:
+  push:
+    branches:
+      - fix/restore-eslint-minimatch-compat-20261101
+permissions:
+  contents: write
+concurrency:
+  group: dependency-eslint-compatible-lock-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: true
+      - name: Setup Node.js 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+      - name: Regenerate lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify compatibility boundaries
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          const packages = lock.packages ?? {};
+          const exact = (path, version) => {
+            const actual = packages[path]?.version;
+            if (actual !== version) throw new Error(path + ': expected ' + version + ', got ' + (actual ?? 'missing'));
+            console.log(path + '@' + actual);
+          };
+          exact('node_modules/minimatch', '3.1.5');
+          exact('node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch', '11.0.1');
+          exact('node_modules/glob', '14.0.2');
+          exact('node_modules/@sentry/nextjs', '11.10.0');
+          exact('node_modules/@sentry/node', '11.10.0');
+          exact('node_modules/@sentry/bundler-plugins', '11.10.0');
+          const globMinimatch = Object.entries(packages).filter(([path, pkg]) =>
+            path.endsWith('/node_modules/minimatch') && path.includes('glob/node_modules/')
+          );
+          if (globMinimatch.length && globMinimatch.some(([, pkg]) => pkg.version !== '11.0.1')) {
+            throw new Error('glob must use minimatch 11.0.1: ' + JSON.stringify(globMinimatch));
+          }
+          NODE
+      - name: Validate manifest and lock alignment
+        run: node scripts/security/check-package-lock-aligned.mjs
+      - name: Validate clean install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Commit lockfile only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add package-lock.json
+          test "$(git diff --cached --name-only)" = 'package-lock.json'
+          if git diff --cached --quiet; then
+            echo 'package-lock.json already current'; exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(deps): lock ESLint-compatible minimatch graph'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
