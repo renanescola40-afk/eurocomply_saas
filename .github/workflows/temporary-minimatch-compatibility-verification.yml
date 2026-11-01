@@ -1,0 +1,67 @@
+name: Temporary minimatch compatibility verification
+on:
+  push:
+    branches:
+      - fix/minimatch11-default-interop-20261101
+permissions:
+  contents: write
+concurrency:
+  group: minimatch-interop-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: true
+      - name: Setup Node.js 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+      - name: Regenerate lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Check package manifest and lockfile alignment
+        run: node scripts/security/check-package-lock-aligned.mjs
+      - name: Verify patched graph and adapter alias
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          const paths = Object.keys(lock.packages ?? {});
+          const wrapper = lock.packages['node_modules/minimatch'];
+          const core = lock.packages['node_modules/minimatch-core'];
+          const glob = lock.packages['node_modules/glob'];
+          if (wrapper?.version !== '11.0.1') throw new Error('minimatch wrapper is not 11.0.1');
+          if (core?.version !== '11.0.1') throw new Error('minimatch-core alias is not 11.0.1');
+          if (glob?.version !== '14.0.2') throw new Error('glob is not 14.0.2');
+          if (!wrapper.resolved?.startsWith('file:')) throw new Error('minimatch wrapper is not resolved from local vendor adapter');
+          console.log('minimatch adapter: ' + wrapper.version);
+          console.log('upstream minimatch core: ' + core.version);
+          console.log('glob: ' + glob.version);
+          console.log('installed minimatch paths: ' + paths.filter(p => p === 'node_modules/minimatch' || p.endsWith('/node_modules/minimatch')).join(', '));
+          NODE
+      - name: Clean deterministic install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify legacy ESLint import compatibility
+        run: npm run lint
+      - name: Verify focused security override contract
+        run: npx vitest run tests/security/dependency-security-overrides.test.ts
+      - name: Commit generated lockfile only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add package-lock.json
+          changed_files="$(git diff --cached --name-only)"
+          test "$changed_files" = 'package-lock.json'
+          if git diff --cached --quiet; then
+            echo 'package-lock.json is already current; no commit required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(deps): lock minimatch compatibility adapter graph'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
