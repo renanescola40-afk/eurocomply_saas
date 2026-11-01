@@ -4,7 +4,7 @@
 **Canonical repository:** `renanescola40-afk/eurocomply_saas`  
 **Frozen G1 source baseline:** `70d3545f414d063379d481fd238aed563e05edda`  
 **Evidence Factory source snapshot:** `6b54e899ffd4edd7ce26883f4fc715a3fef098e0`  
-**Execution branch:** `enterprise/evidence-factory-v1-20261101`
+**Execution branch:** `enterprise/evidence-factory-readback-reconcile-20261101`
 
 ## Official scoring
 
@@ -32,7 +32,7 @@ The two existing source PASS controls are BIL-01 and OPS-01. Their owner-authori
 ## Gate readiness snapshot
 
 - A-09: eligible for independent review (BIL-01 source PASS).
-- A-18: eligible for independent review (OPS-01 source PASS).
+- A-18: eligible for independent review (OPS-01 source PASS; production SHA matches frozen G1 baseline).
 - A-12: BLOCKED (DAT-01).
 - Remaining 21 gates: NOT_ELIGIBLE.
 - Formal Evidence Factory independent acceptances: 0/24.
@@ -47,30 +47,32 @@ Fresh read-only comparison on 2026-11-01:
 - Shared migration versions: **0**.
 - All 137 production versions are absent from QA; all 7 QA versions are absent from production.
 
-This is not simply a 130-entry lag: the ledgers are disjoint. Full canonical replay parity remains unestablished. No database writes or migrations were performed.
+The ledgers are disjoint; this is not simply a 130-entry lag. Full canonical replay parity remains unestablished. No database writes or migrations were performed.
 
-### DAT-05 — Supabase security diagnostics
+### DAT-05 — Supabase RLS, FORCE RLS and grants
 
-The production advisor snapshot reported:
-- 33 INFO findings: RLS enabled without policies.
-- 1 WARN: leaked-password protection disabled.
+The read-only catalog artifact reports:
+- Production: **115/115** public base tables have RLS enabled and FORCE RLS enabled.
+- Isolated QA: **115/115** public base tables have RLS enabled and FORCE RLS enabled.
+- 33 tables in each environment have no policies.
+- No anon or authenticated SELECT/INSERT/UPDATE/DELETE table privileges were reported for those no-policy tables.
 
-The INFO findings are not proof of exposure. Table-by-table intended access, grants, FORCE RLS and RPC ACL review remains necessary.
+This reduces the immediate concern raised by advisor INFO findings, but does not prove tenant isolation or full database security. Function EXECUTE grants, SECURITY DEFINER behavior, service_role exposure, Storage policies, full schema parity and application-mediated access remain unverified. The provider artifact is captured but has not been independently accepted.
 
 ### OPS-01 — Vercel production identity
 
-Vercel reports production READY on SHA `70d3545f414d063379d481fd238aed563e05edda`, which matches the frozen G1 source baseline and the existing OPS-01 acceptance SHA. Current GitHub main is newer, but OPS-01 requires exact identity of the deployed release; it does not require production to track every main commit. The SHA difference alone does not invalidate the source PASS. Runtime smoke and customer journey evidence remain separate requirements.
+Vercel reports production READY on SHA `70d3545f414d063379d481fd238aed563e05edda`, matching the frozen G1 source baseline and the existing OPS-01 acceptance SHA. Current GitHub main is newer, but OPS-01 requires exact identity of the deployed release; it does not require production to track every main commit. Runtime smoke and customer journey evidence remain separate requirements.
 
 ## Evidence Factory and CI
 
-- Provider readback records captured: **3**.
-- Records independently accepted: **0**.
-- Record validation status: **PENDING_CI_EXECUTION**.
+- Evidence records indexed: **3** (DAT-01, DAT-05, OPS-01).
+- Independent acceptance: **0**.
+- Record validation status: **PENDING_EXACT_SHA_CI_VALIDATION**.
+- Provider artifacts: migration parity, RLS/FORCE/grants, and Vercel deployment identity.
 - Draft PR: [#2588](https://github.com/renanescola40-afk/eurocomply_saas/pull/2588).
-- Prior Enterprise Evidence Tests run `41341793480`: FAILURE.
-- Follow-up run `41342152434`: FAILURE.
-- Both failed job summaries exposed no step records; log download returned BlobNotFound. Root cause cannot be attributed without fresh runner diagnostics.
-- Latest changes include exact source-PASS provenance checks and a regression test. They have not yet been verified by a successful CI run.
+- Latest observed Enterprise Evidence Tests run on the PR head: `41343943840` — FAILURE.
+- Job steps/logs/artifacts were unavailable through the connected API; log retrieval returned BlobNotFound. Root cause cannot be confirmed.
+- Corrected SHA-256 digests and DAT-05 record binding are prepared on this isolated branch. It is not yet integrated into PR #2588 and has not been CI-verified.
 
 ## Decision
 
