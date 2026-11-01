@@ -92,6 +92,6 @@ The branch comparison reported 15 commits ahead of main and zero behind immediat
 
 ## Required next verification
 
-1. Execute `npm run test` and the focused Enterprise dashboard/closure contract commands on exact branch HEAD `97a4da5de023378b98ac47a5e531d7382af8b630`.
+1. Execute `npm run test` and the focused Enterprise dashboard/closure contract commands on the exact branch-ref SHA retrieved immediately before execution; record that exact tested SHA. `97a4da5de023378b98ac47a5e531d7382af8b630` is the test-code implementation anchor, not the final branch-ref SHA.
 2. Run the complete required security suite on that same SHA and resolve separately any GitHub code-scanning, OSSF, or branch-protection integration permissions.
 3. Only open a PR after confirming that the resulting Actions workload is covered by existing authorized quota with no new cost; bind every review/check to the exact tested SHA.
