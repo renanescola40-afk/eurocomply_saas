@@ -1,0 +1,776 @@
+{
+  "schema": "risck-comply.enterprise-38-control-matrix.v1",
+  "source_commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+  "scope_file": "config/g1-enterprise-scope-v1.json",
+  "denominator": 38,
+  "controls": [
+    {
+      "control_id": "SEC-01",
+      "gate_ids": [
+        "A-01"
+      ],
+      "domain": "Security",
+      "owner": "security",
+      "criterion": "Session authentication, recovery and logout reject expired/revoked sessions in authenticated browser/API tests",
+      "evidence_required": "Authenticated run logs, replayable negative session fixtures",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "SEC-02",
+      "gate_ids": [
+        "A-02"
+      ],
+      "domain": "Security",
+      "owner": "security",
+      "criterion": "Every mandatory read and mutation is authorized server-side by active membership and role, including deny tests",
+      "evidence_required": "Role/permission matrix plus negative API integration evidence",
+      "dependencies": [
+        "SEC-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "SEC-03",
+      "gate_ids": [
+        "A-03"
+      ],
+      "domain": "Security",
+      "owner": "security",
+      "criterion": "Tenant A cannot read, mutate, export or download tenant B records via API, RLS and Storage",
+      "evidence_required": "Tenant A/B authenticated runtime and SQL/RLS/Storage results",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "SEC-04",
+      "gate_ids": [
+        "A-02"
+      ],
+      "domain": "Security",
+      "owner": "security",
+      "criterion": "Privileged SQL functions, elevated writers, files and webhooks are restricted to intended principals",
+      "evidence_required": "Production grants/policy readback and unauthorized-invocation tests",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "SEC-05",
+      "gate_ids": [
+        "A-04"
+      ],
+      "domain": "Security",
+      "owner": "security",
+      "criterion": "Secrets never reach client bundles or logs; TLS and at-rest protection are appropriately configured",
+      "evidence_required": "Secret scanner, deployed configuration attestation, transport/storage checks",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "SEC-06",
+      "gate_ids": [
+        "A-03"
+      ],
+      "domain": "Security",
+      "owner": "security",
+      "criterion": "No known unaccepted material high/critical issue in committed flows; privileged actions have durable audit events",
+      "evidence_required": "Risk register, vulnerability dispositions, event replay and audit outputs",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "FUN-01",
+      "gate_ids": [
+        "A-05"
+      ],
+      "domain": "Functional product",
+      "owner": "product",
+      "criterion": "A legitimate user signs up, authenticates and creates/joins the intended workspace",
+      "evidence_required": "Authenticated signup/onboarding E2E and durable DB readback",
+      "dependencies": [
+        "SEC-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "FUN-02",
+      "gate_ids": [
+        "A-06"
+      ],
+      "domain": "Functional product",
+      "owner": "product",
+      "criterion": "AI inventory create/view/update and risk assessment persist with correct tenant and ownership",
+      "evidence_required": "Authenticated E2E plus persisted record and isolation evidence",
+      "dependencies": [
+        "FUN-01",
+        "SEC-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "FUN-03",
+      "gate_ids": [
+        "A-06"
+      ],
+      "domain": "Functional product",
+      "owner": "product",
+      "criterion": "Governance workflow records accountable owner, decision, timestamps, review state and supporting evidence",
+      "evidence_required": "Multi-role approval/deny E2E and durable audit trail",
+      "dependencies": [
+        "FUN-02",
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "FUN-04",
+      "gate_ids": [
+        "A-07"
+      ],
+      "domain": "Functional product",
+      "owner": "product",
+      "criterion": "Evidence uploads/downloads, audit trail, mandatory reporting and document export work with access controls",
+      "evidence_required": "Authenticated browser/API tests, generated file inspection and data readback",
+      "dependencies": [
+        "FUN-03",
+        "SEC-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "FUN-05",
+      "gate_ids": [
+        "A-08"
+      ],
+      "domain": "Functional product",
+      "owner": "product",
+      "criterion": "Administration, retention/deletion/export and privacy request workflows fulfill the published offering",
+      "evidence_required": "Role-specific E2E, data deletion/retention and export evidence",
+      "dependencies": [
+        "FUN-01",
+        "SEC-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "FUN-06",
+      "gate_ids": [
+        "A-08"
+      ],
+      "domain": "Functional product",
+      "owner": "product",
+      "criterion": "Navigation and actual product contracts match what is marketed; incomplete optional flows are not sold as complete",
+      "evidence_required": "Release-scoped product route inventory and marketing/contract mismatch review",
+      "dependencies": [
+        "FUN-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "BIL-01",
+      "gate_ids": [
+        "A-09"
+      ],
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "criterion": "Publicly committed plans map to existing correctly configured Stripe prices and intended access limits",
+      "evidence_required": "Redacted Stripe product/price IDs and offer-to-entitlement mapping",
+      "dependencies": [],
+      "status": "PASS",
+      "source_evidence_refs": [
+        "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json"
+      ],
+      "blocker_evidence_refs": [],
+      "accepted_by": "G1 Engineering, owner-authorized acceptance (independent Stripe LIVE + Vercel provider readbacks; governed PR integration pending)",
+      "accepted_at": "2026-10-22T21:03:16.517Z",
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "BIL-02",
+      "gate_ids": [
+        "A-10"
+      ],
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "criterion": "Signed Stripe TEST webhooks reject invalid signatures and replay/duplicates safely",
+      "evidence_required": "Genuine Stripe test event, webhook delivery IDs and idempotency readback",
+      "dependencies": [
+        "BIL-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "BIL-03",
+      "gate_ids": [
+        "A-10"
+      ],
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "criterion": "A genuine test Checkout creates and persists the expected organization entitlement in isolated QA",
+      "evidence_required": "Exact-SHA Stripe TEST event linked to QA durable DB state and app entitlement",
+      "dependencies": [
+        "BIL-02",
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "BIL-04",
+      "gate_ids": [
+        "A-11"
+      ],
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "criterion": "Plan changes, nonpayment and cancellation converge on durable, safe subscription states",
+      "evidence_required": "Genuine Stripe TEST lifecycle events plus authenticated UI/backend assertions",
+      "dependencies": [
+        "BIL-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "BIL-05",
+      "gate_ids": [
+        "A-11"
+      ],
+      "domain": "Commercial and billing",
+      "owner": "billing",
+      "criterion": "Access checks and billing modifications are authorized server-side; customer cannot self-grant a paid tier",
+      "evidence_required": "Negative API tests and tenant-isolated entitlement query evidence",
+      "dependencies": [
+        "SEC-02",
+        "BIL-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "DAT-01",
+      "gate_ids": [
+        "A-12"
+      ],
+      "domain": "Database and continuity",
+      "owner": "database",
+      "criterion": "An ordered, reconciled and reviewed migration manifest bootstraps isolated QA without version collisions",
+      "evidence_required": "Approved replay manifest, migration hashes, SQL replay log and schema parity check",
+      "dependencies": [],
+      "status": "BLOCKED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [
+        "docs/enterprise/G1_P0B_RLS_REPLAY_DIAGNOSTIC_2026-10-22.md",
+        "docs/enterprise/evidence/G1_PROD_PROVIDER_SQL_STATEMENT_SHA256_2026-10-22.json",
+        "docs/enterprise/evidence/G1_QA_REPLAY_047_POLICY_GAPS_2026-10-22.json"
+      ],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": "QA PostgreSQL rollback-only canonical source replay verified through step 47/137 (using explicitly guarded source-only historical overlays for #18,#19,#37,#39); step 48 fails closed on 20/28 required RLS policies missing across 8 tables. This is a source/provenance pre-materialization defect; original production provider ledger and migrations unmodified. Isolated QA has ZERO durably applied migration entries. DAT-01 remains BLOCKED until source-bound, reviewed full 137/137 replay and durable QA postcondition readback."
+    },
+    {
+      "control_id": "DAT-02",
+      "gate_ids": [
+        "A-13"
+      ],
+      "domain": "Database and continuity",
+      "owner": "database",
+      "criterion": "Concurrent membership changes and usage quotas preserve critical invariants or fail atomically",
+      "evidence_required": "Native PostgreSQL concurrent-session tests and repeatable invariant queries",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "DAT-03",
+      "gate_ids": [
+        "A-13"
+      ],
+      "domain": "Database and continuity",
+      "owner": "database",
+      "criterion": "High-value decisions, audit-chain and billing state survive transaction failure/retry without untracked divergence",
+      "evidence_required": "Rollback/atomicity negative cases, constraint assertions and audit-chain validation",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "DAT-04",
+      "gate_ids": [
+        "A-14"
+      ],
+      "domain": "Database and continuity",
+      "owner": "database",
+      "criterion": "A bounded isolated restoration proves DB and relevant Auth/Storage/application recovery boundaries",
+      "evidence_required": "Restore transcript, data integrity diff, Auth/Storage scope and recovery limitation log",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "DAT-05",
+      "gate_ids": [
+        "A-14"
+      ],
+      "domain": "Database and continuity",
+      "owner": "database",
+      "criterion": "Production migrations, RLS/FORCE RLS, RPC grants and data boundaries match the approved release",
+      "evidence_required": "Version-scoped provider SQL readback, function ACL and grant tests",
+      "dependencies": [
+        "DAT-01",
+        "SEC-03"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "QAT-01",
+      "gate_ids": [
+        "A-15"
+      ],
+      "domain": "Quality assurance",
+      "owner": "qa",
+      "criterion": "Mandatory application/unit/integration and security regression suites complete without failing checks",
+      "evidence_required": "Exact-SHA test logs and results for full required suites",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "QAT-02",
+      "gate_ids": [
+        "A-16"
+      ],
+      "domain": "Quality assurance",
+      "owner": "qa",
+      "criterion": "Real authenticated browser tests cover core user journeys and tenant A/B access denies",
+      "evidence_required": "Exact-SHA Playwright logs, artifacts sanitized of private data",
+      "dependencies": [
+        "FUN-04",
+        "SEC-03",
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "QAT-03",
+      "gate_ids": [
+        "A-16"
+      ],
+      "domain": "Quality assurance",
+      "owner": "qa",
+      "criterion": "Billing plus error, retries, persistence, cancellations and degraded behavior pass application/runtime E2E",
+      "evidence_required": "Exact-SHA runtime/Stripe sandbox QA report",
+      "dependencies": [
+        "BIL-04",
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "QAT-04",
+      "gate_ids": [
+        "A-17"
+      ],
+      "domain": "Quality assurance",
+      "owner": "qa",
+      "criterion": "Test source SHA, build, QA environment and deployed tested artifact are traceable; no synthetic substitution",
+      "evidence_required": "Signed or otherwise independently verifiable check IDs, exact-SHA provenance",
+      "dependencies": [
+        "QAT-01",
+        "OPS-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "OPS-01",
+      "gate_ids": [
+        "A-18"
+      ],
+      "domain": "Production operations",
+      "owner": "platform",
+      "criterion": "The current production deployment is READY, its exact SHA is known and release acceptance uses that SHA",
+      "evidence_required": "Live Vercel deployment ID/commit SHA and domain assignment verification",
+      "dependencies": [],
+      "status": "PASS",
+      "source_evidence_refs": [
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+      ],
+      "blocker_evidence_refs": [],
+      "accepted_by": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
+      "accepted_at": "2026-10-22T20:52:14.027Z",
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "OPS-02",
+      "gate_ids": [
+        "A-19"
+      ],
+      "domain": "Production operations",
+      "owner": "platform",
+      "criterion": "Protected or equivalently controlled merges/releases require approved review, trustworthy checks and explicit release decision",
+      "evidence_required": "Readback of native rule enforcement or documented audited equivalent controls",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "OPS-03",
+      "gate_ids": [
+        "A-20"
+      ],
+      "domain": "Production operations",
+      "owner": "platform",
+      "criterion": "Public critical routes and an authenticated core workflow pass deployment-specific smoke checks",
+      "evidence_required": "Runtime smoke results and health/endpoints with exact deployment identity",
+      "dependencies": [
+        "OPS-01",
+        "QAT-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "OPS-04",
+      "gate_ids": [
+        "A-20"
+      ],
+      "domain": "Production operations",
+      "owner": "platform",
+      "criterion": "Production monitoring, alert routing, incident response and support contact operate and are documented",
+      "evidence_required": "Provider alert check, incident drill, runbook and support route",
+      "dependencies": [
+        "OPS-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "OPS-05",
+      "gate_ids": [
+        "A-21"
+      ],
+      "domain": "Production operations",
+      "owner": "platform",
+      "criterion": "A governed rollback/recovery exercise verifies safe restore of a known-good release without customer-data mutation",
+      "evidence_required": "Isolated/staged rehearsal log, rollback target SHA and acceptance record",
+      "dependencies": [
+        "OPS-01",
+        "DAT-04"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "OPS-06",
+      "gate_ids": [
+        "A-21"
+      ],
+      "domain": "Production operations",
+      "owner": "platform",
+      "criterion": "QA, live, preview and production configuration and credentials stay isolated and fail closed",
+      "evidence_required": "Environment provenance matrix, safe negative-cross-environment tests",
+      "dependencies": [
+        "SEC-05",
+        "DAT-01"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "TRU-01",
+      "gate_ids": [
+        "A-22"
+      ],
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "criterion": "Operator/contracting entity and software rights are identified and supported by appropriate corporate evidence",
+      "evidence_required": "Authoritative supplier/ownership records, reviewed identity statement",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "TRU-02",
+      "gate_ids": [
+        "A-23"
+      ],
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "criterion": "Product terms, privacy notice and applicable DPA are accurate, accessible and reviewed for the target service",
+      "evidence_required": "Versioned terms/privacy/DPA, legal approver identity, effective dates",
+      "dependencies": [],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "TRU-03",
+      "gate_ids": [
+        "A-23"
+      ],
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "criterion": "Subprocessors, retention/deletion, transfers and GDPR role allocation match operating reality",
+      "evidence_required": "Verified vendor list and data flow, retention schedule and legal/privacy sign-off",
+      "dependencies": [
+        "TRU-02",
+        "FUN-05"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "TRU-04",
+      "gate_ids": [
+        "A-24"
+      ],
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "criterion": "AI Act and independent-assurance marketing statements are scoped, current and do not imply false certification",
+      "evidence_required": "Fact/legal review checklist and approved claim inventory",
+      "dependencies": [
+        "TRU-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "TRU-05",
+      "gate_ids": [
+        "A-24"
+      ],
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "criterion": "Customer-ready security questionnaire, disclosure/contact route, support and incident commitments are truthful",
+      "evidence_required": "Evidence-indexed procurement packet, tested contact path and approved commitments",
+      "dependencies": [
+        "OPS-04",
+        "TRU-02"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    },
+    {
+      "control_id": "TRU-06",
+      "gate_ids": [
+        "A-22"
+      ],
+      "domain": "Legal and customer trust",
+      "owner": "legal",
+      "criterion": "All legal obligations applicable to the offered scope have a documented qualified acceptance or bounded unresolved decision",
+      "evidence_required": "Applicable-obligation matrix, legal reviewer conclusions and approved exceptions",
+      "dependencies": [
+        "TRU-01",
+        "TRU-03",
+        "TRU-04"
+      ],
+      "status": "NOT_VERIFIED",
+      "source_evidence_refs": [],
+      "blocker_evidence_refs": [],
+      "accepted_by": null,
+      "accepted_at": null,
+      "evidence_ids": [],
+      "notes": null
+    }
+  ]
+}
