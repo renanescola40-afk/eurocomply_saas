@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
+import minimatchDefault, { minimatch, Minimatch } from 'minimatch';
 import { globSync } from 'glob';
+
+const require = createRequire(import.meta.url);
+const minimatchCommonJs = require('minimatch');
 
 const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
   dependencies: Record<string, string>;
@@ -12,10 +16,20 @@ const lockfile = JSON.parse(readFileSync('package-lock.json', 'utf8')) as {
 };
 
 describe('patched minimatch and Sentry glob dependency graph', () => {
-  it('pins all minimatch installations to the patched release', () => {
-    const parserOverride = manifest.overrides['@typescript-eslint/typescript-estree'] as { minimatch?: string };
-    expect(parserOverride.minimatch).toBe('11.0.1');
-    expect(lockfile.packages['node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch']?.version).toBe('11.0.1');
+  it('uses the patched compatibility adapter across the dependency graph', () => {
+    expect(manifest.overrides.minimatch).toBe('file:vendor/minimatch-compat');
+    expect(lockfile.packages['node_modules/minimatch']?.link).toBe(true);
+    expect(lockfile.packages['node_modules/minimatch']?.resolved).toBe('vendor/minimatch-compat');
+    expect(lockfile.packages['vendor/minimatch-compat']?.version).toBe('11.0.1');
+    expect(lockfile.packages['node_modules/minimatch-core']?.version).toBe('11.0.1');
+  });
+
+  it('preserves the ESM default/named and CommonJS minimatch APIs', () => {
+    expect(minimatchDefault).toBe(minimatch);
+    expect(minimatch('src/security.ts', '**/*.ts')).toBe(true);
+    expect(minimatchCommonJs('src/security.ts', '**/*.ts')).toBe(true);
+    expect(minimatchCommonJs.Minimatch).toBe(Minimatch);
+    expect(minimatchCommonJs.default).toBe(minimatchCommonJs);
   });
 
   it('pins only the Sentry bundler glob edge to the patched compatible release', () => {
