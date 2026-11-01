@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.enterprise-evidence-sha256-manifest.v1",
-  "generated_at": "2026-11-01T19:48:02.506Z",
+  "generated_at": "2026-11-01T19:52:29.555Z",
   "repository": "renanescola40-afk/eurocomply_saas",
   "source_commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
   "hash_algorithm": "SHA-256",
@@ -12,8 +12,8 @@
     },
     {
       "path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
-      "sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae"
+      "sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8"
     }
   ],
-  "note": "Partial provider artifact register. Supabase digest was recomputed over exact UTF-8 bytes and checked against the SHA-256 abc test vector; CI generator must regenerate the full manifest for the final checked-out commit."
+  "note": "Partial provider artifact register. Supabase and Vercel digests independently recomputed over exact UTF-8 bytes; SHA-256 implementation checked against the standard abc test vector. CI generator must regenerate the full manifest for the final checked-out commit."
 }
