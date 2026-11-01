@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.enterprise-evidence-factory.index.v1",
   "version": "1.0.0",
-  "generated_at": "2026-11-01T19:46:55.348Z",
+  "generated_at": "2026-11-01T19:58:29.690Z",
   "canonical_repository": "renanescola40-afk/eurocomply_saas",
   "source": {
     "branch": "main",
@@ -27,14 +27,14 @@
     "controls_pass_source": 2,
     "controls_blocked_source": 1,
     "controls_not_verified_source": 35,
-    "evidence_records_generated": 4,
+    "evidence_records_generated": 3,
     "evidence_records_valid": 0,
     "gates_total": 24,
     "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
     "gates_accepted": 0,
     "evidence_records_validation": "PENDING_EXACT_SHA_CI_VALIDATION",
-    "artifact_sha256_values_computed": 4,
+    "artifact_sha256_values_computed": 3,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
     "gate_eligibility_note": "A-09 (BIL-01) and A-18 (OPS-01) are eligible for independent review on the canonical source scope. The newer main SHA does not invalidate OPS-01: its accepted criterion is exact identification of the deployed production release, which matches the frozen G1 baseline. Runtime smoke/E2E remains separately unverified."
@@ -485,9 +485,9 @@
       "accepted_by": null,
       "accepted_at": null,
       "evidence_ids": [
-        "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101"
+        "EV-DAT-05-SUPABASE-RLS-FORCE-GRANTS-20261101"
       ],
-      "notes": "NOT_VERIFIED: current Supabase security advisor reports 33 RLS-enabled/no-policy INFO findings; table-by-table grants/FORCE RLS/RPC ACL reconciliation required."
+      "notes": "NOT_VERIFIED: provider readback reports 115/115 public tables RLS+FORCE RLS in production and QA, with no anon/authenticated table privileges on the 33 no-policy tables. Security advisor separately reported 1 WARN for disabled leaked-password protection. Function ACL, service_role, storage, schema parity and tenant-isolation evidence remain open."
     },
     {
       "control_id": "QAT-01",
@@ -1144,32 +1144,6 @@
         "Security advisor findings do not replace table-by-table policy, grants, RPC ACL and tenant-isolation tests.",
         "No customer rows or credentials were accessed.",
         "No database writes, migrations or destructive operations were performed."
-      ],
-      "reviewer_status": "NOT_REVIEWED",
-      "acceptance_status": "NOT_ACCEPTED"
-    },
-    {
-      "evidence_id": "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101",
-      "control_id": "DAT-05",
-      "gate_id": "A-14",
-      "evidence_type": "provider-readback",
-      "status": "NOT_VERIFIED",
-      "repository": "renanescola40-afk/eurocomply_saas",
-      "branch": "main",
-      "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
-      "workflow_run_id": null,
-      "environment": "production-read-only",
-      "generated_at": "2026-11-01T19:41:26.097Z",
-      "source_system": "Supabase Management API",
-      "test_command_or_provider_query": "get_advisors(production, type=security)",
-      "result_summary": "Read-only advisor snapshot: 33 INFO findings for RLS-enabled tables without policies and 1 WARN for disabled leaked-password protection. This does not establish whether each no-policy table is intentionally backend-only; table-by-table grants, FORCE RLS, RPC ACL and approved schema parity remain unverified.",
-      "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
-      "artifact_sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34",
-      "reproducibility_instructions": "Repeat the read-only production security advisor query and inspect every finding against the approved table access model, grants and RPC ACL inventory.",
-      "limitations": [
-        "Advisor findings are informational/warning signals and are not a substitute for authenticated tenant isolation tests.",
-        "No customer rows or credentials were accessed.",
-        "No production settings or policies were changed."
       ],
       "reviewer_status": "NOT_REVIEWED",
       "acceptance_status": "NOT_ACCEPTED"
