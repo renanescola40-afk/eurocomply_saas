@@ -225,9 +225,10 @@
         "OPS-01"
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
-      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "status": "REQUIRES_RECONCILIATION",
       "accepted": false,
-      "acceptance_evidence_ref": null
+      "acceptance_evidence_ref": null,
+      "notes": "OPS-01 source PASS preserved; current provider readback shows deployed production SHA differs from current GitHub main."
     },
     {
       "gate_id": "A-19",
@@ -306,5 +307,6 @@
       "accepted": false,
       "acceptance_evidence_ref": null
     }
-  ]
+  ],
+  "generated_at": "2026-11-01T19:30:00.000Z"
 }
