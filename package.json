@@ -250,7 +250,7 @@
     "vite": "8.1.6",
     "qs": "6.16.1",
     "undici": "7.30.1",
-    "minimatch": "11.0.1",
+    "minimatch": "file:vendor/minimatch-compat",
     "@sentry/bundler-plugins": {
       "glob": "14.0.2"
     }
