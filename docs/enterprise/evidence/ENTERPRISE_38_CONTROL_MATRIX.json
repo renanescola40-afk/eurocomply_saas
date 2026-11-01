@@ -365,8 +365,10 @@
       ],
       "accepted_by": null,
       "accepted_at": null,
-      "evidence_ids": [],
-      "notes": "QA PostgreSQL rollback-only canonical source replay verified through step 47/137 (using explicitly guarded source-only historical overlays for #18,#19,#37,#39); step 48 fails closed on 20/28 required RLS policies missing across 8 tables. This is a source/provenance pre-materialization defect; original production provider ledger and migrations unmodified. Isolated QA has ZERO durably applied migration entries. DAT-01 remains BLOCKED until source-bound, reviewed full 137/137 replay and durable QA postcondition readback."
+      "evidence_ids": [
+        "EV-DAT-01-SUPABASE-MIGRATION-PARITY-20261101"
+      ],
+      "notes": "BLOCKED: current read-only provider readback shows 137 production migrations versus 7 isolated QA migrations; canonical replay parity not established."
     },
     {
       "control_id": "DAT-02",
@@ -446,8 +448,10 @@
       "blocker_evidence_refs": [],
       "accepted_by": null,
       "accepted_at": null,
-      "evidence_ids": [],
-      "notes": null
+      "evidence_ids": [
+        "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101"
+      ],
+      "notes": "NOT_VERIFIED: current Supabase security advisor reports 33 RLS-enabled/no-policy INFO findings; table-by-table grants/FORCE RLS/RPC ACL reconciliation required."
     },
     {
       "control_id": "QAT-01",
@@ -548,8 +552,10 @@
       "blocker_evidence_refs": [],
       "accepted_by": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
       "accepted_at": "2026-10-22T20:52:14.027Z",
-      "evidence_ids": [],
-      "notes": null
+      "evidence_ids": [
+        "EV-OPS-01-VERCEL-PRODUCTION-SHA-20261101"
+      ],
+      "notes": "Source PASS preserved, but current Vercel readback reports production SHA 70d3545f... while current GitHub main is 6b54e899...; governed reconciliation required before treating as current-main proof."
     },
     {
       "control_id": "OPS-02",
@@ -772,5 +778,6 @@
       "evidence_ids": [],
       "notes": null
     }
-  ]
+  ],
+  "generated_at": "2026-11-01T19:30:00.000Z"
 }
