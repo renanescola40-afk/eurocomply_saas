@@ -30,13 +30,14 @@
     "evidence_records_generated": 3,
     "evidence_records_valid": 0,
     "gates_total": 24,
-    "gates_eligible_for_independent_review": 2,
+    "gates_eligible_for_independent_review": 1,
     "gates_blocked": 1,
     "gates_accepted": 0,
-    "evidence_records_validation": "PENDING_CI_EXECUTION",
+    "evidence_records_validation": "PENDING_EXACT_SHA_CI_VALIDATION",
     "artifact_sha256_values_computed": 3,
     "source_gates_pass": 2,
-    "source_product_ready_percent": 8.33
+    "source_product_ready_percent": 8.33,
+    "gate_eligibility_note": "A-09 is eligible for independent review; A-18 is explicitly held for current deployment identity reconciliation despite preserved historical OPS-01 source PASS."
   },
   "controls": [
     {
