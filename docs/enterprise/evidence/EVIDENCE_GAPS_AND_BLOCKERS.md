@@ -1,20 +1,31 @@
 # Evidence Gaps and Blockers
 
-- Source SHA: `6b54e899ffd4edd7ce26883f4fc715a3fef098e0`
-- Scope: 38 controls / 24 gates (fixed)
-- Newly generated evidence: **0**
-- Source status: **2 PASS / 1 BLOCKED / 35 NOT_VERIFIED**
-- Gates eligible for review: **2**; gates accepted by this factory: **0**
+**Source SHA:** `6b54e899ffd4edd7ce26883f4fc715a3fef098e0`  
+**Snapshot:** 2026-11-01T19:30:00Z  
+**Scope:** 38 atomic controls / 24 formal gates (fixed)
 
-## Priority blockers
-1. **DAT-01 — BLOCKED:** canonical replay stopped at 47/137; step 48 fails due to 20 missing required RLS policies across 8 tables; durable QA migration entries remain 0. Production remains read-only.
-2. **BIL-02/BIL-03:** signed Stripe TEST webhook and genuine Checkout-to-QA entitlement proof.
-3. **SEC-01–SEC-06:** authenticated session, role, privileged principal, tenant isolation, secrets and audit runtime proofs.
-4. **FUN-01–FUN-06:** authenticated onboarding, inventory, governance, evidence/export, privacy and marketed-product journeys.
-5. **DAT-02–DAT-05:** transaction invariants, rollback, isolated restore and production RLS/grant readbacks.
-6. **QAT-01–QAT-04:** complete suites, authenticated E2E, billing runtime and exact-SHA deployed artifact provenance.
-7. **OPS-02–OPS-06:** enforced governance, monitoring, incident response, rollback and credential isolation.
-8. **TRU-01–TRU-06:** contracting, legal, privacy, transfer, retention and procurement claims with qualified review.
+## Current source status
+- PASS: **2**
+- BLOCKED: **1**
+- NOT_VERIFIED: **35**
+- Provider readback records captured: **3** (all structurally complete; none independently accepted)
+- Gates eligible for independent review: **1**
+- Gates accepted: **0**
 
-## Acceptance rules
-No status is promoted from file presence alone. PASS requires exact-SHA provenance, a real artifact, reproducible command/provider query, valid SHA-256, freshness where relevant and independent reviewer acceptance. NOT_APPLICABLE requires a documented, approved applicability rationale.
+## Verified provider blockers and warnings
+
+1. **DAT-01 — BLOCKED:** Supabase read-only migration inventory shows 137 production migrations and 7 isolated-QA migrations (130-entry difference). Full canonical replay parity is not established. Do not write to production or bypass source review.
+2. **DAT-05 — NOT_VERIFIED:** Supabase security advisor reports 33 INFO findings for RLS-enabled tables with no policies and 1 WARN for disabled leaked-password protection. The INFO findings do not alone prove exposure; inspect table-by-table intended access, grants, FORCE RLS and RPC ACLs.
+3. **OPS-01 — REQUIRES RECONCILIATION:** Vercel reports production READY on SHA `70d3545f414d063379d481fd238aed563e05edda`; current GitHub main is `6b54e899ffd4edd7ce26883f4fc715a3fef098e0`. The existing source PASS is preserved, but current-main/deployment equality is not established.
+
+## Remaining control families
+- **SEC-01–SEC-06:** authenticated session lifecycle, RBAC, tenant isolation, privileged principals, secret handling and audit-chain runtime evidence.
+- **FUN-01–FUN-06:** real authenticated onboarding, inventory, governance, evidence/export, privacy and marketed-product journeys.
+- **BIL-02–BIL-05:** signed Stripe TEST webhooks, Checkout persistence, lifecycle and entitlement authorization.
+- **DAT-02–DAT-04:** concurrency invariants, atomic rollback and isolated restore evidence.
+- **QAT-01–QAT-04:** full exact-SHA regression/security suites, authenticated browser E2E, billing runtime and artifact provenance.
+- **OPS-02–OPS-06:** required-check governance, smoke/monitoring, incident response, rollback and credential isolation.
+- **TRU-01–TRU-06:** contracting, qualified legal review, privacy/DPA, transfer/retention and procurement assurance.
+
+## Acceptance policy
+A record is not a PASS merely because it exists or has a valid hash. PASS requires exact source SHA, reproducible test/provider query, artifact integrity, freshness, complete runtime conditions and independent reviewer acceptance. NOT_APPLICABLE requires a documented and approved rationale.
