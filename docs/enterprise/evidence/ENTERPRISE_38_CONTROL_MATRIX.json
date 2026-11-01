@@ -368,7 +368,7 @@
       "evidence_ids": [
         "EV-DAT-01-SUPABASE-MIGRATION-PARITY-20261101"
       ],
-      "notes": "BLOCKED: current read-only provider readback shows 137 production migrations versus 7 isolated QA migrations; canonical replay parity not established."
+      "notes": "BLOCKED: exact live comparison shows 137 production migration versions and 7 isolated-QA versions, with zero overlap. Full canonical replay parity is not established."
     },
     {
       "control_id": "DAT-02",
@@ -779,5 +779,5 @@
       "notes": null
     }
   ],
-  "generated_at": "2026-11-01T19:30:00.000Z"
+  "generated_at": "2026-11-01T19:47:59.532Z"
 }
