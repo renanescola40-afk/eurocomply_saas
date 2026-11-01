@@ -30,14 +30,14 @@
     "evidence_records_generated": 3,
     "evidence_records_valid": 0,
     "gates_total": 24,
-    "gates_eligible_for_independent_review": 1,
+    "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
     "gates_accepted": 0,
     "evidence_records_validation": "PENDING_EXACT_SHA_CI_VALIDATION",
     "artifact_sha256_values_computed": 3,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
-    "gate_eligibility_note": "A-09 is eligible for independent review; A-18 is explicitly held for current deployment identity reconciliation despite preserved historical OPS-01 source PASS."
+    "gate_eligibility_note": "A-09 (BIL-01) and A-18 (OPS-01) are eligible for independent review on the canonical source scope. The newer main SHA does not invalidate OPS-01: its accepted criterion is exact identification of the deployed production release, which matches the frozen G1 baseline. Runtime smoke/E2E remains separately unverified."
   },
   "controls": [
     {
@@ -1164,7 +1164,7 @@
       "test_command_or_provider_query": "get_advisors(production, type=security)",
       "result_summary": "Read-only advisor snapshot: 33 INFO findings for RLS-enabled tables without policies and 1 WARN for disabled leaked-password protection. This does not establish whether each no-policy table is intentionally backend-only; table-by-table grants, FORCE RLS, RPC ACL and approved schema parity remain unverified.",
       "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
-      "artifact_sha256": "9e26fdee7e99ef9599c17626550b8286f7eadd9ddba60f7f9ea130bdf223a70b",
+      "artifact_sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34",
       "reproducibility_instructions": "Repeat the read-only production security advisor query and inspect every finding against the approved table access model, grants and RPC ACL inventory.",
       "limitations": [
         "Advisor findings are informational/warning signals and are not a substitute for authenticated tenant isolation tests.",
