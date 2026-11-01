@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.enterprise-evidence-sha256-manifest.v1",
-  "generated_at": "2026-11-01T19:48:02.506Z",
+  "generated_at": "2026-11-01T19:55:26.853Z",
   "repository": "renanescola40-afk/eurocomply_saas",
   "source_commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
   "hash_algorithm": "SHA-256",
@@ -11,9 +11,13 @@
       "sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34"
     },
     {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_RLS_FORCE_GRANTS_2026-11-01.json",
+      "sha256": "2d8157a688c9823c743bcc93dd4fea0daaa5aa55c65375017263bf1c31450fbc"
+    },
+    {
       "path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
-      "sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae"
+      "sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8"
     }
   ],
-  "note": "Partial provider artifact register. Supabase digest was recomputed over exact UTF-8 bytes and checked against the SHA-256 abc test vector; CI generator must regenerate the full manifest for the final checked-out commit."
+  "note": "Provider artifact digests were independently recomputed over exact UTF-8 bytes using a SHA-256 implementation checked against the standard abc test vector. CI generator must regenerate the full manifest for the final checked-out commit."
 }
