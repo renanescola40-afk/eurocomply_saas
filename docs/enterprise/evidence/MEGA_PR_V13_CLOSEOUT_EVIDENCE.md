@@ -3,7 +3,8 @@
 - Repository: `renanescola40-afk/eurocomply_saas`
 - Base/main SHA observed: `91b3b7585ebcd8f679906d54f69002b68d13c422`
 - Working branch: `enterprise/gate-closure-v13`
-- Current branch HEAD after the recorded changes: `97a4da5de023378b98ac47a5e531d7382af8b630`
+- Test-code implementation anchor (after all test corrections): `97a4da5de023378b98ac47a5e531d7382af8b630`.
+- Subsequent evidence/backlog/work-lock documentation commits were added; latest branch comparison before this evidence-file refresh reported HEAD `98db06a398e33dd5b4a6c0b0b463268771e847af`.
 - Work package: repair reproducible CI regression-test failures caused by stale immutable-action expectations and one incomplete Vitest module mock.
 - Scope: test contracts and test harness only. No application runtime, workflow permissions, production configuration, database, Stripe, deployment, or business logic was changed.
 
@@ -50,7 +51,7 @@ Source runs: [CI 41287722292](https://github.com/renanescola40-afk/eurocomply_sa
 
 ## Changes on `enterprise/gate-closure-v13`
 
-The branch now contains the following 11 changed files relative to the observed main SHA:
+The branch now contains the following 14 changed files relative to the observed main SHA:
 
 1. `tests/security/enterprise-final-closeout-workflow.test.mjs`
 2. `tests/security/enterprise-100-closure-workflow.test.mjs`
@@ -62,9 +63,12 @@ The branch now contains the following 11 changed files relative to the observed 
 8. `tests/release/release-final-validation-artifact-hygiene.test.ts`
 9. `tests/security/vercel-production-workflow-contract.test.ts`
 10. `src/app/api/retention-center/export/route.runtime.test.ts`
-11. `docs/enterprise/evidence/MEGA_PR_V13_CLOSEOUT_EVIDENCE.md`
+11. `docs/enterprise/ENTERPRISE_BACKLOG.md` (ENT-022 task record; no gate score change)
+12. `docs/enterprise/AUTONOMOUS_EXECUTION_STATE.md` (task-local execution snapshot)
+13. `docs/enterprise/ACTIVE_WORK_LOCKS.md` (isolated V13 work lock)
+14. `docs/enterprise/evidence/MEGA_PR_V13_CLOSEOUT_EVIDENCE.md`
 
-The branch comparison reported 11 commits ahead of main and zero behind at the time of this reconciliation. This is a repository comparison, not test evidence.
+The branch comparison reported 15 commits ahead of main and zero behind immediately before this evidence-file refresh. This is a repository comparison, not test evidence; the latest evidence-only commit advances the branch again without changing application/test code.
 
 ## Verification boundary and remaining blockers
 
