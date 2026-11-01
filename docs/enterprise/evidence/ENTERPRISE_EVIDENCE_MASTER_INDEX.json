@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.enterprise-evidence-factory.index.v1",
   "version": "1.0.0",
-  "generated_at": "2026-11-01T19:46:55.348Z",
+  "generated_at": "2026-11-01T19:52:37.630Z",
   "canonical_repository": "renanescola40-afk/eurocomply_saas",
   "source": {
     "branch": "main",
@@ -1188,9 +1188,9 @@
       "generated_at": "2026-11-01T19:28:00.000Z",
       "source_system": "Vercel API",
       "test_command_or_provider_query": "get_deployment(production deployment ID, withGitRepoInfo=true); list_deployments(project, target=production)",
-      "result_summary": "Vercel reports production READY on SHA 70d3545f414d063379d481fd238aed563e05edda, which matches the frozen G1 sourceBaselineSha and the existing OPS-01 acceptance SHA. Current main is newer, but OPS-01 requires proof of the actual production deployment identity, not automatic deployment of every main commit. The new provider snapshot remains NOT_VERIFIED as independent evidence and does not establish smoke/E2E health.",
+      "result_summary": "Vercel reports production READY on SHA 70d3545f414d063379d481fd238aed563e05edda, matching the frozen G1 source baseline and existing OPS-01 acceptance SHA. Current main is newer; this does not alone invalidate the deployed release identity. This provider readback is NOT independently accepted and does not prove smoke/E2E health.",
       "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
-      "artifact_sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae",
+      "artifact_sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
       "reproducibility_instructions": "Repeat Vercel get_deployment with Git repository metadata and compare the deployed commit SHA to the canonical GitHub main SHA at the same observation time.",
       "limitations": [
         "This readback proves provider-reported deployment identity and state only.",
