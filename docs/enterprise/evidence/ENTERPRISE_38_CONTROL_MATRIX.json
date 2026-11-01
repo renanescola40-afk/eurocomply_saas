@@ -451,7 +451,7 @@
       "evidence_ids": [
         "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101"
       ],
-      "notes": "NOT_VERIFIED: current Supabase security advisor reports 33 RLS-enabled/no-policy INFO findings; table-by-table grants/FORCE RLS/RPC ACL reconciliation required."
+      "notes": "NOT_VERIFIED: provider readback reports 115/115 public tables RLS+FORCE RLS in production and QA, with no anon/authenticated table privileges on the 33 no-policy tables. Function ACL, service_role, storage, schema parity and tenant-isolation evidence remain open."
     },
     {
       "control_id": "QAT-01",
@@ -779,5 +779,5 @@
       "notes": null
     }
   ],
-  "generated_at": "2026-11-01T19:47:59.532Z"
+  "generated_at": "2026-11-01T19:55:39.534Z"
 }
