@@ -1,10 +1,19 @@
 {
   "schema": "risck-comply.enterprise-evidence-sha256-manifest.v1",
-  "generated_at": "2026-11-01T19:18:00.000Z",
+  "generated_at": "2026-11-01T19:30:00.000Z",
   "repository": "renanescola40-afk/eurocomply_saas",
   "source_commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
   "hash_algorithm": "SHA-256",
-  "state": "PENDING_REPRODUCIBLE_CI_GENERATION",
-  "files": [],
-  "note": "Hashes are intentionally not fabricated. Generate from checked-out exact-SHA file bytes in the evidence workflow; GitHub blob identifiers are SHA-1 and are not substituted for SHA-256."
+  "state": "PARTIAL_PROVIDER_ARTIFACTS_HASHED_CI_REGEN_REQUIRED",
+  "files": [
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
+      "sha256": "9e26fdee7e99ef9599c17626550b8286f7eadd9ddba60f7f9ea130bdf223a70b"
+    },
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+      "sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae"
+    }
+  ],
+  "note": "Hashes are computed over exact UTF-8 JSON file bytes. Existing CI generator regenerates a complete manifest for the checked-out commit; this source manifest is a partial provider-artifact register."
 }
