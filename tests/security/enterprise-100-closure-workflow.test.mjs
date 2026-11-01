@@ -16,8 +16,8 @@ test('Enterprise 100 fan-in remains read-only and immutable-action pinned', () =
   assert.match(workflow, /permissions:\n  contents: read\n  actions: read\n  statuses: read\n  deployments: read/);
   assert.doesNotMatch(workflow, /(?:contents|actions|statuses|deployments|pull-requests|issues): write/);
   assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/);
-  assert.match(workflow, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/);
-  assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
+  assert.match(workflow, /actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1/);
+  assert.match(workflow, /actions\/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9/);
   assert.doesNotMatch(workflow, /pull_request_target/);
   assert.doesNotMatch(workflow, /continue-on-error/);
 });
@@ -111,7 +111,7 @@ test('Supabase RLS canonical closure evidence is emitted only after deterministi
   assert.match(rlsWorkflow, /verify-rls-reconciliation-proof\.mjs/);
   assert.match(rlsWorkflow, /write-rls-reconciliation-closure-evidence\.mjs/);
   assert.match(rlsWorkflow, /release-validation\/supabase-rls-reconciliation\.json/);
-  assert.match(rlsWorkflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
+  assert.match(rlsWorkflow, /actions\/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9/);
   assert.match(rlsEvidenceWriter, /verification\.status !== 'PASS'/);
   assert.match(rlsEvidenceWriter, /expectedSha: targetSha/);
   assert.match(rlsEvidenceWriter, /status: 'PASS'/);
@@ -168,7 +168,7 @@ test('closure remains fail closed after artifact hydration', () => {
   assert.match(checker, /sensitive_evidence_rejected/);
   assert.match(checker, /exact_sha_not_proven/);
   assert.match(checker, /conflicting_sha_bindings/);
-  assert.match(checker, /accepted: statusAccepted/);
+  assert.match(checker, /const accepted = statusAccepted && !explicitFailure && semanticFailures.length === 0/);
   assert.match(checker, /resolveEvidenceShaBinding/);
   assert.match(checker, /document\?\.finalDecision/);
   assert.match(checker, /document\?\.publicationStatus/);

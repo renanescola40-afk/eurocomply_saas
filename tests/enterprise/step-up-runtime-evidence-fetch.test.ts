@@ -167,7 +167,7 @@ describe('Step-Up exact-SHA runtime evidence handoff', () => {
     expect(p0).toContain('STEP_UP_RUNTIME_EVIDENCE_REQUIRED');
     expect(workflow).toContain('secrets.STEP_UP_ASSERTION_SIGNING_SECRET || secrets.STEP_UP_SIGNING_SECRET');
     expect(workflow).toContain('actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0');
-    expect(workflow).toContain('actions/setup-node@820762786026740c76f36085b0efc47a31fe5020');
+    expect(workflow).toContain('actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1');
     expect(workflow).toContain('npm ci --ignore-scripts');
     expect(workflow).toContain('git ls-remote');
     expect(workflow).toContain('refs/heads/main');
