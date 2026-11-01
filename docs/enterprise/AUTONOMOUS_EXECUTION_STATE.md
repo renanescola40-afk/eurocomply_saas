@@ -48,3 +48,23 @@ Automated or black-box external assessment evidence must not be relabeled as an 
 2. keep independent-human-pentest status separate unless a genuine independent engagement produces evidence;
 3. keep qualified counsel approval separate unless attributable counsel acceptance exists;
 4. do not convert optional or buyer-specific assurance into an invented internal technical blocker.
+
+## Normal Chat V13 task execution snapshot — 2026-11-01
+
+This is a task-local engineering status, not a replacement for the protected Enterprise 100 final authority.
+
+- GitHub main observed: `91b3b7585ebcd8f679906d54f69002b68d13c422`.
+- Isolated work branch: `enterprise/gate-closure-v13`.
+- Scope: test-only regression corrections for exact immutable GitHub Action pins, Enterprise closure assertions, and the retention export route runtime-test mock.
+- Baseline main CI: `npm run test` reported 4,178 passed / 8 failed out of 4,186 tests.
+- Corrections for all eight observed failures have been committed on the isolated branch; they have **not** been rerun.
+- Target candidate is A-15/QAT-01. Its formal acceptance remains **IMPLEMENTED_NOT_VERIFIED**; the complete required security suite is not green and exact-branch post-fix evidence is absent.
+- The canonical G1 register read from main still reports 2/24 A gates PASS (A-09/BIL-01 and A-18/OPS-01), with 35/38 atomic criteria NOT_VERIFIED and DAT-01 BLOCKED. This work adds zero formal gate/control credit.
+- No PR was opened because the affected paths trigger GitHub Actions and the available tools cannot verify that the run would use existing no-cost quota.
+- No production, Supabase, Stripe, deployment, merge, or protected-branch operations were performed.
+
+### V13 next verification sequence
+
+1. Run `npm run test` and the focused Enterprise contract tests on the exact final branch SHA.
+2. Re-run the complete required security suite on that same SHA; resolve CodeQL/OSSF/platform permission blockers independently from unit-test results.
+3. Open a draft PR only after confirming that its CI workload is covered by existing authorized quota with no new cost. Keep all gate scores unchanged until formal evidence and review are accepted.
