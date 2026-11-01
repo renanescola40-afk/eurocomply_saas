@@ -48,6 +48,8 @@ jobs:
             docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json \
             docs/enterprise/evidence/ENTERPRISE_38_CONTROL_MATRIX.json \
             docs/enterprise/evidence/ENTERPRISE_24_GATE_MATRIX.json \
+            docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json \
+            docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json \
             docs/enterprise/evidence/schemas/enterprise-evidence-record.schema.json \
             scripts/enterprise-evidence/validate-evidence.mjs \
             tests/enterprise-evidence/validate-evidence.test.mjs
