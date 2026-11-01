@@ -12,7 +12,7 @@ const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
   overrides: Record<string, unknown>;
 };
 const lockfile = JSON.parse(readFileSync('package-lock.json', 'utf8')) as {
-  packages: Record<string, { version?: string }>;
+  packages: Record<string, { version?: string; link?: boolean; resolved?: string }>;
 };
 
 describe('patched minimatch and Sentry glob dependency graph', () => {
