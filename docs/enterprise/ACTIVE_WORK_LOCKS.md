@@ -1,6 +1,6 @@
 # Active work locks
 
-Last reconciled: 2026-09-10
+Last reconciled: 2026-11-01
 
 | Scope | Branch / PR / issue | Mode | Status |
 | --- | --- | --- | --- |
@@ -11,6 +11,7 @@ Last reconciled: 2026-09-10
 | Independent pentest external authority | #1692 / independent assessor | Human / external | Provider selection remains OPEN. 7ASecurity is `HOLD_NOT_SELECTED_BY_OWNER` and receives no terminal provider-selection credit from this lane. Active testing requires a separately accepted provider, due diligence, written ROE, exact target/release binding and explicit owner GO. |
 | Enterprise 100 final evidence authority | #1032 / protected final authority | Protected authority transition | Do not create a competing final authority or substitute repository-only evidence for direct runtime/human producers. |
 | Production evidence producers | protected workflows and independent external providers | Runtime / human | No repository-only substitution; execute only for the exact accepted release lineage and retain attributable evidence. |
+| V13 QAT-01 CI regression repair | `enterprise/gate-closure-v13` / ENT-022 | Test-only / repository | Active isolated test-contract and test-mock correction only. Base main SHA `91b3b7585ebcd8f679906d54f69002b68d13c422`; corrected tests have not been rerun. No workflow permissions, runtime application logic, Production, Supabase, Stripe, or release configuration changes are in scope. No PR/CI run until no-cost quota is confirmed. This branch does not replace or compete with #1032 final authority and grants no gate PASS. |
 
 ## Superseded locks
 
