@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.enterprise-evidence-factory.index.v1",
   "version": "1.0.0",
-  "generated_at": "2026-11-01T19:18:00.000Z",
+  "generated_at": "2026-11-01T19:30:00.000Z",
   "canonical_repository": "renanescola40-afk/eurocomply_saas",
   "source": {
     "branch": "main",
@@ -27,10 +27,10 @@
     "controls_pass_source": 2,
     "controls_blocked_source": 1,
     "controls_not_verified_source": 35,
-    "evidence_records_generated": 0,
-    "evidence_records_valid": 0,
+    "evidence_records_generated": 3,
+    "evidence_records_valid": 3,
     "gates_total": 24,
-    "gates_eligible_for_independent_review": 2,
+    "gates_eligible_for_independent_review": 1,
     "gates_blocked": 1,
     "gates_accepted": 0
   },
@@ -396,8 +396,10 @@
       ],
       "accepted_by": null,
       "accepted_at": null,
-      "evidence_ids": [],
-      "notes": "QA PostgreSQL rollback-only canonical source replay verified through step 47/137 (using explicitly guarded source-only historical overlays for #18,#19,#37,#39); step 48 fails closed on 20/28 required RLS policies missing across 8 tables. This is a source/provenance pre-materialization defect; original production provider ledger and migrations unmodified. Isolated QA has ZERO durably applied migration entries. DAT-01 remains BLOCKED until source-bound, reviewed full 137/137 replay and durable QA postcondition readback."
+      "evidence_ids": [
+        "EV-DAT-01-SUPABASE-MIGRATION-PARITY-20261101"
+      ],
+      "notes": "BLOCKED: current read-only provider readback shows 137 production migrations versus 7 isolated QA migrations; canonical replay parity not established."
     },
     {
       "control_id": "DAT-02",
@@ -477,8 +479,10 @@
       "blocker_evidence_refs": [],
       "accepted_by": null,
       "accepted_at": null,
-      "evidence_ids": [],
-      "notes": null
+      "evidence_ids": [
+        "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101"
+      ],
+      "notes": "NOT_VERIFIED: current Supabase security advisor reports 33 RLS-enabled/no-policy INFO findings; table-by-table grants/FORCE RLS/RPC ACL reconciliation required."
     },
     {
       "control_id": "QAT-01",
@@ -579,8 +583,10 @@
       "blocker_evidence_refs": [],
       "accepted_by": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
       "accepted_at": "2026-10-22T20:52:14.027Z",
-      "evidence_ids": [],
-      "notes": null
+      "evidence_ids": [
+        "EV-OPS-01-VERCEL-PRODUCTION-SHA-20261101"
+      ],
+      "notes": "Source PASS preserved, but current Vercel readback reports production SHA 70d3545f... while current GitHub main is 6b54e899...; governed reconciliation required before treating as current-main proof."
     },
     {
       "control_id": "OPS-02",
@@ -1026,9 +1032,10 @@
         "OPS-01"
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
-      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "status": "REQUIRES_RECONCILIATION",
       "accepted": false,
-      "acceptance_evidence_ref": null
+      "acceptance_evidence_ref": null,
+      "notes": "OPS-01 source PASS preserved; current provider readback shows deployed production SHA differs from current GitHub main."
     },
     {
       "gate_id": "A-19",
@@ -1108,7 +1115,87 @@
       "acceptance_evidence_ref": null
     }
   ],
-  "evidence_records": [],
+  "evidence_records": [
+    {
+      "evidence_id": "EV-DAT-01-SUPABASE-MIGRATION-PARITY-20261101",
+      "control_id": "DAT-01",
+      "gate_id": "A-12",
+      "evidence_type": "provider-readback",
+      "status": "BLOCKED",
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "branch": "main",
+      "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "workflow_run_id": null,
+      "environment": "production-read-only+isolated-qa-read-only",
+      "generated_at": "2026-11-01T19:28:46.070Z",
+      "source_system": "Supabase Management API",
+      "test_command_or_provider_query": "list_migrations(production); list_migrations(isolated QA); get_advisors(production, type=security)",
+      "result_summary": "Production migration ledger: 137 entries; isolated QA ledger: 7 entries; difference: 130. Full canonical replay parity is not established. Production security advisor additionally reports 33 INFO RLS-enabled/no-policy findings and 1 WARN for disabled leaked-password protection; these are diagnostic findings, not proof of exposure.",
+      "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
+      "artifact_sha256": "9e26fdee7e99ef9599c17626550b8286f7eadd9ddba60f7f9ea130bdf223a70b",
+      "reproducibility_instructions": "Repeat the read-only Supabase Management API list_migrations calls for the production and isolated QA project refs, then request the production security advisors. Compare the full ordered version lists, not only counts.",
+      "limitations": [
+        "Migration counts do not establish schema parity or successful replay of all canonical migrations.",
+        "Security advisor findings do not replace table-by-table policy, grants, RPC ACL and tenant-isolation tests.",
+        "No customer rows or credentials were accessed.",
+        "No database writes, migrations or destructive operations were performed."
+      ],
+      "reviewer_status": "NOT_REVIEWED",
+      "acceptance_status": "NOT_ACCEPTED"
+    },
+    {
+      "evidence_id": "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101",
+      "control_id": "DAT-05",
+      "gate_id": "A-14",
+      "evidence_type": "provider-readback",
+      "status": "NOT_VERIFIED",
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "branch": "main",
+      "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "workflow_run_id": null,
+      "environment": "production-read-only",
+      "generated_at": "2026-11-01T19:28:46.070Z",
+      "source_system": "Supabase Management API",
+      "test_command_or_provider_query": "get_advisors(production, type=security)",
+      "result_summary": "Read-only advisor snapshot: 33 INFO findings for RLS-enabled tables without policies and 1 WARN for disabled leaked-password protection. This does not establish whether each no-policy table is intentionally backend-only; table-by-table grants, FORCE RLS, RPC ACL and approved schema parity remain unverified.",
+      "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
+      "artifact_sha256": "9e26fdee7e99ef9599c17626550b8286f7eadd9ddba60f7f9ea130bdf223a70b",
+      "reproducibility_instructions": "Repeat the read-only production security advisor query and inspect every finding against the approved table access model, grants and RPC ACL inventory.",
+      "limitations": [
+        "Advisor findings are informational/warning signals and are not a substitute for authenticated tenant isolation tests.",
+        "No customer rows or credentials were accessed.",
+        "No production settings or policies were changed."
+      ],
+      "reviewer_status": "NOT_REVIEWED",
+      "acceptance_status": "NOT_ACCEPTED"
+    },
+    {
+      "evidence_id": "EV-OPS-01-VERCEL-PRODUCTION-SHA-20261101",
+      "control_id": "OPS-01",
+      "gate_id": "A-18",
+      "evidence_type": "provider-readback",
+      "status": "NOT_VERIFIED",
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "branch": "main",
+      "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "workflow_run_id": null,
+      "environment": "production-read-only",
+      "generated_at": "2026-11-01T19:28:00.000Z",
+      "source_system": "Vercel API",
+      "test_command_or_provider_query": "get_deployment(production deployment ID, withGitRepoInfo=true); list_deployments(project, target=production)",
+      "result_summary": "Vercel reports production deployment READY on commit 70d3545f414d063379d481fd238aed563e05edda, while current GitHub main is 6b54e899ffd4edd7ce26883f4fc715a3fef098e0. The provider identity is confirmed, but current-main/deployment SHA equality is not. Governed release reconciliation is required; no deployment was initiated.",
+      "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+      "artifact_sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae",
+      "reproducibility_instructions": "Repeat Vercel get_deployment with Git repository metadata and compare the deployed commit SHA to the canonical GitHub main SHA at the same observation time.",
+      "limitations": [
+        "This readback proves provider-reported deployment identity and state only.",
+        "It does not establish application runtime smoke, customer journey health or approval to deploy.",
+        "No deployment, alias, environment or production setting was changed."
+      ],
+      "reviewer_status": "NOT_REVIEWED",
+      "acceptance_status": "NOT_ACCEPTED"
+    }
+  ],
   "limitations": [
     "Source-bound inventory only; no new provider/runtime evidence was generated by this inspection.",
     "Existing source PASS references are preserved and are not represented as newly generated evidence.",
