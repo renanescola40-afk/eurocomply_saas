@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.enterprise-evidence-factory.index.v1",
   "version": "1.0.0",
-  "generated_at": "2026-11-01T19:55:16.527Z",
+  "generated_at": "2026-11-01T20:00:22.654Z",
   "canonical_repository": "renanescola40-afk/eurocomply_saas",
   "source": {
     "branch": "main",
@@ -485,7 +485,7 @@
       "accepted_by": null,
       "accepted_at": null,
       "evidence_ids": [
-        "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101"
+        "EV-DAT-05-SUPABASE-RLS-FORCE-GRANTS-20261101"
       ],
       "notes": "NOT_VERIFIED: provider readback reports 115/115 public tables RLS+FORCE RLS in production and QA, with no anon/authenticated table privileges on the 33 no-policy tables. Function ACL, service_role, storage, schema parity and tenant-isolation evidence remain open."
     },
@@ -1149,7 +1149,7 @@
       "acceptance_status": "NOT_ACCEPTED"
     },
     {
-      "evidence_id": "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101",
+      "evidence_id": "EV-DAT-05-SUPABASE-RLS-FORCE-GRANTS-20261101",
       "control_id": "DAT-05",
       "gate_id": "A-14",
       "evidence_type": "provider-readback",
