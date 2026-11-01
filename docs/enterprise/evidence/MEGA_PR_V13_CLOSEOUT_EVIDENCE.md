@@ -73,18 +73,18 @@ The branch comparison reported 15 commits ahead of main and zero behind immediat
 ## Verification boundary and remaining blockers
 
 - All listed changed files were written on the isolated branch and the changed-file list was read back from GitHub.
-- Exact current branch HEAD: `97a4da5de023378b98ac47a5e531d7382af8b630`.
+- Test-code implementation anchor SHA: `97a4da5de023378b98ac47a5e531d7382af8b630`; subsequent commits after this anchor update only evidence, backlog, execution-state, and work-lock documentation.
 - **The tests have not been rerun after the changes.** No post-change PASS result is claimed.
 - No local repository execution or Codespaces runner is available in this session; the GitHub connector exposes repository operations and read-only workflow logs, not an arbitrary test command runner.
 - No workflow was manually dispatched or rerun.
-- Other Full Security Suite blockers were observed: CodeQL autobuild could not complete because GitHub code scanning/API permissions were unavailable for this repository; the branch-protection evidence producer could not read platform rules and emitted unavailable evidence. These are not repaired by editing test assertions.
+- Other Full Security Suite blockers were observed: CodeQL autobuild reported that code scanning is not enabled/available for this repository; OSSF Scorecard failed its GitHub GraphQL `ListCommits` call with `Resource not accessible by integration`; the branch-protection evidence producer could not read platform rules and emitted unavailable evidence. These platform/integration blockers are not repaired by editing test assertions.
 - The Supabase migration dry-run and drift audit could not authenticate to the remote database (PostgreSQL `28P01`, password authentication failed). No database action was taken.
 - PR creation was withheld because the affected test/document paths match pull-request workflow filters, and the available connector cannot establish that the ensuing Actions workload is covered by already-authorized no-cost quota.
 - No production writes, production migrations, live Stripe operations, deployment, merge, or automatic merge occurred.
 
 ## Formal Enterprise status
 
-- The canonical register read on main still reports 2 of 24 A gates PASS (`A-09/BIL-01`, `A-18/OPS-01`), 35 of 38 atomic criteria `NOT_VERIFIED`, and `DAT-01` `BLOCKED`.
+- The canonical G1 register read on main still stores 2 of 24 A gates as PASS (`A-09/BIL-01`, `A-18/OPS-01`), 35 of 38 atomic criteria as `NOT_VERIFIED`, and `DAT-01` as `BLOCKED`. Freshness is not current: the retained BIL-01 and OPS-01 provider records were observed at main/Production SHA `70d3545f414d063379d481fd238aed563e05edda` on 2026-10-22, while the currently observed GitHub main SHA is `91b3b7585ebcd8f679906d54f69002b68d13c422`. The 2/24 (8.33%) and 2/38 (5.26%) figures are therefore stored register values, not a newly verified current-release score.
 - This branch does not change or promote any gate/control status.
 - Targeted candidate: `A-15 / QAT-01` (mandatory source, regression and security CI).
 - Current candidate status: `IMPLEMENTED_NOT_VERIFIED`. The baseline had eight failing tests; the fixes are committed, but exact-branch retest and required complete security checks remain outstanding.
