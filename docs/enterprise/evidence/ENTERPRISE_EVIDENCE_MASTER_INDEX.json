@@ -27,7 +27,7 @@
     "controls_pass_source": 2,
     "controls_blocked_source": 1,
     "controls_not_verified_source": 35,
-    "evidence_records_generated": 3,
+    "evidence_records_generated": 4,
     "evidence_records_valid": 0,
     "gates_total": 24,
     "gates_eligible_for_independent_review": 2,
@@ -1196,6 +1196,33 @@
         "This readback proves provider-reported deployment identity and state only.",
         "It does not establish application runtime smoke, customer journey health or approval to deploy.",
         "No deployment, alias, environment or production setting was changed."
+      ],
+      "reviewer_status": "NOT_REVIEWED",
+      "acceptance_status": "NOT_ACCEPTED"
+    },
+    {
+      "evidence_id": "EV-DAT-05-SUPABASE-RLS-FORCE-GRANTS-20261101",
+      "control_id": "DAT-05",
+      "gate_id": "A-14",
+      "evidence_type": "provider-readback",
+      "status": "NOT_VERIFIED",
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "branch": "main",
+      "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "workflow_run_id": null,
+      "environment": "production-read-only+isolated-qa-read-only",
+      "generated_at": "2026-11-01T19:52:00.000Z",
+      "source_system": "Supabase Management API execute_sql",
+      "test_command_or_provider_query": "Read-only pg_catalog/pg_policies aggregate and has_table_privilege checks for public base tables",
+      "result_summary": "Both production and isolated QA report 115/115 public base tables with RLS and FORCE RLS enabled. Each reports 33 tables without policies, but no anon or authenticated SELECT/INSERT/UPDATE/DELETE grants on those no-policy tables. This narrows the advisor INFO finding but does not prove schema parity, tenant isolation, function ACL safety or service_role boundaries.",
+      "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_RLS_FORCE_GRANTS_2026-11-01.json",
+      "artifact_sha256": "2d8157a688c9823c743bcc93dd4fea0daaa5aa55c65375017263bf1c31450fbc",
+      "reproducibility_instructions": "Repeat the read-only aggregate query against both Supabase project refs using pg_class, pg_namespace, pg_policies and has_table_privilege. Do not query customer rows.",
+      "limitations": [
+        "Read-only catalog metadata only; no customer rows queried.",
+        "No writes, migrations, settings changes or destructive operations.",
+        "Function ACL query was not completed; function grants remain unverified.",
+        "Identical aggregate counts do not establish identical table definitions, constraints, indexes, policies or data."
       ],
       "reviewer_status": "NOT_REVIEWED",
       "acceptance_status": "NOT_ACCEPTED"
