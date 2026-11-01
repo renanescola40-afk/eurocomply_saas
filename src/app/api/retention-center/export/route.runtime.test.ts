@@ -29,11 +29,16 @@ vi.mock('@/server/queries/audit-events', () => ({ createAuditEvent: mocks.create
 vi.mock('@/server/queries/organizations', () => ({
   getCurrentOrganizationForUser: mocks.getCurrentOrganizationForUser,
 }));
-vi.mock('@/server/security/api-guards', () => ({
-  requireApiUser: mocks.requireApiUser,
-  requirePermission: mocks.requirePermission,
-  secureApiError: () => Response.json({ error: 'internal_error' }, { status: 500 }),
-}));
+vi.mock('@/server/security/api-guards', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/server/security/api-guards')>();
+
+  return {
+    ...actual,
+    requireApiUser: mocks.requireApiUser,
+    requirePermission: mocks.requirePermission,
+    secureApiError: () => Response.json({ error: 'internal_error' }, { status: 500 }),
+  };
+});
 vi.mock('@/server/security/step-up', () => ({
   requireStepUpForRequest: mocks.requireStepUpForRequest,
   publicStepUpSummary: () => ({ action: 'export_data', verified: true }),
