@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.enterprise-evidence-factory.index.v1",
   "version": "1.0.0",
-  "generated_at": "2026-11-01T19:30:00.000Z",
+  "generated_at": "2026-11-01T19:46:30.037Z",
   "canonical_repository": "renanescola40-afk/eurocomply_saas",
   "source": {
     "branch": "main",
@@ -30,11 +30,13 @@
     "evidence_records_generated": 3,
     "evidence_records_valid": 0,
     "gates_total": 24,
-    "gates_eligible_for_independent_review": 1,
+    "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
     "gates_accepted": 0,
     "evidence_records_validation": "PENDING_CI_EXECUTION",
-    "artifact_sha256_values_computed": 3
+    "artifact_sha256_values_computed": 3,
+    "source_gates_pass": 2,
+    "source_product_ready_percent": 8.33
   },
   "controls": [
     {
@@ -1034,10 +1036,10 @@
         "OPS-01"
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
-      "status": "REQUIRES_RECONCILIATION",
+      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": false,
       "acceptance_evidence_ref": null,
-      "notes": "OPS-01 source PASS preserved; current provider readback shows deployed production SHA differs from current GitHub main."
+      "notes": "Existing OPS-01 source PASS matches the frozen G1 baseline SHA and remains valid. Current main is newer, but OPS-01 does not require automatic deployment of every main commit. Independent Evidence Factory review remains pending."
     },
     {
       "gate_id": "A-19",
