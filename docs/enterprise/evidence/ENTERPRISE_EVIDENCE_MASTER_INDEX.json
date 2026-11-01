@@ -1,7 +1,7 @@
 {
   "schema": "risck-comply.enterprise-evidence-factory.index.v1",
   "version": "1.0.0",
-  "generated_at": "2026-11-01T19:46:30.037Z",
+  "generated_at": "2026-11-01T19:46:41.351Z",
   "canonical_repository": "renanescola40-afk/eurocomply_saas",
   "source": {
     "branch": "main",
@@ -403,7 +403,7 @@
       "evidence_ids": [
         "EV-DAT-01-SUPABASE-MIGRATION-PARITY-20261101"
       ],
-      "notes": "BLOCKED: current read-only provider readback shows 137 production migrations versus 7 isolated QA migrations; canonical replay parity not established."
+      "notes": "BLOCKED: exact live version comparison shows 137 production migration versions and 7 isolated-QA versions, with zero overlap. Earlier source note claiming zero durable QA entries is superseded by this readback."
     },
     {
       "control_id": "DAT-02",
@@ -1131,12 +1131,12 @@
       "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
       "workflow_run_id": null,
       "environment": "production-read-only+isolated-qa-read-only",
-      "generated_at": "2026-11-01T19:28:46.070Z",
+      "generated_at": "2026-11-01T19:41:26.097Z",
       "source_system": "Supabase Management API",
       "test_command_or_provider_query": "list_migrations(production); list_migrations(isolated QA); get_advisors(production, type=security)",
-      "result_summary": "Production migration ledger: 137 entries; isolated QA ledger: 7 entries; difference: 130. Full canonical replay parity is not established. Production security advisor additionally reports 33 INFO RLS-enabled/no-policy findings and 1 WARN for disabled leaked-password protection; these are diagnostic findings, not proof of exposure.",
+      "result_summary": "Exact read-only migration version comparison: production has 137 versions; isolated QA has 7; zero versions overlap. All 137 production versions are absent from QA and all 7 QA versions are absent from production. Canonical migration replay parity is not established.",
       "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
-      "artifact_sha256": "9e26fdee7e99ef9599c17626550b8286f7eadd9ddba60f7f9ea130bdf223a70b",
+      "artifact_sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34",
       "reproducibility_instructions": "Repeat the read-only Supabase Management API list_migrations calls for the production and isolated QA project refs, then request the production security advisors. Compare the full ordered version lists, not only counts.",
       "limitations": [
         "Migration counts do not establish schema parity or successful replay of all canonical migrations.",
