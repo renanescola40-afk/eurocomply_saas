@@ -55,7 +55,7 @@ The production advisor snapshot reported:
 - 33 INFO findings: RLS enabled without policies.
 - 1 WARN: leaked-password protection disabled.
 
-The INFO findings are not proof of exposure. Table-by-table intended access, grants, FORCE RLS and RPC ACL review remains necessary.
+The INFO findings are not proof of exposure. A subsequent read-only catalog query compared production and isolated QA: both report 115/115 public base tables with RLS and FORCE RLS enabled; 33 tables in each have no policies; neither `anon` nor `authenticated` has SELECT or write grants on those no-policy tables. This narrows the direct-grant concern, but does not establish tenant isolation or full schema parity. Function ACLs, SECURITY DEFINER behavior, Storage policies and service_role boundaries remain unverified.
 
 ### OPS-01 — Vercel production identity
 
@@ -63,9 +63,9 @@ Vercel reports production READY on SHA `70d3545f414d063379d481fd238aed563e05edda
 
 ## Evidence Factory and CI
 
-- Provider readback records captured: **3**.
+- Provider readback records captured: **4**.
 - Records independently accepted: **0**.
-- Record validation status: **PENDING_CI_EXECUTION**.
+- Record validation status: **PENDING_EXACT_SHA_CI_VALIDATION**.
 - Draft PR: [#2588](https://github.com/renanescola40-afk/eurocomply_saas/pull/2588).
 - Prior Enterprise Evidence Tests run `41341793480`: FAILURE.
 - Follow-up run `41342152434`: FAILURE.
