@@ -13,7 +13,11 @@
     {
       "path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
       "sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae"
+    },
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_RLS_FORCE_GRANTS_2026-11-01.json",
+      "sha256": "2d8157a688c9823c743bcc93dd4fea0daaa5aa55c65375017263bf1c31450fbc"
     }
   ],
-  "note": "Partial provider artifact register. Supabase digest was recomputed over exact UTF-8 bytes and checked against the SHA-256 abc test vector; CI generator must regenerate the full manifest for the final checked-out commit."
+  "note": "Four provider readback records are indexed. This source manifest lists the three distinct provider JSON artifacts with recorded SHA-256 digests. CI generator must regenerate a complete manifest for the final checked-out commit; evidence acceptance remains separate."
 }
