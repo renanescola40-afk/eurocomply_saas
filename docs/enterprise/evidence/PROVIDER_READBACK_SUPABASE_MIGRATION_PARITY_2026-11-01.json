@@ -1,0 +1,67 @@
+{
+  "schema": "risck-comply.provider-readback.supabase-migration-parity.v1",
+  "observed_at": "2026-11-01T19:28:46.070Z",
+  "source_system": "Supabase Management API",
+  "access_mode": "read-only",
+  "production": {
+    "project_name": "eurocomply_saas",
+    "region": "eu-west-1",
+    "status": "ACTIVE_HEALTHY",
+    "postgres_major": "17",
+    "migration_count": 137,
+    "latest_migration": {
+      "version": "20261018190000",
+      "name": "reconcile_audited_membership_usage_counters"
+    }
+  },
+  "isolated_qa": {
+    "project_name": "risck-comply-v15c-isolated-qa-20261022",
+    "region": "eu-west-1",
+    "status": "ACTIVE_HEALTHY",
+    "postgres_major": "17",
+    "migration_count": 7,
+    "latest_migration": {
+      "version": "20261026102301",
+      "name": "g9_01_qa_legacy_rpc_acl_hardening_20261026"
+    },
+    "migration_versions": [
+      "20261023113156",
+      "20261023113655",
+      "20261023114116",
+      "20261023114216",
+      "20261023115117",
+      "20261023115821",
+      "20261026102301"
+    ]
+  },
+  "comparison": {
+    "production_migration_count": 137,
+    "qa_migration_count": 7,
+    "count_difference": 130,
+    "parity": "NOT_ESTABLISHED",
+    "interpretation": "The QA migration ledger is not a complete canonical replay of the production ledger."
+  },
+  "production_security_advisors": {
+    "observed_at": "2026-11-01T19:28:46.070Z",
+    "findings": [
+      {
+        "name": "rls_enabled_no_policy",
+        "level": "INFO",
+        "count": 33,
+        "interpretation": "RLS enabled but no policy exists; this is not by itself proof of data exposure and requires table-by-table intended-access review."
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "level": "WARN",
+        "count": 1,
+        "interpretation": "Supabase Auth leaked-password protection is disabled."
+      }
+    ]
+  },
+  "limitations": [
+    "Migration counts do not establish schema parity or successful replay of all canonical migrations.",
+    "Security advisor findings do not replace table-by-table policy, grants, RPC ACL and tenant-isolation tests.",
+    "No customer rows or credentials were accessed.",
+    "No database writes, migrations or destructive operations were performed."
+  ]
+}
