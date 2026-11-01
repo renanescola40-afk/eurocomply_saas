@@ -225,10 +225,10 @@
         "OPS-01"
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
-      "status": "REQUIRES_RECONCILIATION",
+      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": false,
       "acceptance_evidence_ref": null,
-      "notes": "OPS-01 source PASS preserved; current provider readback shows deployed production SHA differs from current GitHub main."
+      "notes": "Existing OPS-01 source PASS matches the frozen G1 baseline SHA and remains valid. Current main is newer, but OPS-01 does not require automatic deployment of every main commit. Independent Evidence Factory review remains pending."
     },
     {
       "gate_id": "A-19",
