@@ -60,6 +60,7 @@ This is a task-local engineering status, not a replacement for the protected Ent
 - Corrections for all eight observed failures have been committed on the isolated branch; they have **not** been rerun.
 - Target candidate is A-15/QAT-01. Its formal acceptance remains **IMPLEMENTED_NOT_VERIFIED**; the complete required security suite is not green and exact-branch post-fix evidence is absent.
 - The canonical G1 register read from main still reports 2/24 A gates PASS (A-09/BIL-01 and A-18/OPS-01), with 35/38 atomic criteria NOT_VERIFIED and DAT-01 BLOCKED. This work adds zero formal gate/control credit.
+- Freshness qualification: both retained BIL-01 and OPS-01 provider records observed Production/main at `70d3545f414d063379d481fd238aed563e05edda` on 2026-10-22, while GitHub main is now `91b3b7585ebcd8f679906d54f69002b68d13c422`. Until current Production/provider evidence is re-read, 2/24 and 2/38 are the stored register snapshot, not a fresh exact-current-release acceptance claim.
 - No PR was opened because the affected paths trigger GitHub Actions and the available tools cannot verify that the run would use existing no-cost quota.
 - No production, Supabase, Stripe, deployment, merge, or protected-branch operations were performed.
 
