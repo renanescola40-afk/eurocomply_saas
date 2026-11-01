@@ -1,0 +1,24 @@
+{
+  "name": "minimatch",
+  "version": "11.0.1",
+  "private": true,
+  "description": "RISCK COMPLY compatibility adapter for patched minimatch 11",
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.cjs",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "types": "./index.d.ts",
+        "default": "./index.js"
+      },
+      "require": "./index.cjs"
+    }
+  },
+  "dependencies": {
+    "minimatch-core": "npm:minimatch@11.0.1"
+  }
+}
