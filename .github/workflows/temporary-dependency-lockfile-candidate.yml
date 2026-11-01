@@ -4,7 +4,7 @@ on:
     branches:
       - fix/security-dependency-patches-20261101
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: dependency-lock-candidate-${{ github.ref }}
   cancel-in-progress: true
@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ github.sha }}
-          persist-credentials: false
+          persist-credentials: true
       - name: Setup Node.js 22
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
@@ -59,6 +59,21 @@ jobs:
           NODE
       - name: Validate clean install from generated lockfile
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Commit generated package-lock.json only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add package-lock.json
+          changed_files="$(git diff --cached --name-only)"
+          test "$changed_files" = 'package-lock.json'
+          if git diff --cached --quiet; then
+            echo 'package-lock.json is already current; no commit required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(deps): regenerate lockfile with patched packages'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
       - name: Upload generated lockfile candidate
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
