@@ -449,9 +449,10 @@
       "accepted_by": null,
       "accepted_at": null,
       "evidence_ids": [
-        "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101"
+        "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101",
+        "EV-DAT-05-SUPABASE-RLS-FORCE-GRANTS-20261101"
       ],
-      "notes": "NOT_VERIFIED: current Supabase security advisor reports 33 RLS-enabled/no-policy INFO findings; table-by-table grants/FORCE RLS/RPC ACL reconciliation required."
+      "notes": "Read-only production/QA catalog snapshot: 115/115 public tables have RLS and FORCE RLS; 33 tables lack policies but have no anon/authenticated SELECT or write grants. Function ACL, SECURITY DEFINER, Storage, service_role and tenant isolation remain unverified."
     },
     {
       "control_id": "QAT-01",
