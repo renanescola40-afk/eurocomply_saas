@@ -75,3 +75,34 @@ test('Codex automatic repair starts only for failed CI PR checks, not main push 
   assert.match(source, /pull\.state === 'open'/);
   assert.match(source, /attempts < policy\.limits\.maxAutofixAttempts/);
 });
+
+// The following completion filters are job-level safeguards. GitHub still
+// records workflow_run events; no check outcome is promoted to PASS here.
+test('Enterprise 100 closure skips only no-op or superseded producer completions', () => {
+  const source = readFileSync('.github/workflows/enterprise-100-closure.yml', 'utf8');
+  const job = source.split('\n  contract:', 2)[1]?.split('    runs-on:', 1)[0] ?? '';
+  assert.match(job, /github\.event_name != 'workflow_run'/);
+  assert.match(job, /github\.event\.workflow_run\.head_sha == github\.sha/);
+  assert.match(job, /github\.event\.workflow_run\.head_branch == 'main'/);
+  assert.match(job, /github\.event\.workflow_run\.conclusion != 'skipped'/);
+  assert.match(job, /github\.event\.workflow_run\.conclusion != 'cancelled'/);
+  assert.doesNotMatch(job, /conclusion == 'success'/, 'failed producers must remain eligible for NO_GO assessment');
+  assert.match(source, /^  pull_request:/m);
+  assert.match(source, /^  push:/m);
+  assert.match(source, /^  workflow_dispatch:/m);
+});
+
+test('Enterprise closeout watchdog ignores no-op producer completion without weakening schedule or manual audit', () => {
+  const source = readFileSync('.github/workflows/enterprise-closeout-watchdog.yml', 'utf8');
+  const job = source.split('\n  watchdog:', 2)[1]?.split('    runs-on:', 1)[0] ?? '';
+  assert.match(job, /github\.event_name != 'workflow_run'/);
+  assert.match(job, /github\.event\.workflow_run\.head_branch == 'main'/);
+  assert.match(job, /github\.event\.workflow_run\.conclusion != 'skipped'/);
+  assert.match(job, /github\.event\.workflow_run\.conclusion != 'cancelled'/);
+  assert.doesNotMatch(job, /conclusion == 'success'/, 'upstream failures must remain visible');
+  assert.match(source, /^  workflow_dispatch:/m);
+  assert.match(source, /^  schedule:/m);
+  assert.match(source, /cron: '17 \*\/6 \* \* \*'/);
+  assert.match(source, /Enterprise Safe Runtime Bootstrap/);
+  assert.match(source, /Enterprise Runtime Closeout/);
+});

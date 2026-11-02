@@ -35,6 +35,15 @@ concurrency:
 jobs:
   watchdog:
     name: Inventory exact-SHA closeout evidence
+    # Keep failure evidence visible, but skip no-op producer completions
+    # before runner allocation. The six-hour and manual audits remain active.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.conclusion != 'skipped' &&
+        github.event.workflow_run.conclusion != 'cancelled'
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:

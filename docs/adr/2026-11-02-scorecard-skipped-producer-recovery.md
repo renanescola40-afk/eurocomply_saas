@@ -36,3 +36,12 @@ This proposed fix must not be called GitHub Actions recovery until a real runner
 ## Additional containment: Codex Auto-Fix
 
 Codex PR Auto-Fix previously requested a runner on any failed CI completion, including a direct push to `main` where there is no PR to repair. Limit the auto-fix job to failed `CI` runs whose original event was `pull_request`. Keep the manual `workflow_dispatch` entry point and the original authorization, token, same-branch and attempt-count guards. This pre-run guard does not disable CI itself, cannot distinguish billing-blocked jobs from failed test jobs, and does not prevent GitHub from recording the downstream workflow_run event. The rule avoids unnecessary runner admission and incidental write-token exposure on `main` CI failures.
+
+## P0 runner-storm containment: zero-evidence completion filters
+
+Two additional consumers were identified in the exact current PR head:
+
+- `Enterprise 100 Closure`: accepts 18 `workflow_run: completed` producers and previously requested a runner for same-main-SHA sources that were `skipped` or `cancelled`. The contract job now rejects those two no-evidence conclusions *before* runner allocation, retains SHA/main checks, direct PR/push/manual validation, and retains **failed** producers for explicit NO_GO.
+- `Enterprise Closeout Watchdog`: accepts two producer completions and previously had no job-level conclusion filter. It now rejects `skipped`/`cancelled` producers while retaining failures, the 6-hour fallback, exact current-main verification and operator manual dispatch.
+
+The change avoids useless job admission, but it **cannot stop GitHub from creating the workflow_run event** or circumvent the account's exhausted free compute allowance. Security scans, required checks, Enterprise promotion logic, production governance and credentials are unchanged. Tests are static contracts until an authorized runner or full offline checkout can execute the actual suite.
