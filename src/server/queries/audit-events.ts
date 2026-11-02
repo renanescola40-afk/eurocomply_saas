@@ -87,7 +87,9 @@ function isMissingAuditEventsTable(error: SupabaseError) {
 }
 
 function isMissingAuditChainColumns(error: SupabaseError) {
-  return error.code === '42703' || error.code === 'PGRST204' || /(previous_hash|event_hash|hash_algorithm|hash_signature|actor_user_id)/i.test(error.message ?? '');
+  // A message mentioning an audit column may describe an authorization error,
+  // not a missing column. Never use it to justify a legacy-write downgrade.
+  return error.code === '42703' || error.code === 'PGRST204';
 }
 
 function isMissingAuditChainRpc(error: SupabaseError) {
