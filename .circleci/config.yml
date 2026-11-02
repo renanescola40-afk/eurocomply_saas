@@ -186,7 +186,7 @@ jobs:
           name: Verify exact branch, source SHA and non-privileged environment
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "fix/actions-p0-runner-storm-20261102" || {
+            test "${CIRCLE_BRANCH:-}" = "ci/circleci-gh-actions-one-shot-20261102" || {
               echo "Recovery quality must run only on its isolated branch" >&2
               exit 1
             }
@@ -640,10 +640,11 @@ workflows:
               only:
                 - fix/actions-p0-runner-storm-20261102
 
-  github-actions-one-shot-20261102:
-    # Branch-scoped fallback; uses a push event without API pipeline parameters.
+  github-actions-quality-one-shot-20261102:
+    # Execute the source-only full-quality job once via a guarded branch push.
+    # No manual API pipeline arguments. All external services/production unavailable.
     jobs:
-      - github-actions-recovery-smoke:
+      - github-actions-recovery-quality:
           filters:
             branches:
               only:
