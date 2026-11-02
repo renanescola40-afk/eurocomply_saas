@@ -353,6 +353,25 @@ describe('audit event persistence', () => {
     });
   });
 
+  it('redacts separator- and Unicode-obfuscated credential names from nested audit metadata', async () => {
+    const { sanitizeAuditMetadata } = await import('./audit-events');
+
+    expect(sanitizeAuditMetadata({
+      'x-api-key': 'must-not-persist',
+      'API.KEY': 'must-not-persist',
+      'pa-ss-word': 'must-not-persist',
+      'ａｕｔｈｏｒｉｚａｔｉｏｎ': 'must-not-persist',
+      safeEvent: 'document.opened',
+      nested: [
+        { 'client-api-key': 'must-not-persist', ok: true },
+        { 'access.to-ken': 'must-not-persist', detail: 'kept' },
+      ],
+    })).toEqual({
+      safeEvent: 'document.opened',
+      nested: [{ ok: true }, { detail: 'kept' }],
+    });
+  });
+
   it('sanitizes audit request context before hashing and persistence', async () => {
     const queryBuilder = createQueryBuilder(['hash-a']);
     const rpc = vi.fn(async () => ({ error: null }));
