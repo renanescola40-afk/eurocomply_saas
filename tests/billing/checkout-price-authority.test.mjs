@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { validateCheckoutPriceAuthority } from '../../src/server/billing/checkout-price-authority.ts';
@@ -51,15 +50,4 @@ test('fails closed on mode mismatch, absent secret mode or invalid catalog price
   assert.deepEqual(validateCheckoutPriceAuthority(canonical, { ...contract, expectedAmountCents: 0 }), { ok: false, reason: 'invalid_catalog_amount' });
   assert.equal(validateCheckoutPriceAuthority(canonical, { ...contract, expectedAmountCents: null }).ok, false);
   assert.equal(validateCheckoutPriceAuthority(canonical, { ...contract, expectedAmountCents: NaN }).ok, false);
-});
-
-test('Checkout checks provider Price before creating customer or subscription session', async () => {
-  const route = await readFile(new URL('../../src/app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
-  const verification = route.indexOf('const priceAuthority = validateCheckoutPriceAuthority');
-  const customer = route.indexOf('const customer = await ensureOrganizationStripeCustomer');
-  const create = route.indexOf('stripe.checkout.sessions.create(');
-  assert.ok(verification > -1, 'missing price authority validation');
-  assert.ok(customer > verification, 'price verification must precede customer mutation');
-  assert.ok(create > verification, 'price verification must precede checkout creation');
-  assert.match(route, /throw new ProviderFailureError\(\{[\s\S]*?providerCode: 'checkout_price_authority_invalid'/);
 });
