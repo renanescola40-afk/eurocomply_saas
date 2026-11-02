@@ -383,6 +383,45 @@ describe('audit event persistence', () => {
     );
   });
 
+  it('rejects a legacy downgrade when direct append is denied for an audit column', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+    const queryBuilder = createQueryBuilder(['hash-a', 'hash-a']);
+    queryBuilder.insert.mockResolvedValueOnce({
+      error: { code: '42501', message: 'permission denied for column previous_hash' },
+    });
+    const rpc = vi.fn(async () => ({
+      error: { code: '42883', message: 'function append_audit_event_chained does not exist' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'direct_append_failed',
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a separately enabled legacy fallback for a typed missing audit column', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+    const queryBuilder = createQueryBuilder(['hash-a', 'hash-a']);
+    queryBuilder.insert.mockResolvedValueOnce({
+      error: { code: '42703', message: 'column previous_hash does not exist' },
+    });
+    const rpc = vi.fn(async () => ({
+      error: { code: '42883', message: 'function append_audit_event_chained does not exist' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({ persisted: true, legacy: true });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).toHaveBeenCalledTimes(2);
+  });
+
   it('sanitizes audit metadata before hashing and persistence', async () => {
     const { sanitizeAuditMetadata } = await import('./audit-events');
 
