@@ -3,8 +3,18 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const config = readFileSync('.circleci/config.yml', 'utf8');
-const job = config.split('\n  github-actions-recovery-smoke:\n', 2)[1]
-  ?.split('\n  # Opt-in small executor;', 1)[0] ?? '';
+// Bound every inspection to exactly one CircleCI job, rather than relying on
+// comments that may move when another job is added to the configuration.
+function circleJob(name) {
+  const marker = '\n  ' + name + ':\n';
+  const start = config.indexOf(marker);
+  assert.notEqual(start, -1, 'Missing CircleCI job: ' + name);
+  const tail = config.slice(start + marker.length);
+  const next = tail.search(/\n  [a-zA-Z][a-zA-Z0-9_-]*:\n/);
+  return next === -1 ? tail : tail.slice(0, next);
+}
+
+const job = circleJob('github-actions-recovery-smoke');
 const workflow = config.split('\n  github-actions-recovery-manual:\n', 2)[1]
   ?.split('\n  enterprise-source-proof-manual:', 1)[0] ?? '';
 
@@ -41,8 +51,7 @@ test('previously implemented CircleCI workflows and their switches are preserved
 
 test('second-stage full quality CI stays opt-in and pinned to recovery SHA with non-production resources', () => {
   assert.match(config, /  run_actions_recovery_quality:\n    type: boolean\n    default: false\n/);
-  const quality = config.split('\n  github-actions-recovery-quality:\n', 2)[1]
-    ?.split('\n  # Opt-in small executor;', 1)[0] ?? '';
+  const quality = circleJob('github-actions-recovery-quality');
   const recovery = config.split('\n  github-actions-recovery-quality-manual:\n', 2)[1]
     ?.split('\n  enterprise-source-proof-manual:', 1)[0] ?? '';
   assert.match(recovery, /when: << pipeline\.parameters\.run_actions_recovery_quality >>/);
@@ -62,4 +71,14 @@ test('second-stage full quality CI stays opt-in and pinned to recovery SHA with 
   ]) assert.ok(quality.includes(marker), 'Missing quality guard: ' + marker);
   assert.doesNotMatch(quality, /setup_remote_docker:|persist_to_workspace:|\bnpm run deploy\b/);
   assert.match(config, /github-actions-recovery-manual:/, 'first-stage smoke remains unchanged');
+});
+
+test('source-only smoke guard inspects only its job and cannot accidentally absorb the full quality job', () => {
+  const smoke = circleJob('github-actions-recovery-smoke');
+  const quality = circleJob('github-actions-recovery-quality');
+  assert.doesNotMatch(smoke, /github-actions-recovery-quality:|npm ci|npm run build/);
+  assert.match(quality, /npm ci --ignore-scripts --no-audit --no-fund/);
+  assert.match(quality, /npm run build/);
+  assert.match(smoke, /resource_class: small/);
+  assert.match(quality, /resource_class: medium/);
 });
