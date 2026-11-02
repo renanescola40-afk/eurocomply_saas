@@ -44,3 +44,18 @@ test('Codex Auto-Fix continues to observe CI completions on feature branches', (
   assert.match(block, /workflows: \[CI\]/);
   assert.doesNotMatch(block, /^    branches: \[main\]$/m);
 });
+
+test('scorecard stabilizer rejects skipped producer completion before runner allocation', () => {
+  const source = readFileSync('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml', 'utf8');
+  const jobHeader = source.split('jobs:\n', 2)[1]?.split('    runs-on:', 1)[0] ?? '';
+  assert.match(jobHeader, /github\.event\.workflow_run\.conclusion != 'skipped'/);
+  assert.match(jobHeader, /github\.event\.workflow_run\.head_branch == 'main'/);
+  assert.match(jobHeader, /github\.event\.workflow_run\.name != 'Enterprise Production Gate'/);
+  assert.match(jobHeader, /github\.event\.workflow_run\.event != 'workflow_dispatch'/);
+  assert.doesNotMatch(jobHeader, /conclusion == 'success'/, 'actual failures must still reach the existing fail-closed reconciliation');
+  const { header, block } = workflowRunTrigger('.github/workflows/enterprise-readiness-scorecard-stabilizer.yml');
+  assert.match(block, /^    branches: \[main\]$/m);
+  assert.match(header, /^  workflow_dispatch:/m);
+  assert.match(source, /group: enterprise-readiness-scorecard-stabilizer-/);
+  assert.match(source, /cancel-in-progress: true/);
+});
