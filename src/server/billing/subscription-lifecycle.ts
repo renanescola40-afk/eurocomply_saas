@@ -6,6 +6,8 @@ import { getBillingPlanIdForStripePriceId } from '@/lib/billing/plans';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { classifyProviderFailure } from '@/server/providers/failure';
+import { validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
+import { getStripeEventModeFromSecretKey } from '@/server/billing/stripe-event-mode';
 import { isPlanAtLeast, type CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 import {
   getBillingAddOnSlugForStripePriceId,
@@ -29,7 +31,7 @@ import {
   type BillingLifecycleReplaySnapshot,
 } from './lifecycle-request-ledger';
 import { getStripeClient } from './stripe';
-import { getStripePriceId, normalizeBillingInterval, normalizeBillingPlanId, type BillingInterval } from './plans';
+import { BILLING_PLANS, getStripePriceId, isSelfServePlan, normalizeBillingInterval, normalizeBillingPlanId, type BillingInterval } from './plans';
 
 export type { BillingLifecycleAction } from './lifecycle-request-ledger';
 export { BillingLifecycleRequestError } from './lifecycle-request-ledger';
@@ -524,6 +526,30 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   const interval = input.interval ? normalizeBillingInterval(input.interval) : getCurrentBillingInterval(baseItem);
   const targetPlan = input.plan ?? currentPlan;
   assertPlanTransition(input.action, currentPlan, targetPlan);
+  // Subscription upgrades, scheduled downgrades and add-on amendments must not
+  // rely on a configured Price ID alone. Verify the canonical self-serve Price
+  // before writing the lifecycle ledger or issuing any Stripe mutation.
+  // Cancellation and reactivation do not select a new Price.
+  if (input.action !== 'cancel' && input.action !== 'reactivate' && isSelfServePlan(targetPlan)) {
+    const targetPriceId = getStripePriceId(targetPlan, interval);
+    let providerPrice: Stripe.Price;
+    try {
+      providerPrice = await stripe.prices.retrieve(targetPriceId, { expand: ['product'] });
+    } catch (error) {
+      throw classifyProviderFailure('stripe', 'subscription_price_retrieve', error);
+    }
+    const lifecyclePriceAuthority = validateCheckoutPriceAuthority(providerPrice, {
+      priceId: targetPriceId,
+      expectedAmountCents: interval === 'year'
+        ? BILLING_PLANS[targetPlan].annualPriceCents
+        : BILLING_PLANS[targetPlan].monthlyPriceCents,
+      expectedInterval: interval,
+      expectedMode: getStripeEventModeFromSecretKey(),
+    });
+    if (!lifecyclePriceAuthority.ok) {
+      throw new BillingLifecycleRequestError('billing_price_configuration_invalid', 503);
+    }
+  }
   const addOns = input.action === 'replace_add_ons' && input.preserveExistingAddOns
     ? mergeProviderAddOnSelections(subscription, baseItem.id, input.addOns, targetPlan)
     : input.action === 'upgrade' || input.action === 'downgrade'
