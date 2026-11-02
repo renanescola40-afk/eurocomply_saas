@@ -40,7 +40,7 @@ function createQueryBuilder(previousHashes: Array<string | null>) {
       const eventHash = previousHashes.shift() ?? null;
       return { data: eventHash ? { event_hash: eventHash } : null, error: null };
     }),
-    insert: vi.fn(async () => ({ error: null })),
+    insert: vi.fn(async (): Promise<{ error: { code?: string; message?: string } | null }> => ({ error: null })),
   };
 }
 
