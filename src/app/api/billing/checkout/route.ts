@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 
 import { getBillingEntitlements } from '@/lib/billing/plans';
+import { validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
 import {
   isPublicSelfServeContractEffective,
   PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
@@ -19,7 +20,8 @@ import {
   claimInitialCheckoutAttempt,
   releaseInitialCheckoutAttempt,
 } from '@/server/billing/initial-checkout-singleflight';
-import { getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import { BILLING_PLANS, getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import { getStripeEventModeFromSecretKey } from '@/server/billing/stripe-event-mode';
 import { getStripeClient } from '@/server/billing/stripe';
 import {
   getAuthoritativeSignedContractPlan,
@@ -486,6 +488,24 @@ export async function POST(request: Request) {
     };
 
     try {
+      // Validate the actual Stripe Price, not just the configured Price ID. In
+      // particular, never issue a paid entitlement against an active €0 TEST
+      // price or a stale/incorrect currency, cadence, or mode binding.
+      const priceRecord = await stripe.prices.retrieve(priceId, { expand: ['product'] });
+      const priceAuthority = validateCheckoutPriceAuthority(priceRecord, {
+        priceId,
+        expectedAmountCents: BILLING_PLANS[plan].monthlyPriceCents,
+        expectedMode: getStripeEventModeFromSecretKey(),
+      });
+      if (!priceAuthority.ok) {
+        throw new ProviderFailureError({
+          provider: 'stripe',
+          kind: 'configuration',
+          providerCode: 'checkout_price_authority_invalid',
+          operation: 'checkout_price_retrieve',
+        });
+      }
+
       const customer = await ensureOrganizationStripeCustomer({
         stripe,
         organizationName,
