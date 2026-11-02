@@ -44,6 +44,18 @@ test('rejects wrong price ID, subscription type, interval, usage, quantity-based
   }
 });
 
+test('accepts a canonical annual Price only with the correct interval and amount', () => {
+  const annual = {
+    ...canonical,
+    unit_amount: 149000,
+    recurring: { ...canonical.recurring, interval: 'year' },
+  };
+  const annualContract = { ...contract, expectedAmountCents: 149000, expectedInterval: 'year' };
+  assert.deepEqual(validateCheckoutPriceAuthority(annual, annualContract), { ok: true, reason: 'canonical_price_confirmed' });
+  assert.equal(validateCheckoutPriceAuthority(annual, { ...annualContract, expectedInterval: 'month' }).ok, false);
+  assert.equal(validateCheckoutPriceAuthority(annual, { ...annualContract, expectedAmountCents: 14900 }).ok, false);
+});
+
 test('fails closed on mode mismatch, absent secret mode or invalid catalog price', () => {
   assert.equal(validateCheckoutPriceAuthority({ ...canonical, livemode: true }, contract).ok, false);
   assert.deepEqual(validateCheckoutPriceAuthority(canonical, { ...contract, expectedMode: null }), { ok: false, reason: 'mode_unavailable' });
