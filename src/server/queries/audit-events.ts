@@ -91,7 +91,10 @@ function isMissingAuditChainColumns(error: SupabaseError) {
 }
 
 function isMissingAuditChainRpc(error: SupabaseError) {
-  return error.code === '42883' || error.code === 'PGRST202' || /append_audit_event_chained|function/i.test(error.message ?? '');
+  // Message-only matching can mistake an authorization/operational error for
+  // a missing RPC and permit an explicitly configured downgrade to direct
+  // insertion. Only recognized undefined-function / schema-cache codes qualify.
+  return error.code === '42883' || error.code === 'PGRST202';
 }
 
 function isAuditChainPreviousHashMismatch(error: SupabaseError) {
