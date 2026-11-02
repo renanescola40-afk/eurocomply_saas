@@ -59,3 +59,19 @@ test('scorecard stabilizer rejects skipped producer completion before runner all
   assert.match(source, /group: enterprise-readiness-scorecard-stabilizer-/);
   assert.match(source, /cancel-in-progress: true/);
 });
+
+test('Codex automatic repair starts only for failed CI PR checks, not main push failures', () => {
+  const source = readFileSync('.github/workflows/codex-autofix.yml', 'utf8');
+  const header = source.split('\njobs:', 2)[0];
+  const job = source.split('\n  autofix:', 2)[1]?.split('    runs-on:', 1)[0] ?? '';
+  assert.match(header, /workflow_run:\s*\n\s*workflows: \[CI\]\s*\n\s*types: \[completed\]/);
+  assert.match(header, /workflow_dispatch:/);
+  assert.match(job, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(job, /github\.event_name == 'workflow_run'/);
+  assert.match(job, /github\.event\.workflow_run\.event == 'pull_request'/);
+  assert.match(job, /github\.event\.workflow_run\.conclusion == 'failure'/);
+  assert.doesNotMatch(job, /github\.event\.workflow_run\.event == 'push'/);
+  assert.match(source, /const sameRepository = pull\.head\.repo\?\.full_name === repositoryFullName/);
+  assert.match(source, /pull\.state === 'open'/);
+  assert.match(source, /attempts < policy\.limits\.maxAutofixAttempts/);
+});

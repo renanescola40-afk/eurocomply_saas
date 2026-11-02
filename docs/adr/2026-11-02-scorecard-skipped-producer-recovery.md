@@ -32,3 +32,7 @@ This is a **job-level** filter. GitHub can still create a workflow run object; t
 - Revert the commit on PR #2592 to restore the previous behavior.
 
 This proposed fix must not be called GitHub Actions recovery until a real runner successfully executes code with genuine required checks.
+
+## Additional containment: Codex Auto-Fix
+
+Codex PR Auto-Fix previously requested a runner on any failed CI completion, including a direct push to `main` where there is no PR to repair. Limit the auto-fix job to failed `CI` runs whose original event was `pull_request`. Keep the manual `workflow_dispatch` entry point and the original authorization, token, same-branch and attempt-count guards. This pre-run guard does not disable CI itself, cannot distinguish billing-blocked jobs from failed test jobs, and does not prevent GitHub from recording the downstream workflow_run event. The rule avoids unnecessary runner admission and incidental write-token exposure on `main` CI failures.
