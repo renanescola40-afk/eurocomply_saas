@@ -87,11 +87,16 @@ function isMissingAuditEventsTable(error: SupabaseError) {
 }
 
 function isMissingAuditChainColumns(error: SupabaseError) {
-  return error.code === '42703' || error.code === 'PGRST204' || /(previous_hash|event_hash|hash_algorithm|hash_signature|actor_user_id)/i.test(error.message ?? '');
+  // A message mentioning an audit column may describe an authorization error,
+  // not a missing column. Never use it to justify a legacy-write downgrade.
+  return error.code === '42703' || error.code === 'PGRST204';
 }
 
 function isMissingAuditChainRpc(error: SupabaseError) {
-  return error.code === '42883' || error.code === 'PGRST202' || /append_audit_event_chained|function/i.test(error.message ?? '');
+  // Message-only matching can mistake an authorization/operational error for
+  // a missing RPC and permit an explicitly configured downgrade to direct
+  // insertion. Only recognized undefined-function / schema-cache codes qualify.
+  return error.code === '42883' || error.code === 'PGRST202';
 }
 
 function isAuditChainPreviousHashMismatch(error: SupabaseError) {
@@ -121,8 +126,11 @@ function isLegacyAuditAppendFallbackAllowed() {
 }
 
 function isBlockedMetadataKey(key: string) {
-  const normalized = key.trim().toLowerCase();
-  return BLOCKED_METADATA_KEYS.some((blocked) => normalized.includes(blocked));
+  // Treat separator and Unicode-width variants of credential names alike.
+  const normalized = key.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return BLOCKED_METADATA_KEYS.some((blocked) =>
+    normalized.includes(blocked.replace(/[^a-z0-9]/g, '')),
+  );
 }
 
 function sanitizeString(value: string) {

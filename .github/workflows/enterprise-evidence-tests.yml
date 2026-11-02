@@ -35,6 +35,27 @@ jobs:
       - name: Install deterministic dependencies
         run: npm ci --ignore-scripts
 
+      - name: Validate G1 evidence factory contracts
+        run: |
+          node --test tests/enterprise-evidence/validate-evidence.test.mjs
+          node scripts/enterprise-evidence/validate-evidence.mjs --report
+
+      - name: Generate exact-SHA SHA-256 evidence manifest
+        env:
+          EVIDENCE_EXACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVIDENCE_SHA256_OUTPUT: artifacts/enterprise-readiness/EVIDENCE_SHA256_MANIFEST.json
+        run: |
+          node scripts/enterprise-evidence/generate-sha256-manifest.mjs \
+            docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json \
+            docs/enterprise/evidence/ENTERPRISE_38_CONTROL_MATRIX.json \
+            docs/enterprise/evidence/ENTERPRISE_24_GATE_MATRIX.json \
+            docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json \
+            docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_RLS_FORCE_GRANTS_2026-11-01.json \
+            docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json \
+            docs/enterprise/evidence/schemas/enterprise-evidence-record.schema.json \
+            scripts/enterprise-evidence/validate-evidence.mjs \
+            tests/enterprise-evidence/validate-evidence.test.mjs
+
       - name: Run enterprise evidence tests with retained diagnostics
         id: evidence_tests
         shell: bash
@@ -71,7 +92,10 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: enterprise-evidence-test-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/enterprise-readiness/enterprise-evidence-tests.log
+          path: |
+            artifacts/enterprise-readiness/enterprise-evidence-tests.log
+            artifacts/enterprise-readiness/EVIDENCE_SHA256_MANIFEST.json
+            artifacts/enterprise-evidence-factory/progress-report.json
           if-no-files-found: error
           retention-days: 30
 

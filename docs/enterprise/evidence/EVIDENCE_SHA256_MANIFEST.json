@@ -1,0 +1,23 @@
+{
+  "schema": "risck-comply.enterprise-evidence-sha256-manifest.v1",
+  "generated_at": "2026-11-01T19:48:02.506Z",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "source_commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+  "hash_algorithm": "SHA-256",
+  "state": "PARTIAL_PROVIDER_ARTIFACTS_HASHED_CI_REGEN_REQUIRED",
+  "files": [
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
+      "sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34"
+    },
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+      "sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae"
+    },
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_RLS_FORCE_GRANTS_2026-11-01.json",
+      "sha256": "2d8157a688c9823c743bcc93dd4fea0daaa5aa55c65375017263bf1c31450fbc"
+    }
+  ],
+  "note": "Four provider readback records are indexed. This source manifest lists the three distinct provider JSON artifacts with recorded SHA-256 digests. CI generator must regenerate a complete manifest for the final checked-out commit; evidence acceptance remains separate."
+}

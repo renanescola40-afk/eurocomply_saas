@@ -1,0 +1,50 @@
+{
+  "schema": "risck-comply.provider-readback.supabase-rls-force-grants.v1",
+  "observed_at": "2026-11-01T19:52:00.000Z",
+  "source_system": "Supabase Management API execute_sql",
+  "access_mode": "read-only",
+  "query_scope": "pg_catalog and pg_policies metadata only; no customer rows queried",
+  "query": "SELECT public base table counts; RLS and FORCE RLS flags; count tables without policies; has_table_privilege checks for anon/authenticated SELECT and INSERT/UPDATE/DELETE",
+  "production": {
+    "project_name": "eurocomply_saas",
+    "public_base_tables": 115,
+    "rls_enabled": 115,
+    "force_rls_enabled": 115,
+    "tables_without_policies": 33,
+    "no_policy_select_granted_anon": 0,
+    "no_policy_select_granted_authenticated": 0,
+    "no_policy_write_granted_anon": 0,
+    "no_policy_write_granted_authenticated": 0
+  },
+  "isolated_qa": {
+    "project_name": "risck-comply-v15c-isolated-qa-20261022",
+    "public_base_tables": 115,
+    "rls_enabled": 115,
+    "force_rls_enabled": 115,
+    "tables_without_policies": 33,
+    "no_policy_select_granted_anon": 0,
+    "no_policy_select_granted_authenticated": 0,
+    "no_policy_write_granted_anon": 0,
+    "no_policy_write_granted_authenticated": 0
+  },
+  "comparison": {
+    "table_count_equal": true,
+    "rls_force_counts_equal": true,
+    "no_policy_grant_counts_equal": true,
+    "schema_parity_established": false,
+    "function_acl_parity_established": false
+  },
+  "interpretation": [
+    "All 115 public base tables in both environments report RLS enabled and FORCE RLS enabled.",
+    "33 tables in each environment have no policies.",
+    "Catalog privilege checks report no anon or authenticated SELECT/INSERT/UPDATE/DELETE grants on those no-policy tables.",
+    "This reduces the immediate concern raised by advisor INFO findings but does not prove tenant isolation or full database security.",
+    "The query does not inspect service_role exposure, function EXECUTE grants, SECURITY DEFINER behavior, storage policies, schema object parity, or application-mediated access."
+  ],
+  "limitations": [
+    "Read-only catalog metadata only; no customer data queried.",
+    "No writes, migrations, settings changes or destructive operations.",
+    "Function ACL query was not completed; function grants remain unverified.",
+    "Identical aggregate counts do not establish identical table definitions, constraints, indexes, policies or data."
+  ]
+}
