@@ -61,6 +61,8 @@ describe('protected rollback runtime proof', () => {
     expect(runner).toContain("safeUrl(env('PRODUCTION_URL'), { allowedHostname: CANONICAL_PRODUCTION_HOST })");
     expect(runner).toContain("const CANONICAL_PRODUCTION_HOST = 'risckcomply.com'");
     expect(runner).toContain("const VERCEL_CLI_VERSION = '56.3.2'");
+    expect(runner).toContain('buildVercelCliInvocation({ args, token, version: VERCEL_CLI_VERSION, env: process.env })');
+    expect(runner).not.toContain("'--token', token");
     expect(workflow).not.toContain('VERCEL_CLI_VERSION:');
   });
 
