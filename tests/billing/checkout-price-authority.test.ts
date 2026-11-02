@@ -35,6 +35,28 @@ describe('self-serve Checkout Price runtime authority', () => {
     }, contract).ok).toBe(false);
   });
 
+  it('validates an exact annual recurring Price without allowing monthly pricing', () => {
+    const annual = { ...canonical, unit_amount: 149000, recurring: { ...canonical.recurring, interval: 'year' } };
+    expect(validateCheckoutPriceAuthority(annual, {
+      ...contract, expectedInterval: 'year', expectedAmountCents: 149000,
+    }).ok).toBe(true);
+    expect(validateCheckoutPriceAuthority(annual, {
+      ...contract, expectedInterval: 'month', expectedAmountCents: 149000,
+    }).ok).toBe(false);
+  });
+
+  it('validates self-serve lifecycle Price before claiming a durable mutation or updating Stripe', async () => {
+    const lifecycle = await readFile(new URL('../../src/server/billing/subscription-lifecycle.ts', import.meta.url), 'utf8');
+    const validate = lifecycle.indexOf('const lifecyclePriceAuthority = validateCheckoutPriceAuthority');
+    const claim = lifecycle.indexOf('const claim = await claimBillingLifecycleRequest({');
+    const update = lifecycle.indexOf('updated = await stripe.subscriptions.update(');
+    expect(validate).toBeGreaterThan(-1);
+    expect(claim).toBeGreaterThan(validate);
+    expect(update).toBeGreaterThan(claim);
+    expect(lifecycle).toContain("input.action !== 'cancel' && input.action !== 'reactivate'");
+    expect(lifecycle).toContain("billing_price_configuration_invalid");
+  });
+
   it('verifies the Stripe Price before the first customer side effect', async () => {
     const source = await readFile(new URL('../../src/app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
     const authority = source.indexOf('const priceAuthority = validateCheckoutPriceAuthority');
