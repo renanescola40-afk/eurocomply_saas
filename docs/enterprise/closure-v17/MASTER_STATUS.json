@@ -46,7 +46,17 @@
     "gitlab": {
       "mainProtected": true,
       "protectionPolicyDetails": "NOT_INDEPENDENTLY_VERIFIED",
-      "mainHeadReadback": "MATCHES_FROZEN_BASELINE"
+      "mainHeadReadback": "MATCHES_FROZEN_BASELINE",
+      "projectRequireSuccessfulPipelineBeforeMerge": false,
+      "projectRequireAllDiscussionsResolvedBeforeMerge": false,
+      "projectMergeApprovalsBeforeMerge": 0,
+      "openMR2635ApprovalRules": [
+        {
+          "type": "code_owner",
+          "required": 0,
+          "qualifiedHumanApproverVerified": false
+        }
+      ]
     },
     "vercel": {
       "productionDeploymentState": "READY",
@@ -56,7 +66,20 @@
       "wwwDomainListedInProductionDeploymentAliases": true,
       "githubMainMatchesProductionSha": false,
       "productionRuntimeSmoke": "NOT_VERIFIED",
-      "rollbackRehearsal": "NOT_VERIFIED"
+      "rollbackRehearsal": "NOT_VERIFIED",
+      "qaCustomEnvironment": {
+        "slug": "qa",
+        "id": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+        "exists": true,
+        "environmentType": "preview",
+        "configuredDomainCount": 0
+      },
+      "variableMetadataRead": {
+        "decrypted": false,
+        "sampleRecordsReturned": 100,
+        "completeCoverage": false,
+        "note": "Custom QA and generic preview settings exist; branch-specific elevated credential names observed in preview metadata. No secret values were retrieved or persisted. Effective privileges, environment origins, and cross-environment negative tests remain NOT_VERIFIED."
+      }
     },
     "githubActions": {
       "runIds": [
@@ -100,7 +123,14 @@
   },
   "workflow": {
     "singleWorkScope": "A-12 DAT-01 only",
-    "specialistHandoffsReceived": [],
+    "specialistHandoffsReceived": [
+      {
+        "owner": "Normal 1",
+        "gate": "A-21",
+        "pr": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
+        "status": "IMPLEMENTED_UNREVIEWED"
+      }
+    ],
     "mergeAuthorization": false,
     "productionMutationAuthorization": false,
     "paidCiAuthorization": false,
@@ -108,7 +138,12 @@
     "notes": [
       "Gate implementations remain exclusively owned by designated executor.",
       "This V17 ledger is coordination metadata, not a substitute for the evidence factory PR #2588 or required formal approvals."
-    ]
+    ],
+    "latestImplementationPrs": [
+      "https://github.com/renanescola40-afk/eurocomply_saas/pull/2593",
+      "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594"
+    ],
+    "statusNote": "Two PRs created by Normal 1: source-bound ledger and a concrete A-21 CLI credential exposure fix. Neither changes formal acceptance or authorizes release."
   },
   "gates": [
     {
@@ -1109,7 +1144,8 @@
       "evidence": [],
       "blockers": [
         "GitHub main branch reports protected:false and branch-protection details return 403 Resource not accessible by integration.",
-        "GitHub rulesets endpoint returns 403 indicating private-repository feature requires plan change; existing CLI/CI evidence is not a substitute for enforced platform policy."
+        "GitHub rulesets endpoint returns 403 indicating private-repository feature requires plan change; existing CLI/CI evidence is not a substitute for enforced platform policy.",
+        "GitLab project settings allow merges without successful pipeline and without all discussions resolved; current MR !2635 requires zero code-owner approvals. Branch being protected alone does not establish effective approval governance."
       ],
       "dependencies": [],
       "nextAction": "Owner must restore feasible effective protection/qualified reviewer policy on the selected GitHub repository within approved cost; read back rules and prove an unauthorized merge is rejected.",
@@ -1232,7 +1268,8 @@
       "evidence": [],
       "blockers": [
         "No same-artifact isolated rollback rehearsal verified in this session.",
-        "No complete credential-origin and QA/TEST/PROD isolation receipt verified."
+        "No complete credential-origin and QA/TEST/PROD isolation receipt verified.",
+        "PR #2594 removes a secret from process argv but is draft; does not prove live rollback or secrets isolation."
       ],
       "dependencies": [
         "OPS-01",
@@ -1240,7 +1277,7 @@
         "SEC-05",
         "DAT-01"
       ],
-      "nextAction": "Run non-destructive isolated rollback rehearsal and independently verify environment credential boundaries; coordinate data rollback compatibility with Normal 2 and DAT-01 Work.",
+      "nextAction": "Qualified review and exact-head CI; execute nonproduction rollback rehearsal and review environment-scoped secret provenance before OPS-05/06 acceptance.",
       "ownerHandoffRequired": [
         "OWNER",
         "GATE",
@@ -1256,7 +1293,41 @@
         "DEPENDENCIES",
         "REVIEWER",
         "NEXT_ACTION"
-      ]
+      ],
+      "implementationHandoff": {
+        "owner": "Normal 1",
+        "gate": "A-21",
+        "atomic": [
+          "OPS-05",
+          "OPS-06"
+        ],
+        "baseSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+        "headSha": "58a60e1860a9c90fd03d6641d318148c976027ba",
+        "branch": "agent/a21-rollback-vercel-token-argv-fix-20261102",
+        "prUrl": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
+        "tests": {
+          "local": "4/4 PASS",
+          "command": "node --test tests/enterprise/vercel-cli-invocation.test.mjs",
+          "verifiedBlobShas": {
+            "scripts/release/vercel-cli-invocation.mjs": "cde6b4b689316c2fcf441edbb1c51a8bf2c4220d",
+            "tests/enterprise/vercel-cli-invocation.test.mjs": "458073fc0090a48ce17fd9f7041175f3578a0b2c"
+          },
+          "sourceAnalysis": "runner no longer contains token CLI flag; Vercel token passed as inherited environment variable",
+          "hostedCI": "NOT_VERIFIED; 45 check runs reported 41 failure and 4 skipped at head; no authenticated runner execution proof"
+        },
+        "environment": "LOCAL_NODE22_OFFLINE, NO_PRODUCTION_WRITE",
+        "evidence": "PR #2594 source patch and exact-blob offline Node.js test receipts; not operational rollback proof",
+        "risk": "Protected production rollback not executed. QA/preview/production secrets scope isolation remains unproved; GitHub CI admission requires governance.",
+        "dependencies": [
+          "QAT-01",
+          "QAT-04",
+          "OPS-01",
+          "DAT-04",
+          "SEC-05"
+        ],
+        "reviewer": null,
+        "nextAction": "Qualified review and exact-head CI; execute nonproduction rollback rehearsal and review environment-scoped secret provenance before OPS-05/06 acceptance."
+      }
     },
     {
       "id": "A-22",
