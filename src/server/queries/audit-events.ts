@@ -121,8 +121,11 @@ function isLegacyAuditAppendFallbackAllowed() {
 }
 
 function isBlockedMetadataKey(key: string) {
-  const normalized = key.trim().toLowerCase();
-  return BLOCKED_METADATA_KEYS.some((blocked) => normalized.includes(blocked));
+  // Treat separator and Unicode-width variants of credential names alike.
+  const normalized = key.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return BLOCKED_METADATA_KEYS.some((blocked) =>
+    normalized.includes(blocked.replace(/[^a-z0-9]/g, '')),
+  );
 }
 
 function sanitizeString(value: string) {
