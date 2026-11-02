@@ -1,0 +1,1443 @@
+{
+  "schema": "risck-comply.enterprise-control-tower-master-status.v17",
+  "asOfDate": "2026-11-02",
+  "authority": "Read-only provider reconciliation and frozen G1 baseline. A review artifact, not an acceptance approval, release permit or new test PASS.",
+  "frozenSources": {
+    "atomicRegistry": "config/g1-enterprise-scope-v1.json",
+    "atomicRegistryBlobSha": "8d16ac921509ce6c23424c16aac721702515d3ab",
+    "gateProjection": "config/g1-product-ready-24-gates.json",
+    "gateProjectionBlobSha": "5a63e9b6c76341405fe1f764e1a258fc5a841832",
+    "baselineGitHubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+    "githubRepository": "renanescola40-afk/eurocomply_saas",
+    "gitlabProjectId": 88025157,
+    "gitlabMainSha": "84a99f813bdce601c119bff27c1d82c5356295d6",
+    "vercelProjectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "productionDeploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "productionSha": "70d3545f414d063379d481fd238aed563e05edda"
+  },
+  "scoring": {
+    "formal": {
+      "denominator": 24,
+      "retainedSourceAccepted": 2,
+      "retainedSourcePercent": 8.33,
+      "currentSessionNewAccepted": 0,
+      "currentSessionIndependentlyAccepted": 0,
+      "remainingToSourceTarget": 22,
+      "remainingPercent": 91.67
+    },
+    "atomic": {
+      "denominator": 38,
+      "retainedSourceAccepted": 2,
+      "retainedSourcePercent": 5.26,
+      "blocked": 1,
+      "notVerified": 35,
+      "remaining": 36,
+      "remainingPercent": 94.74
+    }
+  },
+  "observations": {
+    "github": {
+      "mainProtected": false,
+      "branchProtectionRead": "FORBIDDEN_403_INTEGRATION",
+      "repositoryRulesetsRead": "FORBIDDEN_403_PRIVATE_REPO_FEATURE",
+      "branchHeadReadback": "MATCHES_FROZEN_BASELINE",
+      "note": "Connector repository admin:true does not establish effective branch-protection capability."
+    },
+    "gitlab": {
+      "mainProtected": true,
+      "protectionPolicyDetails": "NOT_INDEPENDENTLY_VERIFIED",
+      "mainHeadReadback": "MATCHES_FROZEN_BASELINE"
+    },
+    "vercel": {
+      "productionDeploymentState": "READY",
+      "deploymentTarget": "production",
+      "apexDomainVerified": true,
+      "wwwDomainVerified": true,
+      "wwwDomainListedInProductionDeploymentAliases": true,
+      "githubMainMatchesProductionSha": false,
+      "productionRuntimeSmoke": "NOT_VERIFIED",
+      "rollbackRehearsal": "NOT_VERIFIED"
+    },
+    "githubActions": {
+      "runIds": [
+        41485876901,
+        41485876727,
+        41485876658
+      ],
+      "observedConclusions": [
+        "failure",
+        "failure",
+        "failure"
+      ],
+      "jobsReadback": "FAILURE_OR_SKIPPED",
+      "logsReadback": "UNAVAILABLE_BLOB_NOT_FOUND",
+      "runnerBillingBlock": "REPORTED_IN_EXISTING_PR_2592_NOT_INDEPENDENTLY_READ_BACK",
+      "testsActuallyExecutedByThisSession": [],
+      "existingOverlapPrs": [
+        "https://github.com/renanescola40-afk/eurocomply_saas/pull/2592",
+        "https://github.com/renanescola40-afk/eurocomply_saas/pull/2588"
+      ]
+    }
+  },
+  "acceptanceSeparation": {
+    "historicalSourceAcceptances": [
+      "A-09",
+      "A-18"
+    ],
+    "currentProviderReadbackVerified": [
+      "A-18 production READY + alias + deployment SHA only"
+    ],
+    "newFormalAcceptancesByV17": [],
+    "candidateReleaseAcceptedSha": null,
+    "statement": "Historic PASS records retained unchanged. V17 readback is evidence, not fresh qualified gate acceptance. GitHub main is not verified as current production."
+  },
+  "decisions": {
+    "INTERNAL_ENTERPRISE_GO": "NO_GO",
+    "PAID_SELF_SERVE_GO": "NO_GO",
+    "EXTERNAL_PROCUREMENT_GO": "NO_GO",
+    "PRODUCTION_RELEASE_GO": "NO_GO",
+    "reason": "Missing exact SHA release proof, effective GitHub branch governance, hosted CI, rollback/environment-isolation and remaining 22 source-unaccepted gates; no qualified release decision."
+  },
+  "workflow": {
+    "singleWorkScope": "A-12 DAT-01 only",
+    "specialistHandoffsReceived": [],
+    "mergeAuthorization": false,
+    "productionMutationAuthorization": false,
+    "paidCiAuthorization": false,
+    "automaticAcceptance": false,
+    "notes": [
+      "Gate implementations remain exclusively owned by designated executor.",
+      "This V17 ledger is coordination metadata, not a substitute for the evidence factory PR #2588 or required formal approvals."
+    ]
+  },
+  "gates": [
+    {
+      "id": "A-01",
+      "label": "Authentication lifecycle",
+      "owner": "Normal 2",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "SEC-01",
+          "criterion": "Session authentication, recovery and logout reject expired/revoked sessions in authenticated browser/API tests",
+          "evidenceRequired": "Authenticated run logs, replayable negative session fixtures",
+          "dependencies": [],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-02",
+      "label": "Server-side role and privileged principal authorization",
+      "owner": "Normal 2",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "SEC-02",
+          "criterion": "Every mandatory read and mutation is authorized server-side by active membership and role, including deny tests",
+          "evidenceRequired": "Role/permission matrix plus negative API integration evidence",
+          "dependencies": [
+            "SEC-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "SEC-04",
+          "criterion": "Privileged SQL functions, elevated writers, files and webhooks are restricted to intended principals",
+          "evidenceRequired": "Production grants/policy readback and unauthorized-invocation tests",
+          "dependencies": [
+            "SEC-02"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "SEC-01",
+        "SEC-02"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-03",
+      "label": "Tenant isolation, critical risk and audit integrity",
+      "owner": "Normal 2",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "SEC-03",
+          "criterion": "Tenant A cannot read, mutate, export or download tenant B records via API, RLS and Storage",
+          "evidenceRequired": "Tenant A/B authenticated runtime and SQL/RLS/Storage results",
+          "dependencies": [
+            "SEC-02"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "SEC-06",
+          "criterion": "No known unaccepted material high/critical issue in committed flows; privileged actions have durable audit events",
+          "evidenceRequired": "Risk register, vulnerability dispositions, event replay and audit outputs",
+          "dependencies": [
+            "SEC-02"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "SEC-02"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-04",
+      "label": "Secrets, encryption and client disclosure protection",
+      "owner": "Normal 2",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "SEC-05",
+          "criterion": "Secrets never reach client bundles or logs; TLS and at-rest protection are appropriately configured",
+          "evidenceRequired": "Secret scanner, deployed configuration attestation, transport/storage checks",
+          "dependencies": [],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-05",
+      "label": "Workspace signup and onboarding",
+      "owner": "Normal 3",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "FUN-01",
+          "criterion": "A legitimate user signs up, authenticates and creates/joins the intended workspace",
+          "evidenceRequired": "Authenticated signup/onboarding E2E and durable DB readback",
+          "dependencies": [
+            "SEC-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "SEC-01"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-06",
+      "label": "AI inventory, risk and accountable governance persistence",
+      "owner": "Normal 3",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "FUN-02",
+          "criterion": "AI inventory create/view/update and risk assessment persist with correct tenant and ownership",
+          "evidenceRequired": "Authenticated E2E plus persisted record and isolation evidence",
+          "dependencies": [
+            "FUN-01",
+            "SEC-03"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "FUN-03",
+          "criterion": "Governance workflow records accountable owner, decision, timestamps, review state and supporting evidence",
+          "evidenceRequired": "Multi-role approval/deny E2E and durable audit trail",
+          "dependencies": [
+            "FUN-02",
+            "SEC-02"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "FUN-01",
+        "SEC-03",
+        "FUN-02",
+        "SEC-02"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-07",
+      "label": "Evidence, reporting, export and access control",
+      "owner": "Normal 3",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "FUN-04",
+          "criterion": "Evidence uploads/downloads, audit trail, mandatory reporting and document export work with access controls",
+          "evidenceRequired": "Authenticated browser/API tests, generated file inspection and data readback",
+          "dependencies": [
+            "FUN-03",
+            "SEC-03"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "FUN-03",
+        "SEC-03"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-08",
+      "label": "Privacy administration and truthful customer product experience",
+      "owner": "Normal 3",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "FUN-05",
+          "criterion": "Administration, retention/deletion/export and privacy request workflows fulfill the published offering",
+          "evidenceRequired": "Role-specific E2E, data deletion/retention and export evidence",
+          "dependencies": [
+            "FUN-01",
+            "SEC-02"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "FUN-06",
+          "criterion": "Navigation and actual product contracts match what is marketed; incomplete optional flows are not sold as complete",
+          "evidenceRequired": "Release-scoped product route inventory and marketing/contract mismatch review",
+          "dependencies": [
+            "FUN-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "FUN-01",
+        "SEC-02"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-09",
+      "label": "Canonical Stripe prices and product plan catalog",
+      "owner": "Normal 3",
+      "sourceAcceptedStatus": "PASS",
+      "sourceAcceptanceDate": "2026-10-22T21:03:16.517Z",
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": "G1 Engineering, owner-authorized acceptance (independent Stripe LIVE + Vercel provider readbacks; governed PR integration pending)",
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "BIL-01",
+          "criterion": "Publicly committed plans map to existing correctly configured Stripe prices and intended access limits",
+          "evidenceRequired": "Redacted Stripe product/price IDs and offer-to-entitlement mapping",
+          "dependencies": [],
+          "sourceStatus": "PASS",
+          "sourceEvidenceRefs": [
+            "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json"
+          ],
+          "sourceAcceptedBy": "G1 Engineering, owner-authorized acceptance (independent Stripe LIVE + Vercel provider readbacks; governed PR integration pending)",
+          "sourceAcceptedAt": "2026-10-22T21:03:16.517Z"
+        }
+      ],
+      "evidence": [
+        "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json"
+      ],
+      "blockers": [],
+      "dependencies": [],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-10",
+      "label": "Signed Stripe TEST webhook and persisted Checkout",
+      "owner": "Normal 3",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "BIL-02",
+          "criterion": "Signed Stripe TEST webhooks reject invalid signatures and replay/duplicates safely",
+          "evidenceRequired": "Genuine Stripe test event, webhook delivery IDs and idempotency readback",
+          "dependencies": [
+            "BIL-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "BIL-03",
+          "criterion": "A genuine test Checkout creates and persists the expected organization entitlement in isolated QA",
+          "evidenceRequired": "Exact-SHA Stripe TEST event linked to QA durable DB state and app entitlement",
+          "dependencies": [
+            "BIL-02",
+            "DAT-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "BIL-01",
+        "BIL-02",
+        "DAT-01"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-11",
+      "label": "Subscription lifecycle and authorized entitlements",
+      "owner": "Normal 3",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "BIL-04",
+          "criterion": "Plan changes, nonpayment and cancellation converge on durable, safe subscription states",
+          "evidenceRequired": "Genuine Stripe TEST lifecycle events plus authenticated UI/backend assertions",
+          "dependencies": [
+            "BIL-03"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "BIL-05",
+          "criterion": "Access checks and billing modifications are authorized server-side; customer cannot self-grant a paid tier",
+          "evidenceRequired": "Negative API tests and tenant-isolated entitlement query evidence",
+          "dependencies": [
+            "SEC-02",
+            "BIL-03"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "BIL-03",
+        "SEC-02"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-12",
+      "label": "Reviewed canonical migration replay to isolated QA",
+      "owner": "Work",
+      "sourceAcceptedStatus": "BLOCKED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "DAT-01",
+          "criterion": "An ordered, reconciled and reviewed migration manifest bootstraps isolated QA without version collisions",
+          "evidenceRequired": "Approved replay manifest, migration hashes, SQL replay log and schema parity check",
+          "dependencies": [],
+          "sourceStatus": "BLOCKED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [
+        "DAT-01 remains source BLOCKED; exclusive Work ownership."
+      ],
+      "dependencies": [],
+      "nextAction": "Obtain the single Work's signed or independently reproducible exact-SHA migration replay handoff; do not change DAT-01 in this lane.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-13",
+      "label": "Atomic membership counters and durable transaction state",
+      "owner": "Normal 2",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "DAT-02",
+          "criterion": "Concurrent membership changes and usage quotas preserve critical invariants or fail atomically",
+          "evidenceRequired": "Native PostgreSQL concurrent-session tests and repeatable invariant queries",
+          "dependencies": [
+            "DAT-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "DAT-03",
+          "criterion": "High-value decisions, audit-chain and billing state survive transaction failure/retry without untracked divergence",
+          "evidenceRequired": "Rollback/atomicity negative cases, constraint assertions and audit-chain validation",
+          "dependencies": [
+            "DAT-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "DAT-01"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-14",
+      "label": "Recovery and live database/RLS parity",
+      "owner": "Normal 2",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "DAT-04",
+          "criterion": "A bounded isolated restoration proves DB and relevant Auth/Storage/application recovery boundaries",
+          "evidenceRequired": "Restore transcript, data integrity diff, Auth/Storage scope and recovery limitation log",
+          "dependencies": [
+            "DAT-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "DAT-05",
+          "criterion": "Production migrations, RLS/FORCE RLS, RPC grants and data boundaries match the approved release",
+          "evidenceRequired": "Version-scoped provider SQL readback, function ACL and grant tests",
+          "dependencies": [
+            "DAT-01",
+            "SEC-03"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "DAT-01",
+        "SEC-03"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-15",
+      "label": "Complete required source, regression and security CI",
+      "owner": "Normal 1",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "QAT-01",
+          "criterion": "Mandatory application/unit/integration and security regression suites complete without failing checks",
+          "evidenceRequired": "Exact-SHA test logs and results for full required suites",
+          "dependencies": [],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [
+        "Hosted GitHub Actions execution is not currently evidenced; latest three Enterprise runs failed; GitHub job logs unavailable (BlobNotFound).",
+        "PR #2592 documents runner admission blocked under zero Actions billing budget; current root cause still requires a controlled runner-admission readback."
+      ],
+      "dependencies": [],
+      "nextAction": "After explicit no-cost or budget-authorized runner admission, run exact-head CI for Node 22, lint, TypeScript, tests, build and security checks; collect job results.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-16",
+      "label": "Authenticated browser, tenant and billing E2E",
+      "owner": "Normal 3",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "QAT-02",
+          "criterion": "Real authenticated browser tests cover core user journeys and tenant A/B access denies",
+          "evidenceRequired": "Exact-SHA Playwright logs, artifacts sanitized of private data",
+          "dependencies": [
+            "FUN-04",
+            "SEC-03",
+            "DAT-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "QAT-03",
+          "criterion": "Billing plus error, retries, persistence, cancellations and degraded behavior pass application/runtime E2E",
+          "evidenceRequired": "Exact-SHA runtime/Stripe sandbox QA report",
+          "dependencies": [
+            "BIL-04",
+            "DAT-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "FUN-04",
+        "SEC-03",
+        "DAT-01",
+        "BIL-04"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-17",
+      "label": "Exact-SHA test and deployed artifact provenance",
+      "owner": "Normal 1",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "QAT-04",
+          "criterion": "Test source SHA, build, QA environment and deployed tested artifact are traceable; no synthetic substitution",
+          "evidenceRequired": "Signed or otherwise independently verifiable check IDs, exact-SHA provenance",
+          "dependencies": [
+            "QAT-01",
+            "OPS-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [
+        "GitHub main SHA does not equal verified Vercel production SHA.",
+        "No complete same-SHA CI -> artifact -> tested origin -> deployment evidence chain."
+      ],
+      "dependencies": [
+        "QAT-01",
+        "OPS-01"
+      ],
+      "nextAction": "Reconcile exact candidate SHA; obtain successful immutable build/test provenance and QA origin attestation before assigning QAT-04 PASS.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-18",
+      "label": "Current production exact-SHA deployment identity",
+      "owner": "Normal 1",
+      "sourceAcceptedStatus": "PASS",
+      "sourceAcceptanceDate": "2026-10-22T20:52:14.027Z",
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "OPS-01",
+          "criterion": "The current production deployment is READY, its exact SHA is known and release acceptance uses that SHA",
+          "evidenceRequired": "Live Vercel deployment ID/commit SHA and domain assignment verification",
+          "dependencies": [],
+          "sourceStatus": "PASS",
+          "sourceEvidenceRefs": [
+            "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+          ],
+          "sourceAcceptedBy": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
+          "sourceAcceptedAt": "2026-10-22T20:52:14.027Z"
+        }
+      ],
+      "evidence": [
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+      ],
+      "blockers": [
+        "Historical acceptance covers production deployment identity only; it does not certify current GitHub main or any new release candidate."
+      ],
+      "dependencies": [],
+      "nextAction": "Reconfirm current www domain alias and READY deployment immediately before an authorized release; bind any future candidate separately.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-19",
+      "label": "Enforced governance and required release checks",
+      "owner": "Normal 1",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "OPS-02",
+          "criterion": "Protected or equivalently controlled merges/releases require approved review, trustworthy checks and explicit release decision",
+          "evidenceRequired": "Readback of native rule enforcement or documented audited equivalent controls",
+          "dependencies": [],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [
+        "GitHub main branch reports protected:false and branch-protection details return 403 Resource not accessible by integration.",
+        "GitHub rulesets endpoint returns 403 indicating private-repository feature requires plan change; existing CLI/CI evidence is not a substitute for enforced platform policy."
+      ],
+      "dependencies": [],
+      "nextAction": "Owner must restore feasible effective protection/qualified reviewer policy on the selected GitHub repository within approved cost; read back rules and prove an unauthorized merge is rejected.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-20",
+      "label": "Live smoke, monitoring, support and incident response",
+      "owner": "Normal 4",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "OPS-03",
+          "criterion": "Public critical routes and an authenticated core workflow pass deployment-specific smoke checks",
+          "evidenceRequired": "Runtime smoke results and health/endpoints with exact deployment identity",
+          "dependencies": [
+            "OPS-01",
+            "QAT-02"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "OPS-04",
+          "criterion": "Production monitoring, alert routing, incident response and support contact operate and are documented",
+          "evidenceRequired": "Provider alert check, incident drill, runbook and support route",
+          "dependencies": [
+            "OPS-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "OPS-01",
+        "QAT-02"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-21",
+      "label": "Rollback and environment credential isolation",
+      "owner": "Normal 1",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "OPS-05",
+          "criterion": "A governed rollback/recovery exercise verifies safe restore of a known-good release without customer-data mutation",
+          "evidenceRequired": "Isolated/staged rehearsal log, rollback target SHA and acceptance record",
+          "dependencies": [
+            "OPS-01",
+            "DAT-04"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "OPS-06",
+          "criterion": "QA, live, preview and production configuration and credentials stay isolated and fail closed",
+          "evidenceRequired": "Environment provenance matrix, safe negative-cross-environment tests",
+          "dependencies": [
+            "SEC-05",
+            "DAT-01"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [
+        "No same-artifact isolated rollback rehearsal verified in this session.",
+        "No complete credential-origin and QA/TEST/PROD isolation receipt verified."
+      ],
+      "dependencies": [
+        "OPS-01",
+        "DAT-04",
+        "SEC-05",
+        "DAT-01"
+      ],
+      "nextAction": "Run non-destructive isolated rollback rehearsal and independently verify environment credential boundaries; coordinate data rollback compatibility with Normal 2 and DAT-01 Work.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-22",
+      "label": "Contracting entity, rights and applicable legal acceptance",
+      "owner": "Normal 4",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "TRU-01",
+          "criterion": "Operator/contracting entity and software rights are identified and supported by appropriate corporate evidence",
+          "evidenceRequired": "Authoritative supplier/ownership records, reviewed identity statement",
+          "dependencies": [],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "TRU-06",
+          "criterion": "All legal obligations applicable to the offered scope have a documented qualified acceptance or bounded unresolved decision",
+          "evidenceRequired": "Applicable-obligation matrix, legal reviewer conclusions and approved exceptions",
+          "dependencies": [
+            "TRU-01",
+            "TRU-03",
+            "TRU-04"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "TRU-01",
+        "TRU-03",
+        "TRU-04"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-23",
+      "label": "Legal, privacy, DPA, transfer and retention truth",
+      "owner": "Normal 4",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "TRU-02",
+          "criterion": "Product terms, privacy notice and applicable DPA are accurate, accessible and reviewed for the target service",
+          "evidenceRequired": "Versioned terms/privacy/DPA, legal approver identity, effective dates",
+          "dependencies": [],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "TRU-03",
+          "criterion": "Subprocessors, retention/deletion, transfers and GDPR role allocation match operating reality",
+          "evidenceRequired": "Verified vendor list and data flow, retention schedule and legal/privacy sign-off",
+          "dependencies": [
+            "TRU-02",
+            "FUN-05"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "TRU-02",
+        "FUN-05"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    },
+    {
+      "id": "A-24",
+      "label": "AI assurance claims and customer procurement commitments",
+      "owner": "Normal 4",
+      "sourceAcceptedStatus": "NOT_VERIFIED",
+      "sourceAcceptanceDate": null,
+      "releaseCandidateAcceptance": "NOT_VERIFIED",
+      "reviewer": null,
+      "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "assessedGithubMainSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "atomicCriteria": [
+        {
+          "id": "TRU-04",
+          "criterion": "AI Act and independent-assurance marketing statements are scoped, current and do not imply false certification",
+          "evidenceRequired": "Fact/legal review checklist and approved claim inventory",
+          "dependencies": [
+            "TRU-02"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        },
+        {
+          "id": "TRU-05",
+          "criterion": "Customer-ready security questionnaire, disclosure/contact route, support and incident commitments are truthful",
+          "evidenceRequired": "Evidence-indexed procurement packet, tested contact path and approved commitments",
+          "dependencies": [
+            "OPS-04",
+            "TRU-02"
+          ],
+          "sourceStatus": "NOT_VERIFIED",
+          "sourceEvidenceRefs": [],
+          "sourceAcceptedBy": null,
+          "sourceAcceptedAt": null
+        }
+      ],
+      "evidence": [],
+      "blockers": [],
+      "dependencies": [
+        "TRU-02",
+        "OPS-04"
+      ],
+      "nextAction": "Await executor handoff with source SHA, exact environment, reproducible tests, reviewer and actual evidence; independently review before changing acceptance.",
+      "ownerHandoffRequired": [
+        "OWNER",
+        "GATE",
+        "ATOMIC",
+        "BASE_SHA",
+        "HEAD_SHA",
+        "BRANCH",
+        "PR_URL",
+        "TESTS",
+        "ENVIRONMENT",
+        "EVIDENCE",
+        "RISKS",
+        "DEPENDENCIES",
+        "REVIEWER",
+        "NEXT_ACTION"
+      ]
+    }
+  ]
+}
