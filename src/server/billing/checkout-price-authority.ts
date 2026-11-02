@@ -10,6 +10,7 @@ export type CheckoutPriceAuthorityInput = {
   priceId: string;
   expectedAmountCents: number | null;
   expectedMode: 'test' | 'live' | null;
+  expectedInterval?: 'month' | 'year';
 };
 
 type CheckoutStripePrice = {
@@ -55,7 +56,7 @@ export function validateCheckoutPriceAuthority(
     || price.currency?.toLowerCase() !== 'eur'
     || price.unit_amount !== contract.expectedAmountCents
     || price.billing_scheme !== 'per_unit'
-    || price.recurring?.interval !== 'month'
+    || price.recurring?.interval !== (contract.expectedInterval ?? 'month')
     || price.recurring?.interval_count !== 1
     || price.recurring?.usage_type !== 'licensed'
     || !price.product
