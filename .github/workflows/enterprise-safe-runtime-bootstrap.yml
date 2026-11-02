@@ -5,6 +5,7 @@ run-name: Safe runtime bootstrap for ${{ inputs.release_sha || github.event.work
 on:
   workflow_run:
     workflows: [Full Security Suite]
+    branches: [main]
     types: [completed]
   workflow_dispatch:
     inputs:
