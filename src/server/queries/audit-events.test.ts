@@ -294,6 +294,62 @@ describe('audit event persistence', () => {
     expect(queryBuilder.insert).not.toHaveBeenCalled();
   });
 
+  it('does not downgrade to direct or legacy insert on permission-denied RPC errors even when fallbacks are configured', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '42501', message: 'permission denied for function append_audit_event_chained' },
+    }));
+    const supabase = { from: vi.fn(() => queryBuilder), rpc };
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a generic RPC failure mentioning a function as proof the RPC is missing', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: 'P0001', message: 'function append_audit_event_chained failed validation' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'transactional_append_unavailable',
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('still recognizes the typed PostgREST schema-cache missing-RPC code for the explicit fallback', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    const queryBuilder = createQueryBuilder(['hash-a', 'hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: 'PGRST202', message: 'Could not find the function in the schema cache' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toMatchObject({
+      persisted: true,
+      transactional: false,
+      rpcUnavailable: true,
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).toHaveBeenCalledTimes(1);
+  });
+
   it('allows direct chained insert only through an explicit non-enterprise fallback flag', async () => {
     vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
     const queryBuilder = createQueryBuilder(['hash-a', 'hash-a']);
