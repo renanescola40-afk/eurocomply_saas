@@ -19,6 +19,10 @@ parameters:
     type: boolean
     default: false
 
+  run_actions_recovery_quality:
+    type: boolean
+    default: false
+
   run_enterprise_source:
     type: boolean
     default: false
@@ -169,6 +173,59 @@ jobs:
               tests/ci/github-actions-budget-regression.test.mjs \
               tests/enterprise/p0-progress-concurrency.test.mjs \
               tests/security/enterprise-100-stale-workflow-run-guard.test.mjs
+
+  # Second-stage opt-in; never auto-trigger, deploy, write to production or use provider secrets.
+  github-actions-recovery-quality:
+    docker:
+      - image: cimg/node:22
+    resource_class: medium
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact branch, source SHA and non-privileged environment
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "fix/actions-p0-runner-storm-20261102" || {
+              echo "Recovery quality must run only on its isolated branch" >&2
+              exit 1
+            }
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI commit}" || {
+              echo "Refusing a checkout that does not match the pipeline SHA" >&2
+              exit 1
+            }
+            node -e "if (Number(process.versions.node.split('.')[0]) !== 22) process.exit(1)"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY; do
+              if [ -n "${!key:-}" ]; then
+                echo "Forbidden credential present in source quality job: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Deterministic dependency install without lifecycle scripts
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Lockfile consistency and repository security policies
+          command: |
+            set -euo pipefail
+            npm run security:package-lock
+            node scripts/security/run-security-ci-without-audit.mjs
+      - run:
+          name: ESLint and TypeScript
+          command: |
+            set -euo pipefail
+            npm run lint
+            npm run typecheck
+      - run:
+          name: Application unit tests
+          command: npm run test
+      - run:
+          name: Next.js CI build using non-production placeholders
+          environment:
+            NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+            NODE_OPTIONS: --max-old-space-size=3072
+          command: npm run build
 
   # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
   qa-preflight-offline:
@@ -568,6 +625,16 @@ workflows:
     when: << pipeline.parameters.run_actions_recovery >>
     jobs:
       - github-actions-recovery-smoke:
+          filters:
+            branches:
+              only:
+                - fix/actions-p0-runner-storm-20261102
+
+  github-actions-recovery-quality-manual:
+    # Independent quality phase. Enable only after a successful small smoke test.
+    when: << pipeline.parameters.run_actions_recovery_quality >>
+    jobs:
+      - github-actions-recovery-quality:
           filters:
             branches:
               only:

@@ -24,3 +24,15 @@ Preview does not enforce GitHub concurrency and some permission scopes.
 
 CircleCI-only results do NOT unblock exhausted GitHub-hosted Actions and do not enforce main merge protection.
 Rollback: revert this isolated change. No production, payments or merge changes involved.
+
+## Optional phase 2 — quality and build
+
+After the smoke job completes successfully, a separate boolean `run_actions_recovery_quality=true` can run native CircleCI `github-actions-recovery-quality-manual` on the same isolated recovery branch. It defaults to `false`, and should NOT be enabled until the owner has reviewed the current Free credits; Docker Medium uses more credits than Docker Small.
+
+The second job refuses protected provider credentials, requires exact `CIRCLE_SHA1`, installs dependencies with `--ignore-scripts`, runs lockfile checks, static security, ESLint, TypeScript, application unit tests and the Next.js build using only public CI placeholders. It does not run E2E against production or access Stripe LIVE.
+
+Quality/build PASS is a separate SOURCE-ONLY result. It cannot turn an unexecuted CodeQL/Gitleaks/GitHub required status into PASS, approve a PR or unblock GitHub Actions spending limits.
+
+Operator: trigger exactly once on `fix/actions-p0-runner-storm-20261102` with `run_actions_recovery_quality=true` and `run_actions_recovery=false`, after smoke PASS. Retain the exact source SHA and link. If it fails, do not repeatedly rerun before analyzing the logs.
+
+Restore previous behavior by reverting the isolated change. No billing, plan or main-branch change is authorized.
