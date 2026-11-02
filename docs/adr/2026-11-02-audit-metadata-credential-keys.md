@@ -41,3 +41,12 @@ path remains available. No fallback flag is enabled by this PR.
 Reviewers must independently consider whether these code predicates are correct
 for the deployed PostgREST release. This strengthens fail-closed safety but is
 not itself proof of the historical runtime failure's root cause.
+
+## Missing-column classifier
+The companion direct-insert error predicate also treated *message text* mentioning
+an audit column as proof of schema absence. Under both explicit compatibility
+flags, a `42501` column-privilege denial could otherwise fall through to a
+legacy insert. Accept only typed `42703` or `PGRST204` column errors.
+Negative and positive tests verify that a permission-denied insert stops before
+legacy fallback while a genuine missing-column error retains the explicit
+compatibility path. Neither branch is enabled by default or configured here.
