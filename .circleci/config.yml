@@ -15,6 +15,10 @@ parameters:
     type: boolean
     default: false
 
+  run_actions_recovery:
+    type: boolean
+    default: false
+
   run_enterprise_source:
     type: boolean
     default: false
@@ -128,6 +132,43 @@ jobs:
       - store_artifacts:
           path: artifacts/circleci-source-validation
           destination: source-only-exact-sha-evidence
+
+  # Explicit opt-in. No build, deploy, production keys or provider mutations.
+  github-actions-recovery-smoke:
+    docker:
+      - image: cimg/node:22
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact GitHub recovery branch and no privileged credentials
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "fix/actions-p0-runner-storm-20261102" || {
+              echo "Unexpected branch" >&2; exit 1
+            }
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing source SHA}" || {
+              echo "Refusing non-identical checkout SHA" >&2; exit 1
+            }
+            node -e "if (Number(process.versions.node.split('.')[0]) !== 22) process.exit(1)"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY; do
+              if [ -n "${!key:-}" ]; then
+                echo "Privileged provider credential is forbidden for offline CI: $key" >&2
+                exit 1
+              fi
+            done
+            echo "Source-only GitHub Actions recovery contracts for $CIRCLE_SHA1"
+      - run:
+          name: Test workflow fixes and security/Free invariants
+          command: |
+            set -euo pipefail
+            node --test --test-reporter=tap \
+              tests/ci/circleci-github-actions-recovery-contract.test.mjs \
+              tests/ci/workflow-run-main-branch-contract.test.mjs \
+              tests/ci/github-actions-budget-regression.test.mjs \
+              tests/enterprise/p0-progress-concurrency.test.mjs \
+              tests/security/enterprise-100-stale-workflow-run-guard.test.mjs
 
   # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
   qa-preflight-offline:
@@ -521,6 +562,16 @@ jobs:
           destination: enterprise-postgres-synthetic-exact-sha
 
 workflows:
+
+  github-actions-recovery-manual:
+    # No jobs run unless an operator supplies run_actions_recovery=true.
+    when: << pipeline.parameters.run_actions_recovery >>
+    jobs:
+      - github-actions-recovery-smoke:
+          filters:
+            branches:
+              only:
+                - fix/actions-p0-runner-storm-20261102
 
   enterprise-source-proof-manual:
     when: << pipeline.parameters.run_enterprise_source >>
