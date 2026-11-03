@@ -244,7 +244,37 @@ jobs:
             NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
             NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
             NODE_OPTIONS: --max-old-space-size=2560
-          command: npm run build
+          command: |
+            set -euo pipefail
+            # Bounded numeric-only cgroup readback; never dump environment or tokens.
+            mem=/sys/fs/cgroup/memory.events
+            limit=/sys/fs/cgroup/memory.max
+            if [ -r "$limit" ]; then
+              printf 'CI_CGROUP_MEMORY_LIMIT=%s\n' "$(cat "$limit")"
+            fi
+            before=0
+            if [ -r "$mem" ]; then
+              before=$(awk '$1=="oom_kill" {print $2}' "$mem")
+              printf 'CI_OOM_KILL_BEFORE=%s\n' "${before:-0}"
+            fi
+            set +e
+            npm run build
+            status=$?
+            set -e
+            after=0
+            if [ -r "$mem" ]; then
+              after=$(awk '$1=="oom_kill" {print $2}' "$mem")
+              printf 'CI_OOM_KILL_AFTER=%s\n' "${after:-0}"
+            fi
+            printf 'CI_BUILD_EXIT=%s\n' "$status"
+            if [ "$status" -eq 137 ]; then
+              if [ "${after:-0}" -gt "${before:-0}" ]; then
+                echo 'CI_BUILD_CLASS=CGROUP_OOM_KILL_OBSERVED'
+              else
+                echo 'CI_BUILD_CLASS=EXIT_137_OOM_UNCONFIRMED'
+              fi
+            fi
+            exit "$status"
 
   # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
   qa-preflight-offline:
