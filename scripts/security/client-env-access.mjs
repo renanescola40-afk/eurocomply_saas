@@ -1,14 +1,13 @@
+import ts from 'typescript';
+
 /**
- * Find client-side process.env references that are not direct NEXT_PUBLIC_* accesses.
- * Next.js only substitutes direct, statically named public variables. Indirection,
- * destructuring and bracket access are deliberately rejected (fail closed).
- * Source checks are defense-in-depth, not evidence of deployed bundle safety.
+ * Identify non-public process environment access in client-boundary TS/JS.
+ * Parsing the syntax tree prevents aliases and destructuring from evading a
+ * process.env-only regex, without treating comments or string text as code.
+ * A direct, statically named, approved NEXT_PUBLIC_* access is the only allowed
+ * use of the global `process` object. This is source-level defense in depth;
+ * emitted browser bundles and provider secrets need separate verification.
  */
-const PROCESS_ENV_REFERENCE = /\bprocess\s*(?:(?:\?\.|\.)\s*env|(?:\?\.\s*)?\[\s*['"]env['"]\s*\])/g;
-const DIRECT_PUBLIC_ACCESS = /^\s*\.\s*(NEXT_PUBLIC_[A-Z0-9_]+)\b/;
-// Keep this finite list aligned with the approved public variable names in
-// scripts/security/check-public-secrets.mjs; an arbitrary NEXT_PUBLIC_ prefix
-// is not sufficient proof that a name or value is safe for the browser.
 const APPROVED_PUBLIC_ENV_NAMES = new Set([
   'NEXT_PUBLIC_APP_URL',
   'NEXT_PUBLIC_SITE_URL',
@@ -20,13 +19,56 @@ const APPROVED_PUBLIC_ENV_NAMES = new Set([
   'NEXT_PUBLIC_SENTRY_DSN',
 ]);
 
-export function findUnsafeClientEnvReferences(source) {
-  const findings = [];
-  for (const match of source.matchAll(PROCESS_ENV_REFERENCE)) {
-    const start = match.index ?? 0;
-    const suffix = source.slice(start + match[0].length);
-    const directPublicAccess = DIRECT_PUBLIC_ACCESS.exec(suffix);
-    if (match[0] !== 'process.env' || !directPublicAccess || !APPROVED_PUBLIC_ENV_NAMES.has(directPublicAccess[1])) findings.push(start);
+function isIdentifier(node, value) {
+  return ts.isIdentifier(node) && node.text === value;
+}
+
+function isDirectApprovedPublicAccess(processNode) {
+  const envAccess = processNode.parent;
+  if (!ts.isPropertyAccessExpression(envAccess) || envAccess.expression !== processNode ||
+      !isIdentifier(envAccess.name, 'env') || envAccess.questionDotToken) return false;
+
+  const publicAccess = envAccess.parent;
+  return ts.isPropertyAccessExpression(publicAccess) &&
+    publicAccess.expression === envAccess && !publicAccess.questionDotToken &&
+    APPROVED_PUBLIC_ENV_NAMES.has(publicAccess.name.text);
+}
+
+function isGlobalProcessProperty(node) {
+  const parent = node.parent;
+  // "foo.process" can be an ordinary application-domain property. Only a
+  // globalThis/window/self process property denotes the process global here.
+  if (ts.isPropertyAccessExpression(parent) && parent.name === node) {
+    return ['globalThis', 'window', 'self'].some((name) => isIdentifier(parent.expression, name));
   }
-  return findings;
+  // Object keys and destructuring property names do not read the global.
+  if (ts.isPropertyAssignment(parent) && parent.name === node) return false;
+  if (ts.isBindingElement(parent) && parent.propertyName === node) {
+    const declaration = parent.parent?.parent;
+    return ts.isVariableDeclaration(declaration) &&
+      ['globalThis', 'window', 'self'].some((name) => isIdentifier(declaration.initializer, name));
+  }
+  return true;
+}
+
+export function findUnsafeClientEnvReferences(source) {
+  const syntaxTree = ts.createSourceFile('client-boundary.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const findings = [];
+  function visit(node) {
+    if (isIdentifier(node, 'process') && isGlobalProcessProperty(node) &&
+        !isDirectApprovedPublicAccess(node)) {
+      findings.push(node.getStart(syntaxTree));
+    }
+    // globalThis['process'], window["process"] and equivalent template keys
+    // bypass direct identifier references, so explicitly reject them.
+    if (ts.isElementAccessExpression(node) &&
+        ['globalThis', 'window', 'self'].some((name) => isIdentifier(node.expression, name)) &&
+        (ts.isStringLiteral(node.argumentExpression) || ts.isNoSubstitutionTemplateLiteral(node.argumentExpression)) &&
+        node.argumentExpression.text === 'process') {
+      findings.push(node.getStart(syntaxTree));
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(syntaxTree);
+  return findings.sort((a, b) => a - b);
 }

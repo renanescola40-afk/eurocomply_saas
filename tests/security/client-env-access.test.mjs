@@ -87,3 +87,34 @@ test('whole scanner does not treat comment-only use client text as a directive',
   const result = runClientBoundaryScanner('// "use client" is only documentation\nconst key = process.env.STRIPE_SECRET_KEY;', { addDirective: false });
   assert.equal(result.status, 0, result.stdout + result.stderr);
 });
+
+const aliasRegressionCases = [
+  ['global process object cannot be aliased', 'const runtime = process; const key = runtime.env.SUPABASE_SERVICE_ROLE_KEY;', 1],
+  ['destructuring env from process is blocked', 'const { env } = process; const key = env.STRIPE_SECRET_KEY;', 1],
+  ['destructuring renamed env is blocked', 'const { env: secrets } = process; const key = secrets.STRIPE_SECRET_KEY;', 1],
+  ['globalThis process property is blocked', 'const key = globalThis.process.env.SUPABASE_SERVICE_ROLE_KEY;', 1],
+  ['globalThis string bracket alias is blocked', 'const key = globalThis["process"]["env"].STRIPE_SECRET_KEY;', 1],
+  ['globalThis template bracket alias is blocked', 'const key = globalThis[`process`].env.SECRET;', 1],
+  ['globalThis process destructuring alias is blocked', 'const { process: runtime } = globalThis; const key = runtime.env.SECRET;', 1],
+  ['process in comments is not an executable reference', '// process.env.SUPABASE_SERVICE_ROLE_KEY\nconst x = 1;', 0],
+  ['process inside a plain string is not executable', 'const label = "process.env.SUPABASE_SERVICE_ROLE_KEY";', 0],
+  ['process as an ordinary domain object property is not global process', 'const record = event.process;', 0],
+  ['process as an object literal key is not global process', 'const result = { process: "complete" };', 0],
+  ['template literal expression is executable', 'const label = `${process.env.STRIPE_SECRET_KEY}`;', 1],
+];
+for (const [description, source, expectedCount] of aliasRegressionCases) {
+  test(description, () => {
+    assert.equal(findUnsafeClientEnvReferences(source).length, expectedCount);
+  });
+}
+
+test('whole scanner rejects process object alias in a client component', () => {
+  const result = runClientBoundaryScanner('const runtime = process; export const key = runtime.env.STRIPE_SECRET_KEY;');
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stderr, /indirect process alias/);
+});
+
+test('whole scanner rejects globalThis bracket process indirection', () => {
+  const result = runClientBoundaryScanner('export const key = globalThis["process"]["env"].SUPABASE_SERVICE_ROLE_KEY;');
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+});

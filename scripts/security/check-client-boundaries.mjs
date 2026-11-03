@@ -132,7 +132,7 @@ for (const file of files) {
   }
 
   for (const index of findUnsafeClientEnvReferences(source)) {
-    failures.push(`${normalized}:${lineNumberFor(source, index)} client boundary references process.env without a direct NEXT_PUBLIC_* property`);
+    failures.push(`${normalized}:${lineNumberFor(source, index)} client boundary references process.env or an indirect process alias without approved direct NEXT_PUBLIC_* access`);
   }
 
   const lines = source.split('\n');
