@@ -1,5 +1,5 @@
 {
-  "OBSERVED_AT": "2026-11-03T12:57:00Z",
+  "OBSERVED_AT": "2026-11-03T12:56:06Z",
   "GITHUB_MAIN_SHA": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
   "GITLAB_MAIN_SHA": "84a99f813bdce601c119bff27c1d82c5356295d6",
   "VERCEL_PRODUCTION_SHA": "70d3545f414d063379d481fd238aed563e05edda",
@@ -58,7 +58,7 @@
     "Independent evidence acceptance for remaining gates; buyer/legal/security assurance remains external where applicable.",
     "DAT-01 needs qualified review of the 137-entry source crosswalk / 123 SQL statement hash mismatches before any canonical replay; no production operation is authorized."
   ],
-  "NEXT_EXECUTABLE_ACTION": "Recover and independently validate production migration source bytes for the 137 identities or obtain approved repository provenance explaining all 123 hash mismatches; revise G5-02 runner only after a qualified reviewer approves crosswalk execution semantics, including the two consolidated groups and superseded entries. Then replay on disposable PostgreSQL 17, assess schema/RLS/grants/functions and durable QA status. Keep DAT-01 blocked until all acceptance evidence is reviewed.",
+  "NEXT_EXECUTABLE_ACTION": "Recover and independently validate production migration source bytes for the 137 identities or obtain approved repository provenance explaining all 123 hash mismatches; PR #2559 separately confirms a ledger-bound manifest is required and provider records are non-executable. Have a qualified reviewer approve crosswalk execution semantics, including the two consolidated groups and superseded entries, before revising G5-02. Then replay on disposable PostgreSQL 17 and assess schema/RLS/grants/functions and durable QA status. Keep DAT-01 blocked until all acceptance evidence is reviewed.",
   "VERCEL_READBACK_STATUS": "Not re-read: Vercel API returned 403 for the supplied team scope; this SHA remains the last observed historical production value and is not asserted current.",
   "CIRCLECI_JOB_ID": "473b5b43-8ac0-40c6-8fdb-a9353d65c873",
   "CIRCLECI_VALIDATED_SHA": "feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6",
@@ -66,5 +66,5 @@
   "CIRCLECI_RESULT": "FAIL at source-ledger preflight, exit 1; exact SHA feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6; artifact replay.json: failure_code SOURCE_LEDGER_MISMATCH, expected 137, completed 0, 25 missing exact filename timestamps, 0 duplicates. Synthetic PostgreSQL service and credential isolation PASS. No migration executed.",
   "CIRCLECI_INCLUDED_CREDIT_STATUS": "Current Free usage page: 30,000 monthly included credits, 10,233 used (19,767 remaining); no plan change/purchase/add-on. #866 completed 21 sec on Docker Small; exact credit attribution not exposed on this page.",
   "CIRCLECI_REPLAY_ARTIFACT": "https://app.circleci.com/pipelines/gh/renanescola40-afk/eurocomply_saas/866/details?useNewPipelines=true&workflowId=d80af373-5868-40bb-9936-cb910a580c61&job=473b5b43-8ac0-40c6-8fdb-a9353d65c873&buildNumber=428&jobType=build&tab=artifacts",
-  "CROSSWALK_EVIDENCE": "Candidate crosswalk 20261022: 137/137 production identities mapped, 135 unique source files, 2 consolidated groups, 0 unresolved. Contract says planning/recovery source only, not executable. Provider SQL statement evidence states 123/137 records do not hash-match repository sources."
+  "CROSSWALK_EVIDENCE": "Candidate crosswalk 20261022: 137/137 production identities mapped, 135 unique source files, 2 consolidated groups, 0 unresolved. Contract says planning/recovery source only, not executable. Provider SQL statement evidence states 123/137 records do not hash-match repository sources. Merged PR #2559 independently documented 359 SQL files/336 distinct versions/16 duplicate groups at its then-current tree and explicitly concluded a production-ledger-bound replay manifest was still required; it also says its provider reconciliation records are not automatic migrations. This supports keeping the current replay blocked pending reviewed ledger-bound source selection."
 }
