@@ -21,6 +21,37 @@ export function validateEvidenceRecord(r,{expectedSha,now=new Date()}={}){
  if(r.status==='NOT_APPLICABLE'&&(!r.applicability_rationale||r.applicability_rationale.length<20||r.reviewer_status!=='ACCEPTED'||r.acceptance_status!=='ACCEPTED'))e.push('not_applicable_requires_approved_rationale');
  return e;
 }
+
+// A gate may claim acceptance only after ALL children pass and a separate
+// qualified review is recorded against the exact SHA and digest-matched proof.
+// This validates the ledger shape; the release reviewer must also independently
+// verify the external approval URL against the provider.
+export function validateGateAcceptance(gate,{eligible,expectedSha,now=new Date()}={}){
+ if(gate?.accepted!==true)return [];
+ const errors=[];
+ if(!eligible)errors.push('child_controls_not_all_pass');
+ for(const key of ['accepted_by','reviewer_id','approval_url','acceptance_evidence_ref']){
+  if(typeof gate[key]!=='string'||!gate[key].trim())errors.push(key+'_required');
+ }
+ if(gate.reviewer_status!=='ACCEPTED'||gate.acceptance_status!=='ACCEPTED')errors.push('qualified_acceptance_required');
+ const when=Date.parse(gate.accepted_at||'');
+ if(!Number.isFinite(when)||when>now.getTime())errors.push('accepted_at_missing_invalid_or_future');
+ if(!SHA40.test(gate.acceptance_sha||''))errors.push('acceptance_sha_invalid');
+ else if(expectedSha&&gate.acceptance_sha!==expectedSha)errors.push('acceptance_sha_mismatch');
+ if(typeof gate.approval_url==='string'&&!/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/pull\/\d+#pullrequestreview-\d+$/.test(gate.approval_url))errors.push('qualified_review_url_invalid');
+ const ref=gate.acceptance_evidence_ref;
+ if(typeof ref==='string'&&ref.trim()){
+  const absolute=path.resolve(ROOT,ref);
+  if(!absolute.startsWith(ROOT+path.sep))errors.push('acceptance_artifact_path_outside_repository');
+  else if(!fs.existsSync(absolute)||!fs.statSync(absolute).isFile())errors.push('acceptance_artifact_missing');
+  else {
+   const digest=crypto.createHash('sha256').update(fs.readFileSync(absolute)).digest('hex');
+   if(!SHA256.test(gate.acceptance_evidence_sha256||'')||digest!==gate.acceptance_evidence_sha256)errors.push('acceptance_artifact_sha256_mismatch');
+  }
+ }
+ return errors;
+}
+
 export function reconcile({scope,gates,index,expectedSha,now=new Date()}){
  const errors=[];if(scope.mandatory.length!==38)errors.push('atomic_scope_must_equal_38');if(gates.groups.length!==24)errors.push('formal_gate_scope_must_equal_24');if(index.fixed_scope?.atomic_controls!==38||index.fixed_scope?.formal_gates!==24)errors.push('index_scope_mismatch');
  const ids=new Set(scope.mandatory.map(c=>c.id)), mappedIds=gates.groups.flatMap(g=>g.atomicCriteria), seen=new Set(), byControl=new Map();
@@ -28,7 +59,7 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date()}){
  for(const id of mappedIds)if(!ids.has(id))errors.push('gate_maps_unknown_control:'+id);
  for(const r of index.evidence_records||[]){if(seen.has(r.evidence_id))errors.push('duplicate_evidence_id:'+r.evidence_id);seen.add(r.evidence_id);if(!ids.has(r.control_id))errors.push('unknown_control:'+r.control_id);const mapped=gates.groups.filter(g=>g.atomicCriteria.includes(r.control_id)).map(g=>g.id);if(!mapped.includes(r.gate_id))errors.push('control_gate_mapping_mismatch:'+r.control_id);const re=validateEvidenceRecord(r,{expectedSha,now});if(re.length)errors.push(r.evidence_id+':'+re.join(','));if(!byControl.has(r.control_id))byControl.set(r.control_id,[]);byControl.get(r.control_id).push(r);}
  const controls=scope.mandatory.map(c=>{const rs=byControl.get(c.id)||[];const validPass=rs.some(r=>r.status==='PASS'&&r.reviewer_status==='ACCEPTED'&&r.acceptance_status==='ACCEPTED'&&validateEvidenceRecord(r,{expectedSha,now}).length===0);const sourceEvidenceValid=Array.isArray(c.evidenceRefs)&&c.evidenceRefs.length>0&&c.evidenceRefs.every(ref=>{if(typeof ref!=='string'||!ref.trim())return false;const p=path.resolve(ROOT,ref);return p.startsWith(ROOT+path.sep)&&fs.existsSync(p)&&fs.statSync(p).isFile();});const sourceAccepted=c.status==='PASS'&&typeof c.acceptedBy==='string'&&c.acceptedBy.trim().length>0&&Number.isFinite(Date.parse(c.acceptedAt||''))&&Date.parse(c.acceptedAt)<=now.getTime()&&sourceEvidenceValid;const status=validPass||sourceAccepted?'PASS':rs.some(r=>r.status==='FAIL')?'FAIL':c.status==='BLOCKED'||rs.some(r=>r.status==='BLOCKED')?'BLOCKED':c.status;return {control_id:c.id,status,source_status:c.status,evidence_count:rs.length,valid_pass_evidence:validPass};});
- const gateRows=gates.groups.map(g=>{const children=g.atomicCriteria.map(id=>controls.find(c=>c.control_id===id));const sourceGate=(index.gates||[]).find(x=>x.gate_id===g.id);const computed=children.length===g.atomicCriteria.length&&children.every(c=>c?.status==='PASS')?'ELIGIBLE_FOR_INDEPENDENT_REVIEW':children.some(c=>c?.status==='BLOCKED')?'BLOCKED':'NOT_ELIGIBLE';const status=sourceGate?.status==='REQUIRES_RECONCILIATION'?'REQUIRES_RECONCILIATION':computed;return {gate_id:g.id,atomic_control_ids:g.atomicCriteria,status,accepted:sourceGate?.accepted===true};});
+ const gateRows=gates.groups.map(g=>{const children=g.atomicCriteria.map(id=>controls.find(c=>c.control_id===id));const sourceGate=(index.gates||[]).find(x=>x.gate_id===g.id);const computed=children.length===g.atomicCriteria.length&&children.every(c=>c?.status==='PASS')?'ELIGIBLE_FOR_INDEPENDENT_REVIEW':children.some(c=>c?.status==='BLOCKED')?'BLOCKED':'NOT_ELIGIBLE';const status=sourceGate?.status==='REQUIRES_RECONCILIATION'?'REQUIRES_RECONCILIATION':computed;const reviewErrors=validateGateAcceptance(sourceGate,{eligible:computed==='ELIGIBLE_FOR_INDEPENDENT_REVIEW'&&status===computed,expectedSha,now});if(reviewErrors.length)errors.push('invalid_gate_acceptance:'+g.id+':'+reviewErrors.join(','));return {gate_id:g.id,atomic_control_ids:g.atomicCriteria,status,accepted:sourceGate?.accepted===true&&reviewErrors.length===0};});
  return {valid:errors.length===0,errors,summary:{controls_total:38,controls_pass:controls.filter(c=>c.status==='PASS').length,controls_blocked:controls.filter(c=>c.status==='BLOCKED').length,controls_not_verified:controls.filter(c=>c.status==='NOT_VERIFIED').length,controls_fail:controls.filter(c=>c.status==='FAIL').length,evidence_records:(index.evidence_records||[]).length,evidence_records_valid:(index.evidence_records||[]).filter(r=>validateEvidenceRecord(r,{expectedSha,now}).length===0).length,gates_total:24,gates_eligible:gateRows.filter(g=>g.status==='ELIGIBLE_FOR_INDEPENDENT_REVIEW').length,gates_blocked:gateRows.filter(g=>g.status==='BLOCKED').length,gates_accepted:gateRows.filter(g=>g.accepted).length},controls,gates:gateRows};
 }
 function main(){const args=process.argv.slice(2),strict=args.includes('--strict'),index=read('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json'),expectedSha=process.env.EVIDENCE_EXACT_SHA||index.source.commit_sha;const result=reconcile({scope:read('config/g1-enterprise-scope-v1.json'),gates:read('config/g1-product-ready-24-gates.json'),index,expectedSha});const dir=path.join(ROOT,'artifacts/enterprise-evidence-factory');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'progress-report.json'),JSON.stringify({...result,source_sha:expectedSha,ci_sha:process.env.GITHUB_SHA||null,generated_at:new Date().toISOString()},null,2)+'\n');console.log(JSON.stringify(result,null,2));if(!result.valid||(strict&&result.summary.gates_accepted!==24))process.exitCode=1;}

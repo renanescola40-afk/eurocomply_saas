@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {validateEvidenceRecord,reconcile} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 const sha='a'.repeat(40),hash='b'.repeat(64),base={evidence_id:'EV-SEC-01-001',control_id:'SEC-01',gate_id:'A-01',evidence_type:'runtime-test',status:'NOT_VERIFIED',repository:'renanescola40-afk/eurocomply_saas',branch:'enterprise/evidence-factory-v1-20261101',commit_sha:sha,workflow_run_id:null,environment:'isolated-qa',generated_at:'2026-11-01T10:00:00Z',source_system:'GitHub Actions',test_command_or_provider_query:'npm run test:auth',result_summary:'Recorded, not accepted.',artifact_path:'artifacts/evidence/sec-01.json',artifact_sha256:hash,reproducibility_instructions:'Run against exact commit SHA.',limitations:[],reviewer_status:'NOT_REVIEWED',acceptance_status:'NOT_ACCEPTED'};
 test('rejects evidence bound to another SHA',()=>assert.ok(validateEvidenceRecord(base,{expectedSha:'c'.repeat(40)}).includes('commit_sha_mismatch')));
 test('PASS requires independent acceptance and an existing digest-matched artifact',()=>{const e=validateEvidenceRecord({...base,status:'PASS'},{expectedSha:sha});assert.ok(e.includes('pass_requires_independent_acceptance'));assert.ok(e.includes('artifact_missing'));});
@@ -27,4 +27,48 @@ test('does not promote a source PASS without accepted metadata and a referenced 
  const r=reconcile({scope:{mandatory},gates:{groups},index:{fixed_scope:{atomic_controls:38,formal_gates:24},evidence_records:[]}});
  assert.equal(r.summary.controls_pass,0);
  assert.equal(r.gates.find(g=>g.gate_id==='A-01').status,'NOT_ELIGIBLE');
+});
+
+
+test('rejects manually toggled A-12 acceptance when its atomic DAT-01 is BLOCKED',()=>{
+ const mandatory=Array.from({length:38},(_,i)=>({id:'X-'+i,status:'NOT_VERIFIED',evidenceRefs:[]}));
+ mandatory[0]={id:'DAT-01',status:'BLOCKED',evidenceRefs:[]};
+ const groups=Array.from({length:24},(_,i)=>({id:'A-'+String(i+1).padStart(2,'0'),atomicCriteria:[i===0?'DAT-01':'X-'+i]}));
+ const result=reconcile({scope:{mandatory},gates:{groups},index:{
+  fixed_scope:{atomic_controls:38,formal_gates:24},
+  evidence_records:[],
+  gates:[{gate_id:'A-01',status:'PASS',accepted:true}]
+ },expectedSha:sha});
+ assert.equal(result.summary.gates_accepted,0);
+ assert.equal(result.gates[0].accepted,false);
+ assert.ok(result.errors.some(e=>e.includes('invalid_gate_acceptance:A-01')));
+ assert.equal(result.valid,false);
+});
+
+test('rejects synthetic approved gate with missing review, proof digest or different SHA',()=>{
+ const denied=validateGateAcceptance({accepted:true,accepted_by:'someone',accepted_at:'2099-01-01',acceptance_sha:'c'.repeat(40),acceptance_evidence_ref:'missing.json'},{
+  eligible:true,expectedSha:sha,now:new Date('2026-11-03T00:00:00Z')
+ });
+ assert.ok(denied.includes('qualified_acceptance_required'));
+ assert.ok(denied.includes('accepted_at_missing_invalid_or_future'));
+ assert.ok(denied.includes('acceptance_sha_mismatch'));
+ assert.ok(denied.includes('acceptance_artifact_missing'));
+});
+
+test('approved gate claim without all child PASS is rejected even with valid metadata and matching evidence bytes',()=>{
+ const rel='artifacts/enterprise-evidence-factory/acceptance-gate-negative.json';
+ const abs=path.resolve(process.cwd(),rel);
+ fs.mkdirSync(path.dirname(abs),{recursive:true});
+ const data='{"kind":"test-only"}';
+ fs.writeFileSync(abs,data);
+ const digest=crypto.createHash('sha256').update(data).digest('hex');
+ const claim={accepted:true,accepted_by:'Reviewer 2',reviewer_id:'reviewer-2',
+  reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
+  accepted_at:'2026-11-02T12:00:00Z',acceptance_sha:sha,
+  approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2598#pullrequestreview-123',
+  acceptance_evidence_ref:rel,acceptance_evidence_sha256:digest};
+ try{
+  assert.deepEqual(validateGateAcceptance(claim,{eligible:true,expectedSha:sha,now:new Date('2026-11-03T00:00:00Z')}),[]);
+  assert.ok(validateGateAcceptance(claim,{eligible:false,expectedSha:sha,now:new Date('2026-11-03T00:00:00Z')}).includes('child_controls_not_all_pass'));
+ }finally{fs.rmSync(abs,{force:true});}
 });
