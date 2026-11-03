@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { findUnsafeClientEnvReferences } from './client-env-access.mjs';
 
 const root = process.cwd();
 const srcRoot = join(root, 'src');
@@ -123,8 +124,8 @@ for (const file of files) {
     }
   }
 
-  if (/process\.env\.(?!NEXT_PUBLIC_)[A-Z0-9_]+/.test(source)) {
-    failures.push(`${normalized}: client boundary references non-public process.env value`);
+  for (const index of findUnsafeClientEnvReferences(source)) {
+    failures.push(`${normalized}:${lineNumberFor(source, index)} client boundary references process.env without a direct NEXT_PUBLIC_* property`);
   }
 
   const lines = source.split('\n');
@@ -145,11 +146,8 @@ console.log(`Scanned ${files.length} source files.`);
 if (failures.length > 0) {
   console.error('Client boundary findings:');
   for (const failure of failures) console.error(`- ${failure}`);
-  if (process.env.STRICT_CLIENT_BOUNDARY_SCAN === '1') {
-    process.exitCode = 1;
-  } else {
-    console.warn('Client boundary check is running in report-only mode. Set STRICT_CLIENT_BOUNDARY_SCAN=1 to fail on findings.');
-  }
+  // This is part of the security CI contract: findings must never exit successfully.
+  process.exitCode = 1;
 } else {
   console.log('Client boundary security: ok');
 }
