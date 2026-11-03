@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '../../src/server/billing/checkout-price-authority.ts';
+import { checkoutStripeModeMatchesPurpose, reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '../../src/server/billing/checkout-price-authority.ts';
 
 const contract = { priceId: 'price_pro_monthly', expectedAmountCents: 14900, expectedMode: 'test' };
 const canonical = {
@@ -81,4 +81,13 @@ test('fails closed on empty, paginated, extra, or malformed Checkout Session ite
     { data: [{ price: null, quantity: 1 }], has_more: false },
   ]) assert.equal(reusableCheckoutLineItemsMatch(items, contract.priceId), false);
   assert.equal(reusableCheckoutLineItemsMatch({ data: [{ price: { id: '' }, quantity: 1 }], has_more: false }, ''), false);
+});
+
+test('never permits LIVE keys for validation-only or TEST keys for public paid checkout', () => {
+  assert.equal(checkoutStripeModeMatchesPurpose('test', true), true);
+  assert.equal(checkoutStripeModeMatchesPurpose('live', false), true);
+  assert.equal(checkoutStripeModeMatchesPurpose('test', false), false);
+  assert.equal(checkoutStripeModeMatchesPurpose('live', true), false);
+  assert.equal(checkoutStripeModeMatchesPurpose(null, false), false);
+  assert.equal(checkoutStripeModeMatchesPurpose(null, true), false);
 });
