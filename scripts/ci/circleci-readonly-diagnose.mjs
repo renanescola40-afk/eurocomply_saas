@@ -5,7 +5,6 @@ import { pathToFileURL } from 'node:url';
 
 const PROJECT = 'gh/renanescola40-afk/eurocomply_saas';
 const FAILED = new Set(['failed', 'failing', 'error', 'errored', 'canceled', 'cancelled', 'timedout', 'timed_out']);
-const RELEVANT = /failed|error|assertionerror|\bts\d{4}\b|\boom\b|killed|fatal|memory|out of memory|no space left|econn|enotfound|eai_again|could not resolve|rate limit|429|503|npm err|permission denied|exit code/i;
 
 export function classifyCircleJob(job, stepOutput = '') {
   const status = String(job?.status ?? job?.outcome ?? 'unknown').toLowerCase();
