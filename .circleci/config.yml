@@ -641,7 +641,10 @@ jobs:
           name: Verify review branch, exact SHA and provider secret isolation
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "ci/circleci-enterprise-gates-20261027"
+            case "${CIRCLE_BRANCH:-}" in
+              ci/circleci-enterprise-gates-20261027|integration/enterprise-unified-candidate-20261102) ;;
+              *) echo "Unexpected branch for synthetic PostgreSQL replay: ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
+            esac
             test -n "${CIRCLE_SHA1:-}"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY; do
@@ -720,6 +723,7 @@ workflows:
             branches:
               only:
                 - ci/circleci-enterprise-gates-20261027
+                - integration/enterprise-unified-candidate-20261102
       - enterprise-pg-synthetic-replay:
           requires:
             - approve-enterprise-postgres-synthetic
@@ -727,6 +731,7 @@ workflows:
             branches:
               only:
                 - ci/circleci-enterprise-gates-20261027
+                - integration/enterprise-unified-candidate-20261102
   g5-02-pg-replay-manual:
     # Owner approved G5-02 run on 2026-10-23; branch-scoped, no provider credentials.
     # CircleCI can run on this branch's push; no automated retries configured.
