@@ -164,3 +164,27 @@ test('regression: removing either canonical membership/role delegation fails con
     'enterprise_member_can_manage', /app_private\.has_org_role\(/),
     { name: 'AssertionError' });
 });
+
+test('metadata-only MFA audit accepts safe delegated Clerk/UUID guards but detects a removed guard', () => {
+  // This catches a real false NO_GO observed with the November migration:
+  // the historical audit required tenant_mfa_satisfied on the wrapper,
+  // while the new wrappers enforce it through the canonical private helpers.
+  assert.match(audit, /canonical_status as\s*\(/i);
+  for (const expected of [
+    'canonical_security_definer',
+    'canonical_pinned_search_path',
+    'canonical_mfa',
+    'canonical_clerk',
+    'canonical_uuid',
+    'canonical_active_member',
+    'canonical_authenticated_execution',
+    'canonical_anonymous_execution',
+    'app_private.is_org_member(p_organization_id)',
+    'app_private.has_org_role(',
+    'NO_GO_RUNTIME_MFA',
+    'PASS_METADATA_ONLY',
+  ]) assert.ok(audit.includes(expected), 'Missing fail-closed audit guard: ' + expected);
+  assert.match(audit, /not c\.canonical_anonymous_execution/i);
+  assert.match(audit, /and c\.canonical_mfa/i);
+  assert.match(audit, /not anonymous_execution\)=2/i);
+});
