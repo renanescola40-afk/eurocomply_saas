@@ -10,11 +10,6 @@ import { findUnsafeClientEnvReferences } from '../../scripts/security/client-env
 const cases = [
   ['static public variable stays permitted', 'const url = process.env.NEXT_PUBLIC_APP_URL;', 0],
   ['approved publishable value stays permitted', 'const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;', 0],
-  ['approved PostHog project key stays permitted', 'const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;', 0],
-  ['approved PostHog endpoint stays permitted', 'const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;', 0],
-  ['approved PostHog asset endpoint stays permitted', 'const host = process.env.NEXT_PUBLIC_POSTHOG_ASSET_HOST;', 0],
-  ['approved analytics consent policy stays permitted', 'const consent = process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT;', 0],
-  ['approved session replay policy stays permitted', 'const replay = process.env.NEXT_PUBLIC_POSTHOG_SESSION_REPLAY;', 0],
   ['secret masquerading as public is blocked', 'const key = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;', 1],
   ['unapproved NEXT_PUBLIC name is blocked', 'const key = process.env.NEXT_PUBLIC_CONFIDENTIAL;', 1],
   ['optional public property is blocked', 'const key = process?.env.NEXT_PUBLIC_APP_URL;', 1],
@@ -91,4 +86,54 @@ test('whole scanner recognizes use client after another directive', () => {
 test('whole scanner does not treat comment-only use client text as a directive', () => {
   const result = runClientBoundaryScanner('// "use client" is only documentation\nconst key = process.env.STRIPE_SECRET_KEY;', { addDirective: false });
   assert.equal(result.status, 0, result.stdout + result.stderr);
+});
+
+const aliasRegressionCases = [
+  ['global process object cannot be aliased', 'const runtime = process; const key = runtime.env.SUPABASE_SERVICE_ROLE_KEY;', 1],
+  ['destructuring env from process is blocked', 'const { env } = process; const key = env.STRIPE_SECRET_KEY;', 1],
+  ['destructuring renamed env is blocked', 'const { env: secrets } = process; const key = secrets.STRIPE_SECRET_KEY;', 1],
+  ['globalThis process property is blocked', 'const key = globalThis.process.env.SUPABASE_SERVICE_ROLE_KEY;', 1],
+  ['globalThis string bracket alias is blocked', 'const key = globalThis["process"]["env"].STRIPE_SECRET_KEY;', 1],
+  ['globalThis template bracket alias is blocked', 'const key = globalThis[`process`].env.SECRET;', 1],
+  ['globalThis process destructuring alias is blocked', 'const { process: runtime } = globalThis; const key = runtime.env.SECRET;', 1],
+  ['process in comments is not an executable reference', '// process.env.SUPABASE_SERVICE_ROLE_KEY\nconst x = 1;', 0],
+  ['process inside a plain string is not executable', 'const label = "process.env.SUPABASE_SERVICE_ROLE_KEY";', 0],
+  ['process as an ordinary domain object property is not global process', 'const record = event.process;', 0],
+  ['process as an object literal key is not global process', 'const result = { process: "complete" };', 0],
+  ['template literal expression is executable', 'const label = `${process.env.STRIPE_SECRET_KEY}`;', 1],
+];
+for (const [description, source, expectedCount] of aliasRegressionCases) {
+  test(description, () => {
+    assert.equal(findUnsafeClientEnvReferences(source).length, expectedCount);
+  });
+}
+
+test('whole scanner rejects process object alias in a client component', () => {
+  const result = runClientBoundaryScanner('const runtime = process; export const key = runtime.env.STRIPE_SECRET_KEY;');
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stderr, /indirect process alias/);
+});
+
+test('whole scanner rejects globalThis bracket process indirection', () => {
+  const result = runClientBoundaryScanner('export const key = globalThis["process"]["env"].SUPABASE_SERVICE_ROLE_KEY;');
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+});
+
+const approvedAnalyticsCases = [
+  'NEXT_PUBLIC_POSTHOG_KEY',
+  'NEXT_PUBLIC_POSTHOG_HOST',
+  'NEXT_PUBLIC_POSTHOG_ASSET_HOST',
+  'NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT',
+  'NEXT_PUBLIC_POSTHOG_SESSION_REPLAY',
+];
+
+for (const name of approvedAnalyticsCases) {
+  test(`approved public analytics name ${name} remains permitted`, () => {
+    assert.deepEqual(findUnsafeClientEnvReferences(`export const value = process.env.${name};`), []);
+    assert.equal(findUnsafeClientEnvReferences(`const secret = process.env["${name}"];`).length, 1);
+  });
+}
+
+test('unapproved analytics-looking variables do not silently become public', () => {
+  assert.equal(findUnsafeClientEnvReferences('const secret = process.env.NEXT_PUBLIC_POSTHOG_PRIVATE_TOKEN;').length, 1);
 });
