@@ -61,7 +61,8 @@ try {
   await db.exec(`revoke all on function ${schema}${f.signature} from public,anon,authenticated; grant execute on function ${schema}${f.signature} to service_role;`);
   if(f.signature.startsWith('app_private.')) await db.exec(`grant execute on function ${f.signature} to authenticated;`);
  }
- const migrations=['20261015235500_enterprise_private_membership_mfa_gate.sql','20261018023000_guard_last_active_owner_removal.sql','20261018113000_atomic_member_removal_with_chained_audit.sql','20261018160000_atomic_member_role_change_with_chained_audit.sql','20261018183000_guard_last_active_owner_seat_release.sql','20261018190000_reconcile_audited_membership_usage_counters.sql'];
+ await db.exec(readFileSync('tests/fixtures/p0-postgres/clerk-safe-identity-and-membership.sql','utf8'));
+ const migrations=['20261015235500_enterprise_private_membership_mfa_gate.sql','20261018023000_guard_last_active_owner_removal.sql','20261018113000_atomic_member_removal_with_chained_audit.sql','20261018160000_atomic_member_role_change_with_chained_audit.sql','20261018183000_guard_last_active_owner_seat_release.sql','20261018190000_reconcile_audited_membership_usage_counters.sql','20261103080000_enterprise_clerk_text_subject_mfa_reconciliation.sql'];
  for(const file of migrations) await check('Compile and apply unmodified migration '+file,async()=>{
    const sql=readFileSync('supabase/migrations/'+file,'utf8');
    await db.exec(sql);
@@ -107,6 +108,42 @@ try {
    assert.equal(r.r,active&&mfa);assert.equal(r.m,[0,1,2,4,7].includes(i)&&mfa);
   });
  }
+ // Regression: old Enterprise helpers called auth.uid(), which casts Clerk
+ // text subjects to UUID and throws SQLSTATE 22P02 before policy evaluation.
+ // The new forward-only migration must preserve MFA, role, tenant and
+ // suspended-user denials under a real authenticated PostgreSQL role.
+ for(const [actorIndex,actorRole] of [
+  [0,'owner'],[2,'admin'],[3,'viewer'],[4,'editor'],
+  [5,'owner'],[6,'suspended owner'],[7,'compliance_manager'],
+ ]) for(const aal of ['aal1','aal2']) {
+  await seed();
+  const tenant=actorIndex===5?B:A;
+  const other=actorIndex===5?A:B;
+  const clerkSubject='user_synthetic_clerk_'+actorIndex;
+  await q('update organization_members set clerk_user_id=$1 where id=$2',[clerkSubject,ids[actorIndex]]);
+  await q('insert into organization_security_settings(organization_id,require_mfa_for_all_users) values($1,true),($2,true)',[A,B]);
+  await q("select set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)",
+    [clerkSubject,JSON.stringify({sub:clerkSubject,aal})]);
+  await db.exec('set role authenticated');
+  try {
+   await check('Clerk Enterprise read/manage + cross-tenant + MFA: '+actorRole+' '+aal,async()=>{
+    const result=(await q(
+      'select app_private.enterprise_member_can_read($1::uuid) read_own,'+
+      'app_private.enterprise_member_can_manage($1::uuid) manage_own,'+
+      'app_private.enterprise_member_can_read($2::uuid) read_cross,'+
+      'app_private.enterprise_member_can_manage($2::uuid) manage_cross',
+      [tenant,other]))[0];
+    const active=actorIndex!==6;
+    const allowOwn=active&&aal==='aal2';
+    const allowManage=allowOwn&&[0,2,4,5,7].includes(actorIndex);
+    assert.equal(result.read_own,allowOwn);
+    assert.equal(result.manage_own,allowManage);
+    assert.equal(result.read_cross,false);
+    assert.equal(result.manage_cross,false);
+   });
+  } finally {await db.exec('reset role');}
+ }
+
  await check('Privileged functions reject anon/authenticated through real role EXECUTE checks',async()=>{
   const r=await q("select p.oid::regprocedure::text signature,has_function_privilege('anon',p.oid,'EXECUTE') a,has_function_privilege('authenticated',p.oid,'EXECUTE') u,has_function_privilege('service_role',p.oid,'EXECUTE') s from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('remove_organization_member_audited_atomic','change_organization_member_role_audited_atomic','release_organization_seat_atomic')");
   assert.equal(r.length,3); for(const f of r){assert.equal(f.a,false);assert.equal(f.u,false);assert.equal(f.s,true);}
