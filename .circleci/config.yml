@@ -215,7 +215,7 @@ jobs:
               exit 1
             }
             node -e "if (Number(process.versions.node.split('.')[0]) !== 22) process.exit(1)"
-            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY; do
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
               if [ -n "${!key:-}" ]; then
                 echo "Forbidden credential present in source quality job: $key" >&2
                 exit 1
@@ -276,6 +276,20 @@ jobs:
               fi
             fi
             exit "$status"
+      - run:
+          name: Validate built routes and archive source-quality evidence
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/circleci-quality
+            npm run quality:routes 2>&1 | tee artifacts/circleci-quality/quality-routes.log
+            node --test --test-reporter=tap tests/ci/circleci-quality-proof.test.mjs \
+              tests/ci/circleci-memory-diagnostics-contract.test.mjs \
+              tests/ci/circleci-github-actions-recovery-contract.test.mjs \
+              2>&1 | tee artifacts/circleci-quality/evidence-contracts.tap
+            node scripts/ci/create-circleci-quality-proof.mjs
+      - store_artifacts:
+          path: artifacts/circleci-quality
+          destination: source-quality-exact-sha
 
   # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
   qa-preflight-offline:
@@ -804,3 +818,4 @@ workflows:
 # G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
+

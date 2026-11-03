@@ -3,12 +3,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const yaml = readFileSync('.circleci/config.yml', 'utf8');
-const start = yaml.indexOf('          name: Next.js CI build using non-production placeholders');
+const start = yaml.indexOf('\n  github-actions-recovery-quality:\n');
 const end = yaml.indexOf('\n  # Opt-in small executor;', start);
 const job = start < 0 || end < 0 ? '' : yaml.slice(start, end);
 test('memory proof stays inside bounded, existing source-quality job', () => {
   assert.ok(job);
-  assert.match(job, /NODE_OPTIONS: --max-old-space-size=2560/);
+  // CircleCI #863 validated Large with 5 GiB heap after Medium exited 137.
+  // Keep both bounds explicit: changing the class or exceeding this heap needs review.
+  assert.match(job, /resource_class: large/);
+  assert.match(job, /NODE_OPTIONS: --max-old-space-size=5120/);
   assert.match(job, /NEXT_PUBLIC_SUPABASE_URL: https:\/\/ci-placeholder\.supabase\.co/);
 });
 test('numeric-only cgroup diagnostics capture both OOM counters and build exit', () => {
@@ -29,3 +32,4 @@ test('existing manual quality pipeline is disabled by default and candidate neve
     ?.split('\n  enterprise-source-proof-manual:\n', 1)[0] ?? '';
   assert.doesNotMatch(oneShot, /integration\/enterprise-unified-candidate-20261102/);
 });
+

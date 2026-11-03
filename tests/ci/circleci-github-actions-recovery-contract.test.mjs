@@ -57,7 +57,7 @@ test('second-stage full quality CI stays opt-in and pinned to recovery SHA with 
   assert.match(recovery, /when: << pipeline\.parameters\.run_actions_recovery_quality >>/);
   assert.match(recovery, /only:\n\s+- fix\/actions-p0-runner-storm-20261102/);
   assert.match(quality, /image: cimg\/node:22/);
-  assert.match(quality, /resource_class: medium/);
+  assert.match(quality, /resource_class: large/);
   assert.match(quality, /CIRCLE_BRANCH:-/);
   assert.match(quality, /CIRCLE_SHA1:\?/);
   assert.match(quality, /git rev-parse HEAD/);
@@ -80,7 +80,7 @@ test('source-only smoke guard inspects only its job and cannot accidentally abso
   assert.match(quality, /npm ci --ignore-scripts --no-audit --no-fund/);
   assert.match(quality, /npm run build/);
   assert.match(smoke, /resource_class: small/);
-  assert.match(quality, /resource_class: medium/);
+  assert.match(quality, /resource_class: large/);
 });
 
 
@@ -126,3 +126,4 @@ test('unified candidate smoke runs source-only security billing and evidence con
  assert.doesNotMatch(automatic,/integration\/enterprise-unified-candidate-20261102/);
  assert.match(config,/run_actions_recovery:\n    type: boolean\n    default: false/);
 });
+
