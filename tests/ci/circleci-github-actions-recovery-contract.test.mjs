@@ -82,3 +82,29 @@ test('source-only smoke guard inspects only its job and cannot accidentally abso
   assert.match(smoke, /resource_class: small/);
   assert.match(quality, /resource_class: medium/);
 });
+
+
+test('manual smoke and quality guards agree with the exact workflow branch filters, with no automatic unified-candidate run', () => {
+  const candidate = 'integration/enterprise-unified-candidate-20261102';
+  const recoveryBranch = 'fix/actions-p0-runner-storm-20261102';
+  const oneShotBranch = 'ci/circleci-gh-actions-one-shot-20261102';
+  const smoke = circleJob('github-actions-recovery-smoke');
+  const quality = circleJob('github-actions-recovery-quality');
+  const manualSmoke = config.split('\n  github-actions-recovery-manual:\\n', 2)[1]
+    ?.split('\n  github-actions-recovery-quality-manual:\\n', 1)[0] ?? '';
+  const manualQuality = config.split('\n  github-actions-recovery-quality-manual:\\n', 2)[1]
+    ?.split('\n  github-actions-quality-one-shot-20261102:\\n', 1)[0] ?? '';
+  const oneShot = config.split('\n  github-actions-quality-one-shot-20261102:\\n', 2)[1]
+    ?.split('\n  enterprise-source-proof-manual:\\n', 1)[0] ?? '';
+  for (const branch of [candidate, recoveryBranch]) {
+    assert.ok(smoke.includes(branch), 'manual smoke guard rejects ' + branch);
+    assert.ok(quality.includes(branch), 'manual quality guard rejects ' + branch);
+    assert.ok(manualSmoke.includes('- ' + branch), 'manual smoke filter excludes ' + branch);
+    assert.ok(manualQuality.includes('- ' + branch), 'manual quality filter excludes ' + branch);
+  }
+  assert.ok(quality.includes(oneShotBranch), 'existing one-shot quality guard must remain');
+  assert.ok(oneShot.includes('- ' + oneShotBranch), 'one-shot branch filter must remain');
+  assert.ok(!oneShot.includes(candidate), 'candidate must not launch an automatic CircleCI job on push');
+  assert.match(manualSmoke, /when: << pipeline\\.parameters\\.run_actions_recovery >>/);
+  assert.match(manualQuality, /when: << pipeline\\.parameters\\.run_actions_recovery_quality >>/);
+});

@@ -149,9 +149,10 @@ jobs:
           name: Verify exact GitHub recovery branch and no privileged credentials
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "ci/circleci-gh-actions-one-shot-20261102" || {
-              echo "Unexpected branch" >&2; exit 1
-            }
+            case "${CIRCLE_BRANCH:-}" in
+              fix/actions-p0-runner-storm-20261102|integration/enterprise-unified-candidate-20261102) ;;
+              *) echo "Unexpected branch for manual recovery smoke" >&2; exit 1 ;;
+            esac
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing source SHA}" || {
               echo "Refusing non-identical checkout SHA" >&2; exit 1
             }
@@ -186,10 +187,10 @@ jobs:
           name: Verify exact branch, source SHA and non-privileged environment
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "ci/circleci-gh-actions-one-shot-20261102" || {
-              echo "Recovery quality must run only on its isolated branch" >&2
-              exit 1
-            }
+            case "${CIRCLE_BRANCH:-}" in
+              fix/actions-p0-runner-storm-20261102|ci/circleci-gh-actions-one-shot-20261102|integration/enterprise-unified-candidate-20261102) ;;
+              *) echo "Recovery quality must run only on an approved branch" >&2; exit 1 ;;
+            esac
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI commit}" || {
               echo "Refusing a checkout that does not match the pipeline SHA" >&2
               exit 1
@@ -629,6 +630,7 @@ workflows:
             branches:
               only:
                 - fix/actions-p0-runner-storm-20261102
+                - integration/enterprise-unified-candidate-20261102
 
   github-actions-recovery-quality-manual:
     # Independent quality phase. Enable only after a successful small smoke test.
@@ -639,6 +641,7 @@ workflows:
             branches:
               only:
                 - fix/actions-p0-runner-storm-20261102
+                - integration/enterprise-unified-candidate-20261102
 
   github-actions-quality-one-shot-20261102:
     # Execute the source-only full-quality job once via a guarded branch push.
