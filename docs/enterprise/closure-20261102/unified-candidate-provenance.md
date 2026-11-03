@@ -24,3 +24,9 @@ Total: 23 file snapshots plus this record. Source snapshots are **not** reviewed
 ## Safety
 
 No CircleCI trigger/rerun, paid runner, production write, Stripe LIVE charge, outgoing email, production deployment, main merge, credential exposure or bypass is authorized by this integration. No formal gate PASS, 38/38, 24/24 or GO claim is made.
+
+## 2026-11-03 additive integration
+
+- CircleCI manual smoke and quality branch guards were corrected in the candidate: approved fix and unified branches now match manual workflow filters. Both trigger booleans stay false by default, and one-shot remains restricted to the old one-shot branch. Root cause of CircleCI #416 remains UNKNOWN without job log; the manual mismatch is proven independently.
+- Latest reviewed GitHub PR #2596 head `8af9076ac77cfcda12fceca07a2353348c11e5ff`: the only changed blob compared with original #2596 snapshot was `src/server/queries/audit-events.test.ts` (fixture TypeScript typing). Incorporated without replacing other candidate files. This snapshot is still unreviewed on the new integration SHA.
+- GitLab !2635 changes the GitLab-specific enterprise-source-proof job and assumes `gitlab.com/risck-comply-group/eurocomply_saas` as origin. It must NOT be transplanted verbatim into the GitHub-origin candidate due an intentional source-repository guard. Cross-repo parity remains blocked pending controlled mapping.
