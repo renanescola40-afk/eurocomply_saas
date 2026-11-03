@@ -40,4 +40,20 @@ describe('paid self-serve Checkout plan input authority', () => {
     expect(customerCreate).toBeGreaterThan(checkoutClaim);
     expect(source).not.toContain('normalizeBillingPlanId(parsedBody.data.plan)');
   });
+
+  it('rejects misleading free/basic identifiers at the subscription lifecycle API boundary', async () => {
+    const source = await readFile(new URL('../../src/app/api/billing/subscription/route.ts', import.meta.url), 'utf8');
+    const inputNormalization = source.indexOf('const plan = parsed.data.plan ? normalizeBillingPlanId(parsed.data.plan) : undefined;');
+    const paidAuthority = source.indexOf('normalizePaidCheckoutPlanId(parsed.data.plan) !== plan');
+    const deny = source.indexOf("return noStoreJson({ error: 'invalid_plan' }, { status: 400 });");
+    const contractAuthority = source.indexOf('getAuthoritativeSignedContractPlan(organization.id)');
+    const providerMutation = source.indexOf('const result = await mutateSubscriptionLifecycle({');
+    expect(inputNormalization).toBeGreaterThan(-1);
+    expect(paidAuthority).toBeGreaterThan(inputNormalization);
+    expect(deny).toBeGreaterThan(paidAuthority);
+    expect(contractAuthority).toBeGreaterThan(deny);
+    expect(providerMutation).toBeGreaterThan(contractAuthority);
+    expect(source).toContain('isSelfServePlan(plan) && normalizePaidCheckoutPlanId(parsed.data.plan) !== plan');
+    expect(source).toContain("return noStoreJson({ error: 'sales_assisted_plan_required' }, { status: 400 });");
+  });
 });
