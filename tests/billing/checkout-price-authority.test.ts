@@ -82,6 +82,20 @@ describe('self-serve Checkout Price runtime authority', () => {
     expect(source).toContain("checkout_session_requires_restart");
   });
 
+  it('verifies all eligible add-on Prices before durable subscription mutation', async () => {
+    const lifecycle = await readFile(new URL('../../src/server/billing/subscription-lifecycle.ts', import.meta.url), 'utf8');
+    const addOns = lifecycle.indexOf("const addOns = input.action === 'replace_add_ons'");
+    const addOnPriceRead = lifecycle.indexOf("stripe.prices.retrieve(addOnPriceId, { expand: ['product'] })");
+    const addOnAuthority = lifecycle.indexOf('const addOnPriceAuthority = validateCheckoutPriceAuthority');
+    const claim = lifecycle.indexOf('const claim = await claimBillingLifecycleRequest({');
+    expect(addOns).toBeGreaterThan(-1);
+    expect(addOnPriceRead).toBeGreaterThan(addOns);
+    expect(addOnAuthority).toBeGreaterThan(addOnPriceRead);
+    expect(claim).toBeGreaterThan(addOnAuthority);
+    expect(lifecycle).toContain("(interval === 'year' ? addOn.priceAnnual : addOn.priceMonthly) * 100");
+    expect(lifecycle).toContain("throw new BillingLifecycleRequestError('billing_add_on_price_configuration_invalid', 503)");
+  });
+
   it('requires confirmed expiry before releasing any stale reused session', async () => {
     const source = await readFile(new URL('../../src/app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
     expect(source).toContain("expired.status !== 'expired'");
