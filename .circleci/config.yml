@@ -174,6 +174,22 @@ jobs:
               tests/ci/github-actions-budget-regression.test.mjs \
               tests/enterprise/p0-progress-concurrency.test.mjs \
               tests/security/enterprise-100-stale-workflow-run-guard.test.mjs
+      - run:
+          name: Integrated candidate source-only billing security and evidence regressions
+          command: |
+            set -euo pipefail
+            # Preserve legacy recovery-branch smoke: these new files exist only in the unified candidate.
+            if [ "${CIRCLE_BRANCH:-}" != "integration/enterprise-unified-candidate-20261102" ]; then
+              echo "Integrated source contracts apply to the candidate branch only"
+              exit 0
+            fi
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing exact SHA}"
+            node --test --test-reporter=tap \
+              tests/security/client-env-access.test.mjs \
+              tests/ci/circleci-readonly-diagnose.test.mjs \
+              tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
+            node --experimental-strip-types --test --test-reporter=tap \
+              tests/billing/checkout-price-authority.test.mjs
 
   # Second-stage opt-in; never auto-trigger, deploy, write to production or use provider secrets.
   github-actions-recovery-quality:

@@ -108,3 +108,21 @@ test('manual smoke and quality guards agree with branch filters; candidate opt-i
   assert.match(manualSmoke, /when: << pipeline\.parameters\.run_actions_recovery >>/);
   assert.match(manualQuality, /when: << pipeline\.parameters\.run_actions_recovery_quality >>/);
 });
+
+
+test('unified candidate smoke runs source-only security billing and evidence contracts without npm or provider writes',()=>{
+ const smoke = circleJob('github-actions-recovery-smoke');
+ for (const marker of [
+  'integration/enterprise-unified-candidate-20261102',
+  'tests/security/client-env-access.test.mjs',
+  'tests/ci/circleci-readonly-diagnose.test.mjs',
+  'tests/ci/enterprise-evidence-exact-sha-contract.test.mjs',
+  'tests/billing/checkout-price-authority.test.mjs',
+  'node --experimental-strip-types --test'
+ ]) assert.ok(smoke.includes(marker),'candidate source-only test missing: '+marker);
+ assert.doesNotMatch(smoke,/npm ci|npm run build|stripe checkout|store_artifacts:/);
+ const automatic=config.split('\n  github-actions-quality-one-shot-20261102:\n',2)[1]
+  ?.split('\n  enterprise-source-proof-manual:\n',1)[0] ?? '';
+ assert.doesNotMatch(automatic,/integration\/enterprise-unified-candidate-20261102/);
+ assert.match(config,/run_actions_recovery:\n    type: boolean\n    default: false/);
+});
