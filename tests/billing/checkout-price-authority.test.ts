@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 import { describe, expect, it } from 'vitest';
 
-import { reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
+import { checkoutStripeModeMatchesPurpose, reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
 
 const contract = { priceId: 'price_professional', expectedAmountCents: 14900, expectedMode: 'test' } as const;
 const canonical = {
@@ -101,6 +101,21 @@ describe('self-serve Checkout Price runtime authority', () => {
     expect(staleLegalRelease).toBeGreaterThan(staleLegalExpiry);
     expect(stalePriceExpiry).toBeGreaterThan(-1);
     expect(stalePriceRelease).toBeGreaterThan(stalePriceExpiry);
+  });
+
+  it('keeps TEST-only validation and LIVE-only paid Checkout modes separate', async () => {
+    expect(checkoutStripeModeMatchesPurpose('test', true)).toBe(true);
+    expect(checkoutStripeModeMatchesPurpose('live', false)).toBe(true);
+    expect(checkoutStripeModeMatchesPurpose('live', true)).toBe(false);
+    expect(checkoutStripeModeMatchesPurpose('test', false)).toBe(false);
+    expect(checkoutStripeModeMatchesPurpose(null, false)).toBe(false);
+    const source = await readFile(new URL('../../src/app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
+    const modeCheck = source.indexOf('checkoutStripeModeMatchesPurpose(expectedStripeMode, validationOnlyCheckout)');
+    const stripeClient = source.indexOf('const stripe = getStripeClient()');
+    const checkoutClaim = source.indexOf('let checkoutAttempt = await claimInitialCheckoutAttempt');
+    expect(modeCheck).toBeGreaterThan(-1);
+    expect(stripeClient).toBeGreaterThan(modeCheck);
+    expect(checkoutClaim).toBeGreaterThan(stripeClient);
   });
 
   it('verifies the Stripe Price before the first customer side effect', async () => {
