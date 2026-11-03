@@ -15,6 +15,7 @@ declare
   helper_name text;
   helper_oid oid;
   definition text;
+  helper_config text[];
 begin
   if to_regprocedure('app_private.enterprise_member_can_read(uuid)') is null
      or to_regprocedure('app_private.enterprise_member_can_manage(uuid)') is null
@@ -30,15 +31,23 @@ begin
   for helper_name in
     select unnest(array['is_org_member', 'has_org_role'])
   loop
-    select p.oid, pg_get_functiondef(p.oid)
-    into helper_oid, definition
+    select p.oid, pg_get_functiondef(p.oid), p.proconfig
+    into helper_oid, definition, helper_config
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'app_private' and p.proname = helper_name
+      and p.oid = case helper_name
+        when 'is_org_member' then 'app_private.is_org_member(uuid)'::regprocedure
+        else 'app_private.has_org_role(uuid,text[])'::regprocedure
+      end
       and p.prosecdef = true;
 
     if helper_oid is null
+       or helper_config is null
+       or not ('search_path=pg_catalog' = any(helper_config))
        or position('tenant_mfa_satisfied' in coalesce(definition,'')) = 0
+       or position('current_clerk_user_id' in coalesce(definition,'')) = 0
+       or position('current_legacy_user_id' in coalesce(definition,'')) = 0
        or has_function_privilege('anon', helper_oid, 'EXECUTE') then
       raise exception 'Unsafe or missing prerequisite: app_private.%', helper_name;
     end if;
