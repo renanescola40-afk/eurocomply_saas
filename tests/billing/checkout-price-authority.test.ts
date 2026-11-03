@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 import { describe, expect, it } from 'vitest';
 
-import { validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
+import { reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
 
 const contract = { priceId: 'price_professional', expectedAmountCents: 14900, expectedMode: 'test' } as const;
 const canonical = {
@@ -55,6 +55,31 @@ describe('self-serve Checkout Price runtime authority', () => {
     expect(update).toBeGreaterThan(claim);
     expect(lifecycle).toContain("input.action !== 'cancel' && input.action !== 'reactivate'");
     expect(lifecycle).toContain("billing_price_configuration_invalid");
+  });
+
+  it('fails closed when a reused Checkout Session contains stale or multiple line items', () => {
+    const expectedPrice = 'price_professional';
+    const correct = { price: { id: expectedPrice }, quantity: 1 };
+    expect(reusableCheckoutLineItemsMatch({ data: [correct], has_more: false }, expectedPrice)).toBe(true);
+    expect(reusableCheckoutLineItemsMatch({ data: [{ ...correct, quantity: 2 }], has_more: false }, expectedPrice)).toBe(false);
+    expect(reusableCheckoutLineItemsMatch({ data: [correct, correct], has_more: false }, expectedPrice)).toBe(false);
+    expect(reusableCheckoutLineItemsMatch({ data: [correct], has_more: true }, expectedPrice)).toBe(false);
+    expect(reusableCheckoutLineItemsMatch({ data: [{ price: { id: 'price_wrong' }, quantity: 1 }], has_more: false }, expectedPrice)).toBe(false);
+  });
+
+  it('checks canonical Price before claiming a lease and line items before reusing a session URL', async () => {
+    const source = await readFile(new URL('../../src/app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
+    const verify = source.indexOf('const priceAuthority = validateCheckoutPriceAuthority');
+    const claim = source.indexOf('let checkoutAttempt = await claimInitialCheckoutAttempt');
+    const lineItems = source.indexOf('stripe.checkout.sessions.listLineItems(existingSession.id');
+    const reuseGuard = source.indexOf('reusableCheckoutLineItemsMatch(lineItems, priceId)');
+    const reuse = source.indexOf('singleflightReused: true');
+    expect(verify).toBeGreaterThan(-1);
+    expect(claim).toBeGreaterThan(verify);
+    expect(lineItems).toBeGreaterThan(claim);
+    expect(reuseGuard).toBeGreaterThan(lineItems);
+    expect(reuse).toBeGreaterThan(reuseGuard);
+    expect(source).toContain("checkout_session_requires_restart");
   });
 
   it('verifies the Stripe Price before the first customer side effect', async () => {
