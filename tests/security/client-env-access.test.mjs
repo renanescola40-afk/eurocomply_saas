@@ -14,6 +14,7 @@ const cases = [
   ['approved PostHog endpoint stays permitted', 'const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;', 0],
   ['approved PostHog asset endpoint stays permitted', 'const host = process.env.NEXT_PUBLIC_POSTHOG_ASSET_HOST;', 0],
   ['approved analytics consent policy stays permitted', 'const consent = process.env.NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT;', 0],
+  ['approved session replay policy stays permitted', 'const replay = process.env.NEXT_PUBLIC_POSTHOG_SESSION_REPLAY;', 0],
   ['secret masquerading as public is blocked', 'const key = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;', 1],
   ['unapproved NEXT_PUBLIC name is blocked', 'const key = process.env.NEXT_PUBLIC_CONFIDENTIAL;', 1],
   ['optional public property is blocked', 'const key = process?.env.NEXT_PUBLIC_APP_URL;', 1],
