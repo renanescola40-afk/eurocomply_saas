@@ -28,7 +28,8 @@ describe('patched minimatch and Sentry glob dependency graph', () => {
     expect(minimatchDefault).toBe(minimatch);
     expect(minimatch('src/security.ts', '**/*.ts')).toBe(true);
     expect(minimatchCommonJs('src/security.ts', '**/*.ts')).toBe(true);
-    expect(minimatchCommonJs.Minimatch).toBe(Minimatch);
+    expect(typeof minimatchCommonJs.Minimatch).toBe('function');
+    expect(new minimatchCommonJs.Minimatch('**/*.ts').match('src/security.ts')).toBe(true);
     expect(minimatchCommonJs.default).toBe(minimatchCommonJs);
   });
 
