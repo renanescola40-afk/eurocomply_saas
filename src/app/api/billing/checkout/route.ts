@@ -231,6 +231,26 @@ async function expireCheckoutSessionSafely(stripe: Stripe, sessionId: string, or
   }
 }
 
+/** For reused open sessions, never release checkout ownership until Stripe
+ * confirms the obsolete hosted payment URL is expired. Compensation-only
+ * best-effort helpers are insufficient for this security/contract boundary. */
+async function expireReusedCheckoutSessionStrict(stripe: Stripe, sessionId: string, operation: string) {
+  let expired: Stripe.Checkout.Session;
+  try {
+    expired = await stripe.checkout.sessions.expire(sessionId);
+  } catch (error) {
+    throw classifyProviderFailure('stripe', operation, error);
+  }
+  if (expired.status !== 'expired') {
+    throw new ProviderFailureError({
+      provider: 'stripe',
+      kind: 'conflict',
+      providerCode: 'checkout_session_expiry_unconfirmed',
+      operation,
+    });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const user = await requireApiUser();
@@ -440,7 +460,7 @@ export async function POST(request: Request) {
               );
 
           if (!existingLegalMatches) {
-            await expireCheckoutSessionSafely(stripe, existingSession.id, organization.id, 'billing_checkout_stale_legal_session_expire');
+            await expireReusedCheckoutSessionStrict(stripe, existingSession.id, 'billing_checkout_stale_legal_session_expire');
             await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_stale_legal_session_release');
             checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
             if (checkoutAttempt.outcome !== 'claimed') {
@@ -461,11 +481,7 @@ export async function POST(request: Request) {
             if (!sessionPriceMatches) {
               // Fail closed if Stripe cannot expire the obsolete hosted URL.
               // A new attempt can be claimed only after provider expiry succeeds.
-              try {
-                await stripe.checkout.sessions.expire(existingSession.id);
-              } catch (error) {
-                throw classifyProviderFailure('stripe', 'checkout_stale_price_session_expire', error);
-              }
+              await expireReusedCheckoutSessionStrict(stripe, existingSession.id, 'checkout_stale_price_session_expire');
               await releaseCheckoutAttemptSafely(
                 organization.id,
                 checkoutAttempt.attemptToken,
