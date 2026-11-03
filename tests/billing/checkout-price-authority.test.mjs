@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { validateCheckoutPriceAuthority } from '../../src/server/billing/checkout-price-authority.ts';
+import { reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '../../src/server/billing/checkout-price-authority.ts';
 
 const contract = { priceId: 'price_pro_monthly', expectedAmountCents: 14900, expectedMode: 'test' };
 const canonical = {
@@ -62,4 +62,23 @@ test('fails closed on mode mismatch, absent secret mode or invalid catalog price
   assert.deepEqual(validateCheckoutPriceAuthority(canonical, { ...contract, expectedAmountCents: 0 }), { ok: false, reason: 'invalid_catalog_amount' });
   assert.equal(validateCheckoutPriceAuthority(canonical, { ...contract, expectedAmountCents: null }).ok, false);
   assert.equal(validateCheckoutPriceAuthority(canonical, { ...contract, expectedAmountCents: NaN }).ok, false);
+});
+
+test('reuses only one line item bound to the exact canonical Price', () => {
+  const item = { price: { id: contract.priceId }, quantity: 1 };
+  assert.equal(reusableCheckoutLineItemsMatch({ data: [item], has_more: false }, contract.priceId), true);
+  assert.equal(reusableCheckoutLineItemsMatch({ data: [{ ...item, price: { id: 'price_other' } }], has_more: false }, contract.priceId), false);
+  assert.equal(reusableCheckoutLineItemsMatch({ data: [{ ...item, quantity: 0 }], has_more: false }, contract.priceId), false);
+  assert.equal(reusableCheckoutLineItemsMatch({ data: [{ ...item, quantity: 2 }], has_more: false }, contract.priceId), false);
+});
+
+test('fails closed on empty, paginated, extra, or malformed Checkout Session items', () => {
+  const item = { price: { id: contract.priceId }, quantity: 1 };
+  for (const items of [
+    { data: [], has_more: false },
+    { data: [item], has_more: true },
+    { data: [item, item], has_more: false },
+    { data: [{ price: null, quantity: 1 }], has_more: false },
+  ]) assert.equal(reusableCheckoutLineItemsMatch(items, contract.priceId), false);
+  assert.equal(reusableCheckoutLineItemsMatch({ data: [{ price: { id: '' }, quantity: 1 }], has_more: false }, ''), false);
 });
