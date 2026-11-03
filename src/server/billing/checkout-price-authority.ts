@@ -6,6 +6,7 @@
  * subscription state is mutated. Do not infer authority from product names or
  * client-supplied plan metadata.
  */
+
 /** Validation-only checkout must stay in Stripe TEST. A customer-facing paid
  * checkout may use only Stripe LIVE; never silently downgrade its mode. */
 export function checkoutStripeModeMatchesPurpose(
@@ -22,12 +23,6 @@ export type CheckoutPriceAuthorityInput = {
   expectedInterval?: 'month' | 'year';
 };
 
-type CheckoutStripePrice = Record<string, unknown>;
-
-type CheckoutStripeRecurring = Record<string, unknown>;
-
-type CheckoutStripeProduct = Record<string, unknown>;
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -37,8 +32,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * narrower Product shape. Treat provider payload fields as unknown and validate
  * each required field here so the compile-time bridge does not weaken runtime authority.
  */
-type CheckoutStripePricePayload = unknown;
-
 export type CheckoutPriceAuthorityResult =
   | { ok: true; reason: 'canonical_price_confirmed' }
   | { ok: false; reason: 'mode_unavailable' | 'invalid_catalog_amount' | 'price_mismatch' };
@@ -80,7 +73,6 @@ export function validateCheckoutPriceAuthority(
 
   return { ok: true, reason: 'canonical_price_confirmed' };
 }
-
 
 /** A reused hosted Session is safe only if it still contains exactly one
  * canonical base-plan Price with one licensed seat and no additional items. */
