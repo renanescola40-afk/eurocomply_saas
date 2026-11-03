@@ -9,6 +9,9 @@ import { findUnsafeClientEnvReferences } from '../../scripts/security/client-env
 
 const cases = [
   ['static public variable stays permitted', 'const url = process.env.NEXT_PUBLIC_APP_URL;', 0],
+  ['approved publishable value stays permitted', 'const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;', 0],
+  ['secret masquerading as public is blocked', 'const key = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;', 1],
+  ['unapproved NEXT_PUBLIC name is blocked', 'const key = process.env.NEXT_PUBLIC_CONFIDENTIAL;', 1],
   ['server credential dot access blocked', 'const key = process.env.SUPABASE_SERVICE_ROLE_KEY;', 1],
   ['bracket secret blocked', "const key = process.env['SUPABASE_SERVICE_ROLE_KEY'];", 1],
   ['double-quoted bracket secret blocked', 'const key = process.env["STRIPE_SECRET_KEY"];', 1],
