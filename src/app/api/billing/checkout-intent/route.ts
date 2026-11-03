@@ -3,6 +3,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
+import { normalizePublicCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
@@ -47,7 +48,7 @@ async function handleCheckoutIntent(request: Request) {
   }
 
   const planId = await resolvePlanId(request);
-  const plan = getBillingPlan(planId);
+  const plan = getBillingPlan(normalizePublicCheckoutPlanId(planId));
 
   if (!plan) {
     return noStoreJson({ ok: false, error: 'invalid_plan' }, { status: 400 });

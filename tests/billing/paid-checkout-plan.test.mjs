@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-import { normalizePaidCheckoutPlanId } from '../../src/server/billing/paid-checkout-plan.ts';
+import { normalizePaidCheckoutPlanId, normalizePublicCheckoutPlanId } from '../../src/server/billing/paid-checkout-plan.ts';
 
 test('accepts canonical Essential/Professional plan IDs and their non-misleading legacy names', () => {
   assert.equal(normalizePaidCheckoutPlanId('essential'), 'starter');
@@ -36,4 +36,38 @@ test('subscription lifecycle rejects ambiguous free/basic plan requests before p
   assert.ok(denial > paidAuthority);
   assert.ok(providerMutation > denial);
   assert.ok(source.includes('isSelfServePlan(plan) && normalizePaidCheckoutPlanId(parsed.data.plan) !== plan'));
+});
+
+test('public Checkout selection accepts only paid plans plus explicit sales-led plans', () => {
+  for (const [raw, expected] of [
+    ['starter', 'starter'], ['essential', 'starter'], ['Professional', 'professional'],
+    [' growth ', 'professional'], ['pro', 'professional'], ['business', 'business'],
+    ['ENTERPRISE', 'enterprise'],
+  ]) {
+    assert.equal(normalizePublicCheckoutPlanId(raw), expected);
+  }
+});
+
+test('public Checkout selection never turns free/basic/unknown into paid Essential', () => {
+  for (const raw of ['free', ' basic ', 'BASIC', 'Free', 'trial', '', null, undefined, 0, {}, []]) {
+    assert.equal(normalizePublicCheckoutPlanId(raw), undefined);
+  }
+});
+
+test('public checkout, legacy URL and authenticated intent reject bad input before presenting paid action', async () => {
+  const [page, legacy, intent] = await Promise.all([
+    readFile(new URL('../../src/app/[locale]/checkout/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../../src/app/[locale]/billing/checkout/[plan]/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.ok(page.includes('selectedPlanId ? normalizePublicCheckoutPlanId(selectedPlanId) : undefined'));
+  const pageReject = page.indexOf('if (selectedPlanId && !normalizedRequestedPlan)');
+  assert.ok(pageReject >= 0);
+  assert.ok(page.indexOf('redirect(`/${locale}/pricing?checkout=invalid_plan`)') > pageReject);
+  assert.ok(page.indexOf('getBillingPlan(normalizedRequestedPlan)') > pageReject);
+  assert.ok(page.indexOf('await getCurrentUser()') > pageReject);
+  assert.ok(legacy.includes('const normalizedPlan = normalizePublicCheckoutPlanId(plan);'));
+  assert.ok(legacy.includes('checkout=invalid_plan'));
+  assert.ok(intent.includes('const plan = getBillingPlan(normalizePublicCheckoutPlanId(planId));'));
+  assert.ok(intent.indexOf('if (!plan)') < intent.indexOf('getCurrentOrganizationForUser(user.id)'));
 });
