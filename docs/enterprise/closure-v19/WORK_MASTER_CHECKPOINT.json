@@ -1,14 +1,14 @@
 {
-  "OBSERVED_AT": "2026-11-03",
+  "OBSERVED_AT": "2026-11-03T12:46:00Z",
   "GITHUB_MAIN_SHA": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
   "GITLAB_MAIN_SHA": "84a99f813bdce601c119bff27c1d82c5356295d6",
   "VERCEL_PRODUCTION_SHA": "70d3545f414d063379d481fd238aed563e05edda",
-  "CIRCLECI_PIPELINE_ID": 840,
-  "CIRCLECI_FIRST_FAILING_STEP": "Next.js CI build using non-production placeholders (job 423, npm run build, exit 137); historical pipeline 416 first failed at ESLint and TypeScript: no-require-imports in vendor/minimatch-compat/index.cjs:3",
-  "FAILURE_CLASSIFICATION": "Pipeline 840: build process killed with exit 137; CircleCI RAM chart for Docker Medium (4 GB) rose to approximately 90% near termination, consistent with memory pressure but not a definitive OOM record. Pipeline 416: source lint failure in intentional CommonJS minimatch export bridge.",
-  "REPAIR_COMMIT_SHA": "4610cc214e29377dd4d7c84ca1d17d911625fc26",
+  "CIRCLECI_PIPELINE_ID": 863,
+  "CIRCLECI_FIRST_FAILING_STEP": "None in latest CircleCI #863/job 426: all configured github-actions-recovery-quality steps passed. Historical #416 first failed at ESLint and TypeScript, no-require-imports in vendor/minimatch-compat/index.cjs:3. Pipeline #856/job 425 failed in Next.js build, exit 137.",
+  "FAILURE_CLASSIFICATION": "CircleCI #416 was a source lint failure in the intentional CommonJS adapter and the candidate carries a narrow rule suppression. CircleCI #856 on Docker Medium (4 GB) had source/test steps pass then Next.js build exit 137; cgroup OOM was not confirmed in logs. On #863, switching this manual-only quality job to Docker Large with Node heap 5120 MB produced a successful build, consistent with insufficient memory headroom on Medium; do not claim a kernel OOM event was observed.",
+  "REPAIR_COMMIT_SHA": "ab74c8c1d3d98892ffec3212b0ca932d1a735657",
   "INTEGRATION_PR": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
-  "INTEGRATION_HEAD_SHA": "4610cc214e29377dd4d7c84ca1d17d911625fc26",
+  "INTEGRATION_HEAD_SHA": "ab74c8c1d3d98892ffec3212b0ca932d1a735657",
   "INTEGRATED_SOURCE_PRS": [
     "#2592",
     "#2593",
@@ -19,29 +19,47 @@
     "#2600"
   ],
   "PENDING_SOURCE_PRS": [
-    "#2597: read-only billing QA evidence record only; functional changes present",
+    "#2597: functional billing changes present; independent read-only billing QA evidence record pending",
     "GitLab !2626: canonical DAT-01 replay evidence unresolved",
     "GitLab !2630: no independent applicable missing fix established",
     "GitLab !2631: conflicts/supplemental audit not transplanted",
-    "GitLab !2632: unique checkout test not adapted; source changes redundant",
+    "GitLab !2632: validated/reconciled unique checkout regression contracts; source snapshots/tests require qualified parity review",
     "GitLab !2635: GitLab-specific guard not portable to GitHub as-is"
   ],
   "TESTS_PASS": [
-    "CircleCI 840/job 423 exact SHA 4610cc2: deterministic npm ci; security package-lock and 36 security gates; lint (0 errors); TypeScript; application unit tests (4,215 passed)."
+    "CircleCI #863/job 426, exact SHA ab74c8c: branch/SHA and no-privileged-credentials guard PASS",
+    "CircleCI #863/job 426: npm ci --ignore-scripts PASS",
+    "CircleCI #863/job 426: package-lock and repository security policy step PASS",
+    "CircleCI #863/job 426: ESLint and TypeScript PASS",
+    "CircleCI #863/job 426: npm test PASS (suite completed; UI output did not expose final count)",
+    "CircleCI #863/job 426: Next.js build PASS in 2m43s on Docker Large with NODE_OPTIONS 5120 MB",
+    "GitHub commit status for exact SHA ab74c8c: ci/circleci: github-actions-recovery-quality = success"
   ],
   "TESTS_FAIL": [
-    "CircleCI 840/job 423 exact SHA 4610cc2: Next.js build command npm run build ended exit 137."
+    "CircleCI #856/job 425, exact SHA 8f9d7856018e952a215f77320f12736a21664b09: Next.js build exit 137 on Docker Medium; no conclusive cgroup OOM record",
+    "Historical CircleCI #840/job 423 and #843: Next.js build exit 137 on Docker Medium"
   ],
   "TESTS_BLOCKED": [
-    "Full CircleCI workflow completion and route checks/evidence artifact after build; PostgreSQL canonical replay; runtime QA; exact-SHA passing full validation."
+    "CircleCI quality job #863 does not include quality:routes or the complete exact-SHA source-proof artifact workflow",
+    "Canonical PostgreSQL 17 replay through all migrations, RLS/grants/functions, durable QA ledger and DAT-01 review",
+    "Authenticated runtime QA, tenant isolation and Stripe TEST Checkout/webhook lifecycle",
+    "GitHub Actions hosted admission/reliability and branch-required checks",
+    "Qualified independent review, resolved review threads and governed main integration"
   ],
-  "DAT01_STATUS": "BLOCKED: no proven full canonical replay; production unchanged.",
-  "FORMAL_ACCEPTED": "2/24 (8.33%); no new gates accepted.",
-  "ATOMIC_ACCEPTED": "2/38 (5.26%); no new controls accepted.",
+  "DAT01_STATUS": "BLOCKED: no proof of complete canonical replay to disposable PostgreSQL and durable QA ledger; production remains unchanged.",
+  "FORMAL_ACCEPTED": "2/24 (8.33%); existing BIL-01/A-09 and OPS-01/A-18 only; no new gates accepted.",
+  "ATOMIC_ACCEPTED": "2/38 (5.26%); existing BIL-01 and OPS-01 only; no new controls accepted.",
   "REMAINING_PERCENT": "91.67% formal gates; 94.74% atomic controls.",
   "OWNER_ACTION_REQUIRED": [
-    "Independent qualified review and required protected-branch checks for PR #2598; repository governance reserves actual merge to human owner.",
-    "Resolve memory-pressure/build exit 137 without increasing paid resource exposure; re-run exact-SHA validation after repair."
+    "Qualified independent review and required conversation resolution for draft PR #2598; actual main merge is reserved for human owner despite GitHub's current API readback showing no enforced branch rules.",
+    "Vercel team-scope reauthorization is required to obtain a fresh production deployment SHA; the prior read returned 403 and no provider state was changed.",
+    "Independent evidence acceptance for remaining gates; buyer/legal/security assurance remains external where applicable."
   ],
-  "NEXT_EXECUTABLE_ACTION": "Diagnose and make a bounded memory-use correction for Next.js build on the candidate, then verify the new exact SHA with an included-credit CircleCI run; keep PR #2598 draft until qualified review and required checks exist."
+  "NEXT_EXECUTABLE_ACTION": "Use the successful exact-SHA CircleCI result as candidate source evidence; execute/check the missing route and full source-proof validation within included credits, then run canonical DAT-01 replay on disposable PostgreSQL 17. Keep PR #2598 Draft until its required complete checks and qualified independent review exist.",
+  "VERCEL_READBACK_STATUS": "Not re-read: Vercel API returned 403 for the supplied team scope; this SHA remains the last observed historical production value and is not asserted current.",
+  "CIRCLECI_JOB_ID": "1f9044be-8169-49d5-8794-6507d72a12b9",
+  "CIRCLECI_VALIDATED_SHA": "ab74c8c1d3d98892ffec3212b0ca932d1a735657",
+  "CIRCLECI_WORKFLOW": "github-actions-recovery-quality-manual / github-actions-recovery-quality",
+  "CIRCLECI_RESULT": "SUCCESS; 5m51s; exact branch/SHA and non-privileged env verified; deterministic npm ci; package-lock and security policies; ESLint; TypeScript; npm test; Next.js build. This job did not execute quality:routes or create the full CircleCI source-proof artifact.",
+  "CIRCLECI_INCLUDED_CREDIT_STATUS": "Before #863: Free plan 30,000 monthly included credits, 10,113 used (19,887 remaining). No plan change, purchase or add-on."
 }
