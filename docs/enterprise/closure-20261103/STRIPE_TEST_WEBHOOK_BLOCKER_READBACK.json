@@ -1,0 +1,79 @@
+{
+  "schema": "risck-comply.enterprise.stripe-test-webhook-readonly.v1",
+  "observedDate": "2026-11-03",
+  "mode": "TEST_ONLY",
+  "providerOperations": [
+    "Stripe GET /v1/webhook_endpoints",
+    "Stripe GET /v1/events",
+    "Vercel GET deployment"
+  ],
+  "readOnly": true,
+  "webhookEndpoints": {
+    "count": 1,
+    "hasMore": false,
+    "disabledCount": 1,
+    "endpoint": {
+      "id": "we_1ULOe9Gt3cgjPOtqNFF0MPKi",
+      "status": "disabled",
+      "livemode": false,
+      "enabledEvents": [
+        "checkout.session.completed",
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+        "invoice.payment_failed",
+        "invoice.paid"
+      ],
+      "targetClassification": "protected Vercel preview",
+      "targetPath": "/api/stripe/webhook",
+      "canonicalQaUrlVerified": false,
+      "canonicalProductionDomain": false,
+      "containsVercelProtectionBypassQueryParameter": true,
+      "parameterValue": "REDACTED_NOT_STORED",
+      "recordedEnvironment": "staging_test",
+      "deploymentId": "dpl_HbE3gtkKQ7he6hHc5XfTtDLgYzuo",
+      "recordedReleaseSha": "82715c36e9d6e9e96205f52eb0d4f61f52349f22"
+    }
+  },
+  "targetDeploymentReadback": {
+    "id": "dpl_HbE3gtkKQ7he6hHc5XfTtDLgYzuo",
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "state": "READY",
+    "target": null,
+    "githubSha": "82715c36e9d6e9e96205f52eb0d4f61f52349f22",
+    "candidateSourceShaBeforeEvidenceCommit": "7cbb5bf886603e4acde07ad7763e0c36467ba592",
+    "exactCandidateMatch": false
+  },
+  "testEventsObserved": {
+    "count": 77,
+    "hasMore": false,
+    "eventsWithPendingWebhooks": 8,
+    "scopeNote": "Event counts alone are not proof of webhook delivery, signature verification, idempotency, or QA persisted entitlements."
+  },
+  "decision": {
+    "BIL_02": "NOT_VERIFIED",
+    "BIL_03": "NOT_VERIFIED",
+    "A_10": "NOT_ELIGIBLE",
+    "cause": "TEST webhook endpoint disabled and bound to older protected preview; no authenticated signed event plus QA durable state proof.",
+    "firstActions": [
+      "Reconcile isolated QA target deployment and source SHA without reusing a public-share bypass query credential.",
+      "Validate an approved QA webhook destination and scoped secrets before enabling TEST delivery.",
+      "Use genuine Stripe TEST delivery and prove signature/duplicate rejection, persisted entitlement and exact-SHA provenance.",
+      "Seek independent reviewer approval before updating 38-control/24-gate records."
+    ],
+    "mustNotPerform": [
+      "Do not enable endpoint against a stale preview.",
+      "Do not publish or reuse protection bypass query token.",
+      "Do not touch Stripe LIVE or production.",
+      "Do not claim formal PASS before delivery evidence and independent acceptance."
+    ]
+  },
+  "safety": {
+    "stripeMutations": 0,
+    "productionWrites": 0,
+    "emailSent": 0,
+    "newCosts": 0,
+    "webhookEnabled": false,
+    "circleCiTriggered": false
+  }
+}
