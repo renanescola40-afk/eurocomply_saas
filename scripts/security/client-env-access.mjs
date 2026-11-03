@@ -26,7 +26,7 @@ export function findUnsafeClientEnvReferences(source) {
     const start = match.index ?? 0;
     const suffix = source.slice(start + match[0].length);
     const directPublicAccess = DIRECT_PUBLIC_ACCESS.exec(suffix);
-    if (!directPublicAccess || !APPROVED_PUBLIC_ENV_NAMES.has(directPublicAccess[1])) findings.push(start);
+    if (match[0] !== 'process.env' || !directPublicAccess || !APPROVED_PUBLIC_ENV_NAMES.has(directPublicAccess[1])) findings.push(start);
   }
   return findings;
 }
