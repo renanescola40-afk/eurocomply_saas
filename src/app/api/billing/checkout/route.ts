@@ -21,6 +21,7 @@ import {
   releaseInitialCheckoutAttempt,
 } from '@/server/billing/initial-checkout-singleflight';
 import { BILLING_PLANS, getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import { normalizePaidCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
 import { getStripeEventModeFromSecretKey } from '@/server/billing/stripe-event-mode';
 import { getStripeClient } from '@/server/billing/stripe';
 import {
@@ -293,7 +294,7 @@ export async function POST(request: Request) {
       maxBytes: CHECKOUT_JSON_MAX_BYTES,
     }).catch(() => null);
     const parsedBody = checkoutBodySchema.safeParse(body);
-    const normalizedPlan = parsedBody.success ? normalizeBillingPlanId(parsedBody.data.plan) : undefined;
+    const normalizedPlan = parsedBody.success ? normalizePaidCheckoutPlanId(parsedBody.data.plan) : undefined;
 
     if (!parsedBody.success || !normalizedPlan || !isSelfServePlan(normalizedPlan)) {
       return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
