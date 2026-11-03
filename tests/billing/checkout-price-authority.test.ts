@@ -45,14 +45,21 @@ describe('self-serve Checkout Price runtime authority', () => {
     }).ok).toBe(false);
   });
 
-  it('validates self-serve lifecycle Price before claiming a durable mutation or updating Stripe', async () => {
+  it('validates new lifecycle Prices after durable claim but before provider writes', async () => {
     const lifecycle = await readFile(new URL('../../src/server/billing/subscription-lifecycle.ts', import.meta.url), 'utf8');
     const validate = lifecycle.indexOf('const lifecyclePriceAuthority = validateCheckoutPriceAuthority');
     const claim = lifecycle.indexOf('const claim = await claimBillingLifecycleRequest({');
+    const inFlight = lifecycle.indexOf('await markBillingLifecycleProviderInFlight(requestId)');
     const update = lifecycle.indexOf('updated = await stripe.subscriptions.update(');
-    expect(validate).toBeGreaterThan(-1);
-    expect(claim).toBeGreaterThan(validate);
-    expect(update).toBeGreaterThan(claim);
+    const failure = lifecycle.indexOf("await failBillingLifecycleRequest(requestId, 'stripe_price_validation_failed')");
+    const newMutation = lifecycle.indexOf('if (!providerWasAlreadyCompleted) {');
+    expect(validate).toBeGreaterThan(claim);
+    expect(newMutation).toBeGreaterThan(claim);
+    expect(validate).toBeGreaterThan(newMutation);
+    expect(inFlight).toBeGreaterThan(validate);
+    expect(update).toBeGreaterThan(inFlight);
+    expect(failure).toBeGreaterThan(validate);
+    expect(failure).toBeLessThan(inFlight);
     expect(lifecycle).toContain("input.action !== 'cancel' && input.action !== 'reactivate'");
     expect(lifecycle).toContain("billing_price_configuration_invalid");
   });
@@ -82,7 +89,7 @@ describe('self-serve Checkout Price runtime authority', () => {
     expect(source).toContain("checkout_session_requires_restart");
   });
 
-  it('verifies all eligible add-on Prices before durable subscription mutation', async () => {
+  it('verifies all eligible add-on Prices before any Stripe provider mutation', async () => {
     const lifecycle = await readFile(new URL('../../src/server/billing/subscription-lifecycle.ts', import.meta.url), 'utf8');
     const addOns = lifecycle.indexOf("const addOns = input.action === 'replace_add_ons'");
     const addOnPriceRead = lifecycle.indexOf("stripe.prices.retrieve(addOnPriceId, { expand: ['product'] })");
@@ -91,7 +98,9 @@ describe('self-serve Checkout Price runtime authority', () => {
     expect(addOns).toBeGreaterThan(-1);
     expect(addOnPriceRead).toBeGreaterThan(addOns);
     expect(addOnAuthority).toBeGreaterThan(addOnPriceRead);
-    expect(claim).toBeGreaterThan(addOnAuthority);
+    const inFlight = lifecycle.indexOf('await markBillingLifecycleProviderInFlight(requestId)');
+    expect(claim).toBeLessThan(addOnPriceRead);
+    expect(inFlight).toBeGreaterThan(addOnAuthority);
     expect(lifecycle).toContain("(interval === 'year' ? addOn.priceAnnual : addOn.priceMonthly) * 100");
     expect(lifecycle).toContain("throw new BillingLifecycleRequestError('billing_add_on_price_configuration_invalid', 503)");
   });
