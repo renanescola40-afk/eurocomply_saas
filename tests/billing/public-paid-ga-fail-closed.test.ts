@@ -33,16 +33,21 @@ describe('public paid GA checkout gate', () => {
   it('fails closed before any first-time checkout state claim or Stripe provider access', () => {
     const gaGate = checkoutRoute.indexOf('const publicPaidBillingEnabled');
     const gaDeny = checkoutRoute.indexOf("return noStoreJson({ error: 'public_paid_ga_not_enabled' }, { status: 503 });");
-    const initialCheckout = checkoutRoute.indexOf('let checkoutAttempt = await claimInitialCheckoutAttempt');
     const stripeClient = checkoutRoute.indexOf('const stripe = getStripeClient()');
+    const canonicalPriceCheck = checkoutRoute.indexOf('const priceAuthority = validateCheckoutPriceAuthority');
+    const initialCheckout = checkoutRoute.indexOf('let checkoutAttempt = await claimInitialCheckoutAttempt');
     const ensureCustomer = checkoutRoute.indexOf('await ensureOrganizationStripeCustomer');
     const createCheckout = checkoutRoute.indexOf('stripe.checkout.sessions.create');
 
     expect(gaGate).toBeGreaterThan(-1);
     expect(gaDeny).toBeGreaterThan(gaGate);
-    expect(initialCheckout).toBeGreaterThan(gaDeny);
-    expect(stripeClient).toBeGreaterThan(initialCheckout);
-    expect(ensureCustomer).toBeGreaterThan(stripeClient);
+    // The paid-GA guard must deny before any Stripe access. After the guard,
+    // provider Price verification must precede the durable checkout claim so
+    // configuration errors cannot strand a two-minute lease.
+    expect(stripeClient).toBeGreaterThan(gaDeny);
+    expect(canonicalPriceCheck).toBeGreaterThan(stripeClient);
+    expect(initialCheckout).toBeGreaterThan(canonicalPriceCheck);
+    expect(ensureCustomer).toBeGreaterThan(initialCheckout);
     expect(createCheckout).toBeGreaterThan(ensureCustomer);
   });
 
