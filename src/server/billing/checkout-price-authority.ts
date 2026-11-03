@@ -6,6 +6,15 @@
  * subscription state is mutated. Do not infer authority from product names or
  * client-supplied plan metadata.
  */
+/** Validation-only checkout must stay in Stripe TEST. A customer-facing paid
+ * checkout may use only Stripe LIVE; never silently downgrade its mode. */
+export function checkoutStripeModeMatchesPurpose(
+  expectedMode: 'test' | 'live' | null,
+  validationOnlyCheckout: boolean,
+): boolean {
+  return expectedMode === (validationOnlyCheckout ? 'test' : 'live');
+}
+
 export type CheckoutPriceAuthorityInput = {
   priceId: string;
   expectedAmountCents: number | null;
