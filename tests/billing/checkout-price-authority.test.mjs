@@ -91,3 +91,20 @@ test('never permits LIVE keys for validation-only or TEST keys for public paid c
   assert.equal(checkoutStripeModeMatchesPurpose(null, false), false);
   assert.equal(checkoutStripeModeMatchesPurpose(null, true), false);
 });
+
+test('validates add-on unit prices with the same canonical licensed recurring authority', () => {
+  const addOn = {
+    ...canonical,
+    id: 'price_addon_reg_monitor',
+    unit_amount: 3900,
+    product: { id: 'prod_addon_monitor', active: true },
+  };
+  const addOnContract = { ...contract, priceId: addOn.id, expectedAmountCents: 3900 };
+  assert.equal(validateCheckoutPriceAuthority(addOn, addOnContract).ok, true);
+  assert.equal(validateCheckoutPriceAuthority({ ...addOn, unit_amount: 0 }, addOnContract).ok, false);
+  assert.equal(validateCheckoutPriceAuthority({ ...addOn, unit_amount: 4900 }, addOnContract).ok, false);
+  assert.equal(validateCheckoutPriceAuthority({
+    ...addOn,
+    recurring: { ...canonical.recurring, interval: 'year' },
+  }, addOnContract).ok, false);
+});
