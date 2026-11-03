@@ -44,11 +44,13 @@ bounded validation-only checkout; a public paid Checkout must use LIVE.
    Provider failure or unconfirmed expiry blocks reuse and does not return a
    hosted URL. Best-effort compensation remains distinct from this strict
    reused-session condition.
-6. For upgrade/downgrade and qualifying self-serve add-on amendments, validate
-   the target base-plan Price before claiming the durable lifecycle request
-   ledger or mutating Stripe. Cancellation and reactivation do not select a new
-   Price and must remain available. Existing idempotent completed replay
-   remains authoritative.
+6. For new upgrade/downgrade and eligible add-on amendments, claim the durable
+   idempotency request, then validate the target base-plan Price and every
+   selected active add-on Price **before** any Stripe mutation or provider
+   in-flight marker. A failed preflight records a failed lifecycle request,
+   which can be reclaimed safely. Completed/provider-succeeded recovery and
+   audit completion must not be reblocked by a later price or catalog change.
+   Cancellation and reactivation do not select a new Price and remain available.
 7. Business and Enterprise negotiated prices remain under contract authority;
    do not turn them into public catalogue subscriptions or assume a fixed fee.
 
@@ -67,9 +69,11 @@ bounded validation-only checkout; a public paid Checkout must use LIVE.
 
 - Each first-time Checkout now reads one Price from Stripe before claiming its
   lease; reusing a session additionally reads at most two line items.
-  Subscription lifecycle modifications that target a self-serve plan also read
-  its Price. This adds Stripe API round trips and fail-closed availability
-  dependencies, in exchange for stronger billing integrity.
+  New self-serve lifecycle mutations read the base Price plus one Price for
+  each selected add-on, where applicable. This adds Stripe API round trips
+  and fail-closed availability dependencies, in exchange for stronger billing
+  integrity. Already-provider-succeeded requests bypass fresh Price preflight
+  so the durable audit/ledger recovery process can complete.
 - If the provider cannot be read, checkout/plan mutation can return a safe
   failure instead of silently charging or granting an invalid plan.
 - Only the public-facing failure category is exposed; never log Stripe secrets,
