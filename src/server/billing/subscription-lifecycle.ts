@@ -555,6 +555,35 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
     : input.action === 'upgrade' || input.action === 'downgrade'
       ? getEligibleProviderAddOnSelectionsForPlan(subscription, baseItem.id, targetPlan)
       : normalizeAddOnSelections(input.addOns, targetPlan);
+
+  // Enabled add-ons also carry priced subscription items. Validate each
+  // canonical active add-on Price before a provider write so an incorrect env
+  // binding cannot grant a paid capability for €0 or a different cadence.
+  if (input.action !== 'cancel' && input.action !== 'reactivate') {
+    for (const selection of addOns) {
+      const addOn = getBillingAddOn(selection.slug);
+      if (!addOn || !isAddOnAvailableForPlan(addOn, targetPlan)) {
+        throw new BillingLifecycleRequestError('billing_add_on_catalog_invalid', 503);
+      }
+      const addOnPriceId = getStripeAddOnPriceId(selection.slug, interval);
+      let providerAddOnPrice: Stripe.Price;
+      try {
+        providerAddOnPrice = await stripe.prices.retrieve(addOnPriceId, { expand: ['product'] });
+      } catch (error) {
+        throw classifyProviderFailure('stripe', 'subscription_add_on_price_retrieve', error);
+      }
+      const addOnPriceAuthority = validateCheckoutPriceAuthority(providerAddOnPrice, {
+        priceId: addOnPriceId,
+        expectedAmountCents: (interval === 'year' ? addOn.priceAnnual : addOn.priceMonthly) * 100,
+        expectedInterval: interval,
+        expectedMode: getStripeEventModeFromSecretKey(),
+      });
+      if (!addOnPriceAuthority.ok) {
+        throw new BillingLifecycleRequestError('billing_add_on_price_configuration_invalid', 503);
+      }
+    }
+  }
+
   const claim = await claimBillingLifecycleRequest({
     organizationId: input.organizationId,
     requestedBy: input.userId,
