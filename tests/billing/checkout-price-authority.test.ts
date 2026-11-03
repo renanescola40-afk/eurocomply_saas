@@ -82,6 +82,27 @@ describe('self-serve Checkout Price runtime authority', () => {
     expect(source).toContain("checkout_session_requires_restart");
   });
 
+  it('requires confirmed expiry before releasing any stale reused session', async () => {
+    const source = await readFile(new URL('../../src/app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
+    expect(source).toContain("expired.status !== 'expired'");
+    expect(source).toContain("providerCode: 'checkout_session_expiry_unconfirmed'");
+
+    const staleLegalExpiry = source.indexOf(
+      "expireReusedCheckoutSessionStrict(stripe, existingSession.id, 'billing_checkout_stale_legal_session_expire')",
+    );
+    const staleLegalRelease = source.indexOf(
+      "releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_stale_legal_session_release')",
+    );
+    const stalePriceExpiry = source.indexOf(
+      "expireReusedCheckoutSessionStrict(stripe, existingSession.id, 'checkout_stale_price_session_expire')",
+    );
+    const stalePriceRelease = source.indexOf("'billing_checkout_stale_price_session_release'");
+    expect(staleLegalExpiry).toBeGreaterThan(-1);
+    expect(staleLegalRelease).toBeGreaterThan(staleLegalExpiry);
+    expect(stalePriceExpiry).toBeGreaterThan(-1);
+    expect(stalePriceRelease).toBeGreaterThan(stalePriceExpiry);
+  });
+
   it('verifies the Stripe Price before the first customer side effect', async () => {
     const source = await readFile(new URL('../../src/app/api/billing/checkout/route.ts', import.meta.url), 'utf8');
     const authority = source.indexOf('const priceAuthority = validateCheckoutPriceAuthority');
