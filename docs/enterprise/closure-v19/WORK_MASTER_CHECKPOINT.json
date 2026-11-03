@@ -1,14 +1,14 @@
 {
-  "OBSERVED_AT": "2026-11-03T12:46:00Z",
+  "OBSERVED_AT": "2026-11-03T12:57:00Z",
   "GITHUB_MAIN_SHA": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
   "GITLAB_MAIN_SHA": "84a99f813bdce601c119bff27c1d82c5356295d6",
   "VERCEL_PRODUCTION_SHA": "70d3545f414d063379d481fd238aed563e05edda",
-  "CIRCLECI_PIPELINE_ID": 863,
-  "CIRCLECI_FIRST_FAILING_STEP": "None in latest CircleCI #863/job 426: all configured github-actions-recovery-quality steps passed. Historical #416 first failed at ESLint and TypeScript, no-require-imports in vendor/minimatch-compat/index.cjs:3. Pipeline #856/job 425 failed in Next.js build, exit 137.",
-  "FAILURE_CLASSIFICATION": "CircleCI #416 was a source lint failure in the intentional CommonJS adapter and the candidate carries a narrow rule suppression. CircleCI #856 on Docker Medium (4 GB) had source/test steps pass then Next.js build exit 137; cgroup OOM was not confirmed in logs. On #863, switching this manual-only quality job to Docker Large with Node heap 5120 MB produced a successful build, consistent with insufficient memory headroom on Medium; do not claim a kernel OOM event was observed.",
-  "REPAIR_COMMIT_SHA": "ab74c8c1d3d98892ffec3212b0ca932d1a735657",
+  "CIRCLECI_PIPELINE_ID": 866,
+  "CIRCLECI_FIRST_FAILING_STEP": "CircleCI #866/job 428: Replay 137 migrations on disposable PostgreSQL 17 only; script scripts/diagnostics/g5-02-canonical-replay.py exited 1 at preflight before applying migration 1.",
+  "FAILURE_CLASSIFICATION": "CircleCI #416 was a source lint failure in the intentional CommonJS adapter and the candidate carries a narrow rule suppression. CircleCI #856 on Docker Medium (4 GB) had source/test steps pass then Next.js build exit 137; cgroup OOM was not confirmed in logs. On #863, switching this manual-only quality job to Docker Large with Node heap 5120 MB produced a successful build, consistent with insufficient memory headroom on Medium; do not claim a kernel OOM event was observed. CircleCI #866 exact candidate SHA feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6 failed preflight SOURCE_LEDGER_MISMATCH: 25 observed production ledger versions have no filename with that exact timestamp in supabase/migrations; zero migrations executed; artifact replay.json confirms 0/137 completed and 0 duplicate observed versions. Existing source crosswalk maps 137 production identities to 135 unique files, with two consolidated source groups, but its contract explicitly says it is not executable; historical provider statement evidence reports 123/137 nonmatching source statement hashes. Do not replay or mark DAT-01 PASS until a reviewed, hash-valid execution order is available.",
+  "REPAIR_COMMIT_SHA": "ab74c8c1d3d98892ffec3212b0ca932d1a735657 (CircleCI quality repair); feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6 (safe branch allow-list change; its synthetic replay exposed the source-ledger blocker)",
   "INTEGRATION_PR": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
-  "INTEGRATION_HEAD_SHA": "ab74c8c1d3d98892ffec3212b0ca932d1a735657",
+  "INTEGRATION_HEAD_SHA": "feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6 (source SHA for latest CircleCI #866; checkpoint documentation commit will advance the PR head)",
   "INTEGRATED_SOURCE_PRS": [
     "#2592",
     "#2593",
@@ -33,33 +33,38 @@
     "CircleCI #863/job 426: ESLint and TypeScript PASS",
     "CircleCI #863/job 426: npm test PASS (suite completed; UI output did not expose final count)",
     "CircleCI #863/job 426: Next.js build PASS in 2m43s on Docker Large with NODE_OPTIONS 5120 MB",
-    "GitHub commit status for exact SHA ab74c8c: ci/circleci: github-actions-recovery-quality = success"
+    "GitHub commit status for exact SHA ab74c8c: ci/circleci: github-actions-recovery-quality = success",
+    "CircleCI #866/job 428: PostgreSQL 17.6 disposable service, checkout exact SHA, approved branch/no provider credentials, PG client readiness all PASS."
   ],
   "TESTS_FAIL": [
     "CircleCI #856/job 425, exact SHA 8f9d7856018e952a215f77320f12736a21664b09: Next.js build exit 137 on Docker Medium; no conclusive cgroup OOM record",
-    "Historical CircleCI #840/job 423 and #843: Next.js build exit 137 on Docker Medium"
+    "Historical CircleCI #840/job 423 and #843: Next.js build exit 137 on Docker Medium",
+    "CircleCI #866/job 428 exact SHA feb9905: synthetic DAT-01 preflight failed SOURCE_LEDGER_MISMATCH (25/137 timestamp identities lack exact-named migration files; 0 migrations applied; artifact replay.json attached)."
   ],
   "TESTS_BLOCKED": [
     "CircleCI quality job #863 does not include quality:routes or the complete exact-SHA source-proof artifact workflow",
-    "Canonical PostgreSQL 17 replay through all migrations, RLS/grants/functions, durable QA ledger and DAT-01 review",
     "Authenticated runtime QA, tenant isolation and Stripe TEST Checkout/webhook lifecycle",
     "GitHub Actions hosted admission/reliability and branch-required checks",
-    "Qualified independent review, resolved review threads and governed main integration"
+    "Qualified independent review, resolved review threads and governed main integration",
+    "DAT-01 full replay: source crosswalk is expressly planning/provenance only, not executable; its mapped source evidence does not currently prove canonical SQL parity (123/137 observed statement hashes nonmatching), so no safe execution order can yet be inferred."
   ],
-  "DAT01_STATUS": "BLOCKED: no proof of complete canonical replay to disposable PostgreSQL and durable QA ledger; production remains unchanged.",
+  "DAT01_STATUS": "BLOCKED: CircleCI #866 exact SHA feb9905 failed safe preflight before executing SQL (0/137); 25 timestamp mismatches are explained partly by a non-executable crosswalk (137 production identities -> 135 source files, 2 consolidated groups); provider statement evidence has 123 nonmatching hashes. Need qualified source/historical SQL reconciliation and reviewed replay contract. No Supabase connection or writes occurred.",
   "FORMAL_ACCEPTED": "2/24 (8.33%); existing BIL-01/A-09 and OPS-01/A-18 only; no new gates accepted.",
   "ATOMIC_ACCEPTED": "2/38 (5.26%); existing BIL-01 and OPS-01 only; no new controls accepted.",
   "REMAINING_PERCENT": "91.67% formal gates; 94.74% atomic controls.",
   "OWNER_ACTION_REQUIRED": [
     "Qualified independent review and required conversation resolution for draft PR #2598; actual main merge is reserved for human owner despite GitHub's current API readback showing no enforced branch rules.",
     "Vercel team-scope reauthorization is required to obtain a fresh production deployment SHA; the prior read returned 403 and no provider state was changed.",
-    "Independent evidence acceptance for remaining gates; buyer/legal/security assurance remains external where applicable."
+    "Independent evidence acceptance for remaining gates; buyer/legal/security assurance remains external where applicable.",
+    "DAT-01 needs qualified review of the 137-entry source crosswalk / 123 SQL statement hash mismatches before any canonical replay; no production operation is authorized."
   ],
-  "NEXT_EXECUTABLE_ACTION": "Use the successful exact-SHA CircleCI result as candidate source evidence; execute/check the missing route and full source-proof validation within included credits, then run canonical DAT-01 replay on disposable PostgreSQL 17. Keep PR #2598 Draft until its required complete checks and qualified independent review exist.",
+  "NEXT_EXECUTABLE_ACTION": "Recover and independently validate production migration source bytes for the 137 identities or obtain approved repository provenance explaining all 123 hash mismatches; revise G5-02 runner only after a qualified reviewer approves crosswalk execution semantics, including the two consolidated groups and superseded entries. Then replay on disposable PostgreSQL 17, assess schema/RLS/grants/functions and durable QA status. Keep DAT-01 blocked until all acceptance evidence is reviewed.",
   "VERCEL_READBACK_STATUS": "Not re-read: Vercel API returned 403 for the supplied team scope; this SHA remains the last observed historical production value and is not asserted current.",
-  "CIRCLECI_JOB_ID": "1f9044be-8169-49d5-8794-6507d72a12b9",
-  "CIRCLECI_VALIDATED_SHA": "ab74c8c1d3d98892ffec3212b0ca932d1a735657",
-  "CIRCLECI_WORKFLOW": "github-actions-recovery-quality-manual / github-actions-recovery-quality",
-  "CIRCLECI_RESULT": "SUCCESS; 5m51s; exact branch/SHA and non-privileged env verified; deterministic npm ci; package-lock and security policies; ESLint; TypeScript; npm test; Next.js build. This job did not execute quality:routes or create the full CircleCI source-proof artifact.",
-  "CIRCLECI_INCLUDED_CREDIT_STATUS": "Before #863: Free plan 30,000 monthly included credits, 10,113 used (19,887 remaining). No plan change, purchase or add-on."
+  "CIRCLECI_JOB_ID": "473b5b43-8ac0-40c6-8fdb-a9353d65c873",
+  "CIRCLECI_VALIDATED_SHA": "feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6",
+  "CIRCLECI_WORKFLOW": "enterprise-postgres-synthetic-manual / enterprise-pg-synthetic-replay",
+  "CIRCLECI_RESULT": "FAIL at source-ledger preflight, exit 1; exact SHA feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6; artifact replay.json: failure_code SOURCE_LEDGER_MISMATCH, expected 137, completed 0, 25 missing exact filename timestamps, 0 duplicates. Synthetic PostgreSQL service and credential isolation PASS. No migration executed.",
+  "CIRCLECI_INCLUDED_CREDIT_STATUS": "Current Free usage page: 30,000 monthly included credits, 10,233 used (19,767 remaining); no plan change/purchase/add-on. #866 completed 21 sec on Docker Small; exact credit attribution not exposed on this page.",
+  "CIRCLECI_REPLAY_ARTIFACT": "https://app.circleci.com/pipelines/gh/renanescola40-afk/eurocomply_saas/866/details?useNewPipelines=true&workflowId=d80af373-5868-40bb-9936-cb910a580c61&job=473b5b43-8ac0-40c6-8fdb-a9353d65c873&buildNumber=428&jobType=build&tab=artifacts",
+  "CROSSWALK_EVIDENCE": "Candidate crosswalk 20261022: 137/137 production identities mapped, 135 unique source files, 2 consolidated groups, 0 unresolved. Contract says planning/recovery source only, not executable. Provider SQL statement evidence states 123/137 records do not hash-match repository sources."
 }
