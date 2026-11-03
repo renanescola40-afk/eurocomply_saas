@@ -34,12 +34,12 @@ for (const [description, source, expectedCount] of cases) {
 
 const scannerPath = fileURLToPath(new URL('../../scripts/security/check-client-boundaries.mjs', import.meta.url));
 
-function runClientBoundaryScanner(source) {
+function runClientBoundaryScanner(source, { addDirective = true } = {}) {
   const workspace = mkdtempSync(join(tmpdir(), 'risck-sec05-client-'));
   try {
     const fixtureDir = join(workspace, 'src', 'app', 'fixture');
     mkdirSync(fixtureDir, { recursive: true });
-    writeFileSync(join(fixtureDir, 'page.tsx'), "'use client';\n" + source + '\n', 'utf8');
+    writeFileSync(join(fixtureDir, 'page.tsx'), (addDirective ? "'use client';\n" : '') + source + '\n', 'utf8');
     return spawnSync(process.execPath, [scannerPath], {
       cwd: workspace,
       encoding: 'utf8',
@@ -64,4 +64,26 @@ test('whole scanner allows a direct public variable', () => {
 test('whole scanner rejects unapproved public variable by default', () => {
   const result = runClientBoundaryScanner('export const credential = process.env.NEXT_PUBLIC_CONFIDENTIAL;');
   assert.equal(result.status, 1, result.stdout + result.stderr);
+});
+
+test('whole scanner blocks a forbidden env behind twelve leading line comments', () => {
+  const header = Array.from({ length: 12 }, (_, i) => `// license line ${i}`).join('\n');
+  const result = runClientBoundaryScanner(header + "\n'use client';\nconst key = process.env.SUPABASE_SERVICE_ROLE_KEY;", { addDirective: false });
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stderr, /client boundary references process\.env/);
+});
+
+test('whole scanner blocks a forbidden env behind a multiline block comment', () => {
+  const result = runClientBoundaryScanner('/* large\n * legal notice\n */\n"use client";\nconst key = process.env.STRIPE_SECRET_KEY;', { addDirective: false });
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+});
+
+test('whole scanner recognizes use client after another directive', () => {
+  const result = runClientBoundaryScanner('"use strict";\n"use client";\nconst key = process.env.STRIPE_SECRET_KEY;', { addDirective: false });
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+});
+
+test('whole scanner does not treat comment-only use client text as a directive', () => {
+  const result = runClientBoundaryScanner('// "use client" is only documentation\nconst key = process.env.STRIPE_SECRET_KEY;', { addDirective: false });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
 });
