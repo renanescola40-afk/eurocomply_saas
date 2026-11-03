@@ -17,7 +17,15 @@ export function validateEvidenceRecord(r,{expectedSha,now=new Date()}={}){
  else if(!fs.existsSync(artifactPath)||!fs.statSync(artifactPath).isFile())e.push('artifact_missing');
  else if(crypto.createHash('sha256').update(fs.readFileSync(artifactPath)).digest('hex')!==r.artifact_sha256)e.push('artifact_sha256_mismatch');
  if(/runtime|provider|live/i.test(r.evidence_type||'')&&!Number.isNaN(d.getTime())&&(d>now||now.getTime()-d.getTime()>90*24*60*60*1000))e.push('runtime_evidence_stale');
- if(r.status==='PASS'&&(r.reviewer_status!=='ACCEPTED'||r.acceptance_status!=='ACCEPTED'||!r.accepted_by||!r.accepted_at))e.push('pass_requires_independent_acceptance');
+ if(r.status==='PASS'){
+  const approvedAt=Date.parse(r.accepted_at||'');
+  if(r.reviewer_status!=='ACCEPTED'||r.acceptance_status!=='ACCEPTED'||typeof r.accepted_by!=='string'||!r.accepted_by.trim()||!Number.isFinite(approvedAt)){
+   e.push('pass_requires_independent_acceptance');
+  }
+  if(Number.isFinite(approvedAt)&&(approvedAt>now.getTime()||(!Number.isNaN(d.getTime())&&approvedAt<d.getTime()))){
+   e.push('pass_acceptance_time_invalid');
+  }
+ }
  if(r.status==='NOT_APPLICABLE'&&(!r.applicability_rationale||r.applicability_rationale.length<20||r.reviewer_status!=='ACCEPTED'||r.acceptance_status!=='ACCEPTED'))e.push('not_applicable_requires_approved_rationale');
  return e;
 }

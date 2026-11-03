@@ -72,3 +72,11 @@ test('approved gate claim without all child PASS is rejected even with valid met
   assert.ok(validateGateAcceptance(claim,{eligible:false,expectedSha:sha,now:new Date('2026-11-03T00:00:00Z')}).includes('child_controls_not_all_pass'));
  }finally{fs.rmSync(abs,{force:true});}
 });
+
+test('atomic PASS cannot use future, pre-evidence or whitespace-only acceptance',()=>{
+ const acceptance={...base,status:'PASS',reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',accepted_by:'QA reviewer'};
+ const now=new Date('2026-11-03T12:00:00Z');
+ assert.ok(validateEvidenceRecord({...acceptance,accepted_at:'2099-01-01T00:00:00Z'},{expectedSha:sha,now}).includes('pass_acceptance_time_invalid'));
+ assert.ok(validateEvidenceRecord({...acceptance,accepted_at:'2026-10-01T00:00:00Z'},{expectedSha:sha,now}).includes('pass_acceptance_time_invalid'));
+ assert.ok(validateEvidenceRecord({...acceptance,accepted_by:'   ',accepted_at:'2026-11-01T11:00:00Z'},{expectedSha:sha,now}).includes('pass_requires_independent_acceptance'));
+});
