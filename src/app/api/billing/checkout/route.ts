@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 
 import { getBillingEntitlements } from '@/lib/billing/plans';
-import { reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
+import { checkoutStripeModeMatchesPurpose, reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
 import {
   isPublicSelfServeContractEffective,
   PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
@@ -395,6 +395,15 @@ export async function POST(request: Request) {
 
     // Before claiming the initial-checkout lease, validate provider reality.
     // Misconfigured Prices must not strand a lease or revive an obsolete Price.
+    const expectedStripeMode = getStripeEventModeFromSecretKey();
+    if (!checkoutStripeModeMatchesPurpose(expectedStripeMode, validationOnlyCheckout)) {
+      throw new ProviderFailureError({
+        provider: 'stripe',
+        kind: 'configuration',
+        providerCode: 'checkout_stripe_mode_not_authorized',
+        operation: 'checkout_price_preflight',
+      });
+    }
     const stripe = getStripeClient();
     const priceId = getStripePriceId(plan);
     let priceRecord: Stripe.Price;
@@ -406,7 +415,7 @@ export async function POST(request: Request) {
     const priceAuthority = validateCheckoutPriceAuthority(priceRecord, {
       priceId,
       expectedAmountCents: BILLING_PLANS[plan].monthlyPriceCents,
-      expectedMode: getStripeEventModeFromSecretKey(),
+      expectedMode: expectedStripeMode,
     });
     if (!priceAuthority.ok) {
       throw new ProviderFailureError({
