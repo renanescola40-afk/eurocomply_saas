@@ -118,3 +118,22 @@ test('whole scanner rejects globalThis bracket process indirection', () => {
   const result = runClientBoundaryScanner('export const key = globalThis["process"]["env"].SUPABASE_SERVICE_ROLE_KEY;');
   assert.equal(result.status, 1, result.stdout + result.stderr);
 });
+
+const approvedAnalyticsCases = [
+  'NEXT_PUBLIC_POSTHOG_KEY',
+  'NEXT_PUBLIC_POSTHOG_HOST',
+  'NEXT_PUBLIC_POSTHOG_ASSET_HOST',
+  'NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT',
+  'NEXT_PUBLIC_POSTHOG_SESSION_REPLAY',
+];
+
+for (const name of approvedAnalyticsCases) {
+  test(`approved public analytics name ${name} remains permitted`, () => {
+    assert.deepEqual(findUnsafeClientEnvReferences(`export const value = process.env.${name};`), []);
+    assert.equal(findUnsafeClientEnvReferences(`const secret = process.env["${name}"];`).length, 1);
+  });
+}
+
+test('unapproved analytics-looking variables do not silently become public', () => {
+  assert.equal(findUnsafeClientEnvReferences('const secret = process.env.NEXT_PUBLIC_POSTHOG_PRIVATE_TOKEN;').length, 1);
+});
