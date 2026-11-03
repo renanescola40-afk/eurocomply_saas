@@ -80,7 +80,8 @@ export function reusableCheckoutLineItemsMatch(
   },
   expectedPriceId: string,
 ): boolean {
-  return items.has_more === false
+  return expectedPriceId.startsWith('price_')
+    && items.has_more === false
     && items.data.length === 1
     && items.data[0]?.price?.id === expectedPriceId
     && items.data[0]?.quantity === 1;
