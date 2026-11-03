@@ -1,0 +1,157 @@
+{
+  "schema": "risck-comply.normal2-billing-qa-readback.v1",
+  "observedDate": "2026-11-03",
+  "source": "Read-only authenticated Stripe LIVE/TEST, Supabase QA and GitHub connector readbacks performed by NORMAL 2",
+  "candidateBranch": "normal2/product-enterprise-v18-checkout-price-authority-20261102",
+  "candidateHeadBeforeEvidenceCommit": "963e7b157e84a39c247d3ba090dc3e1d6092bdd2",
+  "status": "EVIDENCE_OBSERVED_BLOCKING_ITEMS_OPEN",
+  "billingGateStatuses": {
+    "A-09": "HISTORICAL_PASS_CATALOG_RECONFIRMED_PRICE_METADATA_ONLY",
+    "A-10": "NOT_VERIFIED",
+    "A-11": "NOT_VERIFIED",
+    "A-16": "NOT_VERIFIED"
+  },
+  "stripe": {
+    "account": "acct_1U6IuJGt3cgjPOtq",
+    "liveCatalog": {
+      "verifiedPriceCount": 6,
+      "expectedPriceCount": 6,
+      "allActive": true,
+      "allEur": true,
+      "matchingAmountAndCadence": true,
+      "rows": [
+        {
+          "plan": "starter",
+          "interval": "month",
+          "priceId": "price_1U6wnYGt3cgjPOtqIATM8DeH",
+          "amountCents": 4900
+        },
+        {
+          "plan": "starter",
+          "interval": "year",
+          "priceId": "price_1U6wnjGt3cgjPOtqAgMbZdQa",
+          "amountCents": 49000
+        },
+        {
+          "plan": "professional",
+          "interval": "month",
+          "priceId": "price_1U6wnpGt3cgjPOtqmL7HoPDw",
+          "amountCents": 14900
+        },
+        {
+          "plan": "professional",
+          "interval": "year",
+          "priceId": "price_1U6wnuGt3cgjPOtqdWopnIyX",
+          "amountCents": 149000
+        },
+        {
+          "plan": "business",
+          "interval": "month",
+          "priceId": "price_1U6wo2Gt3cgjPOtqOr91hofs",
+          "amountCents": 39900
+        },
+        {
+          "plan": "business",
+          "interval": "year",
+          "priceId": "price_1U6wo9Gt3cgjPOtqa8vSvgaM",
+          "amountCents": 399000
+        }
+      ],
+      "productionVercelBindingCurrentReadback": "NOT_VERIFIED",
+      "newCheckoutOrLiveTransactionExecuted": false
+    },
+    "testWebhook": {
+      "endpointId": "we_1ULOe9Gt3cgjPOtqNFF0MPKi",
+      "status": "disabled",
+      "livemode": false,
+      "requiredEventsConfigured": [
+        "checkout.session.completed",
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+        "invoice.payment_failed",
+        "invoice.paid"
+      ],
+      "legacyDeploymentBinding": "Previously pinned to immutable earlier test deployment; current exact-head target routing is NOT_VERIFIED",
+      "secretRetrieved": false,
+      "destinationUrlOrSecretOmitted": true,
+      "enabledOrEdited": false,
+      "realSignedDeliveryObserved": false
+    }
+  },
+  "supabaseQA": {
+    "projectId": "zrxrrfbllsxtleyxjpsz",
+    "observedAppliedMigrationCount": 7,
+    "migrationCountInterpretation": "Number of recorded entries alone does not establish whether the schema is complete or incomplete; assess actual schema/RPC behavior separately",
+    "billingTables": {
+      "stripe_events_processed": {
+        "rowCount": 0,
+        "rls": true,
+        "forceRls": true
+      },
+      "subscriptions": {
+        "rowCount": 0,
+        "rls": true,
+        "forceRls": true
+      },
+      "billing_checkout_attempts": {
+        "rowCount": 0,
+        "rls": true,
+        "forceRls": true
+      },
+      "billing_lifecycle_requests": {
+        "rowCount": 0,
+        "rls": true,
+        "forceRls": true
+      }
+    },
+    "checkoutRpcSignatures": [
+      "claim_initial_billing_checkout_atomic(uuid,text,uuid,timestamptz)",
+      "bind_initial_billing_checkout_session_atomic(uuid,uuid,text,timestamptz)",
+      "release_initial_billing_checkout_atomic(uuid,uuid)",
+      "clear_initial_billing_checkout_by_session_atomic(text)"
+    ],
+    "checkoutRpcExecutionPermissions": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true
+    },
+    "testWebhookPersisted": false,
+    "realSubscriptionPersisted": false,
+    "productionMutation": false,
+    "qaMutation": false
+  },
+  "gateBlockers": [
+    "BIL-02: Stripe TEST webhook is disabled; no genuine signed event delivery/invalid signature/replay runtime evidence exists in this readback.",
+    "BIL-03: No Stripe TEST paid Checkout -> signed webhook -> QA persisted subscription and entitlement correlation has been demonstrated.",
+    "BIL-04: No paid, failed-payment, cancellation, upgrade/downgrade and revocation scenario has produced attributable QA runtime traces.",
+    "BIL-05: Authenticated tenant owner/admin/member negative privilege tests and tenant separation are not validated against the candidate runtime.",
+    "QAT-02/03: No authenticated browser E2E and exact-SHA evidence files were produced by this read-only check.",
+    "GitHub Actions current PR head failed before accessible step/log artifacts; exact code execution and root cause unverified.",
+    "CircleCI exact-SHA execution and GitLab MR !2632 reconciliation remain pending."
+  ],
+  "handoff": {
+    "executor": "Work Master/QA authorized operator",
+    "preconditions": [
+      "Confirm immutable candidate SHA and approved synthetic QA target",
+      "Align disabled TEST webhook destination with the exact eligible QA deployment, preserving secrets and not routing to Production",
+      "Coordinate Stripe TEST enablement only after correct destination and owner-governed environment checks",
+      "Confirm QA schema migration and test-user baseline in DAT-01 lane",
+      "Run signed valid/invalid/duplicate TEST webhook and authenticated test Checkout and check QA durable state",
+      "Run lifecycle grant/revocation and tenant unauthorized action E2E",
+      "Attach CI logs, provider IDs redacted, reviewer approval and validator outcome"
+    ],
+    "requiredCircleCi": "Run available no-extra-cost exact-SHA CircleCI job; do not dispatch paid workflows or claim admission without runner logs.",
+    "doNot": "Do not activate old TEST webhook, mutate shared QA destructively, charge LIVE, write Production, send email or declare a gate PASS from this document"
+  },
+  "acceptance": {
+    "newNormal2GatesPassed": 0,
+    "newNormal2GatesTotal": 10,
+    "newNormal2RemainingPercent": 100,
+    "sourceHistoricG1Passes": 2,
+    "sourceHistoricG1Total": 24,
+    "formalGateApprovalProduced": false,
+    "isRuntimeEvidence": false,
+    "thisRecordMayNotBeUsedToClaimBIL02ToBIL05Pass": true
+  }
+}
