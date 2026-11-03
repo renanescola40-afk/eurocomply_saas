@@ -60,11 +60,18 @@ function normalizePath(path) {
 }
 
 function hasUseClientDirective(source) {
-  const firstStatements = source
-    .split('\n')
-    .slice(0, 8)
-    .map((line) => line.trim().replace(/;$/, ''));
-  return firstStatements.includes("'use client'") || firstStatements.includes('"use client"');
+  let remaining = source.replace(/^\uFEFF/, '');
+  // Valid JavaScript directives may follow comments and other directives;
+  // limiting detection to the first eight lines silently misses client modules.
+  while (remaining.length > 0) {
+    const leadingTrivia = /^(?:\s+|\/\/[^\r\n]*(?:\r?\n|$)|\/\*[\s\S]*?\*\/)+/.exec(remaining);
+    if (leadingTrivia) remaining = remaining.slice(leadingTrivia[0].length);
+    const directive = /^(['"])([^'"\r\n]*)\1[ \t]*;?/.exec(remaining);
+    if (!directive) return false;
+    if (directive[2] === 'use client') return true;
+    remaining = remaining.slice(directive[0].length);
+  }
+  return false;
 }
 
 function isClientNamedFile(path) {
