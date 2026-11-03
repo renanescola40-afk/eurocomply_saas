@@ -69,3 +69,19 @@ export function validateCheckoutPriceAuthority(
 
   return { ok: true, reason: 'canonical_price_confirmed' };
 }
+
+
+/** A reused hosted Session is safe only if it still contains exactly one
+ * canonical base-plan Price with one licensed seat and no additional items. */
+export function reusableCheckoutLineItemsMatch(
+  items: {
+    data: Array<{ price?: { id?: string | null } | null; quantity?: number | null }>;
+    has_more: boolean;
+  },
+  expectedPriceId: string,
+): boolean {
+  return items.has_more === false
+    && items.data.length === 1
+    && items.data[0]?.price?.id === expectedPriceId
+    && items.data[0]?.quantity === 1;
+}
