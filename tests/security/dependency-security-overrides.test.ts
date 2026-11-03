@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import minimatchDefault, { minimatch, Minimatch } from 'minimatch';
+import minimatchDefault, { minimatch } from 'minimatch';
 import { globSync } from 'glob';
 
 const require = createRequire(import.meta.url);
