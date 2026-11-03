@@ -12,6 +12,7 @@ DO $verify_enterprise_clerk$
 DECLARE
  actor record;
  owner_fixture record;
+ member_fixture record;
  other_tenant uuid;
  assurance text;
  own_read boolean; own_manage boolean; cross_read boolean; cross_manage boolean;
@@ -153,10 +154,77 @@ BEGIN
     RAISE EXCEPTION 'QA Enterprise negative/positive case failed: unknown-org-manage';
   END IF;
   n := n + 1;
- IF n<>22 THEN RAISE EXCEPTION 'Enterprise fixture coverage mismatch: %',n; END IF;
+ -- Missing AAL must not satisfy a tenant-wide MFA requirement (2).
+ PERFORM set_config('request.jwt.claim.sub',owner_fixture.subject,true);
+ PERFORM set_config('request.jwt.claims',
+   jsonb_build_object('sub',owner_fixture.subject)::text,true);
+ IF app_private.enterprise_member_can_read(owner_fixture.tenant_id) IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'Missing MFA claim granted Enterprise read';
+ END IF;
+ n:=n+1;
+ IF app_private.enterprise_member_can_manage(owner_fixture.tenant_id) IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'Missing MFA claim granted Enterprise manage';
+ END IF;
+ n:=n+1;
+
+ -- A UUID-formatted subject without an active membership is denied (2).
+ PERFORM set_config('request.jwt.claim.sub',
+   '00000000-0000-4000-8000-000000000000',true);
+ PERFORM set_config('request.jwt.claims',
+   '{"sub":"00000000-0000-4000-8000-000000000000","aal":"aal2"}',true);
+ IF app_private.enterprise_member_can_read(owner_fixture.tenant_id) IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'Unknown legacy UUID unexpectedly read tenant';
+ END IF;
+ n:=n+1;
+ IF app_private.enterprise_member_can_manage(owner_fixture.tenant_id) IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'Unknown legacy UUID unexpectedly managed tenant';
+ END IF;
+ n:=n+1;
+
+ -- Invalid UUID-like Clerk text cannot cast to auth.uid or gain access (2).
+ PERFORM set_config('request.jwt.claim.sub','not-a-valid-uuid-identity',true);
+ PERFORM set_config('request.jwt.claims',
+   '{"sub":"not-a-valid-uuid-identity","aal":"aal2"}',true);
+ IF app_private.enterprise_member_can_read(owner_fixture.tenant_id) IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'Unknown malformed subject unexpectedly read tenant';
+ END IF;
+ n:=n+1;
+ IF app_private.enterprise_member_can_manage(owner_fixture.tenant_id) IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'Unknown malformed subject unexpectedly managed tenant';
+ END IF;
+ n:=n+1;
+
+ -- Claiming "owner" in JWT does not grant DB write authority to a member (4).
+ SELECT tenant_id,subject INTO member_fixture
+ FROM pg_temp.clerk_enterprise_rehearsal_20261103
+ WHERE user_role='member' ORDER BY tenant_id,subject LIMIT 1;
+ IF NOT FOUND THEN RAISE EXCEPTION 'QA member fixture missing'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',member_fixture.subject,true);
+ PERFORM set_config('request.jwt.claims',
+   jsonb_build_object('sub',member_fixture.subject,'aal','aal2','role','owner')::text,true);
+ IF app_private.enterprise_member_can_read(member_fixture.tenant_id) IS DISTINCT FROM true THEN
+   RAISE EXCEPTION 'JWT role-claim fixture lost authorized member read';
+ END IF;
+ n:=n+1;
+ IF app_private.enterprise_member_can_manage(member_fixture.tenant_id) IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'Forged owner role-claim elevated member';
+ END IF;
+ n:=n+1;
+ PERFORM set_config('request.jwt.claims',
+   jsonb_build_object('sub',member_fixture.subject,'aal','aal2',
+     'app_metadata',jsonb_build_object('role','owner'))::text,true);
+ IF app_private.enterprise_member_can_read(member_fixture.tenant_id) IS DISTINCT FROM true THEN
+   RAISE EXCEPTION 'App-metadata fixture lost authorized member read';
+ END IF;
+ n:=n+1;
+ IF app_private.enterprise_member_can_manage(member_fixture.tenant_id) IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'JWT app_metadata falsely elevated member';
+ END IF;
+ n:=n+1;
+ IF n<>32 THEN RAISE EXCEPTION 'Enterprise fixture coverage mismatch: %',n; END IF;
 END
 $verify_enterprise_clerk$;
 RESET ROLE;
 SELECT has_function_privilege('anon','app_private.enterprise_member_can_read(uuid)','EXECUTE') AS anon_read_exec,
        has_function_privilege('anon','app_private.enterprise_member_can_manage(uuid)','EXECUTE') AS anon_manage_exec,
-       '22/22' AS verified_qa_cases;
+       '32/32' AS verified_qa_cases;
