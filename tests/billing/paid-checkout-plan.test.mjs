@@ -72,3 +72,16 @@ test('public checkout, legacy URL and authenticated intent reject bad input befo
   assert.ok(intent.includes('const plan = getBillingPlan(normalizePublicCheckoutPlanId(planId));'));
   assert.ok(intent.indexOf('if (!plan)') < intent.indexOf('getCurrentOrganizationForUser(user.id)'));
 });
+
+test('checkout intent never advertises payable checkout while paid GA or legal publication is blocked', async () => {
+  const route = await readFile(new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url), 'utf8');
+  const legal = route.indexOf('isPublicSelfServeContractEffective()');
+  const flag = route.indexOf("process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED === 'true'");
+  const ready = route.indexOf('checkoutReady: !plan.salesLed && publicPaidCheckoutReady');
+  const denial = route.indexOf("'public_paid_checkout_unavailable'");
+  assert.ok(legal >= 0);
+  assert.ok(flag >= 0);
+  assert.ok(ready > legal && ready > flag);
+  assert.ok(denial > ready);
+  assert.ok(route.includes('const priceId = plan.salesLed ? undefined : getStripePriceId(plan);'));
+});

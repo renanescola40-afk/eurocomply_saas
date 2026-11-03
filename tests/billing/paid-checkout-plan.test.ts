@@ -82,4 +82,15 @@ describe('paid self-serve Checkout plan input authority', () => {
     expect(page.indexOf('await getCurrentUser()')).toBeGreaterThan(guard);
     expect(page).toContain('redirect(`/${locale}/pricing?checkout=invalid_plan`)');
   });
+
+  it('does not advertise Checkout readiness unless paid GA and public legal versions are effective', async () => {
+    const route = await readFile(new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url), 'utf8');
+    expect(route).toContain("process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED === 'true'");
+    expect(route).toContain('&& isPublicSelfServeContractEffective()');
+    expect(route).toContain('checkoutReady: !plan.salesLed && publicPaidCheckoutReady');
+    expect(route).toContain("'public_paid_checkout_unavailable'");
+    expect(route).toContain('const alreadyOnPlan = entitlements.licensed &&');
+    expect(route).toContain('const priceId = plan.salesLed ? undefined : getStripePriceId(plan);');
+    expect(route).not.toContain('checkoutReady: !plan.salesLed && Boolean(priceId) && !alreadyOnPlan');
+  });
 });

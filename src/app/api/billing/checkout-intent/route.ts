@@ -1,4 +1,5 @@
 import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
+import { isPublicSelfServeContractEffective } from '@/lib/legal/public-contract';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
@@ -84,6 +85,11 @@ async function handleCheckoutIntent(request: Request) {
   const targetEntitlementPlan = BILLING_TO_ENTITLEMENT_PLAN[plan.id];
   const alreadyOnPlan = entitlements.licensed && entitlements.plan === targetEntitlementPlan;
   const priceId = plan.salesLed ? undefined : getStripePriceId(plan);
+  // Intent is a public-facing readiness signal, not permission to bypass
+  // release gates. Paid checkout itself uses these exact fail-closed rules.
+  const publicPaidCheckoutReady =
+    process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED === 'true'
+    && isPublicSelfServeContractEffective();
 
   return noStoreJson({
     ok: true,
@@ -104,14 +110,16 @@ async function handleCheckoutIntent(request: Request) {
       licensed: entitlements.licensed,
       authoritySource: entitlements.authoritySource,
       alreadyOnPlan,
-      checkoutReady: !plan.salesLed && Boolean(priceId) && !alreadyOnPlan,
+      checkoutReady: !plan.salesLed && publicPaidCheckoutReady && Boolean(priceId) && !alreadyOnPlan,
       nextAction: alreadyOnPlan
         ? 'already_subscribed'
         : plan.salesLed
           ? 'contact_sales'
-          : priceId
-            ? 'create_checkout_session'
-            : 'configure_plan_price',
+          : !publicPaidCheckoutReady
+            ? 'public_paid_checkout_unavailable'
+            : priceId
+              ? 'create_checkout_session'
+              : 'configure_plan_price',
     },
   });
 }
