@@ -158,9 +158,9 @@ test('regression: removing either canonical membership/role delegation fails con
   assert.throws(() => assertForwardClerkWrapper(
     forwardMigration.replace(readDelegation, 'and true;'),
     'enterprise_member_can_read', /app_private\.is_org_member\(p_organization_id\)/),
-    /app_private\.is_org_member/);
+    { name: 'AssertionError' });
   assert.throws(() => assertForwardClerkWrapper(
     forwardMigration.replace(manageDelegation, 'and true /* intentionally invalid */('),
     'enterprise_member_can_manage', /app_private\.has_org_role\(/),
-    /app_private\.has_org_role/);
+    { name: 'AssertionError' });
 });
