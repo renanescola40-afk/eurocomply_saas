@@ -589,57 +589,57 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
     // provider mutations need fresh Price preflight: completed/provider-succeeded
     // requests must finish their existing audit even if catalog Prices change.
     try {
-    // Subscription upgrades, scheduled downgrades and add-on amendments must not
-    // rely on a configured Price ID alone. Verify the canonical self-serve Price
-    // before issuing any Stripe mutation.
-    // Cancellation and reactivation do not select a new Price.
-    if (input.action !== 'cancel' && input.action !== 'reactivate' && isSelfServePlan(targetPlan)) {
-      const targetPriceId = getStripePriceId(targetPlan, interval);
-      let providerPrice: Stripe.Price;
-      try {
-        providerPrice = await stripe.prices.retrieve(targetPriceId, { expand: ['product'] });
-      } catch (error) {
-        throw classifyProviderFailure('stripe', 'subscription_price_retrieve', error);
-      }
-      const lifecyclePriceAuthority = validateCheckoutPriceAuthority(providerPrice, {
-        priceId: targetPriceId,
-        expectedAmountCents: interval === 'year'
-          ? BILLING_PLANS[targetPlan].annualPriceCents
-          : BILLING_PLANS[targetPlan].monthlyPriceCents,
-        expectedInterval: interval,
-        expectedMode: getStripeEventModeFromSecretKey(),
-      });
-      if (!lifecyclePriceAuthority.ok) {
-        throw new BillingLifecycleRequestError('billing_price_configuration_invalid', 503);
-      }
-    }
-    // Enabled add-ons also carry priced subscription items. Validate each
-    // canonical active add-on Price before a provider write so an incorrect env
-    // binding cannot grant a paid capability for €0 or a different cadence.
-    if (input.action !== 'cancel' && input.action !== 'reactivate') {
-      for (const selection of addOns) {
-        const addOn = getBillingAddOn(selection.slug);
-        if (!addOn || !isAddOnAvailableForPlan(addOn, targetPlan)) {
-          throw new BillingLifecycleRequestError('billing_add_on_catalog_invalid', 503);
-        }
-        const addOnPriceId = getStripeAddOnPriceId(selection.slug, interval);
-        let providerAddOnPrice: Stripe.Price;
+      // Subscription upgrades, scheduled downgrades and add-on amendments must not
+      // rely on a configured Price ID alone. Verify the canonical self-serve Price
+      // before issuing any Stripe mutation.
+      // Cancellation and reactivation do not select a new Price.
+      if (input.action !== 'cancel' && input.action !== 'reactivate' && isSelfServePlan(targetPlan)) {
+        const targetPriceId = getStripePriceId(targetPlan, interval);
+        let providerPrice: Stripe.Price;
         try {
-          providerAddOnPrice = await stripe.prices.retrieve(addOnPriceId, { expand: ['product'] });
+          providerPrice = await stripe.prices.retrieve(targetPriceId, { expand: ['product'] });
         } catch (error) {
-          throw classifyProviderFailure('stripe', 'subscription_add_on_price_retrieve', error);
+          throw classifyProviderFailure('stripe', 'subscription_price_retrieve', error);
         }
-        const addOnPriceAuthority = validateCheckoutPriceAuthority(providerAddOnPrice, {
-          priceId: addOnPriceId,
-          expectedAmountCents: (interval === 'year' ? addOn.priceAnnual : addOn.priceMonthly) * 100,
+        const lifecyclePriceAuthority = validateCheckoutPriceAuthority(providerPrice, {
+          priceId: targetPriceId,
+          expectedAmountCents: interval === 'year'
+            ? BILLING_PLANS[targetPlan].annualPriceCents
+            : BILLING_PLANS[targetPlan].monthlyPriceCents,
           expectedInterval: interval,
           expectedMode: getStripeEventModeFromSecretKey(),
         });
-        if (!addOnPriceAuthority.ok) {
-          throw new BillingLifecycleRequestError('billing_add_on_price_configuration_invalid', 503);
+        if (!lifecyclePriceAuthority.ok) {
+          throw new BillingLifecycleRequestError('billing_price_configuration_invalid', 503);
         }
       }
-    }
+      // Enabled add-ons also carry priced subscription items. Validate each
+      // canonical active add-on Price before a provider write so an incorrect env
+      // binding cannot grant a paid capability for €0 or a different cadence.
+      if (input.action !== 'cancel' && input.action !== 'reactivate') {
+        for (const selection of addOns) {
+          const addOn = getBillingAddOn(selection.slug);
+          if (!addOn || !isAddOnAvailableForPlan(addOn, targetPlan)) {
+            throw new BillingLifecycleRequestError('billing_add_on_catalog_invalid', 503);
+          }
+          const addOnPriceId = getStripeAddOnPriceId(selection.slug, interval);
+          let providerAddOnPrice: Stripe.Price;
+          try {
+            providerAddOnPrice = await stripe.prices.retrieve(addOnPriceId, { expand: ['product'] });
+          } catch (error) {
+            throw classifyProviderFailure('stripe', 'subscription_add_on_price_retrieve', error);
+          }
+          const addOnPriceAuthority = validateCheckoutPriceAuthority(providerAddOnPrice, {
+            priceId: addOnPriceId,
+            expectedAmountCents: (interval === 'year' ? addOn.priceAnnual : addOn.priceMonthly) * 100,
+            expectedInterval: interval,
+            expectedMode: getStripeEventModeFromSecretKey(),
+          });
+          if (!addOnPriceAuthority.ok) {
+            throw new BillingLifecycleRequestError('billing_add_on_price_configuration_invalid', 503);
+          }
+        }
+      }
     } catch (error) {
       await failBillingLifecycleRequest(requestId, 'stripe_price_validation_failed');
       throw error;
