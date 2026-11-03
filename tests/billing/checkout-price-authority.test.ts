@@ -22,6 +22,11 @@ describe('self-serve Checkout Price runtime authority', () => {
     expect(validateCheckoutPriceAuthority(canonical, contract).ok).toBe(true);
   });
 
+  it('accepts an expanded Stripe Product with exact optional deleted typing', () => {
+    const providerShape = { ...canonical, product: { id: 'prod_professional', active: true, deleted: undefined } };
+    expect(validateCheckoutPriceAuthority(providerShape, contract).ok).toBe(true);
+  });
+
   it('rejects an active zero-Euro Professional TEST Price and a LIVE/TEST mismatch', () => {
     expect(validateCheckoutPriceAuthority({ ...canonical, unit_amount: 0 }, contract).ok).toBe(false);
     expect(validateCheckoutPriceAuthority({ ...canonical, livemode: true }, contract).ok).toBe(false);
