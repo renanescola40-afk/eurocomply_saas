@@ -54,7 +54,7 @@
     "BIL_02": "NOT_VERIFIED",
     "BIL_03": "NOT_VERIFIED",
     "A_10": "NOT_ELIGIBLE",
-    "cause": "TEST webhook endpoint disabled and bound to older protected preview; no authenticated signed event plus QA durable state proof.",
+    "cause": "TEST webhook endpoint disabled and bound to older protected preview; no authenticated signed event plus QA durable state proof. Vercel custom QA environment has zero associated domains.",
     "firstActions": [
       "Reconcile isolated QA target deployment and source SHA without reusing a public-share bypass query credential.",
       "Validate an approved QA webhook destination and scoped secrets before enabling TEST delivery.",
@@ -75,5 +75,14 @@
     "newCosts": 0,
     "webhookEnabled": false,
     "circleCiTriggered": false
+  },
+  "vercelQaCustomEnvironmentReadback": {
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "slug": "qa",
+    "id": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+    "type": "preview",
+    "associatedDomainCount": 0,
+    "source": "Authenticated Vercel list_project_custom_environments read-only",
+    "conclusion": "QA domain absent; no verified current QA webhook URL."
   }
 }
