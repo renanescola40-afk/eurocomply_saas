@@ -188,6 +188,8 @@ jobs:
               tests/security/client-env-access.test.mjs \
               tests/ci/circleci-readonly-diagnose.test.mjs \
               tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
+            node --test --test-reporter=tap \
+              tests/billing/checkout-recovery-lease-contract.test.mjs
             node --experimental-strip-types --test --test-reporter=tap \
               tests/billing/checkout-price-authority.test.mjs
 
