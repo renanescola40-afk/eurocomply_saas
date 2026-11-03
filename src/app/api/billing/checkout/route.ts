@@ -373,12 +373,34 @@ export async function POST(request: Request) {
 
     const legalAcceptanceAt = validationOnlyCheckout ? '' : new Date().toISOString();
 
+    // Before claiming the initial-checkout lease, validate provider reality.
+    // Misconfigured Prices must not strand a lease or revive an obsolete Price.
+    const stripe = getStripeClient();
+    const priceId = getStripePriceId(plan);
+    let priceRecord: Stripe.Price;
+    try {
+      priceRecord = await stripe.prices.retrieve(priceId, { expand: ['product'] });
+    } catch (error) {
+      throw classifyProviderFailure('stripe', 'checkout_price_retrieve', error);
+    }
+    const priceAuthority = validateCheckoutPriceAuthority(priceRecord, {
+      priceId,
+      expectedAmountCents: BILLING_PLANS[plan].monthlyPriceCents,
+      expectedMode: getStripeEventModeFromSecretKey(),
+    });
+    if (!priceAuthority.ok) {
+      throw new ProviderFailureError({
+        provider: 'stripe',
+        kind: 'configuration',
+        providerCode: 'checkout_price_authority_invalid',
+        operation: 'checkout_price_retrieve',
+      });
+    }
+
     let checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
     if (checkoutAttempt.outcome === 'busy') {
       return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
     }
-
-    const stripe = getStripeClient();
 
     if (checkoutAttempt.outcome === 'existing') {
       if (!checkoutAttempt.stripeSessionId) {
@@ -426,6 +448,34 @@ export async function POST(request: Request) {
             }
             existingSession = null as never;
           } else {
+            // Even a correctly scoped, open session can be bound to a stale or
+            // mispriced line item. Never return a URL before verifying that the
+            // stored Stripe session actually uses today's canonical Price.
+            let lineItems: Stripe.ApiList<Stripe.LineItem>;
+            try {
+              lineItems = await stripe.checkout.sessions.listLineItems(existingSession.id, { limit: 2 });
+            } catch (error) {
+              throw classifyProviderFailure('stripe', 'checkout_session_line_items', error);
+            }
+            const sessionPriceMatches = lineItems.has_more === false
+              && lineItems.data.length === 1
+              && lineItems.data[0]?.price?.id === priceId
+              && lineItems.data[0]?.quantity === 1;
+            if (!sessionPriceMatches) {
+              // Fail closed if Stripe cannot expire the obsolete hosted URL.
+              // A new attempt can be claimed only after provider expiry succeeds.
+              try {
+                await stripe.checkout.sessions.expire(existingSession.id);
+              } catch (error) {
+                throw classifyProviderFailure('stripe', 'checkout_stale_price_session_expire', error);
+              }
+              await releaseCheckoutAttemptSafely(
+                organization.id,
+                checkoutAttempt.attemptToken,
+                'billing_checkout_stale_price_session_release',
+              );
+              return noStoreJson({ error: 'checkout_session_requires_restart' }, { status: 409 });
+            }
             if (!isSafeStripeCheckoutUrl(existingSession.url)) {
               throw new Error('billing_checkout_existing_session_url_invalid');
             }
@@ -468,7 +518,6 @@ export async function POST(request: Request) {
     }
 
     const attemptToken = checkoutAttempt.attemptToken;
-    const priceId = getStripePriceId(plan);
     const organizationName = typeof organization.name === 'string' ? organization.name : null;
     const metadata = {
       organization_id: organization.id,
@@ -488,24 +537,6 @@ export async function POST(request: Request) {
     };
 
     try {
-      // Validate the actual Stripe Price, not just the configured Price ID. In
-      // particular, never issue a paid entitlement against an active €0 TEST
-      // price or a stale/incorrect currency, cadence, or mode binding.
-      const priceRecord = await stripe.prices.retrieve(priceId, { expand: ['product'] });
-      const priceAuthority = validateCheckoutPriceAuthority(priceRecord, {
-        priceId,
-        expectedAmountCents: BILLING_PLANS[plan].monthlyPriceCents,
-        expectedMode: getStripeEventModeFromSecretKey(),
-      });
-      if (!priceAuthority.ok) {
-        throw new ProviderFailureError({
-          provider: 'stripe',
-          kind: 'configuration',
-          providerCode: 'checkout_price_authority_invalid',
-          operation: 'checkout_price_retrieve',
-        });
-      }
-
       const customer = await ensureOrganizationStripeCustomer({
         stripe,
         organizationName,
