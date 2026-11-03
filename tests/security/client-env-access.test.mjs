@@ -12,6 +12,7 @@ const cases = [
   ['approved publishable value stays permitted', 'const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;', 0],
   ['secret masquerading as public is blocked', 'const key = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;', 1],
   ['unapproved NEXT_PUBLIC name is blocked', 'const key = process.env.NEXT_PUBLIC_CONFIDENTIAL;', 1],
+  ['optional public property is blocked', 'const key = process?.env.NEXT_PUBLIC_APP_URL;', 1],
   ['server credential dot access blocked', 'const key = process.env.SUPABASE_SERVICE_ROLE_KEY;', 1],
   ['bracket secret blocked', "const key = process.env['SUPABASE_SERVICE_ROLE_KEY'];", 1],
   ['double-quoted bracket secret blocked', 'const key = process.env["STRIPE_SECRET_KEY"];', 1],
@@ -58,4 +59,9 @@ test('whole scanner fails closed on bracket credential access without strict env
 test('whole scanner allows a direct public variable', () => {
   const result = runClientBoundaryScanner('export const endpoint = process.env.NEXT_PUBLIC_APP_URL;');
   assert.equal(result.status, 0, result.stdout + result.stderr);
+});
+
+test('whole scanner rejects unapproved public variable by default', () => {
+  const result = runClientBoundaryScanner('export const credential = process.env.NEXT_PUBLIC_CONFIDENTIAL;');
+  assert.equal(result.status, 1, result.stdout + result.stderr);
 });
