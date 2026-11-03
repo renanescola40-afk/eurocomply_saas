@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 
 import { getBillingEntitlements } from '@/lib/billing/plans';
-import { validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
+import { reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
 import {
   isPublicSelfServeContractEffective,
   PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
@@ -457,10 +457,7 @@ export async function POST(request: Request) {
             } catch (error) {
               throw classifyProviderFailure('stripe', 'checkout_session_line_items', error);
             }
-            const sessionPriceMatches = lineItems.has_more === false
-              && lineItems.data.length === 1
-              && lineItems.data[0]?.price?.id === priceId
-              && lineItems.data[0]?.quantity === 1;
+            const sessionPriceMatches = reusableCheckoutLineItemsMatch(lineItems, priceId);
             if (!sessionPriceMatches) {
               // Fail closed if Stripe cannot expire the obsolete hosted URL.
               // A new attempt can be claimed only after provider expiry succeeds.
