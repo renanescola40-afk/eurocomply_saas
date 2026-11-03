@@ -198,7 +198,7 @@ jobs:
   github-actions-recovery-quality:
     docker:
       - image: cimg/node:22
-    resource_class: medium
+    resource_class: large
     working_directory: ~/project
     steps:
       - checkout
@@ -244,7 +244,7 @@ jobs:
           environment:
             NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
             NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
-            NODE_OPTIONS: --max-old-space-size=2560
+            NODE_OPTIONS: --max-old-space-size=5120
           command: |
             set -euo pipefail
             # Bounded numeric-only cgroup readback; never dump environment or tokens.
