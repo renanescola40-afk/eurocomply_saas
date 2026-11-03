@@ -60,8 +60,9 @@ test('public checkout, legacy URL and authenticated intent reject bad input befo
     readFile(new URL('../../src/app/[locale]/billing/checkout/[plan]/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url), 'utf8'),
   ]);
-  assert.ok(page.includes('selectedPlanId ? normalizePublicCheckoutPlanId(selectedPlanId) : undefined'));
-  const pageReject = page.indexOf('if (selectedPlanId && !normalizedRequestedPlan)');
+  assert.ok(page.includes('hasExplicitPlan ? normalizePublicCheckoutPlanId(selectedPlanId) : undefined'));
+  assert.ok(page.includes("Object.prototype.hasOwnProperty.call(resolvedSearchParams, 'plan')"));
+  const pageReject = page.indexOf('if (hasExplicitPlan && !normalizedRequestedPlan)');
   assert.ok(pageReject >= 0);
   assert.ok(page.indexOf('redirect(`/${locale}/pricing?checkout=invalid_plan`)') > pageReject);
   assert.ok(page.indexOf('getBillingPlan(normalizedRequestedPlan)') > pageReject);

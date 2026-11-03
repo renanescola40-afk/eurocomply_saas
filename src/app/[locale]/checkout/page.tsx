@@ -96,8 +96,9 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const checkoutStatus = firstSearchParam(resolvedSearchParams.checkout);
   // An absent plan defaults to Professional. A supplied unknown or historical
   // 'free'/'basic' plan must not silently render a paid subscription.
-  const normalizedRequestedPlan = selectedPlanId ? normalizePublicCheckoutPlanId(selectedPlanId) : undefined;
-  if (selectedPlanId && !normalizedRequestedPlan) {
+  const hasExplicitPlan = Object.prototype.hasOwnProperty.call(resolvedSearchParams, 'plan');
+  const normalizedRequestedPlan = hasExplicitPlan ? normalizePublicCheckoutPlanId(selectedPlanId) : undefined;
+  if (hasExplicitPlan && !normalizedRequestedPlan) {
     redirect(`/${locale}/pricing?checkout=invalid_plan`);
   }
   const selectedPlan = getBillingPlan(normalizedRequestedPlan) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];

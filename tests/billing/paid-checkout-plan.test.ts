@@ -75,8 +75,9 @@ describe('paid self-serve Checkout plan input authority', () => {
     ]);
     expect(intent).toContain('getBillingPlan(normalizePublicCheckoutPlanId(planId))');
     expect(legacy).toContain('const normalizedPlan = normalizePublicCheckoutPlanId(plan);');
-    const guard = page.indexOf('if (selectedPlanId && !normalizedRequestedPlan)');
+    const guard = page.indexOf('if (hasExplicitPlan && !normalizedRequestedPlan)');
     expect(guard).toBeGreaterThan(-1);
+    expect(page).toContain("Object.prototype.hasOwnProperty.call(resolvedSearchParams, 'plan')");
     expect(page.indexOf('getBillingPlan(normalizedRequestedPlan)')).toBeGreaterThan(guard);
     expect(page.indexOf('await getCurrentUser()')).toBeGreaterThan(guard);
     expect(page).toContain('redirect(`/${locale}/pricing?checkout=invalid_plan`)');
