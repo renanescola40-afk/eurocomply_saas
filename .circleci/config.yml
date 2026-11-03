@@ -241,7 +241,7 @@ jobs:
           environment:
             NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
             NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
-            NODE_OPTIONS: --max-old-space-size=3072
+            NODE_OPTIONS: --max-old-space-size=2560
           command: npm run build
 
   # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
