@@ -1,13 +1,13 @@
 {
-  "schema": "risck-comply.work012-recovery-handoff.v21.3",
+  "schema": "risck-comply.work012-recovery-handoff.v21.4",
   "createdAt": "2026-11-04T09:14:42.065Z",
   "owner": "NORMAL_CHAT_MASTER_V21.0",
   "canonicalPR": {
     "number": 2598,
     "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
     "branch": "integration/enterprise-unified-candidate-20261102",
-    "headBeforeCheckpointCommit": "dfc09f62b42c44241d2a0366ca2bc48c3145f42a",
-    "headNote": "Retrieve authoritative latest head from GET /git/ref/heads/integration/enterprise-unified-candidate-20261102; this is the pre-document source SHA.",
+    "headBeforeCheckpointCommit": "9e3b6b83ac40671f0f5c1d3d187440d687adda55",
+    "headNote": "This is the HEAD observed immediately before updating the checkpoint; fetch GitHub current PR #2598 for authoritative current SHA.",
     "draft": true,
     "merged": false,
     "approvedReviewsAtObservation": 0,
@@ -15,7 +15,8 @@
     "filesBeforeCheckpoint": 140,
     "mergeable": true,
     "observedCommitsBeforeCommit": 80,
-    "observedChangedFilesBeforeCommit": 141
+    "observedChangedFilesBeforeCommit": 141,
+    "qualifiedReview": "PENDING"
   },
   "duplicateCI_PR": {
     "number": 2595,
@@ -42,7 +43,7 @@
     "testedSha": "a272309b875b2ffac24b54032bb184171f5ec35b",
     "githubContext": "ci/circleci: github-actions-recovery-quality",
     "result": "FAIL",
-    "firstFailingStep": "UNKNOWN_NO_AUTHENTICATED_JOB_TRANSCRIPT",
+    "firstFailingStep": "UNKNOWN_NO_AUTHENTICATED_CIRCLECI_JOB_LOG",
     "rootCause": "UNDETERMINED",
     "errorText": "NOT_AVAILABLE",
     "classification": "UNRESOLVED; do not assign code, build, dependency, runner, or billing cause",
@@ -55,7 +56,9 @@
     "correctionOrRerunAttemptedByThisConversation": false,
     "candidateCommitWithPassedExactShaQuality": "NONE",
     "latestHeadCombinedStatus": "NO_CIRCLECI_CONTEXT_ON_NEW_SHA",
-    "providerAuthenticatedJobTranscript": "UNAVAILABLE_IN_NORMAL_CHAT"
+    "providerAuthenticatedJobTranscript": "UNAVAILABLE_IN_NORMAL_CHAT",
+    "candidateCurrentSourceQuality": "NOT_VERIFIED",
+    "job431NoReexecutionInThisChat": true
   },
   "githubActions": {
     "problem": "workflow runs fail with zero job steps, likely provider runner-admission issue but root cause unconfirmed",
@@ -92,7 +95,20 @@
     "regressionTestHash": "e3e95ef2c03ac74fc3e6c994fc73d77ca2c04466",
     "nodeTest": "22/22 PASS Node22 local",
     "sampleSourceHashVerified": "24/34",
-    "proof": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json"
+    "proof": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+    "concurrentExactSourceReport": "112/112 compared; 87 exact canonical file matches; 25 unresolved",
+    "histRecoveredVersionIds": [
+      "20260812160405",
+      "20260812225906"
+    ],
+    "histSourceCommitIds": [
+      "8359b7a79f06babd93ef58d7ae7ff77380532fe2",
+      "807f9fd52919706ecc09af81d40c069f60b83e87"
+    ],
+    "histExactProviderDirectStringProof": "Both archived source Git blobs with one leading LF exactly equal Supabase production provider statements[1]; provider read-only SHA256 and byte counts agree frozen evidence",
+    "historicalGitReportCommit": "1cc5ba3ef278b54909799ff33e7fea4ed1086399",
+    "doNotTreatFormattingAsExactProof": true,
+    "latestNode22Tests": "22/22 PASS local source-only at blob 4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41; no full candidate CI"
   },
   "dat01": {
     "status": "BLOCKED",
@@ -156,7 +172,21 @@
     "formalAcceptance": "NOT_GRANTED",
     "sampleExactVersionEvidence": "24/34 SHA256 verified source-to-provider representations, 10 unresolved in subset",
     "newProviderRepresentation": "PREFIX_SINGLE_LF_SINGLE_LEDGER_ENTRY",
-    "provenance": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json"
+    "provenance": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+    "currentExactMappingsChecked": 112,
+    "currentSourceHashMatches": 87,
+    "currentSourceHashMismatches": 25,
+    "historicalImmutableGitSourceRecoveries": 2,
+    "sourceByteEquivalentProvenanceAtLeast": 89,
+    "exactHistoricalIdentitiesStillUnrecovered": 23,
+    "otherNonexactMappingsAwaitReview": 25,
+    "consolidationGroupsAwaitReview": 2,
+    "metadataLedgerVersions": 137,
+    "currentSourceReport": "docs/enterprise/closure-v21/DAT01_EXACT_SOURCE_RECONCILIATION_SUMMARY_20261104.json",
+    "historicalRecoveryReport": "docs/enterprise/closure-v21/DAT01_RECOVERED_HISTORICAL_SOURCE_BLOBS_20261104.json",
+    "currentSourceReportGitBlob": "0ce89409f9e0a64a8e1dc2c2aaf8a35b1b3d9ee6",
+    "historicalRecoveryReportGitBlob": "4e015314356b6a9234d87c64323e296b3d346ab4",
+    "sourceHashMatchesAreNotReplay": true
   },
   "auditChainIndependentReadback": {
     "scope": "production metadata READ ONLY",
@@ -234,7 +264,7 @@
     "paidCITasks": false,
     "StripeLiveTransactions": false
   },
-  "nextExecutableAction": "Use authenticated CircleCI job #431 logs to find actual first failure; run complete source tree DAT01 proof at current SHA and review 10 unresolved first 34 SQL identities, 78 other exact identities, 25 nonexact mappings and both consolidations; qualified reviewer must approve executable source manifest before PostgreSQL17 synthetic replay. No production DB writes, automatic merges, or fabricated gate PASS.",
-  "updatedAt": "2026-11-04T10:04:55.405Z",
+  "nextExecutableAction": "Use Work authenticated CircleCI #431 job log to locate first failing step and fix only verified cause; independently review 23 exact mappings without immutable source provenance plus 25 nonexact mappings/two consolidation groups; approve manifest before disposable PostgreSQL 17 replay. Preserve human final merge and no production/Stripe LIVE writes.",
+  "updatedAt": "2026-11-04T10:24:00.987Z",
   "previousV21CheckpointCommit": "45258179902bc11669d953a25478c9a2e6d54b79"
 }
