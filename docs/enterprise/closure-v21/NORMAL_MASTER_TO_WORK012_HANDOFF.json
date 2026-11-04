@@ -1,13 +1,13 @@
 {
-  "schema": "risck-comply.work012-recovery-handoff.v21.8",
+  "schema": "risck-comply.work012-recovery-handoff.v21.9",
   "createdAt": "2026-11-04T09:14:42.065Z",
   "owner": "NORMAL_CHAT_MASTER_V21.0",
   "canonicalPR": {
     "number": 2598,
     "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
     "branch": "integration/enterprise-unified-candidate-20261102",
-    "headBeforeCheckpointCommit": "e9198dea81daae1dae427ae9222610aaa1888d44",
-    "headNote": "Read GitHub PR #2598 and direct ref for current SHA; this is parent snapshot before V21.8 checkpoint commit.",
+    "headBeforeCheckpointCommit": "7085d3d700722e3d060ff78a1f749a575a734a0c",
+    "headNote": "Pre-checkpoint SHA only; read current GitHub PR #2598 or direct Git ref for authoritative latest candidate SHA",
     "draft": true,
     "merged": false,
     "approvedReviewsAtObservation": 0,
@@ -69,7 +69,8 @@
     "newPipelineTriggeredByThisChat": false,
     "creditsNow": "NOT_VERIFIED",
     "defaultOff": true,
-    "notes": "Step wired only in pre-existing manual full-quality CircleCI job; no source SHA provider run yet."
+    "notes": "Step wired only in pre-existing manual full-quality CircleCI job; no source SHA provider run yet.",
+    "manifestJobDefaultOff": true
   },
   "githubActions": {
     "problem": "workflow runs fail with zero job steps, likely provider runner-admission issue but root cause unconfirmed",
@@ -142,7 +143,14 @@
     "circleCIConfigCommit": "e9198dea81daae1dae427ae9222610aaa1888d44",
     "circleCIConfigReadbackBlob": "4eec80b4e8a765d3b256aad1e70a04cbc9f7a6a3",
     "circleCIJobExecuted": false,
-    "newFormalPASS": 0
+    "newFormalPASS": 0,
+    "sourceGitBlobPinCommit": "21f0cd68cedfdbcb48786bfa65b068db939d4489",
+    "testGitBlobPinCommit": "9cde548f37c1d7f15ce42ddf9ada112800c54023",
+    "frozenPinEvidenceCommit": "7085d3d700722e3d060ff78a1f749a575a734a0c",
+    "frozenPinEvidenceBlob": "7604447ca55b7d43ce679279f5d2fe831069a96a",
+    "localNode22Status": "18 PASS / 0 FAIL",
+    "scope": "Source-only integrity of frozen manifest, crosswalk and provider evidence before parsing; no replay or gate acceptance",
+    "newGatesAccepted": 0
   },
   "dat01": {
     "status": "BLOCKED",
@@ -253,9 +261,9 @@
     "consolidationSourceReview": "docs/enterprise/closure-v21/DAT01_NONEXACT_CONSOLIDATION_SOURCE_RECOVERY_20261104.json",
     "secondConsolidationHistory": "20261013133323 vs 20261013133341 differ in UPDATE alias qualification; 20261013133341 provider SQL exact substring of canonical forward source",
     "manifestValidatorRepoPath": "scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs",
-    "manifestValidatorGitBlob": "ebe83bd44531bdf7398cc38bedfc6cc048b77941",
+    "manifestValidatorGitBlob": "9975e7774c97742e6ac2de0f057497a3e30cda36",
     "manifestValidatorTestRepoPath": "scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs",
-    "manifestValidatorTestGitBlob": "b25ed359320aee6b38f7135c2ff9f728b2a59df2",
+    "manifestValidatorTestGitBlob": "7651dde1256d123ffa2dbd60d3904973c0bcac20",
     "manifestValidatorNode22Tests": {
       "passed": 14,
       "failed": 0,
@@ -285,7 +293,31 @@
     "sourceBytesUnresolved": 34,
     "nonexactIdentityReviewPending": 25,
     "consolidationGroupsReviewPending": 2,
-    "independentReview": "PENDING"
+    "independentReview": "PENDING",
+    "manifestEvidenceGitPinReportPath": "docs/enterprise/closure-v21/DAT01_FROZEN_BLOB_INTEGRITY_V21_9_20261104.json",
+    "manifestEvidenceGitPinReportBlob": "7604447ca55b7d43ce679279f5d2fe831069a96a",
+    "frozenSnapshotsPinnedBeforeJsonParse": true,
+    "snapshotsPinned": {
+      "manifest": "a5c0b46c57c134f76da5f22a3f1858b7e1127287",
+      "crosswalk": "3c3d7c83549d08a2a106f70aff51efed71681769",
+      "provider": "8705c36a875058d5fbe97bdd3033fe498426aa26"
+    },
+    "localNode22Tests": {
+      "passed": 18,
+      "failed": 0,
+      "exactGitObjectBlobs": true,
+      "hostedCircleCiResult": "NOT_VERIFIED"
+    },
+    "legacyReplayAdmission": {
+      "status": "HARD_FAIL_CLOSED_UNTIL_REVIEWED_EXECUTABLE_MANIFEST_AND_SOURCE_PROVENANCE",
+      "preflightBlob": "99c4234e70d5ce53545c4bd7c1d0b24327f0a2e6",
+      "replayBlob": "9a601e343ab07193f62cfd3958063f576c600a9a",
+      "missingVersionIdentityMappings": 25,
+      "preflightReturnsAuthorizationFalse": true,
+      "replayRejectsUnreviewedSource": true,
+      "action": "DO_NOT_PATCH_OR_BYPASS_GUARDS_WITHOUT_APPROVED_REVIEW"
+    },
+    "independentReviewer": "PENDING"
   },
   "auditChainIndependentReadback": {
     "scope": "production metadata READ ONLY",
@@ -363,7 +395,7 @@
     "paidCITasks": false,
     "StripeLiveTransactions": false
   },
-  "nextExecutableAction": "Obtain authenticated CircleCI #431 first failing step; if provider credits allow, authorized manual source-quality job at current PR #2598 exact SHA will now execute Node22 14 DAT01 tests and CLI 137-row draft consistency before Next.js build. For A-12 resolve 34 source-byte gaps and obtain 25 nonexact identity / 2 consolidation independent reviews before authorized isolated PostgreSQL17 137/137 replay. Preserve human final merge and no production writes.",
-  "updatedAt": "2026-11-04T14:34:43.996Z",
+  "nextExecutableAction": "Fetch authenticated CircleCI #431 first failing step; at newly approved exact SHA, run existing manual quality only after confirming credits and authorizations (Node22 validator now verifies 3 frozen Git blob IDs and 18 tests). Independently approve 25 nonexact version identities plus two consolidations and resolve 34 unrecovered SQL sources; explicitly authorize vetted synthetic PostgreSQL17 replay after reviewed manifest. Legacy canonical replay fails closed by design and must NOT be bypassed. Human final merge only.",
+  "updatedAt": "2026-11-04T15:16:43.993Z",
   "previousV21CheckpointCommit": "45258179902bc11669d953a25478c9a2e6d54b79"
 }
