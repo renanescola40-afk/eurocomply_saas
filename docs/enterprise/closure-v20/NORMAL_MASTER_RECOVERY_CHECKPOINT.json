@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.normal-master-recovery-v20.2",
-  "OBSERVED_AT": "2026-11-04T00:38:04.104Z",
+  "OBSERVED_AT": "2026-11-04T00:41:02.644Z",
   "PREDECESSOR_WORK012": {
     "checkpoint": "docs/enterprise/closure-v19/WORK_MASTER_CHECKPOINT.json",
     "last_known_ci_sha": "feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6"
@@ -9,8 +9,8 @@
   "GITHUB_MAIN_SHA": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
   "GITLAB_MAIN_SHA": "84a99f813bdce601c119bff27c1d82c5356295d6",
   "INTEGRATION_PR": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
-  "INTEGRATION_HEAD_SHA": "02f55cd22d05d270af890a4bac1ea9c986a463fc",
-  "INTEGRATION_HEAD_FIELD_SCOPE": "Confirmed immediately before V20.2 metadata audit commit; new commit advances candidate HEAD, read PR for current source SHA.",
+  "INTEGRATION_HEAD_SHA": "96e6ebfc71a76193a49ed244dc03b9420c4ebdcf",
+  "INTEGRATION_HEAD_FIELD_SCOPE": "Candidate HEAD before this exact-SHA source integration commit; fetch PR for latest.",
   "LATEST_CIRCLECI_PIPELINE": 866,
   "LATEST_CIRCLECI_JOB": 428,
   "CIRCLECI_SOURCE_SHA": "feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6",
@@ -82,7 +82,9 @@
     "Integrated eight pinned Checkout and public-intent source snapshots from #2597 at ccc9677f91840625c41f4af1912786748ae90baf in canonical commit 02f55cd22d05d270af890a4bac1ea9c986a463fc",
     "Verified matching Git blob of public checkout normalizer and ran Node 22 isolated 4/4 PASS",
     "Read-only compared 137 ledger versions/names/hash metadata to 137 crosswalk entries: 137/137 match; 135 unique sources; 2 declared consolidations",
-    "Implemented DAT-01 metadata-integrity preflight script, 7 synthetic Node 22 tests PASS; this is not SQL parity or gate acceptance"
+    "Implemented DAT-01 metadata-integrity preflight script, 7 synthetic Node 22 tests PASS; this is not SQL parity or gate acceptance",
+    "Confirmed all 135 mapped SQL source filenames exist on integration candidate via GitHub directory API, 361 SQL files listed; source bytes not compared to provider statements.",
+    "Reviewed and integrated pinned #2597 5c3078cf latest-source delta for login/signup/onboarding/middleware anti-free/basic plan promotion and regression tests; 6 files source-checked, runtime CI NOT_EXECUTED."
   ],
   "CURRENT_BLOCKERS": [
     "CircleCI exact current SHA and credits unavailable from this chat; no pipeline run",
@@ -92,7 +94,7 @@
     "Full npm CI, security suites, authenticated QA runtime, Stripe TEST signed webhook, tenant isolation, release prove not executed",
     "Specialist PR updates need exact latest source review and SHA reconciliation"
   ],
-  "NEXT_EXECUTABLE_ACTION": "Run Node 22 metadata preflight in checked-out canonical source tree, then obtain and review canonical SQL statement provenance and two consolidation execution semantics; run current-head exact-SHA CircleCI only after Free credits and enabled access are confirmed; do not mark DAT-01 PASS from metadata-only validation.",
+  "NEXT_EXECUTABLE_ACTION": "Reconcile provider SQL-statement hashes with authentic source bytes for all 137 records and obtain qualified review of consolidation semantics. Run source metadata preflight and hosted exact-SHA CircleCI only when current included credits/provider access are confirmed. Independently review public checkout through signup and onboarding with authenticated QA.",
   "GO": {
     "INTERNAL_ENTERPRISE": "NO_GO",
     "PAID_CUSTOMER": "NOT_VERIFIED",
@@ -100,5 +102,6 @@
     "EXTERNAL_PROCUREMENT": "NOT_VERIFIED"
   },
   "DAT01_METADATA_PROVENANCE_STATUS": "CONSISTENT_METADATA_ONLY_137_OF_137",
-  "DAT01_CROSSWALK_METADATA_REPORT": "docs/enterprise/closure-v20/DAT01_CROSSWALK_METADATA_TRIAGE_20261104.json"
+  "DAT01_CROSSWALK_METADATA_REPORT": "docs/enterprise/closure-v20/DAT01_CROSSWALK_METADATA_TRIAGE_20261104.json",
+  "DAT01_SOURCE_FILE_READBACK": "135/135 distinct mapped paths verified present using current GitHub migration directory metadata; not SQL-equivalence proof."
 }

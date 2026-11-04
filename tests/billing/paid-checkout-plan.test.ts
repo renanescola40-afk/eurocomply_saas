@@ -93,4 +93,23 @@ describe('paid self-serve Checkout plan input authority', () => {
     expect(route).toContain('const priceId = plan.salesLed ? undefined : getStripePriceId(plan);');
     expect(route).not.toContain('checkoutReady: !plan.salesLed && Boolean(priceId) && !alreadyOnPlan');
   });
+
+  it('keeps signup, login, onboarding and middleware from accepting misleading free/basic public plans', async () => {
+    const [signup, login, onboarding, middleware] = await Promise.all([
+      readFile(new URL('../../src/app/[locale]/signup/page.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../src/app/[locale]/login/page.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../src/app/[locale]/onboarding/page.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../src/middleware.ts', import.meta.url), 'utf8'),
+    ]);
+    expect(signup).toContain('getBillingPlan(normalizePublicCheckoutPlanId(planId))?.id');
+    expect(login.match(/getBillingPlan\(normalizePublicCheckoutPlanId\(planId\)\)\?\.id/g)).toHaveLength(2);
+    expect(onboarding).toContain('const hasExplicitPlan = resolvedSearchParams.plan !== undefined;');
+    expect(onboarding).toContain('normalizePublicCheckoutPlanId(resolvedSearchParams.plan)');
+    expect(onboarding).toContain('getBillingPlan(normalizePublicCheckoutPlanId(submittedPlan))');
+    expect(onboarding.indexOf("error: 'invalid_plan'")).toBeLessThan(onboarding.indexOf('await createOrganization({'));
+    const allowlist = middleware.match(/const CHECKOUT_PLAN_IDS = new Set\(\[([^\]]+)\]\);/)?.[1] ?? '';
+    expect(allowlist).toContain("'essential'");
+    expect(allowlist).not.toContain("'basic'");
+    expect(allowlist).not.toContain("'free'");
+  });
 });

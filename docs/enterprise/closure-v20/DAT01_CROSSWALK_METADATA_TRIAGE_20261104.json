@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.dat01-crosswalk-metadata-triage.v20.2",
-  "OBSERVED_AT": "2026-11-04T00:38:04.104Z",
+  "OBSERVED_AT": "2026-11-04T00:41:02.644Z",
   "source_commit_before_this_report": "02f55cd22d05d270af890a4bac1ea9c986a463fc",
   "data_sources": {
     "ledger": "scripts/diagnostics/g5-02-prod-ledger-versions.json",
@@ -23,9 +23,11 @@
     },
     "consolidated_source_groups": 2,
     "unresolved_metadata_identity_mismatches": 0,
-    "source_file_existence_in_repository": "NOT_FULLY_RECHECKED_IN_THIS_SESSION",
+    "source_file_existence_in_repository": "VERIFIED_135_OF_135_BY_GITHUB_DIRECTORY_METADATA",
     "raw_source_sql_to_ledger_statement_equivalence": "NOT_VERIFIED",
-    "isolated_postgresql17_replay": "NOT_EXECUTED"
+    "isolated_postgresql17_replay": "NOT_EXECUTED",
+    "migration_sql_files_in_directory": 361,
+    "latest_candidate_sha_before_this_report": "96e6ebfc71a76193a49ed244dc03b9420c4ebdcf"
   },
   "new_source_contract": {
     "script": "scripts/diagnostics/g5-02-crosswalk-integrity.mjs",

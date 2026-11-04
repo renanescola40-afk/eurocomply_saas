@@ -85,3 +85,24 @@ test('checkout intent never advertises payable checkout while paid GA or legal p
   assert.ok(denial > ready);
   assert.ok(route.includes('const priceId = plan.salesLed ? undefined : getStripePriceId(plan);'));
 });
+
+test('signup, login, onboarding and middleware never upgrade free/basic URL intents to paid plans', async () => {
+  const [signup, login, onboarding, middleware] = await Promise.all([
+    readFile(new URL('../../src/app/[locale]/signup/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../../src/app/[locale]/login/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../../src/app/[locale]/onboarding/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../../src/middleware.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.ok(signup.includes('getBillingPlan(normalizePublicCheckoutPlanId(planId))?.id'));
+  assert.equal(login.split('getBillingPlan(normalizePublicCheckoutPlanId(planId))?.id').length - 1, 2);
+  assert.ok(onboarding.includes('normalizePublicCheckoutPlanId(resolvedSearchParams.plan)'));
+  assert.ok(onboarding.includes('if (hasExplicitPlan && !normalizedPublicPlan)'));
+  assert.ok(onboarding.includes('getBillingPlan(normalizePublicCheckoutPlanId(submittedPlan))'));
+  assert.ok(onboarding.indexOf("error: 'invalid_plan'") < onboarding.indexOf('await createOrganization({'));
+  const allowlist = middleware.match(/const CHECKOUT_PLAN_IDS = new Set\(\[([^\]]+)\]\);/)?.[1] ?? '';
+  assert.ok(allowlist.includes("'essential'"));
+  assert.ok(allowlist.includes("'business'"));
+  assert.ok(!allowlist.includes("'basic'"));
+  assert.ok(!allowlist.includes("'free'"));
+  assert.ok(middleware.includes('CHECKOUT_PLAN_IDS.has(plan)'));
+});
