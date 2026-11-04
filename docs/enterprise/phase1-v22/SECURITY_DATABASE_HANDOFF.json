@@ -67,7 +67,19 @@
     "consolidation_groups": 2,
     "independent_reviews_approved": 0,
     "isolated_postgres_17_replay_count": 0,
-    "state": "DRAFT_NOT_EXECUTABLE_NOT_APPROVED"
+    "state": "DRAFT_NOT_EXECUTABLE_NOT_APPROVED",
+    "live_production_metadata_hash_comparison": "137/137 MATCH",
+    "live_production_metadata_comparison_columns": [
+      "version",
+      "name",
+      "statement_count",
+      "joined_bytes",
+      "joined_statement_sha256"
+    ],
+    "live_sql_source_bytes_returned": false,
+    "live_provider_query_mode": "READ_ONLY_SELECT",
+    "live_provider_mismatches": 0,
+    "note": "Live production ledger metadata checked against frozen 137-entry ledger on 2026-11-04; no differences. This does not prove migration source byte equality, review or replay."
   },
   "acceptance": {
     "phase1_gate_accepted": 0,
@@ -218,7 +230,7 @@
       "implementation": "New read-only metadata preflight script and six regression tests in focused branch; draft never made executable.",
       "test_command": "node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
       "test_results": "NODE_SYNTAX_CHECK_PASSED; SYNTHETIC_2_ROW_SMOKE_POSITIVE_AND_NEGATIVE_PASSED; FULL_137_REPO_TEST_NOT_RUN_YET",
-      "provider_readback": "PROD schema_migrations count 137 distinct 137; isolated QA ledger only 7 independent QA migrations; frozen manifest structurally crosschecked against archived ledger/crosswalk 137/137.",
+      "provider_readback": "Live PROD SQL metadata matches frozen ledger 137/137 across version, name, statement_count, joined_bytes and SHA256, zero mismatches. QA ledger 7 separate records. 34 source bytes unresolved and replay 0/137.",
       "negative_test_evidence": "Source proof claims 103/137 archived, 34 unresolved; 0 approved reviewer signatures; no SQL replay; wrong-order/hash/premature-replay tests added.",
       "remaining_blocker": "Revalidate all 103 source bytes against provider, recover 34, independent identity review 25, two consolidation groups, approved manifest, PG17 137/137 isolated replay, validator PASS",
       "status": "BLOCKED"
