@@ -150,3 +150,24 @@ not validate an independent external trust anchor or full historical coverage.
 Production historical unsigned/hashless events require governed disposition.
 Roll back by governed PR revert; do not disable the guard merely to obtain PASS.
 A-03/SEC-06 remains NOT_VERIFIED.
+
+## Verified native QA RPC transaction/rollback proof (2026-11-04)
+
+Source: `scripts/security/audit-chain-qa-rollback-rpc-proof.sql`.
+Executed on isolated QA Supabase project `zrxrrfbllsxtleyxjpsz` inside
+an explicit PostgreSQL `BEGIN` / `ROLLBACK` transaction, after verifying
+zero non-internal `audit_events` triggers and reviewing the live function
+body for DB-only advisory lock and insert. Four outcomes were reported PASS:
+QA fixture present, synthetic RPC append visible in the transaction,
+stale-head duplicate rejected via SQLSTATE P0001, and wrong algorithm rejected
+via SQLSTATE 22023. Independent post-rollback read-only readback returned
+`audit_events=0`, `qa.synthetic.*=0` rows. No tenant IDs or audit records
+were exported, no production writes occurred.
+
+**Boundary:** this test is one connection, not competing sessions. The HMAC
+string is intentionally synthetic and invalid: it tests SQL transactional
+head locking/validation, NOT HMAC signing. No JWT user isolation, transaction
+atomicity under process failure, simultaneous writers, independent anchor or
+full release SHA has been verified. A-03/SEC-06 and A-13/DAT-03 remain
+NOT_VERIFIED until all formal acceptance criteria pass. Never execute this
+script on PROD; rerun only on an approved QA fixture.
