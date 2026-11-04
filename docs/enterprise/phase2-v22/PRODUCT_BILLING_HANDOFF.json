@@ -1,0 +1,255 @@
+{
+  "schema": "risck-comply.enterprise.phase2-v22.product-billing-handoff.v1",
+  "observedDate": "2026-11-04",
+  "owner": "Executor 2 / Phase 2",
+  "integrationOwner": "Executor 3 / canonical release",
+  "source": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "canonicalPr": 2598,
+    "candidateBranch": "integration/enterprise-unified-candidate-20261102",
+    "candidateHeadAtObservation": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+    "overlapBillingPr": 2597,
+    "billingPrHeadAtObservation": "e159c3eb590fe7b8e72beb01e6b4d0ed32b474cd",
+    "phase2Branch": "phase2/product-billing-v22",
+    "phase2BranchAfterSourceAndTest": "f9fc14248f82d872d2bd4689469e357dabaf4b31",
+    "phase2BranchCreationBase": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+    "note": "Source changes are scoped to a separate PR; canonical candidate HEAD advanced independently. At latest compare, phase2 branch diverged (6 commits ahead, 2 behind). Executor 3 alone handles integration; no merge here.",
+    "candidateHeadAtLatestReadback": "57457c56e4e8a8019987a39d62dfea6c3caa5425",
+    "phase2SourceAfterEvidenceVaultFix": "66166fc7f5133e07e3eef76766e713221de5f676",
+    "phase2PullRequest": 2605
+  },
+  "changedPaths": [
+    "scripts/enterprise-evidence/phase2-qa-webhook-preflight.mjs",
+    "tests/billing/phase2-qa-webhook-preflight.test.mjs",
+    "src/lib/evidence/upload-recovery.ts",
+    "src/lib/evidence/storage.ts",
+    "tests/product/evidence-upload-recovery.test.mjs",
+    "docs/enterprise/phase2-v22/PRODUCT_BILLING_HANDOFF.json",
+    "docs/enterprise/phase2-v22/EVIDENCE_VAULT_QA_READONLY_PROOF.json"
+  ],
+  "implementation": {
+    "deliverable": "Read-only, fail-closed exact-SHA QA / Supabase / Stripe TEST binding preflight for safe webhook endpoint configuration",
+    "scope": "Preflight guard only: does not mutate Stripe, deploy QA, process events or establish completed customer transactions.",
+    "localBehavioralTests": {
+      "command": "node --test tests/billing/phase2-qa-webhook-preflight.test.mjs",
+      "node": "22.16.0",
+      "passed": 14,
+      "failed": 0,
+      "gitBlobParity": true,
+      "guardBlobSha": "430ef7b8ed576152cc50b843f1bf44ca79dd4402",
+      "testBlobSha": "98bb2274ecc82cba932a0fc5d0312606e34dae28",
+      "testEnvironment": "Isolated local copies byte-identical to GitHub blobs; not a full repository checkout."
+    },
+    "providerSnapshotPreflight": {
+      "readyToConfigureTestWebhook": false,
+      "blockers": [
+        "isolated_qa_deployment_unverified",
+        "deployment_git_provenance_unverified",
+        "runtime_qa_database_unverified",
+        "stripe_test_account_unverified",
+        "stripe_qa_signing_binding_unverified"
+      ],
+      "formalGateAccepted": false
+    }
+  },
+  "providerReadback": {
+    "stripeTest": {
+      "accountContext": "acct_1U6IuJGt3cgjPOtq",
+      "livemode": false,
+      "webhookEndpointCount": 1,
+      "webhookEndpointId": "we_1ULOe9Gt3cgjPOtqNFF0MPKi",
+      "endpointStatus": "disabled",
+      "signedDeliveryVerified": false,
+      "invalidSignatureProviderRejectionVerified": false,
+      "duplicatePersistedEventVerified": false,
+      "observedActiveProfessionalZeroEuroPrice": true,
+      "canonicalProfessionalMonthlyPriceCents": 14900,
+      "pricesObserved": 7
+    },
+    "supabaseQa": {
+      "projectRef": "zrxrrfbllsxtleyxjpsz",
+      "organizations": 2,
+      "subscriptions": 0,
+      "stripeWebhookEvents": 0,
+      "billingCheckoutAttempts": 0,
+      "readOnly": true,
+      "authenticatedCustomerJourneyVerified": false
+    },
+    "vercelQa": {
+      "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+      "qaAliasDeploymentId": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+      "deploymentState": "READY",
+      "gitSourceSha": null,
+      "providerGitSourceAttested": false,
+      "exactCandidateShaDeploymentLookupCount": 0,
+      "doNotRetargetWebhookWithoutVerifiedDeployment": true
+    }
+  },
+  "acceptance": {
+    "phaseGateTotal": 6,
+    "phaseGatesAccepted": 0,
+    "phaseAtomicTotal": 10,
+    "phaseAtomicAccepted": 0,
+    "gateStatuses": [
+      {
+        "gate": "A-05",
+        "controls": [
+          "FUN-01"
+        ],
+        "status": "NOT_VERIFIED",
+        "reason": "Authenticated signup/onboarding owner/workspace session persisted QA journey not completed."
+      },
+      {
+        "gate": "A-06",
+        "controls": [
+          "FUN-02",
+          "FUN-03"
+        ],
+        "status": "NOT_VERIFIED",
+        "reason": "Real inventory, risk, human review, persistence and tenant denial QA readbacks missing."
+      },
+      {
+        "gate": "A-07",
+        "controls": [
+          "FUN-04"
+        ],
+        "status": "NOT_VERIFIED",
+        "reason": "READ-ONLY QA catalog proves FORCE RLS, private Storage, four triggers, three attachment constraints and no anonymous table access; recovery code with 27 local Node tests, but no QA bytes / authenticated E2E upload/retry/tenant-negative/report evidence or hosted CI/independent formal acceptance."
+      },
+      {
+        "gate": "A-08",
+        "controls": [
+          "FUN-05",
+          "FUN-06"
+        ],
+        "status": "NOT_VERIFIED",
+        "reason": "Privacy deletion/export and truthful UX/entitlement end-to-end proof unverified."
+      },
+      {
+        "gate": "A-10",
+        "controls": [
+          "BIL-02",
+          "BIL-03"
+        ],
+        "status": "BLOCKED",
+        "reason": "QA Stripe TEST webhook remains disabled, no signed delivery and zero DB events; custom QA env metadata lists prices but not STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET (effective inheritance not verified); exact deployment SHA missing."
+      },
+      {
+        "gate": "A-11",
+        "controls": [
+          "BIL-04",
+          "BIL-05"
+        ],
+        "status": "BLOCKED",
+        "reason": "No paid TEST subscription lifecycle, upgrade/downgrade/payment-failure and durable entitlements proof."
+      }
+    ],
+    "historicalGlobalBaseline": {
+      "acceptedGates": 2,
+      "gateTotal": 24,
+      "acceptedAtomicControls": 2,
+      "atomicTotal": 38,
+      "scope": "Historical baseline; current candidate not independently accepted or rescored."
+    },
+    "currentReleaseAccepted": false,
+    "qualifiedIndependentReview": false,
+    "formalValidatorAccepted": false
+  },
+  "nextActionsForExecutor3": [
+    "Verify effective QA deployment runtime variable *presence* for STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET; custom QA env listing (20 keys) does not include them; NEVER read secret values or assume inherited settings.",
+    "Review and integrate Evidence Vault immutable upload retry recovery through PR #2605; run exact-source Node 22 tests and authenticated QA Storage retry/tenant-denial proofs; preserve current RLS and protected demo.",
+    "Attest a READY deployment built from exact candidate commit SHA and explicitly bound to isolated QA Supabase, without inferring provenance from a READY alias.",
+    "Confirm TEST-only Stripe API key and TEST-only signing secret are configured in QA (presence/binding only; no secret values).",
+    "Run the preflight before changing any webhook destination; preserve the disabled legacy endpoint until safe alternative is proven.",
+    "Deliver one authentic signed TEST webhook, negative signature and duplicate/replay; read durable QA webhook/subscription/entitlement rows.",
+    "Run authenticated two-tenant onboarding, governance, evidence and privacy journeys at exact SHA; obtain hosted CI and independent review.",
+    "Submit verified evidence to the formal acceptance engine. Do not mark any gate PASS based on offline fixtures."
+  ],
+  "safety": {
+    "productionWrites": false,
+    "stripeLiveWrites": false,
+    "stripeTestWrites": false,
+    "qaDatabaseWrites": false,
+    "emailsSent": false,
+    "addedCosts": false,
+    "secretValuesRead": false,
+    "sharedCircleCiWorkflowModified": false,
+    "canonicalCandidateBranchModified": false
+  },
+  "evidenceVaultRecovery": {
+    "status": "IMPLEMENTED_SOURCE_ONLY_NOT_QA_ACCEPTED",
+    "rootCause": "Immutable Evidence Vault attachment metadata is reserved prior to Storage upload. Provider duplicate/lost success responses may strand an attachment and cause non-idempotent retries.",
+    "fix": "Immutable metadata reserved before Storage upload. For errors and thrown transport failures, private SELECT download of same tenant/object path with no-store; exact SHA-256 and size must match before success. Otherwise rethrow original error. Upsert false and RLS/trigger unchanged.",
+    "sourceSha": "66166fc7f5133e07e3eef76766e713221de5f676",
+    "paths": [
+      "src/lib/evidence/storage.ts",
+      "src/lib/evidence/upload-recovery.ts",
+      "tests/product/evidence-upload-recovery.test.mjs",
+      "docs/enterprise/phase2-v22/EVIDENCE_VAULT_QA_READONLY_PROOF.json"
+    ],
+    "localTest": {
+      "node": "22.16.0",
+      "command": "node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs tests/billing/phase2-qa-webhook-preflight.test.mjs",
+      "passed": 27,
+      "failed": 0,
+      "scope": "Isolated exact Git blob helper + exact Git blob test and source-layout wiring fixture; not full application checkout or hosted CI",
+      "tapSha256": "8adf18fae695aedb216398aade0004bbce2370527f1a6643d702dacb72f60d95",
+      "helperGitBlobSha": "abd8145c61fe2d22f0ac3035d6262f36db006915",
+      "testGitBlobSha": "79512f74d940b4c34c4871336b1fa4ae9d9d3b02",
+      "sourceGitBlobSha": "a8d6c49813f167190632330c6bed2e52af52afd3",
+      "existingEnterpriseVaultSourceHashStaticContractPreserved": true
+    },
+    "qaReadOnly": {
+      "projectRef": "zrxrrfbllsxtleyxjpsz",
+      "evidenceItems": 0,
+      "storageObjects": 0,
+      "evidenceVaultEnabledTriggers": 4,
+      "storagePolicies": 2,
+      "privateBucket": true,
+      "evidenceRlsForce": true,
+      "auditRlsForce": true,
+      "attachmentConstraints": 3,
+      "anonymousNoVaultAccess": true,
+      "authenticatedNoDelete": true,
+      "authenticatedCrossTenantUploadVerified": false,
+      "authenticatedRetryVerified": false,
+      "providerReadbackFile": "docs/enterprise/phase2-v22/EVIDENCE_VAULT_QA_READONLY_PROOF.json",
+      "readOnly": true
+    },
+    "remaining": [
+      "Full repository npm tests, typecheck, lint and hosted CI on exact PR SHA",
+      "Authenticated QA upload success, lost-response retry, duplicate success, other-tenant denial and mismatched existing-object negative proof",
+      "Real PDF/FRIA/Annex IV/Article 50 export and evidence audit references",
+      "Independent review then formal verifier admission"
+    ],
+    "gate": "A-07",
+    "control": "FUN-04",
+    "formalStatus": "NOT_VERIFIED"
+  },
+  "vercelQaEnvironmentMetadata": {
+    "provider": "Vercel project environment variable names; decrypted values never requested",
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "customEnvironment": "qa",
+    "customEnvironmentId": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+    "customEnvEntries": 20,
+    "keysObservedPresent": [
+      "STRIPE_PRICE_ESSENTIAL_MONTHLY",
+      "STRIPE_PRICE_ESSENTIAL_ANNUAL",
+      "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
+      "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
+      "E2E_QA_APPROVED_SUPABASE_REF",
+      "SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_URL"
+    ],
+    "keysNotListedInCustomQa": [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+      "SUPABASE_SERVICE_ROLE_KEY"
+    ],
+    "effectiveDeploymentConfigurationVerified": false,
+    "inheritanceChecked": false,
+    "projectWideListingIncomplete": true,
+    "interpretation": "These secret names were not in the 20 custom-QA specific entries, but this alone does NOT prove absence from any effective inherited or runtime environment. No signing or key-mode claim is accepted.",
+    "next": "Read-only inspect exact QA deployment effective configuration and verify TEST-only secret presence/binding without retrieving values; require fresh deploy if config changes."
+  }
+}

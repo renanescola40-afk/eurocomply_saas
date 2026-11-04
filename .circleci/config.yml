@@ -200,6 +200,10 @@ jobs:
               tests/billing/checkout-recovery-lease-contract.test.mjs
             node --experimental-strip-types --test --test-reporter=tap \
               tests/billing/checkout-price-authority.test.mjs
+            node --test --test-reporter=tap \
+              tests/billing/phase2-qa-webhook-preflight.test.mjs
+            node --experimental-strip-types --test --test-reporter=tap \
+              tests/product/evidence-upload-recovery.test.mjs
 
   # Second-stage opt-in; never auto-trigger, deploy, write to production or use provider secrets.
   github-actions-recovery-quality:
