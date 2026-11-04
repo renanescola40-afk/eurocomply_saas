@@ -1,16 +1,19 @@
 {
-  "schema": "risck-comply.work012-recovery-handoff.v21.0",
+  "schema": "risck-comply.work012-recovery-handoff.v21.1",
   "createdAt": "2026-11-04T09:14:42.065Z",
   "owner": "NORMAL_CHAT_MASTER_V21.0",
   "canonicalPR": {
     "number": 2598,
     "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
     "branch": "integration/enterprise-unified-candidate-20261102",
-    "headBeforeCheckpointCommit": "4230b0148d488a949991ed310d39309f53bcce7f",
-    "headNote": "Commit of this document advances HEAD; retrieve PR provider head after commit; this field is observation SHA not self-referential commit SHA",
+    "headBeforeCheckpointCommit": "2e99a2cbd6a0fd5da55f6c273f3984649e8508bf",
+    "headNote": "Authoritative latest HEAD is the current GitHub PR; this JSON records the parent SHA before the additive checkpoint commit.",
     "draft": true,
     "merged": false,
-    "approvedReviewsAtObservation": 0
+    "approvedReviewsAtObservation": 0,
+    "commitsBeforeCheckpoint": 79,
+    "filesBeforeCheckpoint": 140,
+    "mergeable": true
   },
   "duplicateCI_PR": {
     "number": 2595,
@@ -45,7 +48,12 @@
     "newPipelineTriggeredByThisConversation": false,
     "credits": "historical 19,767 included remaining; CURRENT BALANCE NOT VERIFIED",
     "correctiveActionForJob431": "NONE; no safe root-cause-specific patch without step log",
-    "checklist": "Read job #431 first failing step with authenticated CircleCI in Work or provider; reproduce/fix exact cause; run a single exact-head quality job only with verified included credits"
+    "checklist": "Read job #431 first failing step with authenticated CircleCI in Work or provider; reproduce/fix exact cause; run a single exact-head quality job only with verified included credits",
+    "verifiedAsOf": "2026-11-04T09:36:32.689Z",
+    "correctionOrRerunAttemptedByThisConversation": false,
+    "candidateCommitWithPassedExactShaQuality": "NONE",
+    "latestHeadCombinedStatus": "NO_CIRCLECI_CONTEXT_ON_NEW_SHA",
+    "providerAuthenticatedJobTranscript": "UNAVAILABLE_IN_NORMAL_CHAT"
   },
   "githubActions": {
     "problem": "workflow runs fail with zero job steps, likely provider runner-admission issue but root cause unconfirmed",
@@ -63,7 +71,14 @@
     "testResult": "7 PASS / 0 FAIL, Node v22.16.0, local extracted source blobs verified",
     "commitSha": "THIS_HANDOFF_FILE_SAVED_AS_PART_OF_A_NEW_COMMIT; get canonical current HEAD via GitHub",
     "rootCause": "Historical DAT01 ledger SQL does not have a source-executable 137-row replay manifest; exact raw SQL hashes not interchangeable with statement arrays",
-    "rollback": "Revert the four-file additive commit through governed PR, no DB mutation"
+    "rollback": "Revert the four-file additive commit through governed PR, no DB mutation",
+    "additiveTestCommit": "2e99a2cbd6a0fd5da55f6c273f3984649e8508bf",
+    "dat01NewTestPath": "tests/release/dat01-source-parity-negative.test.mjs",
+    "dat01NewTestBlob": "75a0b2bd227ae4f41d530059836a2123b6ce6d6a",
+    "dat01UpdatedTestCommand": "node --test scripts/diagnostics/g5-02-sql-hash-proof.test.mjs tests/release/dat01-source-parity-negative.test.mjs",
+    "dat01UpdatedResult": "14 PASS / 0 FAIL Node 22.16.0 local exact-Git-blob checkout; not CI proof",
+    "dat01TestFocus": "Synthetic 137 identity hash parity without gate acceptance, modified provider digest, changed source SQL, nonexact identity review, metadata identity/order, unsafe paths, missing/unterminated source",
+    "evidenceFile": "docs/enterprise/closure-v21/DAT01_NEGATIVE_SOURCE_REGRESSION_20261104.json"
   },
   "dat01": {
     "status": "BLOCKED",
@@ -108,7 +123,12 @@
     },
     "sqlReplay": "0/137",
     "independentAcceptance": "NOT_GRANTED",
-    "proofFile": "docs/enterprise/closure-v21/DAT01_SOURCE_HASH_TRIAGE_20261104.json"
+    "proofFile": "docs/enterprise/closure-v21/DAT01_SOURCE_HASH_TRIAGE_20261104.json",
+    "verifiedTestCount": 14,
+    "verifiedNewTestCount": 7,
+    "testsExactGitBlobs": true,
+    "newRegressionEvidence": "docs/enterprise/closure-v21/DAT01_NEGATIVE_SOURCE_REGRESSION_20261104.json",
+    "replay": "0/137"
   },
   "auditChainIndependentReadback": {
     "scope": "production metadata READ ONLY",
@@ -121,7 +141,11 @@
     "firstSignedAtUTC": "2026-07-09 11:55:29",
     "lastSignedAtUTC": "2026-09-05 20:07:40",
     "unsignedAfterLastSignature": 350,
-    "warning": "NO verification of event hash integrity or HMAC; cannot assert tampering. Security owner A-03/SEC-06 investigate signer configuration/history."
+    "warning": "NO verification of event hash integrity or HMAC; cannot assert tampering. Security owner A-03/SEC-06 investigate signer configuration/history.",
+    "securityOwnerHandoffCommentUrl": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2596#issuecomment-6627419926",
+    "deployedBlob": "c69be41d64aa2a5d10e012b4d4082110297361f1",
+    "candidateBlob": "aea604f948961df6399cc87dac15e96708a4b0b7",
+    "note": "Production code permits optional signer; candidate enforces signer only under Enterprise mode. Unverified effective secret presence or signature cause. No tampering conclusion."
   },
   "otherWork": {
     "latestObserved": "#2598 includes read-only DAT-02 QA/PROD zero-drift aggregate, SEC-05 admission verifier and audit-chain guards; these are not formal accepted gates.",
@@ -182,5 +206,7 @@
     "paidCITasks": false,
     "StripeLiveTransactions": false
   },
-  "nextExecutableAction": "Read authenticated CircleCI job431 logs in eligible Work; this normal chat can run read-only DAT01 source diagnostics and QA SQL probes; do not close DAT01 without reviewed complete replay or promote any gate without independent acceptance."
+  "nextExecutableAction": "Obtain CircleCI #431 authenticated first-failure transcript (source SHA a272309b), then exact-current-SHA quality check; perform fully checked-out 137-row source diagnostic and qualified review of 25 nonexact mappings + two consolidation groups; subsequently isolated PostgreSQL 17 replay. No automatic formal PASS.",
+  "updatedAt": "2026-11-04T09:36:32.689Z",
+  "previousV21CheckpointCommit": "45258179902bc11669d953a25478c9a2e6d54b79"
 }
