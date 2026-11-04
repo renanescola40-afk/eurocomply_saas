@@ -9,7 +9,7 @@ export async function evidenceSha256Hex(blob: Blob): Promise<string> {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-type EvidenceDownload = () => Promise<{ data: Blob | null; error: unknown }>;
+type EvidenceDownload = () => PromiseLike<{ data: Blob | null; error: unknown }>;
 
 export async function verifyExistingEvidenceObject(input: {
   expectedSize: number;
@@ -27,4 +27,29 @@ export async function verifyExistingEvidenceObject(input: {
     // Storage SELECT denied, missing object and transport errors are NOT proof.
     return false;
   }
+}
+
+/**
+ * Upload without overwriting immutable evidence. A failed or lost provider
+ * response is recoverable only if a private readback proves identical bytes.
+ * A real upload error always remains fatal when that proof is missing.
+ */
+export async function uploadImmutableEvidenceObject(input: {
+  expectedSize: number;
+  expectedSha256: string;
+  upload: () => PromiseLike<{ error: unknown }>;
+  download: EvidenceDownload;
+}): Promise<void> {
+  let uploadError: unknown;
+  try {
+    const result = await input.upload();
+    if (!result.error) return;
+    uploadError = result.error;
+  } catch (error) {
+    // A transport failure might occur after Storage already wrote the bytes.
+    uploadError = error;
+  }
+
+  const recovered = await verifyExistingEvidenceObject(input);
+  if (!recovered) throw uploadError;
 }
