@@ -1,0 +1,67 @@
+{
+  "observed_at": "2026-11-04T08:27:43.987Z",
+  "release_head_sha": "fd8574fb8c338b6fe5fb91adfef65793ca7bdbfc",
+  "tested_sha": "02f55cd22d05d270af890a4bac1ea9c986a463fc",
+  "circleci": {
+    "pipeline": 885,
+    "job": 429,
+    "result": "FAIL",
+    "reason": "Stale normalizeBillingPlanId requirement in check-billing-page-boundary.mjs",
+    "credits_before_job": {
+      "included": 30000,
+      "used": 10233,
+      "remaining": 19767
+    },
+    "url": "https://app.circleci.com/pipelines/github/renanescola40-afk/eurocomply_saas/885/workflows/14440cae-762a-422e-b1e4-15d85b9620e9/jobs/429"
+  },
+  "provider_access": {
+    "github": "authenticated connector",
+    "gitlab": "authenticated connector read observed",
+    "circleci": "authenticated browser",
+    "vercel": "authenticated connector",
+    "supabase": "read-only metadata"
+  },
+  "github_actions": "RUNNER_ADMISSION_FAILURE_OBSERVED; BILLING_NOT_CONFIRMED; run41666863524 zero-step jobs",
+  "github_main": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+  "gitlab_main": "84a99f813bdce601c119bff27c1d82c5356295d6",
+  "vercel_production_sha": "70d3545f414d063379d481fd238aed563e05edda",
+  "local_tests": {
+    "command": "node --test tests/ci/billing-page-boundary-contract.test.mjs",
+    "result": "3 PASS",
+    "scope": "checker fixture only"
+  },
+  "review": "ci_repair technical review: no blocking findings. Not independent human acceptance.",
+  "dat01": {
+    "status": "BLOCKED",
+    "prod_migrations": 137,
+    "qa_migrations": 7,
+    "complete_replay": "NOT_VERIFIED",
+    "hash_readback": "137 frozen provider statement digests matched in read-only readback"
+  },
+  "acceptance": {
+    "formal_pass": 2,
+    "formal_total": 24,
+    "atomic_pass": 2,
+    "atomic_total": 38,
+    "phase_pass": [
+      0,
+      0,
+      2,
+      0
+    ],
+    "scope": "historical frozen evidence; current release not accepted",
+    "newly_closed": 0,
+    "blocker": "Approved evidence dispatch currently supports OPS-01/BIL-01 only"
+  },
+  "go": {
+    "internal": "NOT_GRANTED",
+    "paid": "NOT_GRANTED",
+    "production": "NOT_GRANTED",
+    "procurement": "NOT_GRANTED"
+  },
+  "governance": {
+    "proposal_pr": 2601,
+    "activation": "PENDING human independent review and merge"
+  },
+  "next_action": "Run one bounded CircleCI quality test on corrected exact SHA; preserve results without changing scoring."
+}
