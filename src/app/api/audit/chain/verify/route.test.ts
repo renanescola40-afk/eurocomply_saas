@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   assertPlanAtLeast: vi.fn(),
@@ -70,6 +70,8 @@ import {
 
 describe('audit chain verification request contract', () => {
   const baseUrl = 'https://app.example.test/api/audit/chain/verify';
+
+  afterEach(() => vi.unstubAllEnvs());
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -214,4 +216,41 @@ describe('audit chain verification request contract', () => {
     expect(body.stepUpVerified).toBe(true);
     expect(body.verificationAuditEvent).toEqual(expect.objectContaining({ persisted: true, transactional: true }));
   });
+  it('rejects excluded legacy events in Enterprise mode and requests HMAC verification', async () => {
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    mocks.listAuditChainEventsForVerification.mockResolvedValue([
+      { id: 'evt_legacy', organization_id: 'org_123', event_hash: null, hash_signature: null },
+      { id: 'evt_002', organization_id: 'org_123', actor_user_id: 'user_123',
+        action: 'document.upload', entity_type: 'document', entity_id: 'doc_123',
+        metadata: {}, created_at: '2026-06-21T09:00:00.000Z',
+        previous_hash: null, event_hash: 'hash-2', hash_signature: 'sig-2' },
+    ]);
+    const response = await GET(new Request(`${baseUrl}?limit=10`));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(mocks.verifyAuditChain).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'evt_002' })],
+      { expectedPreviousHash: null, requireSignatures: true },
+    );
+    expect(body.ok).toBe(false);
+    expect(body.legacyEvents).toBe(1);
+    expect(body.enterpriseSignedVerification).toBe(true);
+    expect(mocks.createAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: expect.objectContaining({ ok: false, legacyEvents: 1 }) }),
+    );
+  });
+
+  it('keeps Enterprise success available for a valid signed window without legacy rows', async () => {
+    vi.stubEnv('RELEASE_TARGET', 'enterprise');
+    const response = await GET(new Request(`${baseUrl}?limit=10`));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.enterpriseSignedVerification).toBe(true);
+    expect(mocks.verifyAuditChain).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'evt_001' })],
+      { expectedPreviousHash: null, requireSignatures: true },
+    );
+  });
+
 });

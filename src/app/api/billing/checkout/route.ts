@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 
 import { getBillingEntitlements } from '@/lib/billing/plans';
+import { checkoutStripeModeMatchesPurpose, reusableCheckoutLineItemsMatch, validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
 import {
   isPublicSelfServeContractEffective,
   PUBLIC_CONTRACT_ACCEPTANCE_METHOD,
@@ -19,7 +20,9 @@ import {
   claimInitialCheckoutAttempt,
   releaseInitialCheckoutAttempt,
 } from '@/server/billing/initial-checkout-singleflight';
-import { getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import { BILLING_PLANS, getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import { normalizePaidCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
+import { getStripeEventModeFromSecretKey } from '@/server/billing/stripe-event-mode';
 import { getStripeClient } from '@/server/billing/stripe';
 import {
   getAuthoritativeSignedContractPlan,
@@ -229,6 +232,26 @@ async function expireCheckoutSessionSafely(stripe: Stripe, sessionId: string, or
   }
 }
 
+/** For reused open sessions, never release checkout ownership until Stripe
+ * confirms the obsolete hosted payment URL is expired. Compensation-only
+ * best-effort helpers are insufficient for this security/contract boundary. */
+async function expireReusedCheckoutSessionStrict(stripe: Stripe, sessionId: string, operation: string) {
+  let expired: Stripe.Checkout.Session;
+  try {
+    expired = await stripe.checkout.sessions.expire(sessionId);
+  } catch (error) {
+    throw classifyProviderFailure('stripe', operation, error);
+  }
+  if (expired.status !== 'expired') {
+    throw new ProviderFailureError({
+      provider: 'stripe',
+      kind: 'conflict',
+      providerCode: 'checkout_session_expiry_unconfirmed',
+      operation,
+    });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const user = await requireApiUser();
@@ -271,7 +294,7 @@ export async function POST(request: Request) {
       maxBytes: CHECKOUT_JSON_MAX_BYTES,
     }).catch(() => null);
     const parsedBody = checkoutBodySchema.safeParse(body);
-    const normalizedPlan = parsedBody.success ? normalizeBillingPlanId(parsedBody.data.plan) : undefined;
+    const normalizedPlan = parsedBody.success ? normalizePaidCheckoutPlanId(parsedBody.data.plan) : undefined;
 
     if (!parsedBody.success || !normalizedPlan || !isSelfServePlan(normalizedPlan)) {
       return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
@@ -371,12 +394,43 @@ export async function POST(request: Request) {
 
     const legalAcceptanceAt = validationOnlyCheckout ? '' : new Date().toISOString();
 
+    // Before claiming the initial-checkout lease, validate provider reality.
+    // Misconfigured Prices must not strand a lease or revive an obsolete Price.
+    const expectedStripeMode = getStripeEventModeFromSecretKey();
+    if (!checkoutStripeModeMatchesPurpose(expectedStripeMode, validationOnlyCheckout)) {
+      throw new ProviderFailureError({
+        provider: 'stripe',
+        kind: 'configuration',
+        providerCode: 'checkout_stripe_mode_not_authorized',
+        operation: 'checkout_price_preflight',
+      });
+    }
+    const stripe = getStripeClient();
+    const priceId = getStripePriceId(plan);
+    let priceRecord: Stripe.Price;
+    try {
+      priceRecord = await stripe.prices.retrieve(priceId, { expand: ['product'] });
+    } catch (error) {
+      throw classifyProviderFailure('stripe', 'checkout_price_retrieve', error);
+    }
+    const priceAuthority = validateCheckoutPriceAuthority(priceRecord, {
+      priceId,
+      expectedAmountCents: BILLING_PLANS[plan].monthlyPriceCents,
+      expectedMode: expectedStripeMode,
+    });
+    if (!priceAuthority.ok) {
+      throw new ProviderFailureError({
+        provider: 'stripe',
+        kind: 'configuration',
+        providerCode: 'checkout_price_authority_invalid',
+        operation: 'checkout_price_retrieve',
+      });
+    }
+
     let checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
     if (checkoutAttempt.outcome === 'busy') {
       return noStoreJson({ error: 'checkout_in_progress' }, { status: 409 });
     }
-
-    const stripe = getStripeClient();
 
     if (checkoutAttempt.outcome === 'existing') {
       if (!checkoutAttempt.stripeSessionId) {
@@ -416,7 +470,7 @@ export async function POST(request: Request) {
               );
 
           if (!existingLegalMatches) {
-            await expireCheckoutSessionSafely(stripe, existingSession.id, organization.id, 'billing_checkout_stale_legal_session_expire');
+            await expireReusedCheckoutSessionStrict(stripe, existingSession.id, 'billing_checkout_stale_legal_session_expire');
             await releaseCheckoutAttemptSafely(organization.id, checkoutAttempt.attemptToken, 'billing_checkout_stale_legal_session_release');
             checkoutAttempt = await claimInitialCheckoutAttempt(organization.id, plan);
             if (checkoutAttempt.outcome !== 'claimed') {
@@ -424,6 +478,27 @@ export async function POST(request: Request) {
             }
             existingSession = null as never;
           } else {
+            // Even a correctly scoped, open session can be bound to a stale or
+            // mispriced line item. Never return a URL before verifying that the
+            // stored Stripe session actually uses today's canonical Price.
+            let lineItems: Stripe.ApiList<Stripe.LineItem>;
+            try {
+              lineItems = await stripe.checkout.sessions.listLineItems(existingSession.id, { limit: 2 });
+            } catch (error) {
+              throw classifyProviderFailure('stripe', 'checkout_session_line_items', error);
+            }
+            const sessionPriceMatches = reusableCheckoutLineItemsMatch(lineItems, priceId);
+            if (!sessionPriceMatches) {
+              // Fail closed if Stripe cannot expire the obsolete hosted URL.
+              // A new attempt can be claimed only after provider expiry succeeds.
+              await expireReusedCheckoutSessionStrict(stripe, existingSession.id, 'checkout_stale_price_session_expire');
+              await releaseCheckoutAttemptSafely(
+                organization.id,
+                checkoutAttempt.attemptToken,
+                'billing_checkout_stale_price_session_release',
+              );
+              return noStoreJson({ error: 'checkout_session_requires_restart' }, { status: 409 });
+            }
             if (!isSafeStripeCheckoutUrl(existingSession.url)) {
               throw new Error('billing_checkout_existing_session_url_invalid');
             }
@@ -466,7 +541,6 @@ export async function POST(request: Request) {
     }
 
     const attemptToken = checkoutAttempt.attemptToken;
-    const priceId = getStripePriceId(plan);
     const organizationName = typeof organization.name === 'string' ? organization.name : null;
     const metadata = {
       organization_id: organization.id,

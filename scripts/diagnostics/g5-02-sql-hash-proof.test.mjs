@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {splitStatements,compareLedger} from './g5-02-sql-hash-proof.mjs';
+const sha=s=>createHash('sha256').update(s).digest('hex');
+const source='create extension if not exists pgcrypto;\n\ncreate table if not exists public.organizations (\n  id uuid primary key default gen_random_uuid(),\n  name text not null,\n  slug text not null unique,\n  created_by uuid references auth.users(id) on delete set null,\n  created_at timestamptz not null default now(),\n  updated_at timestamptz not null default now()\n);\n\nalter table public.organizations enable row level security;\n';
+test('authentic migration yields three provider-equivalent statements',()=>{let s=splitStatements(source);assert.equal(s.length,3);assert.equal(Buffer.byteLength(s.join('\n')),411);assert.equal(sha(s.join('\n')),'ee3a1f9bf97ed6d7576a0d825db79191907b3b5d21e95dceb119c1c8442b5496');});
+test('opaque dollar quoted bodies protect nested semicolons',()=>{assert.equal(splitStatements('do $outer$ begin execute $inner$select 1;select 2;$inner$;end; $outer$; select 3;').length,2);});
+test('escaped quotes and comments protect semicolons',()=>{assert.equal(splitStatements("-- pre ;\nselect E'a\\\'b;z', 'x'';y', (1); /* nested /* ; */ ; */ select 2;").length,2);});
+test('invalid SQL syntax fails closed',()=>{for(const s of ["select 'abc;",'select (1;','select 2','do $inner$begin;'])assert.throws(()=>splitStatements(s));});
+test('BEGIN ATOMIC and psql commands require authoritative parser',()=>{assert.throws(()=>splitStatements('create function f() returns int language sql begin atomic select 1; end;'));assert.throws(()=>splitStatements('\\i foo.sql\nselect 1;'));});
+test('comment-only trailer does not create statement',()=>{assert.deepEqual(splitStatements('select 1;--tail;\n/*end*/'),['select 1']);});
+test('invalid 137-ledger cardinality cannot grant acceptance',()=>{assert.throws(()=>compareLedger({ledger:{versions:[]},crosswalk:{entries:[]},provider:{rows:[]},readSource:()=>''}),/LEDGER_CARDINALITY/);});

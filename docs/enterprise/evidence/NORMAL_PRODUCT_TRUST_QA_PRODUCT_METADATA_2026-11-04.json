@@ -1,0 +1,73 @@
+{
+  "schema": "normal_product_trust.qa_product_module_metadata.v1",
+  "observed_at_utc": "2026-11-04T09:01:58.229Z",
+  "source": {
+    "provider": "connected Supabase QA read-only PostgreSQL metadata",
+    "project_id": "zrxrrfbllsxtleyxjpsz",
+    "postgres_version": "17.11",
+    "query_file": "scripts/enterprise-evidence/qa-product-module-readonly.sql",
+    "no_customer_rows_read": true,
+    "no_writes": true
+  },
+  "observations": {
+    "tables_expected": 17,
+    "tables_present": 15,
+    "present_tables_with_rls_and_force_rls": 15,
+    "missing_tables": [
+      "ai_conformity_assessments",
+      "ai_provider_data_programs"
+    ],
+    "rpc_expected": 4,
+    "rpc_found": 4,
+    "rpc_names": [
+      "approve_fria_assessment_atomic",
+      "compensate_fria_approval_audit_failure",
+      "complete_onboarding_activation_atomic",
+      "create_fria_assessment_atomic"
+    ],
+    "all_four_rpcs_service_role_execute": true,
+    "all_four_rpcs_anon_execute": false,
+    "all_four_rpcs_authenticated_execute": false,
+    "onboarding_core_tables": [
+      "ai_systems",
+      "documents",
+      "invitations",
+      "onboarding_activation_runs",
+      "organization_members",
+      "organizations",
+      "tasks"
+    ],
+    "onboarding_core_tables_rls_and_force_rls": "7/7 (separate connected QA read-only pg_class readback)"
+  },
+  "interpretation": {
+    "verified": "Metadata-only existence and RLS/FORCE RLS flags on the 15 present product tables; PostgreSQL EXECUTE grants on four RPC signatures.",
+    "missing_modules": "Two expected relations absent in QA. src/server/queries/regulatory-control-tower.ts explicitly tolerates missing pre-promotion relations; their end-to-end capabilities remain NOT_VERIFIED.",
+    "not_verified": [
+      "Authenticated positive/negative tenant RLS behavior",
+      "Onboarding activation persistence/idempotency and email side effects",
+      "FRIA and AI inventory end-to-end read/write",
+      "Annex IV/Art.50 runtime execution, evidence Vault object isolation and export",
+      "Schema/procedure parity against production and approved migration ledger",
+      "Exact SHA deployed QA provenance",
+      "Independent control review and formal gate acceptance"
+    ],
+    "gates": [
+      "A-05/FUN-01 PARTIAL_EVIDENCE",
+      "A-06/FUN-02 FUN-03 PARTIAL_EVIDENCE",
+      "A-07/FUN-04 PARTIAL_EVIDENCE",
+      "A-08/FUN-05 FUN-06 PARTIAL_EVIDENCE"
+    ],
+    "gate_acceptance": "NO_NEW_PASS; do not mark any gate accepted based on catalog metadata.",
+    "required_next": "Use isolated authenticated tenant-A/B QA fixtures, prove persistence and cross-tenant denials for these modules, verify supported SQL parity/source SHA and execute independent acceptance engine. Do not deploy or run migrations on production."
+  },
+  "review": {
+    "qualified_reviewer": null,
+    "independent_acceptance": null
+  },
+  "provenance": {
+    "executor": "NORMAL_PRODUCT_TRUST V20",
+    "provider_run": "connected QA read-only SQL returned matching aggregate; no shell or credentials captured",
+    "candidate_at_observation": "7dfc1cfe67f090a5bc564f91f5c1592c440b3c7d",
+    "note": "Observation describes QA environment metadata and is not code-runtime proof for candidate SHA."
+  }
+}

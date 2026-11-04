@@ -19,7 +19,7 @@ const BEAGLE_DOMAIN_VERIFICATION_PATH = '/_e8f1hq2qpr6fuvd036hr4l97yn8octew';
 const INTERNAL_PATHNAME_HEADER = 'x-risck-internal-pathname';
 const PREMIUM_NEWS_PATH = '/dashboard/organizations/reports-governance/news';
 const PRIVATE_AUTH_TIMEOUT_MS = 5_000;
-const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
+const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'pro']);
 
 const PUBLIC_ROUTES = [
   '/',

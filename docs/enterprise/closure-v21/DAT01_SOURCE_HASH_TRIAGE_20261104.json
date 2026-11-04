@@ -1,0 +1,61 @@
+{
+  "schema": "risck-comply.dat01.source-to-ledger-triage.v21.0",
+  "observedAt": "2026-11-04T09:14:42.065Z",
+  "subject": "A-12/DAT-01",
+  "checkpointBaseSha": "4230b0148d488a949991ed310d39309f53bcce7f",
+  "sourceScope": "historical immutable Git source blobs plus frozen Supabase production statement-hash metadata",
+  "productionReadbackMutation": "NONE",
+  "inputProvenance": {
+    "sourceHandOff": "RISCK_COMPLY_DAT01_HANDOFF_V20_3_20261104.zip; local exact blobs verified at source tree",
+    "sourceDiagnosticPath": "scripts/diagnostics/g5-02-sql-hash-proof.mjs",
+    "sourceDiagnosticBlob": "7b8b15392162e61dc995c7c352f3a0697c518677",
+    "testsPath": "scripts/diagnostics/g5-02-sql-hash-proof.test.mjs",
+    "testsBlob": "225c479f71e3b07234f012a63aa1be061f94292f",
+    "providerLedgerPath": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+    "crosswalkPath": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json"
+  },
+  "results": {
+    "productionVersions": 137,
+    "sourceMapped": 137,
+    "uniqueSourceFiles": 135,
+    "sourceConsolidationGroups": 2,
+    "exactVersionMappings": 112,
+    "nonExactMappings": 25,
+    "sampledVersions": 22,
+    "exactSourceStatementHashMatch": 16,
+    "mismatchedOrChangedStatementSequences": 6,
+    "remainingNotDirectlyCompared": 115,
+    "verifiedReplay": 0,
+    "sampleMethod": "SHA256(UTF8(LF-joined SQL statements stripped of terminating semicolons)) verified against provider statement-hash metadata, with conservative lexer and immutable source Git blobs",
+    "disputedVersions": [
+      "20260726070000",
+      "20260804224915",
+      "20260804230433",
+      "20260805223500",
+      "20260807091341",
+      "20260812160405"
+    ],
+    "historical20260726": {
+      "providerStatements": 15,
+      "currentFileStatements": 20,
+      "sourceVsProviderFirst11StatementDigests": "MATCH",
+      "remaining4Statements": "provider recorded DROP/CREATE POLICY operations with USING (true), whereas current canonical file has changed authenticated guard",
+      "prodAndQaCatalogReadPolicies": "USING (true) independently read back; global permission catalogs; requires independent security review, no cross-tenant leak inferred",
+      "replayApproach": "DO NOT automatically replay weakened historical policies in a new deployment"
+    },
+    "localTest": {
+      "command": "node --test g5-02-sql-hash-proof.test.mjs",
+      "node": "v22.16.0",
+      "passed": 7,
+      "failed": 0,
+      "sourceBlobVerified": true,
+      "testBlobVerified": true,
+      "executionScope": "local ZIP-extracted fixtures; not complete repository CI"
+    }
+  },
+  "independentReview": "NOT_GRANTED",
+  "sqlHistoricalCompleteness": "NOT_PROVEN",
+  "sourceExecutableReplayManifest": "NOT_APPROVED",
+  "formalAcceptance": "NOT_GRANTED",
+  "next": "Execute diagnostic in full checked-out canonical repo at exact SHA, separate true SQL drift from parser limitations, review two consolidate/apply-once semantics and 25 non-exact historical mappings; run isolated PostgreSQL17 replay only after reviewed provenance."
+}

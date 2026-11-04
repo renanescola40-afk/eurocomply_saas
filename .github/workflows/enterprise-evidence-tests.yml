@@ -36,7 +36,15 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Validate G1 evidence factory contracts
+        env:
+          EVIDENCE_EXACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EVIDENCE_EXACT_SHA" || {
+            echo "Evidence validation refused: checkout differs from current workflow SHA" >&2
+            exit 1
+          }
+          node --test tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
           node --test tests/enterprise-evidence/validate-evidence.test.mjs
           node scripts/enterprise-evidence/validate-evidence.mjs --report
 
