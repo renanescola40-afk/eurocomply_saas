@@ -46,7 +46,17 @@
           "runner_id": 0,
           "conclusion": "failure"
         }
-      ]
+      ],
+      "billing_usage_readback": {
+        "provider_api": "GET /repos/renanescola40-afk/eurocomply_saas/actions/runs/41846169700/timing",
+        "linux_job_count": 8,
+        "total_billed_ms": 0,
+        "billed_ms_per_job": 0,
+        "total_workflow_duration_ms": 11000,
+        "supports": "No GitHub-hosted runner execution time was billed in the sampled run; consistent with runner not assigned and zero job steps.",
+        "does_not_prove": "Specific billing block, disabled Actions policy, or GitHub service outage.",
+        "official_docs": "https://docs.github.com/en/actions/how-tos/troubleshoot-workflows"
+      }
     },
     "check_runs_at_snapshot": {
       "total_count": 75,
@@ -60,7 +70,16 @@
     "diagnosis": "NO_STEPS_EXECUTED_NO_RUNNER_ASSIGNED_ON_SAMPLED_WORKFLOW",
     "root_cause": "NOT_YET_CONFIRMED_NO_ADMIN_BILLING_OR_RUNNER_ADMISSION_DETAILS",
     "warning": "Do not classify these check results as failing application tests or grant acceptance from a named failed check; inspect GitHub Actions runner/admission/billing/provider configuration with authorized admin access, without retry loop or new expense.",
-    "current_candidate_may_change": true
+    "current_candidate_may_change": true,
+    "additional_run_41846170053": {
+      "workflow": "P0 Lockfile Plan",
+      "job_id": 126630353292,
+      "steps": 0,
+      "total_billed_ms": 0,
+      "total_workflow_duration_ms": 44000,
+      "execution": "NO_RUNNER_EXECUTION",
+      "root_cause": "NOT_CONFIRMED"
+    }
   },
   "review_readback": {
     "pull_requests": [
