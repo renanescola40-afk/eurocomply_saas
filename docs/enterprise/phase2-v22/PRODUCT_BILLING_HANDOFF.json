@@ -131,7 +131,7 @@
           "BIL-03"
         ],
         "status": "BLOCKED",
-        "reason": "Disabled old TEST endpoint, no exact-SHA QA deployment, zero persisted QA billing records."
+        "reason": "QA Stripe TEST webhook remains disabled, no signed delivery and zero DB events; custom QA env metadata lists prices but not STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET (effective inheritance not verified); exact deployment SHA missing."
       },
       {
         "gate": "A-11",
@@ -155,6 +155,7 @@
     "formalValidatorAccepted": false
   },
   "nextActionsForExecutor3": [
+    "Verify effective QA deployment runtime variable *presence* for STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET; custom QA env listing (20 keys) does not include them; NEVER read secret values or assume inherited settings.",
     "Review and integrate Evidence Vault immutable upload retry recovery through PR #2605; run exact-source Node 22 tests and authenticated QA Storage retry/tenant-denial proofs; preserve current RLS and protected demo.",
     "Attest a READY deployment built from exact candidate commit SHA and explicitly bound to isolated QA Supabase, without inferring provenance from a READY alias.",
     "Confirm TEST-only Stripe API key and TEST-only signing secret are configured in QA (presence/binding only; no secret values).",
@@ -213,5 +214,31 @@
     "gate": "A-07",
     "control": "FUN-04",
     "formalStatus": "NOT_VERIFIED"
+  },
+  "vercelQaEnvironmentMetadata": {
+    "provider": "Vercel project environment variable names; decrypted values never requested",
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "customEnvironment": "qa",
+    "customEnvironmentId": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+    "customEnvEntries": 20,
+    "keysObservedPresent": [
+      "STRIPE_PRICE_ESSENTIAL_MONTHLY",
+      "STRIPE_PRICE_ESSENTIAL_ANNUAL",
+      "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
+      "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
+      "E2E_QA_APPROVED_SUPABASE_REF",
+      "SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_URL"
+    ],
+    "keysNotListedInCustomQa": [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+      "SUPABASE_SERVICE_ROLE_KEY"
+    ],
+    "effectiveDeploymentConfigurationVerified": false,
+    "inheritanceChecked": false,
+    "projectWideListingIncomplete": true,
+    "interpretation": "These secret names were not in the 20 custom-QA specific entries, but this alone does NOT prove absence from any effective inherited or runtime environment. No signing or key-mode claim is accepted.",
+    "next": "Read-only inspect exact QA deployment effective configuration and verify TEST-only secret presence/binding without retrieving values; require fresh deploy if config changes."
   }
 }
