@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile,evidenceExpectedSha} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 const sha='a'.repeat(40),hash='b'.repeat(64),base={evidence_id:'EV-SEC-01-001',control_id:'SEC-01',gate_id:'A-01',evidence_type:'runtime-test',status:'NOT_VERIFIED',repository:'renanescola40-afk/eurocomply_saas',branch:'enterprise/evidence-factory-v1-20261101',commit_sha:sha,workflow_run_id:null,environment:'isolated-qa',generated_at:'2026-11-01T10:00:00Z',source_system:'GitHub Actions',test_command_or_provider_query:'npm run test:auth',result_summary:'Recorded, not accepted.',artifact_path:'artifacts/evidence/sec-01.json',artifact_sha256:hash,reproducibility_instructions:'Run against exact commit SHA.',limitations:[],reviewer_status:'NOT_REVIEWED',acceptance_status:'NOT_ACCEPTED'};
 test('rejects evidence bound to another SHA',()=>assert.ok(validateEvidenceRecord(base,{expectedSha:'c'.repeat(40)}).includes('commit_sha_mismatch')));
 test('PASS requires independent acceptance and an existing digest-matched artifact',()=>{const e=validateEvidenceRecord({...base,status:'PASS'},{expectedSha:sha});assert.ok(e.includes('pass_requires_independent_acceptance'));assert.ok(e.includes('artifact_missing'));});
@@ -141,5 +141,49 @@ test('accepted synthetic evidence cannot override frozen BLOCKED DAT-01 without 
   assert.ok(result.errors.includes('blocked_control_pass_claim_requires_source_reconciliation:DAT-01'));
   assert.equal(result.summary.controls_total,38);
   assert.equal(result.summary.gates_total,24);
+ }finally{fs.rmSync(abs,{force:true});}
+});
+
+
+test('archived, never-approved readbacks keep baseline SHA but PASS and review claims require the current SHA',()=>{
+ const frozen='a'.repeat(40),candidate='c'.repeat(40);
+ const historic={...base,commit_sha:frozen,status:'NOT_VERIFIED',
+  reviewer_status:'NOT_REVIEWED',acceptance_status:'NOT_ACCEPTED'};
+ for(const status of ['NOT_VERIFIED','BLOCKED','FAIL']){
+  assert.equal(evidenceExpectedSha({...historic,status},{frozenSha:frozen,candidateSha:candidate}),frozen);
+ }
+ for(const changed of [{status:'PASS'},{reviewer_status:'ACCEPTED'},
+  {acceptance_status:'ACCEPTED'},{commit_sha:'d'.repeat(40)}]){
+  assert.equal(evidenceExpectedSha({...historic,...changed},{frozenSha:frozen,candidateSha:candidate}),candidate);
+ }
+});
+
+test('historic provider readback validates at immutable origin but cannot masquerade as current approved PASS',()=>{
+ const frozen='a'.repeat(40),candidate='c'.repeat(40);
+ const rel='artifacts/enterprise-evidence-factory/archive-versus-current-test.txt';
+ const abs=path.resolve(process.cwd(),rel);
+ const data='historical provider readback fixture, not independently approved';
+ fs.mkdirSync(path.dirname(abs),{recursive:true});fs.writeFileSync(abs,data);
+ const artifact_sha256=crypto.createHash('sha256').update(data).digest('hex');
+ const evidence={...base,evidence_id:'EV-SEC01-HISTORIC',commit_sha:frozen,status:'NOT_VERIFIED',
+  artifact_path:rel,artifact_sha256};
+ const scope=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ const index={source:{commit_sha:frozen},fixed_scope:{atomic_controls:38,formal_gates:24},
+  evidence_records:[evidence]};
+ try{
+  const archived=reconcile({scope,gates,index,expectedSha:candidate,now:new Date('2026-11-04T12:00:00Z')});
+  assert.equal(archived.summary.evidence_records_valid,1);
+  assert.ok(!archived.errors.some(e=>e.includes('commit_sha_mismatch')));
+  assert.equal(archived.summary.controls_pass,2);
+  assert.equal(archived.summary.gates_accepted,0);
+  const forged={...evidence,status:'PASS',reviewer_status:'ACCEPTED',
+   acceptance_status:'ACCEPTED',accepted_by:'Synthetic reviewer only',
+   accepted_at:'2026-11-01T11:00:00Z'};
+  const rejected=reconcile({scope,gates,index:{...index,evidence_records:[forged]},
+   expectedSha:candidate,now:new Date('2026-11-04T12:00:00Z')});
+  assert.equal(rejected.summary.evidence_records_valid,0);
+  assert.equal(rejected.controls.find(c=>c.control_id==='SEC-01').status,'NOT_VERIFIED');
+  assert.ok(rejected.errors.some(e=>e.includes('commit_sha_mismatch')));
  }finally{fs.rmSync(abs,{force:true});}
 });
