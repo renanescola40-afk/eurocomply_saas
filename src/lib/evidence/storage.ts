@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { verifyExistingEvidenceObject } from './upload-recovery';
+import { uploadImmutableEvidenceObject } from './upload-recovery';
 
 export type EvidenceStatus = 'draft' | 'valid' | 'needs_review' | 'expired' | 'archived';
 export type EvidenceType =
@@ -295,27 +295,18 @@ export async function uploadEvidenceFile(params: { organizationId: string; evide
     throw new Error('Evidence attachment metadata reservation could not be verified.');
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from(EVIDENCE_BUCKET)
-    .upload(objectPath, params.file, {
+  await uploadImmutableEvidenceObject({
+    expectedSha256: fileSha256,
+    expectedSize: fileSizeBytes,
+    upload: () => supabase.storage.from(EVIDENCE_BUCKET).upload(objectPath, params.file, {
       upsert: false,
       contentType: fileMimeType,
       cacheControl: '3600',
-    });
-
-  if (uploadError) {
-    // A lost success response or duplicate path may already contain our exact
-    // immutable bytes. Confirm with private Storage SELECT and SHA-256; never
-    // overwrite an existing object or claim success from an error alone.
-    const recovered = await verifyExistingEvidenceObject({
-      expectedSha256: fileSha256,
-      expectedSize: fileSizeBytes,
-      download: () => supabase.storage.from(EVIDENCE_BUCKET).download(
-        objectPath, {}, { cache: 'no-store' },
-      ),
-    });
-    if (!recovered) throw uploadError;
-  }
+    }),
+    download: () => supabase.storage.from(EVIDENCE_BUCKET).download(
+      objectPath, {}, { cache: 'no-store' },
+    ),
+  });
   return {
     bucket: EVIDENCE_BUCKET,
     objectPath,
