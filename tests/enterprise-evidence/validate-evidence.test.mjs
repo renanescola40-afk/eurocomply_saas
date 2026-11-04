@@ -115,3 +115,31 @@ test('historical source PASS retains only two legitimate provider-backed control
  assert.equal(r.gates.find(g=>g.gate_id==='A-18').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
  assert.equal(r.summary.gates_accepted,0);
 });
+
+
+test('accepted synthetic evidence cannot override frozen BLOCKED DAT-01 without source reconciliation',()=>{
+ const rel='artifacts/enterprise-evidence-factory/dat01-frozen-blocked-injection-test.txt';
+ const abs=path.resolve(process.cwd(),rel);
+ const bytes='synthetic blocked control test only - no provider readback';
+ fs.mkdirSync(path.dirname(abs),{recursive:true});
+ fs.writeFileSync(abs,bytes);
+ const digest=crypto.createHash('sha256').update(bytes).digest('hex');
+ const record={...base,evidence_id:'EV-DAT01-FORGED-PASS',
+  control_id:'DAT-01',gate_id:'A-12',status:'PASS',artifact_path:rel,
+  artifact_sha256:digest,reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
+  accepted_by:'Synthetic independent reviewer - not actual review',
+  accepted_at:'2026-11-01T11:00:00Z'};
+ const scope=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ try{
+  const result=reconcile({scope,gates,index:{fixed_scope:{atomic_controls:38,formal_gates:24},
+   evidence_records:[record]},expectedSha:sha,now:new Date('2026-11-04T10:00:00Z')});
+  assert.equal(result.controls.find(x=>x.control_id==='DAT-01').status,'BLOCKED');
+  assert.equal(result.gates.find(x=>x.gate_id==='A-12').status,'BLOCKED');
+  assert.equal(result.summary.gates_accepted,0);
+  assert.equal(result.valid,false);
+  assert.ok(result.errors.includes('blocked_control_pass_claim_requires_source_reconciliation:DAT-01'));
+  assert.equal(result.summary.controls_total,38);
+  assert.equal(result.summary.gates_total,24);
+ }finally{fs.rmSync(abs,{force:true});}
+});
