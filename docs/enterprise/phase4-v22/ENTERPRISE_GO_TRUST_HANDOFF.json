@@ -280,7 +280,14 @@
       "job_logs": "NOT_AVAILABLE_BLOB_NOT_FOUND",
       "root_cause": "UNCONFIRMED_PRE_RUNNER_ADMISSION",
       "authoritative_evaluation": "NOT_VERIFIED",
-      "note": "Point-in-time exact-SHA evidence; re-read candidate head before comparing later."
+      "note": "Point-in-time exact-SHA evidence; re-read candidate head before comparing later.",
+      "github_run_billed_ms": 0,
+      "checked_job_count_with_zero_billable_ms": 9,
+      "checked_runs": [
+        41846169700,
+        41846170053
+      ],
+      "diagnosis": "CONFIRMED_NO_RUNNER_EXECUTION_IN_9_JOBS; ADMISSION_CAUSE_NOT_CONFIRMED"
     },
     "qualified_review_portal_20261104": {
       "evidence_ref": "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json",
@@ -561,7 +568,8 @@
       "blockers": [
         "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
         "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails",
-        "GHA Full Security Suite at snapshot SHA 2489cde5 had 8/8 failed jobs with zero steps and runner_id=0; no qualified approved PR reviews across #2598/#2604/#2601/#2594."
+        "GHA Full Security Suite at snapshot SHA 2489cde5 had 8/8 failed jobs with zero steps and runner_id=0; no qualified approved PR reviews across #2598/#2604/#2601/#2594.",
+        "Provider timing API confirms 0 GitHub Actions billable runtime on all 8 failed Full Security Suite jobs and failed Lockfile Plan job (9/9), matching runner_id=0 and 0 steps. Runner admission/billing root cause remains unverified; no source-test verdict."
       ],
       "remediation_owner": "platform/repository owner",
       "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
