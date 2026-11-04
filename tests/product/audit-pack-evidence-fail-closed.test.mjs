@@ -34,6 +34,7 @@ test('audit and leadership pages clear stale data and show readback failures', (
     assert.match(source, /setLoadError\(/);
     assert.match(source, /finally\s*\{/);
     assert.match(source, /role="alert"/);
+    assert.match(source, /\{loadError \? null : !data \? \(/);
     assert.match(source, /disabled=\{!data\}/);
   }
 });
