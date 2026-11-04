@@ -190,7 +190,10 @@ jobs:
               tests/ci/enterprise-evidence-exact-sha-contract.test.mjs \
               tests/ci/circleci-memory-diagnostics-contract.test.mjs \
               tests/security/membership-usage-counter-drift.test.mjs \
-              tests/release/sec05-acceptance-verifier.test.mjs
+              tests/release/sec05-acceptance-verifier.test.mjs \
+              tests/release/g1-sec05-evidence.test.mjs \
+              tests/release/g1-enterprise-scope-acceptance.test.mjs \
+              tests/enterprise-evidence/validate-evidence.test.mjs
             node --test --test-reporter=tap \
               tests/billing/checkout-recovery-lease-contract.test.mjs
             node --experimental-strip-types --test --test-reporter=tap \
