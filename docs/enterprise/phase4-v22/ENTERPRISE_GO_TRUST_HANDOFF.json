@@ -265,6 +265,43 @@
       "negative_cross_env_key_tests": "NOT_PERFORMED",
       "effect": "Partial OPS-06 support only, not signed acceptance.",
       "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+    },
+    "github_actions_20261104": {
+      "evidence_ref": "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json",
+      "sampled_candidate_sha": "2489cde5411bc245726052960be696a3cc74e3db",
+      "checks": 75,
+      "failed": 62,
+      "skipped": 13,
+      "succeeded": 0,
+      "full_security_suite_workflow_run_id": 41846169700,
+      "full_security_suite_failed_jobs": 8,
+      "full_security_suite_zero_runner_id_jobs": 8,
+      "full_security_suite_zero_step_jobs": 8,
+      "job_logs": "NOT_AVAILABLE_BLOB_NOT_FOUND",
+      "root_cause": "UNCONFIRMED_PRE_RUNNER_ADMISSION",
+      "authoritative_evaluation": "NOT_VERIFIED",
+      "note": "Point-in-time exact-SHA evidence; re-read candidate head before comparing later."
+    },
+    "qualified_review_portal_20261104": {
+      "evidence_ref": "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json",
+      "source_migration": "supabase/migrations/20260726140000_qualified_reviewer_portal.sql",
+      "source_migration_version": "20260726140000",
+      "migration_recorded_in_production": false,
+      "migration_recorded_in_isolated_qa": false,
+      "checked_relations_absent_in_both": 6,
+      "relation_names": [
+        "qualified_review_assignments",
+        "qualified_reviewers",
+        "qualified_review_submissions",
+        "qualified_reviewer_invites",
+        "qualified_reviewer_sessions",
+        "qualified_reviewer_attestations"
+      ],
+      "provider_access": "Supabase read-only pg_catalog + supabase_migrations.schema_migrations",
+      "limitation": "Does not prove no independent external qualified legal opinion exists; portal-based process cannot rely on non-existent relations.",
+      "production_schema_writes": 0,
+      "qa_schema_writes": 0,
+      "remediation_owner": "Executor 3 database/integration + qualified reviewer owner"
     }
   },
   "controls": [
@@ -281,13 +318,15 @@
         "https://github.com/renanescola40-afk/eurocomply_saas/pull/2601",
         "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/41826352801",
         "GitLab project 88025157 main branch/project settings connected readback 2026-11-04",
-        "docs/security/evidence/runtime/branch-protection-required-checks.json"
+        "docs/security/evidence/runtime/branch-protection-required-checks.json",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
         "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails",
         "GitLab main is marked protected, but current principal can push; zero required approvals, pipeline success and resolved discussions are not enforced. GitLab main SHA diverges and cannot be treated as an equivalent release-control boundary.",
-        "Retained branch-protection evidence artifact has status=Exception, so no current enforced-provider PASS is documented."
+        "Retained branch-protection evidence artifact has status=Exception, so no current enforced-provider PASS is documented.",
+        "Canonical candidate SHA 2489cde5411bc245726052960be696a3cc74e3db showed 62 failed and 13 skipped of 75 check runs; Full Security Suite 8/8 jobs had runner_id=0, zero steps and no available logs; runner admission cause not confirmed."
       ],
       "remediation_owner": "platform/repository owner",
       "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
@@ -395,7 +434,8 @@
       "accepted_at": null,
       "source_refs": [
         "docs/legal-assurance/LEGAL_ENTITY_FACTS.md",
-        "docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md"
+        "docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending"
@@ -413,10 +453,12 @@
       "accepted_at": null,
       "source_refs": [
         "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md",
-        "docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md"
+        "docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
-        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending"
+        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending",
+        "Qualified-review portal source migration 20260726140000 is not recorded in either production or isolated-QA schema migrations; six corresponding public qualified reviewer relations are absent in both databases. Legal acceptance must use a separately verified external review channel or an independently approved and staged migration, never pretend portal is functioning."
       ],
       "remediation_owner": "founder/qualified legal reviewer",
       "next_executable_action": "Privately verify current authoritative legal-entity facts, chain of title and qualified applicability/signatory acceptance without putting private identifiers in git"
@@ -432,7 +474,8 @@
       "source_refs": [
         "docs/trust/DPA_DRAFT.md",
         "docs/legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md",
-        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
@@ -474,7 +517,8 @@
         "docs/trust/CLAIMS_AND_COPY_AUDIT.md",
         "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md",
         "scripts/security/check-public-claims.mjs",
-        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "No qualified signed claim inventory approved for exact released capabilities",
@@ -516,7 +560,8 @@
       "reviewer_status": "REVIEW_PENDING",
       "blockers": [
         "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
-        "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails"
+        "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails",
+        "GHA Full Security Suite at snapshot SHA 2489cde5 had 8/8 failed jobs with zero steps and runner_id=0; no qualified approved PR reviews across #2598/#2604/#2601/#2594."
       ],
       "remediation_owner": "platform/repository owner",
       "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
@@ -562,7 +607,8 @@
       "formal_status": "NOT_VERIFIED",
       "reviewer_status": "REVIEW_PENDING",
       "blockers": [
-        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending"
+        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending",
+        "Qualified reviewer portal schema and migration 20260726140000 are absent in production and QA; independently signed legal acceptance via any channel not evidenced."
       ],
       "remediation_owner": "founder/qualified legal reviewer",
       "next_executable_action": "Privately verify current authoritative legal-entity facts, chain of title and qualified applicability/signatory acceptance without putting private identifiers in git"
@@ -592,7 +638,8 @@
       "reviewer_status": "REVIEW_PENDING",
       "blockers": [
         "No qualified signed claim inventory approved for exact released capabilities",
-        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted"
+        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted",
+        "Qualified reviewer portal schema is not deployed; qualified AI assurance and external procurement review evidence still missing."
       ],
       "remediation_owner": "legal/assurance/procurement",
       "next_executable_action": "Validate actual EU AI Act assistance claims, current product feature proof, pentest scope, support intake and buyer evidence; obtain qualified release-bound approval"
