@@ -136,7 +136,7 @@
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
       "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
       "provider_readback": "QA/PROD app_private.is_org_member definition hash e66823b6d1667a32f24e8dec7c90547e; has_org_role 364143ed2878ca970a59ae4987491cb2.",
-      "negative_test_evidence": "10/10 archived QA SQL claim-simulation probes reported in #2599; NOT signed JWT E2E.",
+      "negative_test_evidence": "10/10 archived QA SQL claim-simulation probes reported in #2599; NOT signed JWT E2E.; QA synthetic Clerk text subject also reproduces 22P02 on enterprise_member_can_manage; delegated has_org_role correctly returns false.",
       "remaining_blocker": "Authenticated role-escalation/removal/last-owner deny tests and independent review",
       "status": "NOT_VERIFIED"
     },
@@ -266,7 +266,8 @@
       "productionHelperDefinitionEquivalent": true,
       "risk": "CLIENT_AUTH_COMPATIBILITY_AVAILABILITY_NOT_VERIFIED_TENANT_EXPOSURE",
       "fixAlreadyPresentInPr2599AndCanonicalCandidate": true,
-      "appliedInProduction": false
+      "appliedInProduction": false,
+      "enterprise_member_can_manage": "ERROR_SQLSTATE_22P02"
     },
     "read_only_sql_function_acl": {
       "prodAndQa": [
