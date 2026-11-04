@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.enterprise-gate-closure-v23.acceptance-ledger.v1",
-  "generated_at": "2026-11-04T14:07:23.508Z",
+  "generated_at": "2026-11-04T14:15:28.747Z",
   "repository": "renanescola40-afk/eurocomply_saas",
   "canonical_candidate_branch": "integration/enterprise-unified-candidate-20261102",
   "candidate_commit_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
@@ -79,7 +79,10 @@
       "manifest_sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae",
       "recomputed_and_index_sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
       "assigned_executor": "VE3",
-      "effect": "Integrity metadata not fully reconciled; no Evidence Factory PASS claimed. The current index itself matches recomputed bytes."
+      "effect": "Digest now reconciled on acceptance-only PR #2607, but canonical candidate remains unmodified and reviewer/governed integration pending.",
+      "corrected_on_acceptance_branch": true,
+      "acceptance_branch_commit_sha": "8d9b21bbaf3e6637bdd360c21107aea0611942d9",
+      "is_merge_complete": false
     }
   },
   "acceptance_contract": {
@@ -111,7 +114,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Authenticated run logs, replayable negative session fixtures.",
-      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-01 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-01 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "SEC-02",
@@ -138,7 +142,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Role/permission matrix plus negative API integration evidence.",
-      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-02 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-02 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "SEC-03",
@@ -165,7 +170,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Tenant A/B authenticated runtime and SQL/RLS/Storage results.",
-      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-03 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-03 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "SEC-04",
@@ -192,7 +198,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Production grants/policy readback and unauthorized-invocation tests.",
-      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-04 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-04 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "SEC-05",
@@ -231,7 +238,8 @@
         "Production SSL enforcement was reported off in existing preacceptance record",
         "Browser bundle/log secret negative scan and exact-SHA green CI absent",
         "Project-specific encryption-at-rest attestation and independent approval absent"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "SEC-06",
@@ -258,7 +266,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Risk register, vulnerability dispositions, event replay and audit outputs.",
-      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-06 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE1: deliver all required proof for SEC-06 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "FUN-01",
@@ -285,7 +294,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Authenticated signup/onboarding E2E and durable DB readback.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-01 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-01 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "FUN-02",
@@ -323,7 +333,8 @@
       ],
       "remaining_conditions": [
         "Authenticated inventory/risk/governance persistence and role decisions plus runtime release exact-SHA and complete migrations"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "FUN-03",
@@ -361,7 +372,8 @@
       ],
       "remaining_conditions": [
         "Authenticated inventory/risk/governance persistence and role decisions plus runtime release exact-SHA and complete migrations"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "FUN-04",
@@ -390,7 +402,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Authenticated browser/API tests, generated file inspection and data readback.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-04 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-04 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "FUN-05",
@@ -419,7 +432,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Role-specific E2E, data deletion/retention and export evidence.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-05 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-05 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "FUN-06",
@@ -446,7 +460,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Release-scoped product route inventory and marketing/contract mismatch review.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-06 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-06 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "BIL-01",
@@ -457,7 +472,7 @@
       "assigned_executor": "VE3",
       "source_status": "PASS",
       "evidence_status": "SOURCE_PASS_HISTORICAL",
-      "reviewer_status": "NOT_REVIEWED",
+      "reviewer_status": "REVIEW_REQUESTED_NOT_APPROVED",
       "formal_acceptance_status": "NOT_ACCEPTED",
       "source_baseline_sha": "70d3545f414d063379d481fd238aed563e05edda",
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
@@ -482,7 +497,8 @@
         "Fresh Vercel six production environment price-key bindings in provider readback",
         "Qualified independent human review against exact applicable source and hashed gate acceptance artifact",
         "Vercel environment list response was truncated (100 shown, 21 omitted); six same-named encrypted variables seen had a QA custom-environment ID and do not establish current Production price bindings. No secret values recorded."
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "BIL-02",
@@ -519,7 +535,8 @@
       ],
       "remaining_conditions": [
         "Genuine signed TEST event, invalid signature rejection, duplicate replay and QA durable event/entitlement proof"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "BIL-03",
@@ -560,7 +577,8 @@
       ],
       "remaining_conditions": [
         "Genuine signed TEST event, invalid signature rejection, duplicate replay and QA durable event/entitlement proof"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "BIL-04",
@@ -587,7 +605,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Genuine Stripe TEST lifecycle events plus authenticated UI/backend assertions.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for BIL-04 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for BIL-04 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "BIL-05",
@@ -616,7 +635,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Negative API tests and tenant-isolated entitlement query evidence.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for BIL-05 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for BIL-05 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "DAT-01",
@@ -665,7 +685,8 @@
         "37 unmatched historical SQL representations or equivalent qualified source proof",
         "Approval of nonexact identities and two consolidations",
         "Reviewed executable 137/137 manifest, isolated PostgreSQL replay, schema parity and independent approval"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "DAT-02",
@@ -703,7 +724,8 @@
       "remaining_conditions": [
         "Exact SHA native concurrent transaction, rollback, race and audit durability tests",
         "Required DAT-01 provenance/replay acceptance before downstream claims"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "DAT-03",
@@ -741,7 +763,8 @@
       "remaining_conditions": [
         "Exact SHA native concurrent transaction, rollback, race and audit durability tests",
         "Required DAT-01 provenance/replay acceptance before downstream claims"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "DAT-04",
@@ -768,7 +791,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Restore transcript, data integrity diff, Auth/Storage scope and recovery limitation log.",
-      "next_acceptance_action": "Assigned VE3: deliver all required proof for DAT-04 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE3: deliver all required proof for DAT-04 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "DAT-05",
@@ -816,7 +840,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Version-scoped provider SQL readback, function ACL and grant tests.",
-      "next_acceptance_action": "Assigned VE3: deliver all required proof for DAT-05 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE3: deliver all required proof for DAT-05 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "QAT-01",
@@ -839,7 +864,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete successful exact-candidate-SHA CI proving install/lint/typecheck/tests/security/build/regressions. GitHub check runs: 62 failure, 13 skipped, 0 success; selected logs BlobNotFound. Historical CircleCI #863 success is different SHA and incomplete.",
-      "next_acceptance_action": "VE1 coordinate QAT-01 proof; VE3 provide exact-SHA CircleCI full source proof and logs, with infrastructure-vs-code failure classification."
+      "next_acceptance_action": "VE1 coordinate QAT-01 proof; VE3 provide exact-SHA CircleCI full source proof and logs, with infrastructure-vs-code failure classification.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "QAT-02",
@@ -870,7 +896,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Exact-SHA Playwright logs, artifacts sanitized of private data.",
-      "next_acceptance_action": "Assigned VE3: deliver all required proof for QAT-02 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE3: deliver all required proof for QAT-02 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "QAT-03",
@@ -899,7 +926,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Exact-SHA runtime/Stripe sandbox QA report.",
-      "next_acceptance_action": "Assigned VE3: deliver all required proof for QAT-03 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE3: deliver all required proof for QAT-03 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "QAT-04",
@@ -927,7 +955,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Signed or otherwise independently verifiable check IDs, exact-SHA provenance.",
-      "next_acceptance_action": "Assigned VE3: deliver all required proof for QAT-04 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE3: deliver all required proof for QAT-04 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "OPS-01",
@@ -938,7 +967,7 @@
       "assigned_executor": "VE3",
       "source_status": "PASS",
       "evidence_status": "SOURCE_PASS_HISTORICAL",
-      "reviewer_status": "NOT_REVIEWED",
+      "reviewer_status": "REVIEW_REQUESTED_NOT_APPROVED",
       "formal_acceptance_status": "NOT_ACCEPTED",
       "source_baseline_sha": "70d3545f414d063379d481fd238aed563e05edda",
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
@@ -972,7 +1001,8 @@
       "remaining_conditions": [
         "Independent qualified reviewer, genuine GitHub review approval URL and gate acceptance artifact digest",
         "Separate historical SHA-256 manifest remains stale for provider Vercel artifact: EVIDENCE_SHA256_MANIFEST.json records e5eb5e1d..., whereas actual artifact SHA-256 and corrected Evidence Factory index are 701913ec...; acceptance metadata must be reconciled before independent gate signoff."
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "OPS-02",
@@ -1006,7 +1036,8 @@
         "Effective native protection ruleset readback with bypass visibility",
         "Required code-owner/stale review/check enforcement and explicit governed release decision",
         "Approval from a qualified separate human reviewer"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "OPS-03",
@@ -1043,7 +1074,8 @@
       ],
       "remaining_conditions": [
         "Current exact deployed SHA runtime smoke; monitoring alert and support/incident handling proof"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "OPS-04",
@@ -1077,7 +1109,8 @@
       ],
       "remaining_conditions": [
         "Current exact deployed SHA runtime smoke; monitoring alert and support/incident handling proof"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "OPS-05",
@@ -1105,7 +1138,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Isolated/staged rehearsal log, rollback target SHA and acceptance record.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for OPS-05 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for OPS-05 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "OPS-06",
@@ -1134,7 +1168,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Environment provenance matrix, safe negative-cross-environment tests.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for OPS-06 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for OPS-06 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "TRU-01",
@@ -1157,7 +1192,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Authoritative supplier/ownership records, reviewed identity statement.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-01 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-01 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "TRU-02",
@@ -1180,7 +1216,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Versioned terms/privacy/DPA, legal approver identity, effective dates.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-02 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-02 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "TRU-03",
@@ -1209,7 +1246,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Verified vendor list and data flow, retention schedule and legal/privacy sign-off.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-03 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-03 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "TRU-04",
@@ -1236,7 +1274,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Fact/legal review checklist and approved claim inventory.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-04 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-04 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "TRU-05",
@@ -1265,7 +1304,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Evidence-indexed procurement packet, tested contact path and approved commitments.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-05 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-05 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     },
     {
       "control_id": "TRU-06",
@@ -1296,7 +1336,8 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Applicable-obligation matrix, legal reviewer conclusions and approved exceptions.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-06 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for TRU-06 at exact applicable SHA, then qualified independent review.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc"
     }
   ],
   "gates": [
@@ -1321,7 +1362,9 @@
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
       "dependencies": [],
       "missing_required_evidence": "All SEC-01 source controls lack complete independent acceptance evidence and qualified approval.",
-      "next_acceptance_action": "Assigned VE1 to provide source-bound evidence for SEC-01; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE1 to provide source-bound evidence for SEC-01; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-02",
@@ -1348,7 +1391,9 @@
         "SEC-02"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: SEC-01, SEC-02; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE1 to provide source-bound evidence for SEC-02, SEC-04; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE1 to provide source-bound evidence for SEC-02, SEC-04; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-03",
@@ -1374,7 +1419,9 @@
         "SEC-02"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: SEC-02; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE1 to provide source-bound evidence for SEC-03, SEC-06; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE1 to provide source-bound evidence for SEC-03, SEC-06; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-04",
@@ -1413,7 +1460,9 @@
         "Production SSL enforcement was reported off in existing preacceptance record",
         "Browser bundle/log secret negative scan and exact-SHA green CI absent",
         "Project-specific encryption-at-rest attestation and independent approval absent"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-05",
@@ -1438,7 +1487,9 @@
         "SEC-01"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: SEC-01; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for FUN-01; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for FUN-01; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-06",
@@ -1476,7 +1527,9 @@
       ],
       "remaining_conditions": [
         "Authenticated inventory/risk/governance persistence and role decisions plus runtime release exact-SHA and complete migrations"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-07",
@@ -1502,7 +1555,9 @@
         "SEC-03"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: FUN-03, SEC-03; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for FUN-04; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for FUN-04; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-08",
@@ -1529,7 +1584,9 @@
         "SEC-02"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: FUN-01, SEC-02; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for FUN-05, FUN-06; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for FUN-05, FUN-06; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-09",
@@ -1540,7 +1597,7 @@
       "assigned_executor": "VE3",
       "source_status": "SOURCE_PASS_HISTORICAL",
       "evidence_status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "reviewer_status": "REVIEW_PENDING",
+      "reviewer_status": "REVIEW_REQUESTED",
       "formal_acceptance_status": "NOT_ACCEPTED",
       "formally_accepted": false,
       "approval_url": null,
@@ -1564,7 +1621,12 @@
         "Fresh Vercel six production environment price-key bindings in provider readback",
         "Qualified independent human review against exact applicable source and hashed gate acceptance artifact",
         "Vercel environment list response was truncated (100 shown, 21 omitted); six same-named encrypted variables seen had a QA custom-environment ID and do not establish current Production price bindings. No secret values recorded."
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION",
+      "reviewer_requested_login": "sastestezoer-commits",
+      "reviewer_independence_verified": false,
+      "reviewer_qualification_verified": false
     },
     {
       "gate_id": "A-10",
@@ -1603,7 +1665,9 @@
       ],
       "remaining_conditions": [
         "Genuine signed TEST event, invalid signature rejection, duplicate replay and QA durable event/entitlement proof"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-11",
@@ -1630,7 +1694,9 @@
         "SEC-02"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: BIL-03, SEC-02; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for BIL-04, BIL-05; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for BIL-04, BIL-05; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-12",
@@ -1665,7 +1731,9 @@
         "37 unmatched historical SQL representations or equivalent qualified source proof",
         "Approval of nonexact identities and two consolidations",
         "Reviewed executable 137/137 manifest, isolated PostgreSQL replay, schema parity and independent approval"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-13",
@@ -1702,7 +1770,9 @@
       "remaining_conditions": [
         "Exact SHA native concurrent transaction, rollback, race and audit durability tests",
         "Required DAT-01 provenance/replay acceptance before downstream claims"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-14",
@@ -1729,7 +1799,9 @@
         "SEC-03"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: DAT-01, SEC-03; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE3 to provide source-bound evidence for DAT-04, DAT-05; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE3 to provide source-bound evidence for DAT-04, DAT-05; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-15",
@@ -1752,7 +1824,9 @@
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
       "dependencies": [],
       "missing_required_evidence": "No complete successful exact-candidate-SHA CI proving install/lint/typecheck/tests/security/build/regressions. GitHub check runs: 62 failure, 13 skipped, 0 success; selected logs BlobNotFound. Historical CircleCI #863 success is different SHA and incomplete.",
-      "next_acceptance_action": "VE1 coordinate QAT-01 proof; VE3 provide exact-SHA CircleCI full source proof and logs, with infrastructure-vs-code failure classification."
+      "next_acceptance_action": "VE1 coordinate QAT-01 proof; VE3 provide exact-SHA CircleCI full source proof and logs, with infrastructure-vs-code failure classification.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-16",
@@ -1781,7 +1855,9 @@
         "BIL-04"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: FUN-04, SEC-03, DAT-01, BIL-04; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE3 to provide source-bound evidence for QAT-02, QAT-03; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE3 to provide source-bound evidence for QAT-02, QAT-03; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-17",
@@ -1806,7 +1882,9 @@
         "QAT-01"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: QAT-01; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE3 to provide source-bound evidence for QAT-04; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE3 to provide source-bound evidence for QAT-04; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-18",
@@ -1817,7 +1895,7 @@
       "assigned_executor": "VE3",
       "source_status": "SOURCE_PASS_HISTORICAL",
       "evidence_status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "reviewer_status": "REVIEW_PENDING",
+      "reviewer_status": "REVIEW_REQUESTED",
       "formal_acceptance_status": "NOT_ACCEPTED",
       "formally_accepted": false,
       "approval_url": null,
@@ -1840,8 +1918,13 @@
       ],
       "remaining_conditions": [
         "Independent qualified reviewer, genuine GitHub review approval URL and gate acceptance artifact digest",
-        "Separate historical SHA-256 manifest remains stale for provider Vercel artifact: EVIDENCE_SHA256_MANIFEST.json records e5eb5e1d..., whereas actual artifact SHA-256 and corrected Evidence Factory index are 701913ec...; acceptance metadata must be reconciled before independent gate signoff."
-      ]
+        "Manifest SHA-256 corrected in acceptance-only PR #2607; governed approval/integration into candidate still pending, therefore this correction alone is not canonical gate acceptance."
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION",
+      "reviewer_requested_login": "sastestezoer-commits",
+      "reviewer_independence_verified": false,
+      "reviewer_qualification_verified": false
     },
     {
       "gate_id": "A-19",
@@ -1875,7 +1958,9 @@
         "Effective native protection ruleset readback with bypass visibility",
         "Required code-owner/stale review/check enforcement and explicit governed release decision",
         "Approval from a qualified separate human reviewer"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-20",
@@ -1910,7 +1995,9 @@
       ],
       "remaining_conditions": [
         "Current exact deployed SHA runtime smoke; monitoring alert and support/incident handling proof"
-      ]
+      ],
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-21",
@@ -1938,7 +2025,9 @@
         "DAT-01"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: DAT-04, SEC-05, DAT-01; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for OPS-05, OPS-06; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for OPS-05, OPS-06; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-22",
@@ -1966,7 +2055,9 @@
         "TRU-04"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: TRU-01, TRU-03, TRU-04; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for TRU-01, TRU-06; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for TRU-01, TRU-06; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-23",
@@ -1993,7 +2084,9 @@
         "FUN-05"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: TRU-02, FUN-05; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for TRU-02, TRU-03; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for TRU-02, TRU-03; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     },
     {
       "gate_id": "A-24",
@@ -2020,7 +2113,9 @@
         "OPS-04"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: TRU-02, OPS-04; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for TRU-04, TRU-05; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for TRU-04, TRU-05; independent reviewer to decide after complete proof.",
+      "latest_observed_candidate_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "evidence_sha_applicability": "PENDING_CURRENT_EXACT_SHA_REVALIDATION"
     }
   ],
   "limitations": [
@@ -2030,5 +2125,28 @@
     "Current provider readbacks are described in this report but have not been approved as canonical acceptance artifacts.",
     "Provider and CI state may change after this snapshot."
   ],
-  "evidence_discovery_note": "Read-only cross-check of additional 2026-11-04 preacceptance, historical SQL hash triage, TEST billing and RLS readbacks; records retain NOT_ACCEPTED. Evidence remains source- and environment-specific, not automatic current candidate PASS."
+  "evidence_discovery_note": "Read-only cross-check of additional 2026-11-04 preacceptance, historical SQL hash triage, TEST billing and RLS readbacks; records retain NOT_ACCEPTED. Evidence remains source- and environment-specific, not automatic current candidate PASS.",
+  "candidate_head_tracking": {
+    "last_inspected_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
+    "latest_observed_sha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+    "changed_since_last_inspected": true,
+    "diff": "Three commits modifying DAT-01 diagnostic scripts and tests only; frozen scope, gate projection and Evidence Factory index blob unchanged",
+    "delta_files": [
+      "scripts/diagnostics/dat01-provider-provenance-preflight.py",
+      "scripts/diagnostics/g5-02-canonical-replay.py",
+      "tests/diagnostics/test_dat01_provider_provenance_preflight.py"
+    ],
+    "acceptance_consequence": "All unaccepted candidate-exact CI proof must be reissued at current HEAD; no historical PASS promoted."
+  },
+  "review_request": {
+    "pr": 2607,
+    "requested_github_login": "sastestezoer-commits",
+    "requested_at": "2026-11-04T14:15:28.747Z",
+    "request_confirmed_via_github": true,
+    "reviewer_repo_permission": "write",
+    "prior_unrelated_native_approval_pr": 2559,
+    "qualification_and_independence": "NOT_YET_CONFIRMED",
+    "submitted_review_decision": "NONE",
+    "does_not_count_as_approval": true
+  }
 }
