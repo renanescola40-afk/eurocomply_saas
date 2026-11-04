@@ -164,3 +164,22 @@ test('SEC-05 partial transport evidence cannot obtain a formal PASS', () => {
   assert.ok(result.errors.some(x => x.includes('SEC-05 (missing PostgreSQL TLS enforcement or at-rest provider proof: production)')));
   assert.ok(result.errors.some(x => x.includes('SEC-05 (independent exact-SHA review missing)')));
 });
+
+
+test('BIL-02 TEST webhook blocker readback cannot be reclassified as a signed accepted delivery', () => {
+  const r = copy();
+  const evidencePath = 'docs/enterprise/evidence/NORMAL_PRODUCT_TRUST_BIL02_TEST_BLOCKER_2026-11-04.json';
+  const evidence = JSON.parse(readFileSync(evidencePath,'utf8'));
+  const billing = item(r,'BIL-02');
+  billing.status = 'PASS';
+  billing.acceptedBy = 'Synthetic negative-test reviewer; NOT an actual acceptance';
+  billing.acceptedAt = evidence.observedAt;
+  billing.evidenceRefs = [evidencePath];
+  const result = evaluateG1Scope(r);
+  assert.equal(result.valid,false);
+  assert.ok(result.errors.some(x => x.includes('BIL-02 (BIL-02 schema/subject/gate mismatch)')));
+  assert.ok(result.errors.some(x => x.includes('BIL-02 (BIL-02 correctly routed enabled TEST webhook endpoint missing)')));
+  assert.ok(result.errors.some(x => x.includes('BIL-02 (BIL-02 genuine signed delivery is not proven)')));
+  assert.ok(result.errors.some(x => x.includes('BIL-02 (BIL-02 qualified independent GitHub review not attested)')));
+  assert.equal(result.enterprise100,false);
+});
