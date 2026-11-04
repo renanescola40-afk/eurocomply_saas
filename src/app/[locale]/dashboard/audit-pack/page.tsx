@@ -191,7 +191,7 @@ export default function AuditPackPage() {
         <MiniSignal label={t.evidence} value={data ? `${data.evidenceCoverage}%` : '--'} />
       </section>
 
-      {!data ? (
+      {loadError ? null : !data ? (
         <Card className="rounded-xl border-white/[0.075] bg-[#0d1522] text-white">
           <CardContent className="py-14 text-center">
             <FileArchive className="mx-auto h-8 w-8 text-blue-300/45" />
