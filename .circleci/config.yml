@@ -46,7 +46,7 @@ jobs:
             test -n "${CIRCLE_SHA1:-}"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             case "${CIRCLE_BRANCH:-}" in
-              ci/circleci-pr-validation-20261104|dependabot/github_actions/actions/setup-python-7|dependabot/npm_and_yarn/supabase-0f67fd58a4|phase1/security-dat01-v22|acceptance/a18-ops01-review-packet-20261104|acceptance/a09-bil01-review-packet-20261104|test/phase2-evidence-vault-wiring-regex-20261104|normal2/product-enterprise-v18-checkout-price-authority-20261102|agent/v20-delegated-merge-policy-20261103|agent/sec05-client-env-failclosed-20261103) ;;
+              ci/circleci-pr-validation-20261104|dependabot/github_actions/actions/setup-python-7|dependabot/npm_and_yarn/supabase-0f67fd58a4|phase1/security-dat01-v22|acceptance/a18-ops01-review-packet-20261104|acceptance/a09-bil01-review-packet-20261104|test/phase2-evidence-vault-wiring-regex-20261104|normal2/product-enterprise-v18-checkout-price-authority-20261102|agent/v20-delegated-merge-policy-20261103|agent/sec05-client-env-failclosed-20261103|test/fix-onboarding-plan-boundary-contract-20261104) ;;
               *) echo "Branch is outside the approved PR-validation scope" >&2; exit 1 ;;
             esac
             for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
@@ -899,4 +899,5 @@ workflows:
                 - normal2/product-enterprise-v18-checkout-price-authority-20261102
                 - agent/v20-delegated-merge-policy-20261103
                 - agent/sec05-client-env-failclosed-20261103
+                - test/fix-onboarding-plan-boundary-contract-20261104
 
