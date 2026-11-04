@@ -126,13 +126,21 @@ export default function AuditPackPage() {
   const t = copy.en;
   const [data, setData] = useState<AuditPackData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   async function generatePack() {
     if (!user?.id) return;
     setLoading(true);
-    const pack = await buildAuditPackData({ userId: user.id });
-    setData(pack);
-    setLoading(false);
+    setLoadError(null);
+    setData(null);
+    try {
+      const pack = await buildAuditPackData({ userId: user.id });
+      setData(pack);
+    } catch {
+      setLoadError('The audit package could not load verified evidence. Check workspace access and retry.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -174,6 +182,8 @@ export default function AuditPackPage() {
           </div>
         </div>
       </header>
+
+      {loadError ? <p role="alert" className="rounded-lg border border-amber-400/20 p-3 text-sm text-amber-200">{loadError}</p> : null}
 
       <section className="grid gap-3 md:grid-cols-3">
         <MiniSignal label={t.score} value={data ? `${data.complianceScore}%` : '--'} />
