@@ -1,13 +1,13 @@
 {
-  "schema": "risck-comply.work012-recovery-handoff.v21.4",
+  "schema": "risck-comply.work012-recovery-handoff.v21.5",
   "createdAt": "2026-11-04T09:14:42.065Z",
   "owner": "NORMAL_CHAT_MASTER_V21.0",
   "canonicalPR": {
     "number": 2598,
     "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
     "branch": "integration/enterprise-unified-candidate-20261102",
-    "headBeforeCheckpointCommit": "9e3b6b83ac40671f0f5c1d3d187440d687adda55",
-    "headNote": "This is the HEAD observed immediately before updating the checkpoint; fetch GitHub current PR #2598 for authoritative current SHA.",
+    "headBeforeCheckpointCommit": "b88c55c9052e758d9b132cc8c6c61a5427808189",
+    "headNote": "Read current GitHub PR #2598 or exact Git ref for authoritative SHA; this is source HEAD before publication of V21.5.",
     "draft": true,
     "merged": false,
     "approvedReviewsAtObservation": 0,
@@ -108,7 +108,12 @@
     "histExactProviderDirectStringProof": "Both archived source Git blobs with one leading LF exactly equal Supabase production provider statements[1]; provider read-only SHA256 and byte counts agree frozen evidence",
     "historicalGitReportCommit": "1cc5ba3ef278b54909799ff33e7fea4ed1086399",
     "doNotTreatFormattingAsExactProof": true,
-    "latestNode22Tests": "22/22 PASS local source-only at blob 4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41; no full candidate CI"
+    "latestNode22Tests": "22/22 PASS local source-only at blob 4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41; no full candidate CI",
+    "nonexactSourceAudit": "25/25 provider production hashes read-only verified against frozen SHA256 metadata; 13 current source whole-file byte matches, 12 different; ALL 25 identity mappings require reviewer",
+    "nonexactSourceAuditCommit": "a69adb51023f4344f6a70f16dcfd444a1d997dd6",
+    "nonexactSourceAuditFile": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+    "sourceByteCoverageLowerBound": "102/137 source byte equivalent by current or historically recovered Git evidence; 35 unresolved; NOT replay, NOT approved manifest",
+    "newGatesAcceptedThisTurn": 0
   },
   "dat01": {
     "status": "BLOCKED",
@@ -186,7 +191,24 @@
     "historicalRecoveryReport": "docs/enterprise/closure-v21/DAT01_RECOVERED_HISTORICAL_SOURCE_BLOBS_20261104.json",
     "currentSourceReportGitBlob": "0ce89409f9e0a64a8e1dc2c2aaf8a35b1b3d9ee6",
     "historicalRecoveryReportGitBlob": "4e015314356b6a9234d87c64323e296b3d346ab4",
-    "sourceHashMatchesAreNotReplay": true
+    "sourceHashMatchesAreNotReplay": true,
+    "canonicalExactVersionMappings": 112,
+    "canonicalExactByteMatches": 87,
+    "historicallyRecoveredExactSourceMatches": 2,
+    "remainingExactWithoutHistoricalSource": 23,
+    "nonexactMappingsCheckedAgainstLiveProvider": 25,
+    "nonexactProviderHashesMatchingFrozen": 25,
+    "nonexactCurrentSourceByteMatches": 13,
+    "nonexactCurrentSourceByteMismatches": 12,
+    "nonexactVersionIdentitiesAwaitingIndependentReview": 25,
+    "byteEquivalentSourceIdentityEvidenceAcross137": 102,
+    "remainingWithoutByteEquivalentSourceAcross137": 35,
+    "consolidationGroupsNeedingApplyOnceReview": 2,
+    "nonexactEvidenceFile": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+    "nonexactEvidenceGitBlob": "9bd2c328248dc0121fca42af495505438d50179e",
+    "baselineSummaryGitBlob": "0ce89409f9e0a64a8e1dc2c2aaf8a35b1b3d9ee6",
+    "historicalRecoveryEvidenceGitBlob": "4e015314356b6a9234d87c64323e296b3d346ab4",
+    "byteEvidenceNotReplay": true
   },
   "auditChainIndependentReadback": {
     "scope": "production metadata READ ONLY",
@@ -264,7 +286,7 @@
     "paidCITasks": false,
     "StripeLiveTransactions": false
   },
-  "nextExecutableAction": "Use Work authenticated CircleCI #431 job log to locate first failing step and fix only verified cause; independently review 23 exact mappings without immutable source provenance plus 25 nonexact mappings/two consolidation groups; approve manifest before disposable PostgreSQL 17 replay. Preserve human final merge and no production/Stripe LIVE writes.",
-  "updatedAt": "2026-11-04T10:24:00.987Z",
+  "nextExecutableAction": "Identify historic immutable Git blobs or vendor migration archive for 23 exact and 12 nonexact SQL byte divergences; independently verify all 25 nonexact version identities and 2 consolidation apply-once semantics; only then qualify executable 137-row manifest for isolated PostgreSQL17 replay. In parallel retrieve authenticated CircleCI #431 first failing command from Work/owner; no exact SHA CircleCI PASS or release GO.",
+  "updatedAt": "2026-11-04T11:24:31.663Z",
   "previousV21CheckpointCommit": "45258179902bc11669d953a25478c9a2e6d54b79"
 }
