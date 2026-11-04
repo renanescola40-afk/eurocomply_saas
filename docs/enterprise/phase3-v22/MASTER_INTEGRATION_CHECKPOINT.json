@@ -10,9 +10,10 @@
     "latestCurrentHead": "RESOLVE_BRANCH_HEAD_AT_READ_TIME",
     "sourceFreezeSha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
     "releaseFreezeCommitSha": "RESOLVE_FROM_COMMIT_CONTAINING_THIS_CHECKPOINT",
-    "freezeStatus": "DOCUMENTATION_ONLY_CHECKPOINT_PENDING_EXACT_HEAD_CI",
+    "freezeStatus": "DOCUMENTATION_CORRECTION_COMPLETE; POST_UPDATE_SHA_IS_FREEZE_REFERENCE_PENDING_EXACT_SHA_CI",
     "headChangesInvalidatePriorCI": true,
-    "needOneSingleCandidate": true
+    "needOneSingleCandidate": true,
+    "headObservedBeforeLastCheckpointCorrection": "3a10cef7432a680ef87d3838b6f995ee5ba05462"
   },
   "github": {
     "main": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
@@ -192,7 +193,8 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
       "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": []
     },
     {
       "GATE_ID": "A-02",
@@ -208,8 +210,14 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-01"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "SEC-01",
+        "SEC-02"
+      ]
     },
     {
       "GATE_ID": "A-03",
@@ -225,8 +233,13 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-02"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "SEC-02"
+      ]
     },
     {
       "GATE_ID": "A-04",
@@ -242,7 +255,8 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
       "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": []
     },
     {
       "GATE_ID": "A-05",
@@ -257,8 +271,13 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-01"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "SEC-01"
+      ]
     },
     {
       "GATE_ID": "A-06",
@@ -274,8 +293,18 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-02",
+        "A-03",
+        "A-05"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "FUN-01",
+        "SEC-03",
+        "FUN-02",
+        "SEC-02"
+      ]
     },
     {
       "GATE_ID": "A-07",
@@ -290,8 +319,15 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-03",
+        "A-06"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "FUN-03",
+        "SEC-03"
+      ]
     },
     {
       "GATE_ID": "A-08",
@@ -307,8 +343,15 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-02",
+        "A-05"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "FUN-01",
+        "SEC-02"
+      ]
     },
     {
       "GATE_ID": "A-09",
@@ -326,7 +369,8 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "HISTORICAL_PASS_NEW_RELEASE_UNVERIFIED",
       "DEPENDENCIES": [],
-      "NEXT_ACTION": "Historical PASS; current Stripe LIVE/TEST six canonical active price amounts read-only observed; current deployment/env bindings and qualified review still required."
+      "NEXT_ACTION": "Historical PASS; current Stripe LIVE/TEST six canonical active price amounts read-only observed; current deployment/env bindings and qualified review still required.",
+      "ATOMIC_DEPENDENCIES": []
     },
     {
       "GATE_ID": "A-10",
@@ -342,8 +386,16 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-09",
+        "A-12"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "BIL-01",
+        "BIL-02",
+        "DAT-01"
+      ]
     },
     {
       "GATE_ID": "A-11",
@@ -359,8 +411,15 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-02",
+        "A-10"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "BIL-03",
+        "SEC-02"
+      ]
     },
     {
       "GATE_ID": "A-12",
@@ -376,7 +435,8 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "BLOCKED",
       "DEPENDENCIES": [],
-      "NEXT_ACTION": "DAT-01 BLOCKED: nonexact source identities and unresolved SQL statement hashes; canonical replay 0/137."
+      "NEXT_ACTION": "DAT-01 BLOCKED: nonexact source identities and unresolved SQL statement hashes; canonical replay 0/137.",
+      "ATOMIC_DEPENDENCIES": []
     },
     {
       "GATE_ID": "A-13",
@@ -395,8 +455,13 @@
       ],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "DAT-02 counter drift QA 2/2 and PROD 266/266 zero observed; native PG read-only synthetic missing-row regression 1/1; DAT-03 concurrency/transaction/audit tests and review missing."
+      "DEPENDENCIES": [
+        "A-12"
+      ],
+      "NEXT_ACTION": "DAT-02 counter drift QA 2/2 and PROD 266/266 zero observed; native PG read-only synthetic missing-row regression 1/1; DAT-03 concurrency/transaction/audit tests and review missing.",
+      "ATOMIC_DEPENDENCIES": [
+        "DAT-01"
+      ]
     },
     {
       "GATE_ID": "A-14",
@@ -413,9 +478,14 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
       "DEPENDENCIES": [
+        "A-03",
         "A-12"
       ],
-      "NEXT_ACTION": "Restoration RTO/RPO, complete native restore, schema/RLS parity and isolation unverified."
+      "NEXT_ACTION": "Restoration RTO/RPO, complete native restore, schema/RLS parity and isolation unverified.",
+      "ATOMIC_DEPENDENCIES": [
+        "DAT-01",
+        "SEC-03"
+      ]
     },
     {
       "GATE_ID": "A-15",
@@ -431,7 +501,8 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
       "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": []
     },
     {
       "GATE_ID": "A-16",
@@ -448,11 +519,18 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
       "DEPENDENCIES": [
-        "A-05",
-        "A-10",
-        "A-11"
+        "A-03",
+        "A-07",
+        "A-11",
+        "A-12"
       ],
-      "NEXT_ACTION": "Authenticated deployed journey including Stripe TEST webhook and negative paths unverified."
+      "NEXT_ACTION": "Authenticated deployed journey including Stripe TEST webhook and negative paths unverified.",
+      "ATOMIC_DEPENDENCIES": [
+        "FUN-04",
+        "SEC-03",
+        "DAT-01",
+        "BIL-04"
+      ]
     },
     {
       "GATE_ID": "A-17",
@@ -469,9 +547,13 @@
       "FORMAL_STATUS": "NOT_VERIFIED",
       "DEPENDENCIES": [
         "A-15",
-        "A-16"
+        "A-18"
       ],
-      "NEXT_ACTION": "No exact-head CircleCI source/build/preview/QA verified lineage."
+      "NEXT_ACTION": "No exact-head CircleCI source/build/preview/QA verified lineage.",
+      "ATOMIC_DEPENDENCIES": [
+        "QAT-01",
+        "OPS-01"
+      ]
     },
     {
       "GATE_ID": "A-18",
@@ -489,7 +571,8 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "HISTORICAL_PASS_NEW_RELEASE_UNVERIFIED",
       "DEPENDENCIES": [],
-      "NEXT_ACTION": "Historical PASS; Vercel production dpl_CmyiHWky6g41su26PE1nyGwwCS1f READY SHA 70d3545; not candidate SHA."
+      "NEXT_ACTION": "Historical PASS; Vercel production dpl_CmyiHWky6g41su26PE1nyGwwCS1f READY SHA 70d3545; not candidate SHA.",
+      "ATOMIC_DEPENDENCIES": []
     },
     {
       "GATE_ID": "A-19",
@@ -505,7 +588,8 @@
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
       "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": []
     },
     {
       "GATE_ID": "A-20",
@@ -521,8 +605,15 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-16",
+        "A-18"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "OPS-01",
+        "QAT-02"
+      ]
     },
     {
       "GATE_ID": "A-21",
@@ -538,8 +629,19 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-04",
+        "A-12",
+        "A-14",
+        "A-18"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "OPS-01",
+        "DAT-04",
+        "SEC-05",
+        "DAT-01"
+      ]
     },
     {
       "GATE_ID": "A-22",
@@ -555,8 +657,16 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-23",
+        "A-24"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "TRU-01",
+        "TRU-03",
+        "TRU-04"
+      ]
     },
     {
       "GATE_ID": "A-23",
@@ -572,8 +682,14 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-08"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "TRU-02",
+        "FUN-05"
+      ]
     },
     {
       "GATE_ID": "A-24",
@@ -589,8 +705,15 @@
       "EVIDENCE_REF": [],
       "REVIEWER": null,
       "FORMAL_STATUS": "NOT_VERIFIED",
-      "DEPENDENCIES": [],
-      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+      "DEPENDENCIES": [
+        "A-20",
+        "A-23"
+      ],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure",
+      "ATOMIC_DEPENDENCIES": [
+        "TRU-02",
+        "OPS-04"
+      ]
     }
   ],
   "safety": {
@@ -602,5 +725,51 @@
     "paidCiDispatches": 0,
     "mergesToMain": 0
   },
-  "nextExecutableAction": "Read resulting checkpoint commit SHA and canonical PR head, then keep source frozen; exact-SHA CI requires authenticated CircleCI + verified included credits. Continue safe QA native SQL only; do not mark any new gate PASS."
+  "nextExecutableAction": "Do not change candidate source; exact-SHA CircleCI needs authenticated private job logs and current Free included-credit readback. DAT-02/03/04/05 formal PASS depends on DAT-01 and required reviewed runtime proof per scope; QA/PROD read-only parity is not approval.",
+  "observationsAfterInitialCheckpoint": {
+    "source": "Authenticated read-only provider revalidation; operational evidence, no formal acceptance",
+    "githubActions": {
+      "frozenHeadBeforeCorrection": "3a10cef7432a680ef87d3838b6f995ee5ba05462",
+      "runsObserved": 49,
+      "conclusionFailure": 49,
+      "selectedRunIds": [
+        41827275374,
+        41827275553,
+        41827275447
+      ],
+      "selectedJobSteps": "NONE",
+      "billingCause": "NOT_CONFIRMED"
+    },
+    "vercel": {
+      "productionDomain": "www.risckcomply.com",
+      "productionDomainAliasPointsTo": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+      "qaAliasPointsTo": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+      "qaGitSource": "NOT_BOUND_TO_CANDIDATE"
+    },
+    "catalogParity": {
+      "QA": {
+        "publicTables": 115,
+        "rls": 115,
+        "forceRls": 115,
+        "policies": 227,
+        "functions": 150,
+        "migrationRecords": 7
+      },
+      "PROD": {
+        "publicTables": 115,
+        "rls": 115,
+        "forceRls": 115,
+        "policies": 227,
+        "functions": 150,
+        "migrationRecords": 137
+      },
+      "fingerprintsMatch": {
+        "policies": true,
+        "functionDefinitions": true,
+        "tableRlsFlags": true
+      },
+      "catalogFingerprintsAreNotDataRestoreProof": true
+    },
+    "sourceAcceptanceDependenciesAreBinding": true
+  }
 }
