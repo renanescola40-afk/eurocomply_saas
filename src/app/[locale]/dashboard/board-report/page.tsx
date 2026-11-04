@@ -36,13 +36,21 @@ export default function BoardReportPage() {
   const t = copy.en;
   const [data, setData] = useState<BoardReportData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   async function generateReport() {
     if (!user?.id) return;
     setLoading(true);
-    const report = await buildBoardReportData({ userId: user.id });
-    setData(report);
-    setLoading(false);
+    setLoadError(null);
+    setData(null);
+    try {
+      const report = await buildBoardReportData({ userId: user.id });
+      setData(report);
+    } catch {
+      setLoadError('The leadership report could not load verified evidence. Check workspace access and retry.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -78,6 +86,8 @@ export default function BoardReportPage() {
             </div>
           </div>
         </header>
+
+        {loadError ? <p data-print-hide role="alert" className="rounded-lg border border-amber-400/20 p-3 text-sm text-amber-200">{loadError}</p> : null}
 
         {!data ? (
           <Card data-print-card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white"><CardContent className="py-12 text-center text-white/45">{t.empty}</CardContent></Card>
