@@ -1,0 +1,151 @@
+{
+  "schema": "risck-comply.phase4.provider-runtime-readback.v1",
+  "captured_date_utc": "2026-11-04",
+  "evidence_class": "PROVIDER_LIVE_READBACK",
+  "authorized_scope": "read-only QA and production observations, no production mutation or provider credential retrieval",
+  "source": "Authenticated Vercel connector: get_deployment, get_alias, web_fetch_vercel_url and get_runtime_logs",
+  "provenance": {
+    "project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+    "note": "Responses observed 2026-11-04 13:41-13:44 UTC; sanitized, no cookies, bearer tokens, secrets or share links stored"
+  },
+  "production": {
+    "hostname": "www.risckcomply.com",
+    "alias_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "deployment_state": "READY",
+    "deployment_target": "production",
+    "observed_source_commit_sha": "70d3545f414d063379d481fd238aed563e05edda",
+    "live_http_get_health": {
+      "time_utc": "2026-11-04T13:44:08Z",
+      "status": 200,
+      "body": {
+        "status": "ok"
+      },
+      "no_store": true,
+      "strict_transport_security_present": true,
+      "x_content_type_options": "nosniff"
+    },
+    "exact_canonical_candidate_sha_proven": false,
+    "customer_authenticated_flows_tested": false,
+    "note": "Health endpoint verifies only the basic publicly reachable process; source SHA is older than the currently observed integration candidate"
+  },
+  "qa": {
+    "hostname": "eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app",
+    "immutable_deployment_hostname": "eurocomply-saas-d4zalec76-renanescola40-afks-projects.vercel.app",
+    "deployment_id": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+    "deployment_state": "READY",
+    "release_commit_sha": "NOT_ATTESTED_BY_AVAILABLE_DEPLOYMENT_METADATA",
+    "tests": [
+      {
+        "method": "GET",
+        "route": "/api/health",
+        "hostname": "qa_alias",
+        "time_utc": "2026-11-04T13:41:02Z",
+        "http_status": 200,
+        "body_status": "ok",
+        "no_store": true,
+        "hsts": true,
+        "nosniff": true,
+        "assessment": "PASS_BASIC_PUBLIC_HEALTH_ONLY"
+      },
+      {
+        "method": "GET",
+        "route": "/api/health",
+        "hostname": "immutable_deployment",
+        "time_utc": "2026-11-04T13:41:08Z",
+        "http_status": 200,
+        "body_status": "ok",
+        "no_store": true,
+        "hsts": true,
+        "nosniff": true,
+        "assessment": "PASS_BASIC_PUBLIC_HEALTH_ONLY"
+      },
+      {
+        "method": "GET",
+        "route": "/api/ready/release",
+        "hostname": "qa_alias",
+        "time_utc": "2026-11-04T13:41:59Z",
+        "http_status": 503,
+        "body_error": "security_control_unavailable",
+        "no_store": true,
+        "assessment": "BLOCKED_AT_PRE_AUTH_RATE_LIMIT"
+      },
+      {
+        "method": "GET",
+        "route": "/api/ready",
+        "hostname": "qa_alias",
+        "time_utc": "2026-11-04T13:42:02Z",
+        "http_status": 503,
+        "body_error": "security_control_unavailable",
+        "no_store": true,
+        "assessment": "BLOCKED_AT_PRE_AUTH_RATE_LIMIT"
+      }
+    ],
+    "log_correlation": [
+      {
+        "timestamp_utc": "2026-11-04T13:41:59.304Z",
+        "route": "/api/ready/release",
+        "level": "error",
+        "source": "Vercel function log",
+        "message": "[security:rate-limit] Upstash Redis is not configured.",
+        "policy": "health-internal",
+        "failure_mode": "fail-closed"
+      },
+      {
+        "timestamp_utc": "2026-11-04T13:42:02.295Z",
+        "route": "/api/ready",
+        "level": "error",
+        "source": "Vercel function log",
+        "message": "[security:rate-limit] Upstash Redis is not configured.",
+        "policy": "health-internal",
+        "failure_mode": "fail-closed"
+      }
+    ],
+    "observability_smoke_get": {
+      "http_status": "NOT_ATTESTED_BY_WEB_FETCH_CONNECTOR",
+      "log_indication": "Vercel function log records security_denied with missing_or_invalid_healthcheck_token for a GET to /api/observability/smoke",
+      "alert_routing": "NOT_TESTED",
+      "note": "An earlier GET fetch hit deployment authentication retry. Do not promote the function log event into an independently confirmed HTTP 401 or end-to-end alert delivery."
+    },
+    "root_cause": {
+      "status": "CONFIRMED_ON_THIS_DEPLOYMENT",
+      "reason": "The QA deployment is missing the effective Upstash Redis runtime configuration; its fail-closed internal readiness rate-limit prevents the protected readiness and release-provenance paths from executing.",
+      "checked_source_paths": [
+        "src/server/security/rate-limit.ts",
+        "src/server/security/api-guards.ts",
+        "src/app/api/ready/route.ts",
+        "src/app/api/ready/release/route.ts"
+      ],
+      "missing_runtime_inputs_to_verify": [
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN"
+      ],
+      "do_not_infer": "This 503 does not establish Stripe or Supabase downtime and does not prove a specific missing variable individually; one or both effective values may be missing.",
+      "security_policy": "Keep fail-closed; do not bypass rate-limit, use production Redis credentials, or create unapproved paid infrastructure."
+    }
+  },
+  "remediation_and_retest": {
+    "operator_action": "Using an existing authorized, isolated QA Upstash instance, provision or restore both variables via the Vercel QA/Preview environment without printing or persisting values; verify actual deployment environment inheritance; redeploy only QA, no production deployment.",
+    "verification_sequence": [
+      "Read Vercel QA runtime logs and verify no Redis not configured/error entries for new GET readiness requests.",
+      "GET QA /api/health -> 200 with no-store.",
+      "GET QA /api/ready/release without bearer -> expected 401 (or fail-closed 503 if backend still unavailable); 401 alone proves only token protection, not release provenance.",
+      "Use authorized QA-only HEALTHCHECK_TOKEN to GET /api/ready/release, check expected exact QA deployment SHA and sanitized provenance.",
+      "With separately authorized QA-only token, GET /api/ready must exercise readiness dependencies. Require expected result based on configured QA services, not force a 200.",
+      "Execute isolated monitoring smoke only after validating QA-only Sentry/alert routing; verify alert received and redacted, record escalation owner and acknowledgement; test incident drill.",
+      "Do not mark OPS-03, OPS-04, A-20 or any Production GO as PASS without exact-SHA release-bound and independent review evidence."
+    ],
+    "new_costs_approved": false,
+    "production_mutations_approved": false
+  },
+  "formal_acceptance": {
+    "phase4_gates_accepted_from_this_evidence": 0,
+    "phase4_atomic_accepted_from_this_evidence": 0,
+    "relevant_controls": [
+      "OPS-03",
+      "OPS-04",
+      "OPS-06"
+    ],
+    "all_GO_decisions": "NO-GO"
+  }
+}
