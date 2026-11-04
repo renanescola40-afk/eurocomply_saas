@@ -43,6 +43,30 @@
       "connectionEncrypted": true,
       "tlsVersion": "TLSv1.3",
       "cipher": "TLS_AES_256_GCM_SHA384"
+    },
+    "qaAndProdPrepromotionRelations": {
+      "query": "BEGIN READ ONLY; SELECT public.pg_class/pg_namespace aggregate for two named module relations; ROLLBACK",
+      "expectedRelations": [
+        "ai_conformity_assessments",
+        "ai_provider_data_programs"
+      ],
+      "qa": {
+        "expected": 2,
+        "present": 0,
+        "missing": [
+          "ai_conformity_assessments",
+          "ai_provider_data_programs"
+        ]
+      },
+      "prod": {
+        "expected": 2,
+        "present": 0,
+        "missing": [
+          "ai_conformity_assessments",
+          "ai_provider_data_programs"
+        ]
+      },
+      "interpretation": "Both absent in QA and production; no QA-only drift for these two relation names. Functional implementation and support are NOT_VERIFIED. Production schema was not modified."
     }
   },
   "execution": {
@@ -67,7 +91,8 @@
       "Two QA tables absent, reportedly pre-promotion; data catalog metadata cannot prove functional FRIA, Annex IV or Art 50 workflow.",
       "RLS/FORCE RLS flags and RPC role grants are not runtime authenticated two-tenant isolation tests.",
       "Production deployment SHA differs from candidate. A source candidate check is not a deployed result.",
-      "Do not set any formal PASS or production GO from this source-only evidence."
+      "Do not set any formal PASS or production GO from this source-only evidence.",
+      "QA+production both lack two pre-promotion relations; do not present this as an isolated QA drift or proof of completed modules."
     ]
   }
 }
