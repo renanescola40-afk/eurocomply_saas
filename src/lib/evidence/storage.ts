@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { evidenceSha256Hex, verifyExistingEvidenceObject } from './upload-recovery';
+import { verifyExistingEvidenceObject } from './upload-recovery';
 
 export type EvidenceStatus = 'draft' | 'valid' | 'needs_review' | 'expired' | 'archived';
 export type EvidenceType =
@@ -247,6 +247,12 @@ function sanitizeFileName(fileName: string) {
   return safe || 'evidence.bin';
 }
 
+async function sha256Hex(file: File) {
+  const buffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, '0')).join('');
+}
+
 
 
 /**
@@ -258,7 +264,7 @@ export async function uploadEvidenceFile(params: { organizationId: string; evide
   const fileMimeType = validateEvidenceUpload(params.file);
   const fileName = sanitizeFileName(params.file.name);
   const objectPath = `${params.organizationId}/${params.evidenceId}/${fileName}`;
-  const fileSha256 = await evidenceSha256Hex(params.file);
+  const fileSha256 = await sha256Hex(params.file);
   const fileSizeBytes = params.file.size;
 
   const { data: reservation, error: reservationError } = await supabase
