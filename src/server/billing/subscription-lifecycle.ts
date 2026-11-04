@@ -32,6 +32,7 @@ import {
 } from './lifecycle-request-ledger';
 import { getStripeClient } from './stripe';
 import { BILLING_PLANS, getStripePriceId, isSelfServePlan, normalizeBillingInterval, normalizeBillingPlanId, type BillingInterval } from './plans';
+import { resolveSubscriptionCurrentPlan } from './subscription-current-plan-authority';
 
 export type { BillingLifecycleAction } from './lifecycle-request-ledger';
 export { BillingLifecycleRequestError } from './lifecycle-request-ledger';
@@ -522,7 +523,19 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   assertProviderLifecycleState(input.action, subscription);
 
   const baseItem = getBaseSubscriptionItem(subscription);
-  const currentPlan = normalizeBillingPlanId(authority.plan ?? subscription.metadata.plan) ?? 'starter';
+  // Stripe's allowlisted base Price is the plan-of-record for mutations.
+  // Persisted and provider metadata must agree; never assume paid Essential
+  // when a source label is unknown, absent or stale after a Stripe change.
+  const currentPlan = resolveSubscriptionCurrentPlan(
+    getBillingPlanIdForStripePriceId(baseItem.price.id),
+    [
+      { raw: authority.plan, normalized: normalizeBillingPlanId(authority.plan) },
+      { raw: subscription.metadata.plan, normalized: normalizeBillingPlanId(subscription.metadata.plan) },
+    ],
+  );
+  if (!currentPlan) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
   const interval = input.interval ? normalizeBillingInterval(input.interval) : getCurrentBillingInterval(baseItem);
   const targetPlan = input.plan ?? currentPlan;
   assertPlanTransition(input.action, currentPlan, targetPlan);
