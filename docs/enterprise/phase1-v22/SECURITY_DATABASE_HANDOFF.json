@@ -284,8 +284,8 @@
       "root_cause": "No complete exact-SHA source/security CI acceptance; GitHub runs show failure and CircleCI full source proof is pending.",
       "implementation": "New fail-closed DAT manifest tests prepared; canonical CI files untouched.",
       "test_command": "npm ci && npm run lint && npm run typecheck && npm run test && npm run build && npm run security:ci",
-      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NO_REPO_CHECKOUT_AVAILABLE_IN_LOCAL_RUNTIME",
-      "provider_readback": "GitHub Actions canonical SHA 55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab multiple failed workflows; not classified as code failures without logs.",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NO_REPO_CHECKOUT_AVAILABLE_IN_LOCAL_RUNTIME; Exact-SHA hosted quality NOT_VERIFIED; step-less runner failure is not a code-level regression proof.",
+      "provider_readback": "GitHub Actions canonical SHA 55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab multiple failed workflows; not classified as code failures without logs.; GitHub canonical SHA 38aada9d29ce8ee93daa2a33f94038e9e484a3fc: 49 workflow runs reported failure, sampled CI/Full Security Suite/Evidence jobs had 0 steps and no start timestamps. Cannot attribute to application code. See QAT01_CANONICAL_CI_STEPLESS_READBACK_20261104.json.",
       "negative_test_evidence": "Negative preflight fixtures prepared; production/auth/tenant test suite still incomplete.",
       "remaining_blocker": "Executor 3 exact-SHA CircleCI source validation and quality:routes, approved independent test evidence",
       "status": "NOT_VERIFIED"
@@ -346,6 +346,20 @@
       "authenticatedSignedJwtBrowserE2E": "NOT_VERIFIED",
       "independentReviewer": "PENDING",
       "formalAcceptance": "NOT_ACCEPTED"
+    },
+    "QAT01_current_canonical_provider": {
+      "report": "docs/enterprise/phase1-v22/QAT01_CANONICAL_CI_STEPLESS_READBACK_20261104.json",
+      "canonicalHeadObserved": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "actionsRunsFailureAtExactSha": 49,
+      "inspectedCIQualityJobs": [
+        126626798107,
+        126626795792,
+        126626792922
+      ],
+      "observedSteps": 0,
+      "hostedCodeTestResult": "NOT_EXECUTED_OR_UNAVAILABLE",
+      "CircleCIExactSHA": "NOT_VERIFIED",
+      "reviewer": "PENDING"
     }
   }
 }
