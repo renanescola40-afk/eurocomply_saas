@@ -202,3 +202,33 @@ test('all four archived Evidence Factory records are SHA-256-bound to existing i
   assert.notEqual(record.status,'PASS','historical provider readback cannot silently grant PASS');
  }
 });
+
+
+test('existing but foreign G1 proof cannot mint an accepted source control',()=>{
+ const scope=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
+ const bill=scope.mandatory.find(x=>x.id==='BIL-01');
+ bill.evidenceRefs=['docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json'];
+ const r=reconcile({scope,gates,index,expectedSha:index.source.commit_sha});
+ assert.equal(r.valid,false);
+ assert.ok(r.errors.includes('g1_source_acceptance_evidence_invalid'));
+ assert.ok(r.errors.includes('source_pass_unverified:BIL-01'));
+ assert.equal(r.controls.find(x=>x.control_id==='BIL-01').status,'NOT_VERIFIED');
+ assert.equal(r.controls.find(x=>x.control_id==='OPS-01').status,'NOT_VERIFIED',
+   'invalid G1 acceptance scope fails closed as a whole');
+ assert.equal(r.gates.find(x=>x.gate_id==='A-09').status,'NOT_ELIGIBLE');
+ assert.equal(r.summary.gates_accepted,0);
+});
+
+test('G1 content verification preserves the two legitimate frozen source PASS controls',()=>{
+ const scope=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
+ const r=reconcile({scope,gates,index,expectedSha:index.source.commit_sha});
+ assert.equal(r.summary.controls_pass,2);
+ assert.equal(r.controls.find(x=>x.control_id==='BIL-01').status,'PASS');
+ assert.equal(r.controls.find(x=>x.control_id==='OPS-01').status,'PASS');
+ assert.ok(!r.errors.includes('g1_source_acceptance_evidence_invalid'));
+ assert.equal(r.summary.gates_accepted,0);
+});
