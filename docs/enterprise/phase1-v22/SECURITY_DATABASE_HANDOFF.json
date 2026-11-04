@@ -120,6 +120,13 @@
       "fullFileByteClaimsRemain": "103/137",
       "qualifiedReview": "PENDING",
       "replayPerformed": "0/137"
+    },
+    "v25StatementLevelHistoricalProof": {
+      "artifact": "docs/enterprise/phase1-v22/DAT01_EXACT_COMMENT_WRAPPED_SQL_SOURCE_RECOVERY_20261104.json",
+      "verifiedExactSQLSubspanWithCommentOnlyWrapper": 3,
+      "newlyApprovedWholeSourceByteEvidence": 0,
+      "independentAcceptance": "PENDING",
+      "replay": "0/137"
     }
   },
   "acceptance": {
@@ -438,6 +445,76 @@
         "A-03"
       ],
       "next": "Reproduce signed JWT browser/API session and MFA, then real tenant A/B seeded AI System/Document/Storage/export negative tests and independent review on exact CI SHA."
+    },
+    "e1_v25_evidence_and_deployment": {
+      "scope": "E1_ATOMIC_GATES_A01_A02_A03_A04_A12_A15",
+      "canonicalMainSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "sourceEvidenceCommit": "0d449e6b6f1efb7bcd50d7046dd6a812cd769c9b",
+      "sourceArtifact": "docs/enterprise/phase1-v22/DAT01_EXACT_COMMENT_WRAPPED_SQL_SOURCE_RECOVERY_20261104.json",
+      "sourceArtifactGitBlob": "2c5aacdf6bcc2468f3466b49298a577cc65c6989",
+      "dat01StatementLevelExactCommentWrappedCount": 3,
+      "dat01VerifiedStatementVersions": [
+        "20260922112907",
+        "20260929101638",
+        "20261004082501"
+      ],
+      "dat01StrictWholeFileBytesNewlyApproved": 0,
+      "dat01HistoricalWholeFileClaimsUnchanged": 103,
+      "dat01FullFileGapsUnresolved": 34,
+      "dat01NonexactIdentitiesUnreviewed": 25,
+      "dat01ConsolidationGroupsUnreviewed": 2,
+      "postgres17ExecutableReplay": "0/137",
+      "qaSqlDefectReproduced": {
+        "environment": "zrxrrfbllsxtleyxjpsz",
+        "function": "app_private.enterprise_member_can_read(uuid)",
+        "sqlState": "22P02",
+        "actualLiveRuntimeStillUnfixed": true,
+        "sourceFixAlreadyInMain": true,
+        "qaMigrationAppliedPermanently": false,
+        "authenticatedSignedJwtProof": "NOT_VERIFIED"
+      },
+      "qaPreviewBuild": {
+        "provider": "Vercel",
+        "deploymentId": "dpl_4wkcLLNxgYHW9wA1cHzkzCPTABUM",
+        "sourceMainSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+        "state": "ERROR",
+        "causeCode": "QA_ENVIRONMENT_GUARD",
+        "remainingVariableRequirements": [
+          "STRIPE_SECRET_KEY=TEST_ONLY",
+          "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=TEST_ONLY",
+          "STRIPE_WEBHOOK_SECRET=DEDICATED_QA",
+          "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=TEST_ONLY",
+          "CLERK_SECRET_KEY=TEST_ONLY",
+          "NEXT_PUBLIC_APP_URL=HTTPS_NONPRODUCTION_ORIGIN"
+        ],
+        "secretsViewedOrModified": false,
+        "ownerOfReleaseEnvCorrection": "E3",
+        "errorDoesNotProveSourceCompileFailure": true
+      },
+      "githubActionsScopedPrHead": {
+        "testedHeadBeforeHandoff": "b36a113f587e82e48082328d8d2ed9b781821aba",
+        "observedFailedJobRuns": 3,
+        "jobStepsObserved": 0,
+        "codeTestsActuallyRun": false,
+        "currentHeadCI": "NOT_VERIFIED"
+      },
+      "independentReview": {
+        "requestedLogin": "sastestezoer-commits",
+        "approval": "PENDING",
+        "selfApproval": false
+      },
+      "gateResults": {
+        "A01": "NOT_VERIFIED",
+        "A02": "NOT_VERIFIED",
+        "A03": "NOT_VERIFIED",
+        "A04": "NOT_VERIFIED",
+        "A12": "BLOCKED",
+        "A15": "NOT_VERIFIED"
+      },
+      "acceptedE1Gates": 0,
+      "acceptedE1Controls": 0,
+      "formalGateAccepted": false,
+      "e5Handoff": "Review the three provider-to-GitLab SQL statement-byte identity proofs without interpreting them as whole-file or version-qualified migration acceptance. E3 to resolve QA Preview config and run exact-SHA CI and authenticated QA. No new accepted control or gate."
     }
   }
 }
