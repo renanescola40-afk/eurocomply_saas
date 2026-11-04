@@ -69,5 +69,22 @@
     "paidCITasks": 0,
     "productionDeploys": 0,
     "mainMerges": 0
+  },
+  "negativeSyntheticTest": {
+    "environment": "QA PostgreSQL, read-only transaction",
+    "dataset": "Two fully fabricated organizations; one simulated usage row; zero customer records used or mutated",
+    "priorLeftJoin": {
+      "organizationsChecked": 1,
+      "drift": 0
+    },
+    "correctedFullOuterJoin": {
+      "organizationsChecked": 2,
+      "missingUsageRows": 1,
+      "drift": 1
+    },
+    "interpretation": "Original query misses membership-only organization; corrected join detects missing usage counter even when all real QA/PROD snapshots have zero drift",
+    "result": "PASS",
+    "queryMode": "CTEs with VALUES; no tables written; BEGIN READ ONLY; ROLLBACK",
+    "limit": "Synthetic join semantics, not native concurrency/transactional repair proof"
   }
 }
