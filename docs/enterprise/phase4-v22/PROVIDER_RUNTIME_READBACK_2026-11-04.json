@@ -98,6 +98,149 @@
       ],
       "evidence_effect": "Confirms presence of bounded public status, vulnerability intake guidance and SLA disclosures on existing production deployment, not an operational support ticket acknowledgment, on-call rota, incident drill, or acceptance of external SLA obligations.",
       "formal_gate_acceptance_change": 0
+    },
+    "rollback_candidate_preflight_20261104": {
+      "schema": "risck-comply.rollback-candidate-read-only-preflight.v1",
+      "probe_window_utc": "2026-11-04T15:09:37Z–15:11:01Z",
+      "sources": [
+        "Vercel get_deployment read-only deployment/source metadata",
+        "Vercel web_fetch_vercel_url direct immutable deployment GET (four routes each)",
+        "GitHub compare_commits base=priorSHA head=currentProductionSHA"
+      ],
+      "current": {
+        "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+        "provider_target": "production",
+        "provider_state": "READY",
+        "source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+        "health_body_status": "ok",
+        "routes": [
+          {
+            "route": "/api/health",
+            "http_status": 200,
+            "no_store": true,
+            "hsts": true
+          },
+          {
+            "route": "/pt",
+            "http_status": 200,
+            "no_store": true,
+            "hsts": true
+          },
+          {
+            "route": "/pt/login",
+            "http_status": 200,
+            "no_store": true,
+            "hsts": true
+          },
+          {
+            "route": "/pt/pricing",
+            "http_status": 200,
+            "no_store": true,
+            "hsts": true
+          }
+        ]
+      },
+      "previous_production_candidates": [
+        {
+          "deployment_id": "dpl_AhroVz3nzXxnSnYkMkNiZ8vjXtDt",
+          "provider_target": "production",
+          "provider_state": "READY",
+          "source_sha": "bc5a70706aafb8f3a0cd8d9680394b4797834357",
+          "github_compare_status": "ahead",
+          "github_merge_base": "bc5a70706aafb8f3a0cd8d9680394b4797834357",
+          "github_ahead_by_from_target_to_current": 4,
+          "github_behind_by_from_target_to_current": 0,
+          "ancestor_of_current_production_sha": true,
+          "routes": [
+            {
+              "route": "/api/health",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt/login",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt/pricing",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            }
+          ]
+        },
+        {
+          "deployment_id": "dpl_5HWQHYcrwR1regv1qeVSTj2kjxkY",
+          "provider_target": "production",
+          "provider_state": "READY",
+          "source_sha": "66ffc10dbbd89fb71aa4d170c74a128e78066d66",
+          "github_compare_status": "ahead",
+          "github_merge_base": "66ffc10dbbd89fb71aa4d170c74a128e78066d66",
+          "github_ahead_by_from_target_to_current": 33,
+          "github_behind_by_from_target_to_current": 0,
+          "ancestor_of_current_production_sha": true,
+          "routes": [
+            {
+              "route": "/api/health",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt/login",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt/pricing",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            }
+          ]
+        }
+      ],
+      "completed_checks": {
+        "provider_exact_sha_metadata_readback": true,
+        "prior_production_target_ready": true,
+        "prior_source_commit_ancestor_of_published_current": true,
+        "immutable_deployment_direct_public_smoke_routes": 12,
+        "public_route_http_200_count": 12,
+        "public_response_no_store_count": 12,
+        "public_response_hsts_count": 12
+      },
+      "limitations": {
+        "app_authenticated_core_workflow": "NOT_EXECUTED",
+        "target_qa_or_production_runtime_release_sha_via_token": "NOT_ATTESTED",
+        "independent_functional_known_good_approval": "NOT_ISSUED",
+        "database_migration_backward_compatibility": "NOT_TESTED",
+        "target_secrets_and_provider_isolation": "NOT_TESTED",
+        "rollback_alias_mutation": "NOT_EXECUTED",
+        "restoration_alias_mutation": "NOT_EXECUTED",
+        "rehearsal_in_an_isolated_QA_environment": "NOT_EXECUTED",
+        "canonical_candidate_sha_validation": "NOT_EXECUTED",
+        "gitlab_or_circle_ci_exact_sha_approval": "NOT_ATTESTED",
+        "run_rollback_dry_run_script": "NOT_EXECUTED"
+      },
+      "OPS_05_status": "PARTIAL_PROVIDER_PREFLIGHT_NOT_ACCEPTED",
+      "release_status": "NO_GO",
+      "provenance_note": "No link credentials, bearer tokens, environment secret values, production writes, Vercel alias mutations, deployment creations, or paid services."
     }
   },
   "qa": {
