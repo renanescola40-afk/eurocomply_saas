@@ -66,7 +66,8 @@
         "job_logs_url": null,
         "log_download": "BlobNotFound",
         "classification": "RUNNER_ADMISSION_OR_PROVIDER_BLOCKER_SUSPECTED; GitHub billing causality NOT VERIFIED",
-        "safe_action": "Inspect GitHub Actions billing/usage and run admission in account UI; do not re-run failing jobs without provider diagnosis"
+        "safe_action": "Inspect GitHub Actions billing/usage and run admission in account UI; do not re-run failing jobs without provider diagnosis",
+        "mixed_status_observation": "On PR #2604 exact first head 6424193fa1a7c32174b8b23c92bee52eb8ca7ae7, 2 newer qualified-review/closeout-plan checks reported success while several checks failed or were skipped. Failures cannot all be labeled provider billing without per-job admission evidence; successful reports are not human approval or mandatory source proof."
       },
       "note": "Branch protected=false does not prove absence of every effective policy; requested direct ruleset/protection detail is unavailable."
     },
@@ -83,7 +84,21 @@
       "environment_readback": "Project environment variable metadata available; first page and custom QA environment present. No secret values decrypted or negative credential-isolation tests executed.",
       "runtime_alert_test": "NOT_TESTED",
       "rollback_rehearsal": "NOT_TESTED",
-      "health_auth_smoke": "NOT_TESTED"
+      "health_auth_smoke": "NOT_TESTED",
+      "preview_sensitive_metadata_review": {
+        "inspected_on": "2026-11-04",
+        "provenance": "Vercel project environment variable metadata, decrypt=false, first page only",
+        "flagged_preview_key_names": [
+          "SUPABASE_ADMIN_KEY",
+          "SUPABASE_SERVICE_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "RESEND_API_KEY"
+        ],
+        "provider_warning": "securityIssues includes readable-secret for these Preview-targeted variables",
+        "claim_boundary": "A provider securityIssues metadata flag is NOT proof that any secret leaked to clients or logs; account permission scope, project role and deployment bundle must be tested. No values were fetched or stored.",
+        "next_test": "Compare Preview/QA/Production variable targets and effective key identifiers through non-disclosing provider attestations. Verify no privileged key ships to NEXT_PUBLIC/client bundles, then perform QA negative cross-environment tests without retrieving secret values.",
+        "status": "NOT_VERIFIED"
+      }
     },
     "legal": {
       "contracting_identity": "Owner-designated draft exists, authoritative registration details not verified in checked evidence",
@@ -182,11 +197,13 @@
       "accepted_at": null,
       "source_refs": [
         "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
-        "docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md"
+        "docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md",
+        "Vercel project environment metadata readback 2026-11-04 (redacted; no values)"
       ],
       "unmet_requirements": [
         "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
-        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted"
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
+        "Vercel Preview-targeted privileged variable names flagged securityIssues=readable-secret require scoped access/client bundle review; no disclosure or leak established."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
