@@ -1,0 +1,186 @@
+{
+  "schema": "risck-comply.work012-recovery-handoff.v21.0",
+  "createdAt": "2026-11-04T09:14:42.065Z",
+  "owner": "NORMAL_CHAT_MASTER_V21.0",
+  "canonicalPR": {
+    "number": 2598,
+    "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
+    "branch": "integration/enterprise-unified-candidate-20261102",
+    "headBeforeCheckpointCommit": "4230b0148d488a949991ed310d39309f53bcce7f",
+    "headNote": "Commit of this document advances HEAD; retrieve PR provider head after commit; this field is observation SHA not self-referential commit SHA",
+    "draft": true,
+    "merged": false,
+    "approvedReviewsAtObservation": 0
+  },
+  "duplicateCI_PR": {
+    "number": 2595,
+    "head": "a272309b875b2ffac24b54032bb184171f5ec35b",
+    "branch": "ci/circleci-gh-actions-one-shot-20261102",
+    "relation": "historical CI dispatch branch behind canonical PR #2598; DO NOT DOUBLE MERGE"
+  },
+  "main": {
+    "githubSha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+    "gitlabSha": "84a99f813bdce601c119bff27c1d82c5356295d6"
+  },
+  "production": {
+    "vercelProjectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "productionDeploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "deploymentSha": "70d3545f414d063379d481fd238aed563e05edda",
+    "ready": "READY",
+    "alias": "www.risckcomply.com",
+    "isCurrentCandidate": false,
+    "deploymentTriggered": false
+  },
+  "circleci": {
+    "latestVerifiedJob": 431,
+    "jobURL": "https://circleci.com/gh/renanescola40-afk/eurocomply_saas/431",
+    "testedSha": "a272309b875b2ffac24b54032bb184171f5ec35b",
+    "githubContext": "ci/circleci: github-actions-recovery-quality",
+    "result": "FAIL",
+    "firstFailingStep": "UNKNOWN_NO_AUTHENTICATED_JOB_TRANSCRIPT",
+    "rootCause": "UNDETERMINED",
+    "errorText": "NOT_AVAILABLE",
+    "classification": "UNRESOLVED; do not assign code, build, dependency, runner, or billing cause",
+    "access": "No installed/connected CircleCI action and private job web page inaccessible in this normal chat",
+    "newPipelineTriggeredByThisConversation": false,
+    "credits": "historical 19,767 included remaining; CURRENT BALANCE NOT VERIFIED",
+    "correctiveActionForJob431": "NONE; no safe root-cause-specific patch without step log",
+    "checklist": "Read job #431 first failing step with authenticated CircleCI in Work or provider; reproduce/fix exact cause; run a single exact-head quality job only with verified included credits"
+  },
+  "githubActions": {
+    "problem": "workflow runs fail with zero job steps, likely provider runner-admission issue but root cause unconfirmed",
+    "notAuthoritativeAsSourceTest": true,
+    "requiredChecksPreserved": true
+  },
+  "implementedThisTurn": {
+    "files": [
+      "scripts/diagnostics/g5-02-sql-hash-proof.mjs",
+      "scripts/diagnostics/g5-02-sql-hash-proof.test.mjs",
+      "docs/enterprise/closure-v21/DAT01_SOURCE_HASH_TRIAGE_20261104.json",
+      "docs/enterprise/closure-v21/NORMAL_MASTER_TO_WORK012_HANDOFF.json"
+    ],
+    "test": "node --test g5-02-sql-hash-proof.test.mjs",
+    "testResult": "7 PASS / 0 FAIL, Node v22.16.0, local extracted source blobs verified",
+    "commitSha": "THIS_HANDOFF_FILE_SAVED_AS_PART_OF_A_NEW_COMMIT; get canonical current HEAD via GitHub",
+    "rootCause": "Historical DAT01 ledger SQL does not have a source-executable 137-row replay manifest; exact raw SQL hashes not interchangeable with statement arrays",
+    "rollback": "Revert the four-file additive commit through governed PR, no DB mutation"
+  },
+  "dat01": {
+    "status": "BLOCKED",
+    "sample": {
+      "productionVersions": 137,
+      "sourceMapped": 137,
+      "uniqueSourceFiles": 135,
+      "sourceConsolidationGroups": 2,
+      "exactVersionMappings": 112,
+      "nonExactMappings": 25,
+      "sampledVersions": 22,
+      "exactSourceStatementHashMatch": 16,
+      "mismatchedOrChangedStatementSequences": 6,
+      "remainingNotDirectlyCompared": 115,
+      "verifiedReplay": 0,
+      "sampleMethod": "SHA256(UTF8(LF-joined SQL statements stripped of terminating semicolons)) verified against provider statement-hash metadata, with conservative lexer and immutable source Git blobs",
+      "disputedVersions": [
+        "20260726070000",
+        "20260804224915",
+        "20260804230433",
+        "20260805223500",
+        "20260807091341",
+        "20260812160405"
+      ],
+      "historical20260726": {
+        "providerStatements": 15,
+        "currentFileStatements": 20,
+        "sourceVsProviderFirst11StatementDigests": "MATCH",
+        "remaining4Statements": "provider recorded DROP/CREATE POLICY operations with USING (true), whereas current canonical file has changed authenticated guard",
+        "prodAndQaCatalogReadPolicies": "USING (true) independently read back; global permission catalogs; requires independent security review, no cross-tenant leak inferred",
+        "replayApproach": "DO NOT automatically replay weakened historical policies in a new deployment"
+      },
+      "localTest": {
+        "command": "node --test g5-02-sql-hash-proof.test.mjs",
+        "node": "v22.16.0",
+        "passed": 7,
+        "failed": 0,
+        "sourceBlobVerified": true,
+        "testBlobVerified": true,
+        "executionScope": "local ZIP-extracted fixtures; not complete repository CI"
+      }
+    },
+    "sqlReplay": "0/137",
+    "independentAcceptance": "NOT_GRANTED",
+    "proofFile": "docs/enterprise/closure-v21/DAT01_SOURCE_HASH_TRIAGE_20261104.json"
+  },
+  "auditChainIndependentReadback": {
+    "scope": "production metadata READ ONLY",
+    "observedAt": "2026-11-04",
+    "totalEvents": 421,
+    "hashedSigned": 28,
+    "hashedUnsigned": 389,
+    "unhashed": 4,
+    "missingSignatures": 393,
+    "firstSignedAtUTC": "2026-07-09 11:55:29",
+    "lastSignedAtUTC": "2026-09-05 20:07:40",
+    "unsignedAfterLastSignature": 350,
+    "warning": "NO verification of event hash integrity or HMAC; cannot assert tampering. Security owner A-03/SEC-06 investigate signer configuration/history."
+  },
+  "otherWork": {
+    "latestObserved": "#2598 includes read-only DAT-02 QA/PROD zero-drift aggregate, SEC-05 admission verifier and audit-chain guards; these are not formal accepted gates.",
+    "securityOwner": "PR #2596",
+    "billingOwner": "PR #2597",
+    "mfaOwner": "PR #2599",
+    "clientEnvOwner": "PR #2600",
+    "governanceProposal": "PR #2601 DRAFT/unactivated",
+    "duplicateMergeForbidden": true
+  },
+  "gates": {
+    "phase1": {
+      "accepted": 0,
+      "total": 6
+    },
+    "phase2": {
+      "accepted": 0,
+      "total": 6
+    },
+    "phase3": {
+      "accepted": 2,
+      "total": 6
+    },
+    "phase4": {
+      "accepted": 0,
+      "total": 6
+    },
+    "formal": {
+      "accepted": 2,
+      "total": 24,
+      "percent": 8.33,
+      "remaining": 22,
+      "remainingPercent": 91.67,
+      "scope": "frozen historical A-09 BIL-01 and A-18 OPS-01 only"
+    },
+    "atomic": {
+      "accepted": 2,
+      "total": 38,
+      "percent": 5.26,
+      "remaining": 36,
+      "remainingPercent": 94.74
+    },
+    "newlyAccepted": 0
+  },
+  "go": {
+    "internalEnterprise": "NO_GO",
+    "paidCustomer": "NOT_GRANTED",
+    "productionRelease": "NO_GO",
+    "externalProcurement": "NOT_GRANTED"
+  },
+  "governance": {
+    "eligibleHumanFinalMergeOnly": true,
+    "independentReviewRequired": true,
+    "PR2601Active": "NO",
+    "productionWrites": false,
+    "productionDeploy": false,
+    "emails": false,
+    "paidCITasks": false,
+    "StripeLiveTransactions": false
+  },
+  "nextExecutableAction": "Read authenticated CircleCI job431 logs in eligible Work; this normal chat can run read-only DAT01 source diagnostics and QA SQL probes; do not close DAT01 without reviewed complete replay or promote any gate without independent acceptance."
+}
