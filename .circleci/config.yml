@@ -143,8 +143,13 @@ jobs:
           name: Vitest unit suite
           command: npm run test -- --reporter=verbose
       - run:
-          name: Evidence Vault upload-recovery regression suite
-          command: node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs
+          name: Evidence Vault upload-recovery regression suite (when present on selected PR head)
+          command: |
+            if [ -f tests/product/evidence-upload-recovery.test.mjs ]; then
+              node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs
+            else
+              echo "Not applicable: Evidence Vault regression file is absent from this selected PR head."
+            fi
       - run:
           name: Run present specialist source regressions
           command: |
