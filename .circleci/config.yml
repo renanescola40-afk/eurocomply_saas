@@ -790,6 +790,16 @@ workflows:
               only:
                 - ci/circleci-gh-actions-one-shot-20261102
 
+  # Manual opt-in, restricted to the Dependabot branch. Other pipelines unchanged.
+  pr2590-github-actions-manual:
+    when: << pipeline.parameters.run_pr2590_workflow_validation >>
+    jobs:
+      - pr2590-github-actions-validation:
+          filters:
+            branches:
+              only:
+                - dependabot/github_actions/actions/setup-python-7
+
   enterprise-source-proof-manual:
     when: << pipeline.parameters.run_enterprise_source >>
     jobs:
