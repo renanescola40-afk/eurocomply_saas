@@ -127,7 +127,14 @@
     "linked_source_migration": "supabase/migrations/20260726140000_qualified_reviewer_portal.sql",
     "source_handoff": "docs/compliance/QUALIFIED_REVIEW_OPERATIONS_HANDOFF.md",
     "caution": "This demonstrates the six checked public relations are absent on both examined projects; it does not prove the absence of all external signed legal opinions or review systems outside these schemas. Existing portal-based workflow cannot rely on these relations until schema provenance and migration history are reconciled.",
-    "migration_applied": "NOT_VERIFIED",
+    "migration_applied": {
+      "source_version": "20260726140000",
+      "production_migration_ledger_recorded": false,
+      "isolated_qa_migration_ledger_recorded": false,
+      "check": "SELECT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '20260726140000')",
+      "verdict": "NOT_APPLIED_IN_BOTH_EXAMINED_ENVIRONMENTS",
+      "caution": "An unrecorded migration alone does not prove every migration dependency is missing; migration order and intended deployment boundary require independent database reviewer."
+    },
     "production_ddl_or_dml": "NONE",
     "qa_ddl_or_dml": "NONE",
     "cross_lane_handoff": "Executor 3 owns canonical release and database migration orchestration; do not write production schema or apply migrations to force PASS."
