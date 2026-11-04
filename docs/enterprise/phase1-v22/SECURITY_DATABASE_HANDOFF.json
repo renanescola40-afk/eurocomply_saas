@@ -117,7 +117,7 @@
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
       "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
       "provider_readback": "QA and PROD app_private.enterprise_member_can_read MD5 d22463f096060aa22683ee61a74e5875; both security-definer with pg_catalog search_path.",
-      "negative_test_evidence": "SQL fixtures present in #2599; signed-JWT/session-expiry negative E2E still missing.",
+      "negative_test_evidence": "SQL fixtures present in #2599; signed-JWT/session-expiry negative E2E still missing.; 2026-11-04 direct QA synthetic Clerk text claims reproducibly raise 22P02 in enterprise_member_can_read; is_org_member denies false.",
       "remaining_blocker": "Signed JWT signup/login/revocation/MFA AAL2 E2E and qualified review",
       "status": "NOT_VERIFIED"
     },
@@ -154,7 +154,7 @@
       "implementation": "Existing security-definer source retained; no privileged grants changed.",
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
       "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
-      "provider_readback": "Three app_private helpers share QA/PROD definition fingerprints and pg_catalog search_path.",
+      "provider_readback": "Three app_private helpers share QA/PROD definition fingerprints and pg_catalog search_path.; four checked private helpers are SECURITY DEFINER pg_catalog, anon EXECUTE=false, authenticated/service_role=true in both QA and PROD. Does not prove all privileged functions.",
       "negative_test_evidence": "Forbidden RPC and privilege invocation under signed JWT NOT_VERIFIED.",
       "remaining_blocker": "Review all privileged functions/grants and unauthorized invocation",
       "status": "NOT_VERIFIED"
@@ -230,9 +230,9 @@
       "implementation": "New read-only metadata preflight script and six regression tests in focused branch; draft never made executable.",
       "test_command": "node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
       "test_results": "NODE_SYNTAX_CHECK_PASSED; SYNTHETIC_2_ROW_SMOKE_POSITIVE_AND_NEGATIVE_PASSED; FULL_137_REPO_TEST_NOT_RUN_YET",
-      "provider_readback": "Live PROD SQL metadata matches frozen ledger 137/137 across version, name, statement_count, joined_bytes and SHA256, zero mismatches. QA ledger 7 separate records. 34 source bytes unresolved and replay 0/137.",
+      "provider_readback": "Live PROD SQL metadata matches frozen ledger 137/137 across version, name, statement_count, joined_bytes and SHA256, zero mismatches. QA ledger 7 separate records. 34 source bytes unresolved and replay 0/137. Historical SHA pointer correction: archive SHA ...8c94c53d 404; real source Git blob ...1ae57ae3 verified by direct Git blob fetch and live SQL exact-text with one LF. Two historical entries independently revalidated; unchanged 103/137.",
       "negative_test_evidence": "Source proof claims 103/137 archived, 34 unresolved; 0 approved reviewer signatures; no SQL replay; wrong-order/hash/premature-replay tests added.",
-      "remaining_blocker": "Revalidate all 103 source bytes against provider, recover 34, independent identity review 25, two consolidation groups, approved manifest, PG17 137/137 isolated replay, validator PASS",
+      "remaining_blocker": "Revalidate all 103 source bytes against provider, recover 34, independent identity review 25, two consolidation groups, approved manifest, PG17 137/137 isolated replay, validator PASS; qualified reviewer to reconcile incorrect historical source blob identity pointer.",
       "status": "BLOCKED"
     },
     {
@@ -254,5 +254,46 @@
       "remaining_blocker": "Executor 3 exact-SHA CircleCI source validation and quality:routes, approved independent test evidence",
       "status": "NOT_VERIFIED"
     }
-  ]
+  ],
+  "revalidation_20261104": {
+    "supabase_qa_synthetic_clerk_text_claim": {
+      "subject": "user_phase1_clerk_text_synthetic",
+      "tenantFixture": "00000000-0000-4000-8000-000000000001",
+      "mode": "QA_READ_ONLY_SQL_CLAIM_SIMULATION_NOT_SIGNED_JWT",
+      "is_org_member": false,
+      "has_org_role": false,
+      "enterprise_member_can_read": "ERROR_SQLSTATE_22P02",
+      "productionHelperDefinitionEquivalent": true,
+      "risk": "CLIENT_AUTH_COMPATIBILITY_AVAILABILITY_NOT_VERIFIED_TENANT_EXPOSURE",
+      "fixAlreadyPresentInPr2599AndCanonicalCandidate": true,
+      "appliedInProduction": false
+    },
+    "read_only_sql_function_acl": {
+      "prodAndQa": [
+        "enterprise_member_can_read",
+        "enterprise_member_can_manage",
+        "is_org_member",
+        "has_org_role"
+      ],
+      "anonExecuteAll": false,
+      "authenticatedExecuteAll": true,
+      "serviceRoleExecuteAll": true,
+      "securityDefinerAll": true,
+      "lockedSearchPathAll": "pg_catalog",
+      "enterpriseHelpersStillUseAuthUidCast": true,
+      "boundary": "CATALOG_ONLY_NO_SIGNED_JWT_TEST"
+    },
+    "historical_blob_correction": {
+      "version": "20260812160405",
+      "archiveRecordedSha": "1deb46599425646bf1d0ea4f919c24de8c94c53d",
+      "archiveBlobLookup": "404_NOT_FOUND",
+      "correctedGitSha": "1deb46599425646bf1d0ea4f919c24de1ae57ae3",
+      "immutableCommit": "8359b7a79f06babd93ef58d7ae7ff77380532fe2",
+      "sourceEqualToLiveProviderStatementWithOnePrefixLF": true,
+      "secondHistoricalSourceVersionRevalidated": "20260812225906",
+      "proofCountChanged": false,
+      "evidence": "docs/enterprise/phase1-v22/DAT01_HISTORICAL_BLOB_IDENTITY_CORRECTION_20261104.json",
+      "originalArchiveNotMutated": true
+    }
+  }
 }
