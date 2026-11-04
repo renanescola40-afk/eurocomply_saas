@@ -242,7 +242,7 @@
       "dependencies": [],
       "historical_source_status": "NOT_VERIFIED",
       "official_status": "NOT_ACCEPTED",
-      "current_evidence_status": "NOT_VERIFIED",
+      "current_evidence_status": "SOURCE_PR_APPROVED_BUT_DEPLOYED_G1_CRITERION_NOT_VERIFIED",
       "evidence_sha": null,
       "evidence_sha256": [],
       "historical_source_evidence_refs": [],
@@ -251,7 +251,7 @@
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": [],
       "responsible_executor": "E1",
-      "next_eligible_action": "Await E1 proof, then first review pass"
+      "next_eligible_action": "E1 to supply remaining DEPLOYED SEC-05 evidence; do not equate PR #2600 source approval with formal gate acceptance"
     },
     {
       "control_id": "SEC-06",
@@ -669,7 +669,7 @@
       "dependencies": [],
       "historical_source_status": "NOT_VERIFIED",
       "official_status": "NOT_ACCEPTED",
-      "current_evidence_status": "NOT_VERIFIED",
+      "current_evidence_status": "SOURCE_CI_OTHER_SHA_ONLY_CURRENT_MAIN_NOT_VERIFIED",
       "evidence_sha": null,
       "evidence_sha256": [],
       "historical_source_evidence_refs": [],
@@ -678,7 +678,7 @@
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": [],
       "responsible_executor": "E1",
-      "next_eligible_action": "Await exact-SHA E3/E1 test proof"
+      "next_eligible_action": "E3/E1 to provide complete required suite results at frozen current main source SHA, and independent gate review"
     },
     {
       "control_id": "QAT-02",
@@ -1094,15 +1094,15 @@
       "historical_source_gate_status": "NOT_ELIGIBLE",
       "official_status": "NOT_ACCEPTED",
       "accepted": false,
-      "current_evidence_status": "NOT_ELIGIBLE",
+      "current_evidence_status": "PARTIAL_SOURCE_REVIEW_APPROVED_IMPLEMENTATION_STILL_UNVERIFIED",
       "evidence_sha": null,
       "evidence_sha256": null,
       "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
-      "outstanding_dependency": "No all-criterion completed proof of source/client/log secret negatives, deployed server configuration, edge TLS and at-rest protection",
+      "outstanding_dependency": "PR #2600 scanner source patch received native APPROVED at its exact head, but no full source/client/log negative tests, deployed config, TLS at edge, at-rest proof or independent A-04 acceptance",
       "responsible_executor": "E1",
-      "next_eligible_action": "Await E1 proof, then first review pass"
+      "next_eligible_action": "E1 to supply remaining DEPLOYED SEC-05 evidence; do not equate PR #2600 source approval with formal gate acceptance"
     },
     {
       "gate_id": "A-05",
@@ -1299,15 +1299,15 @@
       "historical_source_gate_status": "NOT_ELIGIBLE",
       "official_status": "NOT_ACCEPTED",
       "accepted": false,
-      "current_evidence_status": "NOT_ELIGIBLE",
+      "current_evidence_status": "OTHER_SHA_PARTIAL_SOURCE_CI_REPORTED_EXACT_MAIN_UNVERIFIED",
       "evidence_sha": null,
       "evidence_sha256": null,
       "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
-      "outstanding_dependency": "Complete mandatory application/integration/security regression evidence for exact source SHA absent",
+      "outstanding_dependency": "PR #2613 reports CircleCI job #442 PASS 4244 tests for PR #2597 head c7ea6317..., NOT current main 6f7079a7...; GitHub commit status for PR #2613 has two PENDING CircleCI statuses #446/#447",
       "responsible_executor": "E1",
-      "next_eligible_action": "Await exact-SHA E3/E1 test proof"
+      "next_eligible_action": "E3/E1 to provide complete required suite results at frozen current main source SHA, and independent gate review"
     },
     {
       "gate_id": "A-16",
@@ -1479,5 +1479,52 @@
       "next_eligible_action": "Await verified atomic proofs from E4 before independent acceptance"
     }
   ],
-  "critical_acceptance_boundary": "A historical source PASS and a verified SHA-256 never constitute a new formal Evidence Factory gate PASS. Do not modify source controls or product-ready grouping. Approval must be independent, native GitHub and verified by the official validator before formal promotion."
+  "critical_acceptance_boundary": "A historical source PASS and a verified SHA-256 never constitute a new formal Evidence Factory gate PASS. Do not modify source controls or product-ready grouping. Approval must be independent, native GitHub and verified by the official validator before formal promotion.",
+  "latest_acceptance_update": {
+    "date": "2026-11-04",
+    "source_main_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+    "new_qualified_gate_reviews_observed": 0,
+    "pr2610_a18_gate_review_count": 0,
+    "pr2611_a09_gate_review_count": 0,
+    "source_pr2600_review": {
+      "pr": 2600,
+      "state": "APPROVED",
+      "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2600#pullrequestreview-5771890177",
+      "reviewer": "renansilva2002-tech",
+      "commit_sha": "370c17746eeeb167b6542c6b099598719a9f3082",
+      "accepted_gate": false,
+      "boundary": "CODE PR APPROVAL, NOT SEC-05/A-04 FORMAL GATE REVIEW"
+    },
+    "circleci_source_report": {
+      "source_pr": 2613,
+      "reported_pipeline": 1105,
+      "reported_job": 442,
+      "reported_result": "SUCCESS_PER_PR_DESCRIPTION_NOT_INDEPENDENTLY_CONFIRMED_VIA_CIRCLECI",
+      "reported_test_files": 867,
+      "reported_tests": 4244,
+      "validated_pr_branch": 2597,
+      "validated_source_sha": "c7ea6317c123c25863b08426afa6248b24dc8e29",
+      "ci_config_sha": "5bc43ee590b0d4fc031a2ee39cacf8e209a4c0a9",
+      "current_main_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "exact_main_evidence": false,
+      "pr2613_latest_statuses": [
+        {
+          "context": "ci/circleci: pr-head-validation",
+          "state": "pending",
+          "url": "https://circleci.com/gh/renanescola40-afk/eurocomply_saas/446"
+        },
+        {
+          "context": "ci/circleci: pr-source-validation",
+          "state": "pending",
+          "url": "https://circleci.com/gh/renanescola40-afk/eurocomply_saas/447"
+        }
+      ]
+    },
+    "validation_environment": {
+      "repository_worktree_present": false,
+      "github_network_available_in_container": false,
+      "official_node_validator_executed": false
+    },
+    "no_repeated_review_request": true
+  }
 }
