@@ -32,6 +32,52 @@ parameters:
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
+  pr-source-validation:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact SHA and reject provider credentials
+          command: |
+            set -euo pipefail
+            test -n "${CIRCLE_SHA1:-}"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            case "${CIRCLE_BRANCH:-}" in
+              ci/circleci-pr-validation-20261104|dependabot/github_actions/actions/setup-python-7|dependabot/npm_and_yarn/supabase-0f67fd58a4|phase1/security-dat01-v22|acceptance/a18-ops01-review-packet-20261104|acceptance/a09-bil01-review-packet-20261104|test/phase2-evidence-vault-wiring-regex-20261104|normal2/product-enterprise-v18-checkout-price-authority-20261102|agent/v20-delegated-merge-policy-20261103|agent/sec05-client-env-failclosed-20261103) ;;
+              *) echo "Branch is outside the approved PR-validation scope" >&2; exit 1 ;;
+            esac
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "Provider credential is forbidden in source-only PR validation: $key" >&2
+                exit 1
+              fi
+            done
+            mkdir -p artifacts/pr-validation
+            printf '{"sha":"%s","branch":"%s","scope":"source-only"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/pr-validation/identity.json
+      - run:
+          name: Install deterministic dependencies without lifecycle scripts
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Verify lockfile alignment
+          command: npm run security:package-lock
+      - run:
+          name: Lint
+          command: npm run lint
+      - run:
+          name: Typecheck
+          command: npm run typecheck
+      - run:
+          name: Vitest unit suite
+          command: npm run test -- --reporter=dot
+      - run:
+          name: Evidence Vault upload-recovery regression suite
+          command: node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs
+      - store_artifacts:
+          path: artifacts/pr-validation
+          destination: pr-validation-exact-sha
   synthetic-backup-components:
     machine:
       image: ubuntu-2204:2026.05.1
@@ -835,4 +881,20 @@ workflows:
 # G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
+  pr-source-validation:
+    jobs:
+      - pr-source-validation:
+          filters:
+            branches:
+              only:
+                - ci/circleci-pr-validation-20261104
+                - dependabot/github_actions/actions/setup-python-7
+                - dependabot/npm_and_yarn/supabase-0f67fd58a4
+                - phase1/security-dat01-v22
+                - acceptance/a18-ops01-review-packet-20261104
+                - acceptance/a09-bil01-review-packet-20261104
+                - test/phase2-evidence-vault-wiring-regex-20261104
+                - normal2/product-enterprise-v18-checkout-price-authority-20261102
+                - agent/v20-delegated-merge-policy-20261103
+                - agent/sec05-client-env-failclosed-20261103
 
