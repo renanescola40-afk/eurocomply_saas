@@ -368,5 +368,41 @@
     "application_http_status": "NOT_ATTESTED",
     "source_authorization": "src/app/api/ai-systems/route.ts calls requireApiUser() before organization access",
     "caution": "A 401 from Vercel deployment protection is not an application auth 401; no tenant isolation PASS."
+  },
+  "environment_provenance_20261104": {
+    "checked_at_utc": "2026-11-04T14:12:13Z",
+    "supabase_source": "Supabase connected list_projects/get_project, read-only metadata",
+    "vercel_source": "Vercel QA-scoped env-key readback + public route Content-Security-Policy",
+    "qa": {
+      "supabase_project_ref": "zrxrrfbllsxtleyxjpsz",
+      "supabase_project_name": "risck-comply-v15c-isolated-qa-20261022",
+      "supabase_status": "ACTIVE_HEALTHY",
+      "supabase_region": "eu-west-1",
+      "public_env_url_keys_verified": [
+        "SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_URL"
+      ],
+      "public_env_url_refs_both_match_qa": true,
+      "browser_csp_supabase_refs": [
+        "zrxrrfbllsxtleyxjpsz"
+      ],
+      "browser_csp_contains_production_ref": false
+    },
+    "production": {
+      "supabase_project_ref": "tganhbbhfxcpblmgqprg",
+      "supabase_project_name": "eurocomply_saas",
+      "supabase_status": "ACTIVE_HEALTHY",
+      "supabase_region": "eu-west-1",
+      "browser_csp_supabase_refs": [
+        "tganhbbhfxcpblmgqprg"
+      ],
+      "browser_csp_contains_qa_ref": false,
+      "production_server_credential_ref": "NOT_VERIFIED_WITH_THIS_METHOD"
+    },
+    "status": "POSITIVE_PARTIAL_PROVENANCE_NOT_FULL_NEGATIVE_ISOLATION",
+    "accepted_security_limit": "The separate frontend CSP allowlists and QA public URL values support app environment segregation but do not prove cross-environment key rejection, admin token isolation, tenant security or DB IAM controls.",
+    "production_data_access": "NONE",
+    "secret_values_recorded": false,
+    "OPS_06_formal_status": "NOT_VERIFIED"
   }
 }
