@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.enterprise-gate-closure-v23.acceptance-ledger.v1",
-  "generated_at": "2026-11-04T14:00:33.016Z",
+  "generated_at": "2026-11-04T14:03:22.575Z",
   "repository": "renanescola40-afk/eurocomply_saas",
   "canonical_candidate_branch": "integration/enterprise-unified-candidate-20261102",
   "candidate_commit_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
@@ -207,7 +207,23 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No accepted current-source secret-scan results; no proved client-bundle/log negative tests, deployed TLS + at-rest storage attestation and reviewer approval. Current GitHub Gitleaks job failed, with log download unavailable.",
-      "next_acceptance_action": "VE1 provide exact-SHA scanner, bundle/log negative tests, TLS and encryption provider readback; qualified independent reviewer to verify."
+      "next_acceptance_action": "VE1 provide exact-SHA scanner, bundle/log negative tests, TLS and encryption provider readback; qualified independent reviewer to verify.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/SEC05_PROVIDER_TRANSPORT_PREACCEPTANCE_2026-11-04.json",
+        "docs/enterprise/evidence/SEC05_QA_SSL_POSTREFRESH_PREACCEPTANCE_2026-11-04.json",
+        "docs/enterprise/closure-v20/QA_PRODUCT_SEC05_READONLY_INDEPENDENT_20261104.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "QA and production sampled PostgreSQL connections negotiated TLSv1.3",
+        "Vercel domain certificate metadata exists",
+        "QA SSL enforcement owner-dashboard observation exists, but is not a management API attestation"
+      ],
+      "remaining_conditions": [
+        "Real trusted-runner non-TLS rejection negative probe was inconclusive (DNS unavailable)",
+        "Production SSL enforcement was reported off in existing preacceptance record",
+        "Browser bundle/log secret negative scan and exact-SHA green CI absent",
+        "Project-specific encryption-at-rest attestation and independent approval absent"
+      ]
     },
     {
       "control_id": "SEC-06",
@@ -290,7 +306,16 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Authenticated E2E plus persisted record and isolation evidence.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-02 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-02 at exact applicable SHA, then qualified independent review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/closure-v20/QA_PRODUCT_SEC05_READONLY_INDEPENDENT_20261104.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "QA source catalog found 15 of 17 expected tables, with RLS/FORCE RLS on present ones; two pre-promotion relations absent from both QA and production"
+      ],
+      "remaining_conditions": [
+        "Authenticated inventory/risk/governance persistence and role decisions plus runtime release exact-SHA and complete migrations"
+      ]
     },
     {
       "control_id": "FUN-03",
@@ -319,7 +344,16 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Multi-role approval/deny E2E and durable audit trail.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-03 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for FUN-03 at exact applicable SHA, then qualified independent review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/closure-v20/QA_PRODUCT_SEC05_READONLY_INDEPENDENT_20261104.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "QA source catalog found 15 of 17 expected tables, with RLS/FORCE RLS on present ones; two pre-promotion relations absent from both QA and production"
+      ],
+      "remaining_conditions": [
+        "Authenticated inventory/risk/governance persistence and role decisions plus runtime release exact-SHA and complete migrations"
+      ]
     },
     {
       "control_id": "FUN-04",
@@ -429,7 +463,17 @@
       "accepted_by_historical": "G1 Engineering, owner-authorized acceptance (independent Stripe LIVE + Vercel provider readbacks; governed PR integration pending)",
       "accepted_at_historical": "2026-10-22T21:03:16.517Z",
       "missing_required_evidence": "Independent qualified approval URL, source-bound gate acceptance artifact + digest and fresh Vercel production price-binding attestation absent. Historical source PASS is not a new Evidence Factory acceptance.",
-      "next_acceptance_action": "VE3 provide source-bound artifact and independently verified environment price binding; qualified human reviewer review A-09 in acceptance-only PR."
+      "next_acceptance_action": "VE3 provide source-bound artifact and independently verified environment price binding; qualified human reviewer review A-09 in acceptance-only PR.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL2_BILLING_QA_READ_ONLY_CHECK_2026-11-03.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Independent current Stripe LIVE read-only API refresh matched 6 active Prices and 3 active Products"
+      ],
+      "remaining_conditions": [
+        "Fresh Vercel six production environment price-key bindings in provider readback",
+        "Qualified independent human review against exact applicable source and hashed gate acceptance artifact"
+      ]
     },
     {
       "control_id": "BIL-02",
@@ -454,7 +498,19 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Genuine Stripe test event, webhook delivery IDs and idempotency readback.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for BIL-02 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for BIL-02 at exact applicable SHA, then qualified independent review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL_PRODUCT_TRUST_BIL02_TEST_BLOCKER_2026-11-04.json",
+        "docs/enterprise/evidence/NORMAL2_BILLING_QA_READ_ONLY_CHECK_2026-11-03.json",
+        "docs/enterprise/closure-20261103/STRIPE_TEST_WEBHOOK_BLOCKER_READBACK.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "One Stripe TEST webhook endpoint exists but is disabled and targets an old preview",
+        "Supabase QA had 0 subscriptions, webhook events and checkout attempts at readback"
+      ],
+      "remaining_conditions": [
+        "Genuine signed TEST event, invalid signature rejection, duplicate replay and QA durable event/entitlement proof"
+      ]
     },
     {
       "control_id": "BIL-03",
@@ -483,7 +539,19 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Exact-SHA Stripe TEST event linked to QA durable DB state and app entitlement.",
-      "next_acceptance_action": "Assigned VE2: deliver all required proof for BIL-03 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE2: deliver all required proof for BIL-03 at exact applicable SHA, then qualified independent review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL_PRODUCT_TRUST_BIL02_TEST_BLOCKER_2026-11-04.json",
+        "docs/enterprise/evidence/NORMAL2_BILLING_QA_READ_ONLY_CHECK_2026-11-03.json",
+        "docs/enterprise/closure-20261103/STRIPE_TEST_WEBHOOK_BLOCKER_READBACK.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "One Stripe TEST webhook endpoint exists but is disabled and targets an old preview",
+        "Supabase QA had 0 subscriptions, webhook events and checkout attempts at readback"
+      ],
+      "remaining_conditions": [
+        "Genuine signed TEST event, invalid signature rejection, duplicate replay and QA durable event/entitlement proof"
+      ]
     },
     {
       "control_id": "BIL-04",
@@ -576,7 +644,19 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "DAT-01 source BLOCKED: 137 production migration versions not reconciled with QA (0 shared with seven QA versions); approved canonical migration manifest, replay, hashes and schema parity absent.",
-      "next_acceptance_action": "VE1 supply reviewed 137/137 provenance, exact-SHA isolated QA replay and accepted parity proof; then independent gate review."
+      "next_acceptance_action": "VE1 supply reviewed 137/137 provenance, exact-SHA isolated QA replay and accepted parity proof; then independent gate review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/closure-v21/DAT01_137_LEDGER_SOURCE_HASH_TRIAGE_COMPLETE_20261104.json",
+        "docs/enterprise/closure-v21/DAT01_EXACT_SOURCE_RECONCILIATION_SUMMARY_20261104.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Frozen provider 137-version hash crosswalk processed; 100 representations matched archived hashes, 37 unmatched; 25 nonexact version/name mappings remain unapproved"
+      ],
+      "remaining_conditions": [
+        "37 unmatched historical SQL representations or equivalent qualified source proof",
+        "Approval of nonexact identities and two consolidations",
+        "Reviewed executable 137/137 manifest, isolated PostgreSQL replay, schema parity and independent approval"
+      ]
     },
     {
       "control_id": "DAT-02",
@@ -603,7 +683,18 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Native PostgreSQL concurrent-session tests and repeatable invariant queries.",
-      "next_acceptance_action": "Assigned VE3: deliver all required proof for DAT-02 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE3: deliver all required proof for DAT-02 at exact applicable SHA, then qualified independent review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL1_SECURITY_DATA_QA_READBACK_20261103.md",
+        "docs/enterprise/phase3-v22/MASTER_INTEGRATION_CHECKPOINT.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Read-only QA/production counter snapshots found no current aggregate drift"
+      ],
+      "remaining_conditions": [
+        "Exact SHA native concurrent transaction, rollback, race and audit durability tests",
+        "Required DAT-01 provenance/replay acceptance before downstream claims"
+      ]
     },
     {
       "control_id": "DAT-03",
@@ -630,7 +721,18 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Rollback/atomicity negative cases, constraint assertions and audit-chain validation.",
-      "next_acceptance_action": "Assigned VE3: deliver all required proof for DAT-03 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE3: deliver all required proof for DAT-03 at exact applicable SHA, then qualified independent review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL1_SECURITY_DATA_QA_READBACK_20261103.md",
+        "docs/enterprise/phase3-v22/MASTER_INTEGRATION_CHECKPOINT.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Read-only QA/production counter snapshots found no current aggregate drift"
+      ],
+      "remaining_conditions": [
+        "Exact SHA native concurrent transaction, rollback, race and audit durability tests",
+        "Required DAT-01 provenance/replay acceptance before downstream claims"
+      ]
     },
     {
       "control_id": "DAT-04",
@@ -851,7 +953,16 @@
       "accepted_by_historical": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
       "accepted_at_historical": "2026-10-22T20:52:14.027Z",
       "missing_required_evidence": "Independent qualified approval URL and exact-SHA gate acceptance artifact + digest absent. The deployed production source SHA is frozen 70d3545f..., distinct from candidate 1ec52301..., which is valid for identity proof only.",
-      "next_acceptance_action": "VE3 prepare A-18 reviewed production-identity package; qualified reviewer verify currently READY deployment, alias and frozen SHA."
+      "next_acceptance_action": "VE3 prepare A-18 reviewed production-identity package; qualified reviewer verify currently READY deployment, alias and frozen SHA.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Current Vercel API confirms production READY and exact baseline SHA with www.risckcomply.com deployment alias"
+      ],
+      "remaining_conditions": [
+        "Independent qualified reviewer, genuine GitHub review approval URL and gate acceptance artifact digest"
+      ]
     },
     {
       "control_id": "OPS-02",
@@ -874,7 +985,18 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "GitHub branch protection readback returns 403 Resource not accessible by integration; repository rulesets returns 403 GitHub Pro required. Mandatory review/check enforcement and release decision remain unproved; candidate PR #2598 has zero submitted reviews.",
-      "next_acceptance_action": "VE4 provide native ruleset/branch protection readback or independently audited equivalent, non-bypass check enforcement, qualified review and release decision; VE3 supply exact-SHA CI results."
+      "next_acceptance_action": "VE4 provide native ruleset/branch protection readback or independently audited equivalent, non-bypass check enforcement, qualified review and release decision; VE3 supply exact-SHA CI results.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/PLATFORM_RULESETS_EVIDENCE_FALLBACK.md"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Rulesets evidence fallback procedure is documented"
+      ],
+      "remaining_conditions": [
+        "Effective native protection ruleset readback with bypass visibility",
+        "Required code-owner/stale review/check enforcement and explicit governed release decision",
+        "Approval from a qualified separate human reviewer"
+      ]
     },
     {
       "control_id": "OPS-03",
@@ -902,7 +1024,16 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Runtime smoke results and health/endpoints with exact deployment identity.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for OPS-03 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for OPS-03 at exact applicable SHA, then qualified independent review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL1_SECURITY_DATA_QA_READBACK_20261103.md"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Production deployment metadata observed, but no active authenticated smoke or incident drill"
+      ],
+      "remaining_conditions": [
+        "Current exact deployed SHA runtime smoke; monitoring alert and support/incident handling proof"
+      ]
     },
     {
       "control_id": "OPS-04",
@@ -927,7 +1058,16 @@
       "accepted_by_historical": null,
       "accepted_at_historical": null,
       "missing_required_evidence": "No complete accepted proof for: Provider alert check, incident drill, runbook and support route.",
-      "next_acceptance_action": "Assigned VE4: deliver all required proof for OPS-04 at exact applicable SHA, then qualified independent review."
+      "next_acceptance_action": "Assigned VE4: deliver all required proof for OPS-04 at exact applicable SHA, then qualified independent review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL1_SECURITY_DATA_QA_READBACK_20261103.md"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Production deployment metadata observed, but no active authenticated smoke or incident drill"
+      ],
+      "remaining_conditions": [
+        "Current exact deployed SHA runtime smoke; monitoring alert and support/incident handling proof"
+      ]
     },
     {
       "control_id": "OPS-05",
@@ -1247,7 +1387,23 @@
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
       "dependencies": [],
       "missing_required_evidence": "No accepted current-source secret-scan results; no proved client-bundle/log negative tests, deployed TLS + at-rest storage attestation and reviewer approval. Current GitHub Gitleaks job failed, with log download unavailable.",
-      "next_acceptance_action": "VE1 provide exact-SHA scanner, bundle/log negative tests, TLS and encryption provider readback; qualified independent reviewer to verify."
+      "next_acceptance_action": "VE1 provide exact-SHA scanner, bundle/log negative tests, TLS and encryption provider readback; qualified independent reviewer to verify.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/SEC05_PROVIDER_TRANSPORT_PREACCEPTANCE_2026-11-04.json",
+        "docs/enterprise/evidence/SEC05_QA_SSL_POSTREFRESH_PREACCEPTANCE_2026-11-04.json",
+        "docs/enterprise/closure-v20/QA_PRODUCT_SEC05_READONLY_INDEPENDENT_20261104.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "QA and production sampled PostgreSQL connections negotiated TLSv1.3",
+        "Vercel domain certificate metadata exists",
+        "QA SSL enforcement owner-dashboard observation exists, but is not a management API attestation"
+      ],
+      "remaining_conditions": [
+        "Real trusted-runner non-TLS rejection negative probe was inconclusive (DNS unavailable)",
+        "Production SSL enforcement was reported off in existing preacceptance record",
+        "Browser bundle/log secret negative scan and exact-SHA green CI absent",
+        "Project-specific encryption-at-rest attestation and independent approval absent"
+      ]
     },
     {
       "gate_id": "A-05",
@@ -1301,7 +1457,16 @@
         "SEC-02"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: FUN-01, SEC-03, FUN-02, SEC-02; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for FUN-02, FUN-03; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for FUN-02, FUN-03; independent reviewer to decide after complete proof.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/closure-v20/QA_PRODUCT_SEC05_READONLY_INDEPENDENT_20261104.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "QA source catalog found 15 of 17 expected tables, with RLS/FORCE RLS on present ones; two pre-promotion relations absent from both QA and production"
+      ],
+      "remaining_conditions": [
+        "Authenticated inventory/risk/governance persistence and role decisions plus runtime release exact-SHA and complete migrations"
+      ]
     },
     {
       "gate_id": "A-07",
@@ -1377,7 +1542,17 @@
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
       "dependencies": [],
       "missing_required_evidence": "Independent qualified approval URL, source-bound gate acceptance artifact + digest and fresh Vercel production price-binding attestation absent. Historical source PASS is not a new Evidence Factory acceptance.",
-      "next_acceptance_action": "VE3 provide source-bound artifact and independently verified environment price binding; qualified human reviewer review A-09 in acceptance-only PR."
+      "next_acceptance_action": "VE3 provide source-bound artifact and independently verified environment price binding; qualified human reviewer review A-09 in acceptance-only PR.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL2_BILLING_QA_READ_ONLY_CHECK_2026-11-03.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Independent current Stripe LIVE read-only API refresh matched 6 active Prices and 3 active Products"
+      ],
+      "remaining_conditions": [
+        "Fresh Vercel six production environment price-key bindings in provider readback",
+        "Qualified independent human review against exact applicable source and hashed gate acceptance artifact"
+      ]
     },
     {
       "gate_id": "A-10",
@@ -1404,7 +1579,19 @@
         "DAT-01"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: BIL-02, DAT-01; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for BIL-02, BIL-03; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE2 to provide source-bound evidence for BIL-02, BIL-03; independent reviewer to decide after complete proof.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL_PRODUCT_TRUST_BIL02_TEST_BLOCKER_2026-11-04.json",
+        "docs/enterprise/evidence/NORMAL2_BILLING_QA_READ_ONLY_CHECK_2026-11-03.json",
+        "docs/enterprise/closure-20261103/STRIPE_TEST_WEBHOOK_BLOCKER_READBACK.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "One Stripe TEST webhook endpoint exists but is disabled and targets an old preview",
+        "Supabase QA had 0 subscriptions, webhook events and checkout attempts at readback"
+      ],
+      "remaining_conditions": [
+        "Genuine signed TEST event, invalid signature rejection, duplicate replay and QA durable event/entitlement proof"
+      ]
     },
     {
       "gate_id": "A-11",
@@ -1454,7 +1641,19 @@
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
       "dependencies": [],
       "missing_required_evidence": "DAT-01 source BLOCKED: 137 production migration versions not reconciled with QA (0 shared with seven QA versions); approved canonical migration manifest, replay, hashes and schema parity absent.",
-      "next_acceptance_action": "VE1 supply reviewed 137/137 provenance, exact-SHA isolated QA replay and accepted parity proof; then independent gate review."
+      "next_acceptance_action": "VE1 supply reviewed 137/137 provenance, exact-SHA isolated QA replay and accepted parity proof; then independent gate review.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/closure-v21/DAT01_137_LEDGER_SOURCE_HASH_TRIAGE_COMPLETE_20261104.json",
+        "docs/enterprise/closure-v21/DAT01_EXACT_SOURCE_RECONCILIATION_SUMMARY_20261104.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Frozen provider 137-version hash crosswalk processed; 100 representations matched archived hashes, 37 unmatched; 25 nonexact version/name mappings remain unapproved"
+      ],
+      "remaining_conditions": [
+        "37 unmatched historical SQL representations or equivalent qualified source proof",
+        "Approval of nonexact identities and two consolidations",
+        "Reviewed executable 137/137 manifest, isolated PostgreSQL replay, schema parity and independent approval"
+      ]
     },
     {
       "gate_id": "A-13",
@@ -1480,7 +1679,18 @@
         "DAT-01"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: DAT-01; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE3 to provide source-bound evidence for DAT-02, DAT-03; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE3 to provide source-bound evidence for DAT-02, DAT-03; independent reviewer to decide after complete proof.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL1_SECURITY_DATA_QA_READBACK_20261103.md",
+        "docs/enterprise/phase3-v22/MASTER_INTEGRATION_CHECKPOINT.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Read-only QA/production counter snapshots found no current aggregate drift"
+      ],
+      "remaining_conditions": [
+        "Exact SHA native concurrent transaction, rollback, race and audit durability tests",
+        "Required DAT-01 provenance/replay acceptance before downstream claims"
+      ]
     },
     {
       "gate_id": "A-14",
@@ -1607,7 +1817,16 @@
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
       "dependencies": [],
       "missing_required_evidence": "Independent qualified approval URL and exact-SHA gate acceptance artifact + digest absent. The deployed production source SHA is frozen 70d3545f..., distinct from candidate 1ec52301..., which is valid for identity proof only.",
-      "next_acceptance_action": "VE3 prepare A-18 reviewed production-identity package; qualified reviewer verify currently READY deployment, alias and frozen SHA."
+      "next_acceptance_action": "VE3 prepare A-18 reviewed production-identity package; qualified reviewer verify currently READY deployment, alias and frozen SHA.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Current Vercel API confirms production READY and exact baseline SHA with www.risckcomply.com deployment alias"
+      ],
+      "remaining_conditions": [
+        "Independent qualified reviewer, genuine GitHub review approval URL and gate acceptance artifact digest"
+      ]
     },
     {
       "gate_id": "A-19",
@@ -1630,7 +1849,18 @@
       "candidate_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
       "dependencies": [],
       "missing_required_evidence": "GitHub branch protection readback returns 403 Resource not accessible by integration; repository rulesets returns 403 GitHub Pro required. Mandatory review/check enforcement and release decision remain unproved; candidate PR #2598 has zero submitted reviews.",
-      "next_acceptance_action": "VE4 provide native ruleset/branch protection readback or independently audited equivalent, non-bypass check enforcement, qualified review and release decision; VE3 supply exact-SHA CI results."
+      "next_acceptance_action": "VE4 provide native ruleset/branch protection readback or independently audited equivalent, non-bypass check enforcement, qualified review and release decision; VE3 supply exact-SHA CI results.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/PLATFORM_RULESETS_EVIDENCE_FALLBACK.md"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Rulesets evidence fallback procedure is documented"
+      ],
+      "remaining_conditions": [
+        "Effective native protection ruleset readback with bypass visibility",
+        "Required code-owner/stale review/check enforcement and explicit governed release decision",
+        "Approval from a qualified separate human reviewer"
+      ]
     },
     {
       "gate_id": "A-20",
@@ -1656,7 +1886,16 @@
         "QAT-02"
       ],
       "missing_required_evidence": "Unaccepted control prerequisites: QAT-02; child proof and qualified review still absent.",
-      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for OPS-03, OPS-04; independent reviewer to decide after complete proof."
+      "next_acceptance_action": "Assigned VE4 to provide source-bound evidence for OPS-03, OPS-04; independent reviewer to decide after complete proof.",
+      "additional_existing_evidence_refs": [
+        "docs/enterprise/evidence/NORMAL1_SECURITY_DATA_QA_READBACK_20261103.md"
+      ],
+      "verified_partial_evidence_not_pass": [
+        "Production deployment metadata observed, but no active authenticated smoke or incident drill"
+      ],
+      "remaining_conditions": [
+        "Current exact deployed SHA runtime smoke; monitoring alert and support/incident handling proof"
+      ]
     },
     {
       "gate_id": "A-21",
@@ -1775,5 +2014,6 @@
     "This audit report itself is not an acceptance and must not be used to force a gate PASS.",
     "Current provider readbacks are described in this report but have not been approved as canonical acceptance artifacts.",
     "Provider and CI state may change after this snapshot."
-  ]
+  ],
+  "evidence_discovery_note": "Read-only cross-check of additional 2026-11-04 preacceptance, historical SQL hash triage, TEST billing and RLS readbacks; records retain NOT_ACCEPTED. Evidence remains source- and environment-specific, not automatic current candidate PASS."
 }
