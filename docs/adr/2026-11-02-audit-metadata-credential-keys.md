@@ -129,3 +129,24 @@ and validate rollback and customer error behavior BEFORE any release.
 Historical unsigned or hashless records require separate owner-approved
 disposition; this source change does not sign historical events. SEC-06 and
 A-03 remain NOT_VERIFIED.
+
+
+## Enterprise audit-chain verifier: fail-closed HMAC / legacy completeness (2026-11-04)
+
+The common verifier previously returned ok=true when the signing key was absent,
+without performing any HMAC verification. The route also excluded hashless
+historical events while reporting verification.ok. Under explicit Enterprise
+release mode (RISCK_COMPLY_ENTERPRISE_RELEASE=true or RELEASE_TARGET=enterprise)
+the route now requires an HMAC verification key, reports
+signatureVerificationUnavailable, and reports ok=false for any unhashed legacy
+records excluded from the loaded verification window. The shared verifier
+remains backward compatible for callers not requesting requireSignatures=true.
+
+Four regression cases have been authored for strict-mode no-key, signed and
+unsigned records, Enterprise route flags, and legacy-event handling. No exact
+SHA Vitest, full CI, CircleCI, signed JWT E2E, or cryptographic readback from
+PROD has been executed; do not claim gate acceptance. The bounded route does
+not validate an independent external trust anchor or full historical coverage.
+Production historical unsigned/hashless events require governed disposition.
+Roll back by governed PR revert; do not disable the guard merely to obtain PASS.
+A-03/SEC-06 remains NOT_VERIFIED.
