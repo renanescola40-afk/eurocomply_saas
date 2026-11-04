@@ -183,6 +183,42 @@
         "qa_private_unauthenticated_api_test": "INCONCLUSIVE_VERCEL_PROTECTION_LAYER",
         "note": "Public reachability only. No authenticated flows verified.",
         "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      },
+      "production_rollback_immutable_preflight_20261104": {
+        "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "current_production": {
+          "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+          "source_sha": "70d3545f414d063379d481fd238aed563e05edda"
+        },
+        "two_prior_production_deployments": [
+          {
+            "id": "dpl_AhroVz3nzXxnSnYkMkNiZ8vjXtDt",
+            "source_sha": "bc5a70706aafb8f3a0cd8d9680394b4797834357",
+            "github_ancestor": true,
+            "commit_distance": 4
+          },
+          {
+            "id": "dpl_5HWQHYcrwR1regv1qeVSTj2kjxkY",
+            "source_sha": "66ffc10dbbd89fb71aa4d170c74a128e78066d66",
+            "github_ancestor": true,
+            "commit_distance": 33
+          }
+        ],
+        "direct_immutable_public_routes": [
+          "/api/health",
+          "/pt",
+          "/pt/login",
+          "/pt/pricing"
+        ],
+        "verified_responses": 12,
+        "status": "12/12 HTTP 200 with no-store + HSTS; GitHub ancestry verified via compare_commits",
+        "dry_run_script_run": false,
+        "actual_alias_rollback": false,
+        "actual_alias_restore": false,
+        "authenticated_customer_workflow": false,
+        "target_accepted_as_known_good": false,
+        "exact_candidate_release_validated": false,
+        "formal_effect": "PARTIAL_OPS-05_EVIDENCE_ONLY_NO_GATE_ACCEPTANCE"
       }
     },
     "legal": {
@@ -399,7 +435,8 @@
       "unmet_requirements": [
         "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
         "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
-        "Retained rollback evidence status=Open (generated 2026-07-06); not a recently executed release-bound QA rollback or acceptance."
+        "Retained rollback evidence status=Open (generated 2026-07-06); not a recently executed release-bound QA rollback or acceptance.",
+        "Confirmed source-ancestry of two prior READY production-target Vercel deployments and public GET smoke 12/12 across previous+current immutable builds, but no isolated rollback/recovery rehearsal and no previous known-good functional acceptance."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
@@ -601,7 +638,8 @@
       "blockers": [
         "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
         "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
-        "QA environment cannot currently pass protected readiness because effective Upstash Redis configuration is missing; deploy-source SHA unverified."
+        "QA environment cannot currently pass protected readiness because effective Upstash Redis configuration is missing; deploy-source SHA unverified.",
+        "Provider-verified previous production source SHAs are ancestors and health routes pass; mandatory rollback alias-switch/restore rehearsal and QA credential isolation negative tests are still missing."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
