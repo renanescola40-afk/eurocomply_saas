@@ -1,13 +1,13 @@
 {
-  "schema": "risck-comply.work012-recovery-handoff.v21.2",
+  "schema": "risck-comply.work012-recovery-handoff.v21.3",
   "createdAt": "2026-11-04T09:14:42.065Z",
   "owner": "NORMAL_CHAT_MASTER_V21.0",
   "canonicalPR": {
     "number": 2598,
     "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
     "branch": "integration/enterprise-unified-candidate-20261102",
-    "headBeforeCheckpointCommit": "329ca4ea33745143eae5df76f027ee8d599cba6f",
-    "headNote": "Self-referential current commit not available in document content; fetch latest PR #2598 HEAD from GitHub.",
+    "headBeforeCheckpointCommit": "dfc09f62b42c44241d2a0366ca2bc48c3145f42a",
+    "headNote": "Retrieve authoritative latest head from GET /git/ref/heads/integration/enterprise-unified-candidate-20261102; this is the pre-document source SHA.",
     "draft": true,
     "merged": false,
     "approvedReviewsAtObservation": 0,
@@ -85,7 +85,14 @@
     "sourceRepresentationRegression": "tests/release/dat01-source-parity-negative.test.mjs",
     "verifiedLocalCommand": "node --test scripts/diagnostics/g5-02-sql-hash-proof.test.mjs tests/release/dat01-source-parity-negative.test.mjs",
     "verifiedLocalResult": "19 PASS / 0 FAIL Node22.16.0; exact source Git blobs pinned",
-    "newProofPath": "docs/enterprise/closure-v21/DAT01_SOURCE_REPRESENTATION_MATCHES_20261104.json"
+    "newProofPath": "docs/enterprise/closure-v21/DAT01_SOURCE_REPRESENTATION_MATCHES_20261104.json",
+    "sourceRepresentationV3": "scripts/diagnostics/g5-02-sql-hash-proof.mjs",
+    "sourceVariant": "exact single leading LF",
+    "regressionSourceHash": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+    "regressionTestHash": "e3e95ef2c03ac74fc3e6c994fc73d77ca2c04466",
+    "nodeTest": "22/22 PASS Node22 local",
+    "sampleSourceHashVerified": "24/34",
+    "proof": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json"
   },
   "dat01": {
     "status": "BLOCKED",
@@ -143,10 +150,13 @@
       "20260812221912 trim trailing whitespace only",
       "20260812224650 trim trailing whitespace only"
     ],
-    "testedSourceBlob": "52a5ff8b411d1643533e80deab57ef0b729f0d49",
-    "testsBlob": "fce3ee758a54a84793743420b02666279f751f91",
-    "node22TestResult": "19 PASS / 0 FAIL",
-    "formalAcceptance": "NOT_GRANTED"
+    "testedSourceBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+    "testsBlob": "e3e95ef2c03ac74fc3e6c994fc73d77ca2c04466",
+    "node22TestResult": "22 PASS / 0 FAIL",
+    "formalAcceptance": "NOT_GRANTED",
+    "sampleExactVersionEvidence": "24/34 SHA256 verified source-to-provider representations, 10 unresolved in subset",
+    "newProviderRepresentation": "PREFIX_SINGLE_LF_SINGLE_LEDGER_ENTRY",
+    "provenance": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json"
   },
   "auditChainIndependentReadback": {
     "scope": "production metadata READ ONLY",
@@ -224,7 +234,7 @@
     "paidCITasks": false,
     "StripeLiveTransactions": false
   },
-  "nextExecutableAction": "Read exact CircleCI #431 first failing command/log with authenticated Work access; run current candidate 137-row DAT01 source proof in a complete checkout and reconcile the 25 nonexact identities/two consolidation groups before authorized PostgreSQL17 synthetic replay. No hosted success, gate acceptance, or production go asserted.",
-  "updatedAt": "2026-11-04T09:46:57.665Z",
+  "nextExecutableAction": "Use authenticated CircleCI job #431 logs to find actual first failure; run complete source tree DAT01 proof at current SHA and review 10 unresolved first 34 SQL identities, 78 other exact identities, 25 nonexact mappings and both consolidations; qualified reviewer must approve executable source manifest before PostgreSQL17 synthetic replay. No production DB writes, automatic merges, or fabricated gate PASS.",
+  "updatedAt": "2026-11-04T10:04:55.405Z",
   "previousV21CheckpointCommit": "45258179902bc11669d953a25478c9a2e6d54b79"
 }
