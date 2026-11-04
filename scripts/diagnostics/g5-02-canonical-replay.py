@@ -33,6 +33,13 @@ if missing or multiple:
 report["manifest_sha256"]=hashlib.sha256(pathlib.Path("scripts/diagnostics/g5-02-prod-ledger-versions.json").read_bytes()).hexdigest()
 report["files"]=[]
 save()
+# DAT-01: fail closed before executing even the first synthetic migration.
+# Source-version equality alone cannot establish provider-statement equivalence.
+preflight=subprocess.run([sys.executable,"scripts/diagnostics/dat01-provider-provenance-preflight.py"],capture_output=True,text=True)
+if preflight.returncode!=0:
+    report["provider_provenance"]="NOT_RECONCILED"
+    fail("DAT01_PROVIDER_PROVENANCE_BLOCKED","source-only replay refused until provider SQL equivalence is verified")
+report["provider_provenance"]="PREFLIGHT_OK_NOT_FORMAL_ACCEPTANCE"
 subprocess.run(["pg_isready","-h","127.0.0.1","-U","risck_synthetic","-d","risck_synthetic"],check=True,stdout=subprocess.DEVNULL)
 for i,v in enumerate(versions,1):
     f=by_version[v][0]
