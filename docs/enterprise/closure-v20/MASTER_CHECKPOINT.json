@@ -1,18 +1,18 @@
 {
-  "observed_at": "2026-11-04T08:27:43.987Z",
-  "release_head_sha": "fd8574fb8c338b6fe5fb91adfef65793ca7bdbfc",
-  "tested_sha": "02f55cd22d05d270af890a4bac1ea9c986a463fc",
+  "observed_at": "2026-11-04T08:32:23.253Z",
+  "release_head_sha": "2c448e54b623bf22928fbef8f3d36a4cb226928a",
+  "tested_sha": "2c448e54b623bf22928fbef8f3d36a4cb226928a",
   "circleci": {
-    "pipeline": 885,
-    "job": 429,
+    "pipeline": 892,
+    "job": 430,
     "result": "FAIL",
-    "reason": "Stale normalizeBillingPlanId requirement in check-billing-page-boundary.mjs",
+    "reason": "login/signup client boundaries import server normalizer",
     "credits_before_job": {
       "included": 30000,
       "used": 10233,
       "remaining": 19767
     },
-    "url": "https://app.circleci.com/pipelines/github/renanescola40-afk/eurocomply_saas/885/workflows/14440cae-762a-422e-b1e4-15d85b9620e9/jobs/429"
+    "url": "https://app.circleci.com/pipelines/github/renanescola40-afk/eurocomply_saas/892/workflows/906a282e-0416-43d7-bcc1-b56e1438cf97/jobs/430"
   },
   "provider_access": {
     "github": "authenticated connector",
@@ -26,9 +26,9 @@
   "gitlab_main": "84a99f813bdce601c119bff27c1d82c5356295d6",
   "vercel_production_sha": "70d3545f414d063379d481fd238aed563e05edda",
   "local_tests": {
-    "command": "node --test tests/ci/billing-page-boundary-contract.test.mjs",
-    "result": "3 PASS",
-    "scope": "checker fixture only"
+    "command": "node --test tests/billing/paid-checkout-plan.test.mjs tests/ci/billing-page-boundary-contract.test.mjs",
+    "result": "12 PASS",
+    "scope": "local retrieved fixtures Node24, no full-repository or runtime proof"
   },
   "review": "ci_repair technical review: no blocking findings. Not independent human acceptance.",
   "dat01": {
@@ -63,5 +63,9 @@
     "proposal_pr": 2601,
     "activation": "PENDING human independent review and merge"
   },
-  "next_action": "Run one bounded CircleCI quality test on corrected exact SHA; preserve results without changing scoring."
+  "next_action": "Run one bounded CircleCI quality test on corrected exact SHA; preserve results without changing scoring.",
+  "completed_changes": [
+    "Billing page policy aligns with public checkout boundary",
+    "Pure checkout normalization moved to shared lib; client imports avoid server tree"
+  ]
 }

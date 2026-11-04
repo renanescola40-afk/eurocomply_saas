@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
-import { normalizePublicCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
+import { normalizePublicCheckoutPlanId } from '@/lib/billing/paid-checkout-plan';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 const publicErrors = {
@@ -153,3 +153,4 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+
