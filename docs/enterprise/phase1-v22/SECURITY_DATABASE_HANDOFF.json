@@ -147,11 +147,12 @@
       "root_cause": "Clerk text JWT subject can cause invalid UUID cast in enterprise helper; MFA lifecycle and signed JWT E2E are not yet proven.",
       "implementation": "PR #2599 migration already byte-identical in candidate; no duplicate patch.",
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
-      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
       "provider_readback": "QA and PROD app_private.enterprise_member_can_read MD5 d22463f096060aa22683ee61a74e5875; both security-definer with pg_catalog search_path.",
       "negative_test_evidence": "SQL fixtures present in #2599; signed-JWT/session-expiry negative E2E still missing.; 2026-11-04 direct QA synthetic Clerk text claims reproducibly raise 22P02 in enterprise_member_can_read; is_org_member denies false.",
       "remaining_blocker": "Signed JWT signup/login/revocation/MFA AAL2 E2E and qualified review",
-      "status": "NOT_VERIFIED"
+      "status": "NOT_VERIFIED",
+      "qa_transactional_evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json"
     },
     {
       "control_id": "SEC-02",
@@ -166,11 +167,12 @@
       "root_cause": "Tenant membership and role enforcement requires actual server/API negative proofs.",
       "implementation": "PR #2599 integrated source; no duplicate change.",
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
-      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
       "provider_readback": "QA/PROD app_private.is_org_member definition hash e66823b6d1667a32f24e8dec7c90547e; has_org_role 364143ed2878ca970a59ae4987491cb2.",
       "negative_test_evidence": "10/10 archived QA SQL claim-simulation probes reported in #2599; NOT signed JWT E2E.; QA synthetic Clerk text subject also reproduces 22P02 on enterprise_member_can_manage; delegated has_org_role correctly returns false.",
       "remaining_blocker": "Authenticated role-escalation/removal/last-owner deny tests and independent review",
-      "status": "NOT_VERIFIED"
+      "status": "NOT_VERIFIED",
+      "qa_transactional_evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json"
     },
     {
       "control_id": "SEC-04",
@@ -185,11 +187,12 @@
       "root_cause": "Privileged function grants and definer principal invocation not fully tested.",
       "implementation": "Existing security-definer source retained; no privileged grants changed.",
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
-      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
       "provider_readback": "Three app_private helpers share QA/PROD definition fingerprints and pg_catalog search_path.; four checked private helpers are SECURITY DEFINER pg_catalog, anon EXECUTE=false, authenticated/service_role=true in both QA and PROD. Does not prove all privileged functions.",
       "negative_test_evidence": "Forbidden RPC and privilege invocation under signed JWT NOT_VERIFIED.",
       "remaining_blocker": "Review all privileged functions/grants and unauthorized invocation",
-      "status": "NOT_VERIFIED"
+      "status": "NOT_VERIFIED",
+      "qa_transactional_evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json"
     },
     {
       "control_id": "SEC-03",
@@ -204,11 +207,12 @@
       "root_cause": "Full tenant A/B data/API/Storage/export signed URL isolation evidence remains incomplete.",
       "implementation": "No RLS weakening; PR #2599 authorization hardening already in canonical candidate.",
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
-      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
       "provider_readback": "Both QA/PROD public tables: 115/115 RLS enabled and FORCE RLS; zero RLS-disabled public tables.",
       "negative_test_evidence": "RLS coverage verified as metadata; authenticated API/Storage negative tests NOT_VERIFIED.",
       "remaining_blocker": "Complete A/B runtime/browser/API/Storage/export deny matrix and independent review",
-      "status": "NOT_VERIFIED"
+      "status": "NOT_VERIFIED",
+      "qa_transactional_evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json"
     },
     {
       "control_id": "SEC-06",
@@ -327,6 +331,21 @@
       "proofCountChanged": false,
       "evidence": "docs/enterprise/phase1-v22/DAT01_HISTORICAL_BLOB_IDENTITY_CORRECTION_20261104.json",
       "originalArchiveNotMutated": true
+    },
+    "clerkQA32CaseTransactional": {
+      "evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json",
+      "qaProject": "zrxrrfbllsxtleyxjpsz",
+      "postgres": "17.11",
+      "fixture": "5 active test identities / 2 isolated tenants",
+      "checks": "32/32 PASS",
+      "migrationSourceBlob": "31073c868fa14e66ebf5b1df2c917fafefac9177",
+      "testSourceBlob": "36e48ddfd1e9db83287151dd77e90a5c1f45159c",
+      "executedWithinSingleBeginRollback": true,
+      "anonExecuteReadAndManage": false,
+      "postRollbackCatalogDefinitionUnchanged": true,
+      "authenticatedSignedJwtBrowserE2E": "NOT_VERIFIED",
+      "independentReviewer": "PENDING",
+      "formalAcceptance": "NOT_ACCEPTED"
     }
   }
 }
