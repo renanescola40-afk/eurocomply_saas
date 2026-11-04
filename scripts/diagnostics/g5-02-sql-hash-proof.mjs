@@ -36,17 +36,26 @@ export function compareLedger({ ledger,crosswalk,provider,readSource }) {
     const v=versions[i],e=entries[i],p=rows[i];
     if(!/^\d{14}$/.test(v)||e?.production_version!==v||e?.order!==i+1||p?.version!==v||p?.name!==e?.production_name)throw Error('ORDER_OR_IDENTITY_'+(i+1));
     if(!/^supabase\/migrations\/[A-Za-z0-9_-]+\.sql$/.test(e.source)||!(/^[a-f0-9]{64}$/.test(p.joined_statement_sha256)))throw Error('UNTRUSTED_PATH_OR_HASH_'+(i+1));
-    let status='UNVERIFIED',reason=null;
+    let status='UNVERIFIED',reason=null,matchedBy=null;
     try{
-      const statements=splitStatements(readSource(e.source));
-      const text=statements.join('\n');
-      const matched=statements.length===p.statement_count&&Buffer.byteLength(text,'utf8')===p.joined_bytes&&digest(text)===p.joined_statement_sha256;
+      const source=readSource(e.source);
+      // Run the conservative lexer even when the provider stores a whole SQL file
+      // in one ledger array element. Unsupported/unclosed SQL never auto-passes.
+      const statements=splitStatements(source);
+      const candidates=[['SPLIT_STATEMENTS_LF',statements.join('\n'),statements.length]];
+      if(p.statement_count===1){
+        candidates.push(['RAW_FILE_SINGLE_LEDGER_ENTRY',source,1]);
+        if(source.trimEnd()!==source) candidates.push(['TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY',source.trimEnd(),1]);
+      }
+      const verified=candidates.find(([,text,count])=>count===p.statement_count&&Buffer.byteLength(text,'utf8')===p.joined_bytes&&digest(text)===p.joined_statement_sha256);
+      matchedBy=verified?.[0]??null;
+      const matched=Boolean(verified);
       status=e.mapping==='exact_version'?(matched?'EXACT_HASH_MATCH':'EXACT_HASH_MISMATCH'):(matched?'NON_EXACT_HASH_MATCH_REVIEW':'NON_EXACT_MAPPING_REVIEW');
     }catch(err){status='SOURCE_UNVERIFIED';reason=String(err?.message||err).replace(/[^A-Z0-9_]/g,'_').slice(0,80);}
-    results.push({version:v,name:p.name,mapping:e.mapping,status,...(reason?{reason}:{} )});
+    results.push({version:v,name:p.name,mapping:e.mapping,status,...(matchedBy?{matchedBy}:{}),...(reason?{reason}:{} )});
   }
   const count=status=>results.filter(x=>x.status===status).length;
-  return {schema:'risck-comply.dat01.source-hash.v1',counts:{total:137,exactMatch:count('EXACT_HASH_MATCH'),exactMismatch:count('EXACT_HASH_MISMATCH'),nonExactMatchNeedsReview:count('NON_EXACT_HASH_MATCH_REVIEW'),nonExactNeedsReview:count('NON_EXACT_MAPPING_REVIEW'),unverified:count('SOURCE_UNVERIFIED')},results,sqlReplay:'NOT_EXECUTED',formalAcceptance:'NOT_GRANTED',status:'DIAGNOSTIC_ONLY'};
+  return {schema:'risck-comply.dat01.source-hash.v2',sourceRepresentationChecks:['SPLIT_STATEMENTS_LF','RAW_FILE_SINGLE_LEDGER_ENTRY','TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY'],counts:{total:137,exactMatch:count('EXACT_HASH_MATCH'),exactMismatch:count('EXACT_HASH_MISMATCH'),nonExactMatchNeedsReview:count('NON_EXACT_HASH_MATCH_REVIEW'),nonExactNeedsReview:count('NON_EXACT_MAPPING_REVIEW'),unverified:count('SOURCE_UNVERIFIED')},results,sqlReplay:'NOT_EXECUTED',formalAcceptance:'NOT_GRANTED',status:'DIAGNOSTIC_ONLY'};
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===resolve(process.argv[1])){
   const root=resolve(process.cwd()),migrationRoot=realpathSync(resolve(root,'supabase/migrations'));
