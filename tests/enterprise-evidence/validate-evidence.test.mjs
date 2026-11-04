@@ -187,3 +187,18 @@ test('historic provider readback validates at immutable origin but cannot masque
   assert.ok(rejected.errors.some(e=>e.includes('commit_sha_mismatch')));
  }finally{fs.rmSync(abs,{force:true});}
 });
+
+
+test('all four archived Evidence Factory records are SHA-256-bound to existing immutable artifact bytes',()=>{
+ const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
+ assert.equal(index.evidence_records.length,4,'frozen initial index must keep four records');
+ for(const record of index.evidence_records){
+  const absolute=path.resolve(process.cwd(),record.artifact_path);
+  assert.ok(absolute.startsWith(process.cwd()+path.sep),'artifact must stay in repository');
+  assert.ok(fs.existsSync(absolute),record.evidence_id+' artifact missing');
+  const digest=crypto.createHash('sha256').update(fs.readFileSync(absolute)).digest('hex');
+  assert.equal(digest,record.artifact_sha256,record.evidence_id+' artifact hash is stale or tampered');
+  assert.equal(record.commit_sha,index.source.commit_sha,record.evidence_id+' frozen SHA changed');
+  assert.notEqual(record.status,'PASS','historical provider readback cannot silently grant PASS');
+ }
+});
