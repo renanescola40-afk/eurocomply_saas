@@ -106,3 +106,35 @@ test('raw-source matching cannot approve nonexact history identity mappings',()=
   assert.equal(r.results[index].matchedBy,'RAW_FILE_SINGLE_LEDGER_ENTRY');
   assert.equal(r.formalAcceptance,'NOT_GRANTED');
 });
+
+test('single provider entry preserving a leading LF matches exactly and stays diagnostic only',()=>{
+  const f=fixture(), source='select 1;\nselect 2;\n', index=61;
+  f.readSource=p=>p===f.crosswalk.entries[index].source?source:'select 1;';
+  f.provider.rows[index].joined_bytes=Buffer.byteLength('\n'+source);
+  f.provider.rows[index].joined_statement_sha256=hash('\n'+source);
+  const r=compareLedger(f);
+  assert.equal(r.counts.exactMatch,137);
+  assert.equal(r.results[index].matchedBy,'PREFIX_SINGLE_LF_SINGLE_LEDGER_ENTRY');
+  assert.equal(r.formalAcceptance,'NOT_GRANTED');
+  assert.equal(r.sqlReplay,'NOT_EXECUTED');
+});
+test('single leading-LF allowance does not accept two extra LFs or arbitrary prepends',()=>{
+  const f=fixture(), source='select 1;\nselect 2;\n', index=62;
+  f.readSource=p=>p===f.crosswalk.entries[index].source?source:'select 1;';
+  f.provider.rows[index].joined_bytes=Buffer.byteLength('\n\n'+source);
+  f.provider.rows[index].joined_statement_sha256=hash('\n\n'+source);
+  const r=compareLedger(f);
+  assert.equal(r.counts.exactMismatch,1);
+  assert.equal(r.results[index].matchedBy,undefined);
+});
+test('leading LF source parity never upgrades nonexact historical identity to exact acceptance',()=>{
+  const f=fixture(), source='select 1;\nselect 2;\n', index=63;
+  f.readSource=p=>p===f.crosswalk.entries[index].source?source:'select 1;';
+  f.crosswalk.entries[index].mapping='superseded_by_forward_reconciliation';
+  f.provider.rows[index].joined_bytes=Buffer.byteLength('\n'+source);
+  f.provider.rows[index].joined_statement_sha256=hash('\n'+source);
+  const r=compareLedger(f);
+  assert.equal(r.counts.nonExactMatchNeedsReview,1);
+  assert.equal(r.results[index].matchedBy,'PREFIX_SINGLE_LF_SINGLE_LEDGER_ENTRY');
+  assert.equal(r.formalAcceptance,'NOT_GRANTED');
+});
