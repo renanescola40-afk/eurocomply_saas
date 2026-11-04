@@ -113,8 +113,16 @@ function isAuditChainAppendContention(error: SupabaseError) {
 
 const isPreviousHashMismatch = isAuditChainPreviousHashMismatch;
 
+function isEnterpriseSignedAuditMode() {
+  // Enterprise release gates must never silently accept unsigned events or
+  // downgrade a failed transactional RPC to direct/legacy inserts.
+  return (process.env.RISCK_COMPLY_ENTERPRISE_RELEASE ?? '').trim().toLowerCase() === 'true'
+    || (process.env.RELEASE_TARGET ?? '').trim().toLowerCase() === 'enterprise';
+}
+
 function isFallbackEnabled(name: string) {
-  return (process.env[name] ?? '').trim().toLowerCase() === 'true';
+  return !isEnterpriseSignedAuditMode()
+    && (process.env[name] ?? '').trim().toLowerCase() === 'true';
 }
 
 export function isNonTransactionalAuditAppendFallbackAllowed() {
@@ -353,6 +361,10 @@ async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: Nor
     }
 
     const { id, createdAt, chain } = buildChainedPayload(input, previousHashRead.hash);
+    if (isEnterpriseSignedAuditMode() && !chain.signature) {
+      // Keep this distinct from a missing-RPC error, preventing any fallback.
+      return { ok: false as const, error: { code: 'AUDIT_SIGNING_UNAVAILABLE' } };
+    }
 
     const { error } = await supabase.rpc(CHAIN_APPEND_RPC, buildAuditChainRpcParams(input, chain, id, createdAt));
 
@@ -398,6 +410,12 @@ export async function createAuditEvent(input: AuditEventInput) {
 
   if (!normalizedInput) {
     return { persisted: false, reason: 'invalid_audit_event_input' as const };
+  }
+
+  if (isEnterpriseSignedAuditMode() && !(process.env.AUDIT_CHAIN_SIGNING_SECRET ?? '').trim()) {
+    // No secret content, user IDs or event metadata in diagnostic logs.
+    console.warn('[audit] enterprise_signing_material_unavailable');
+    return { persisted: false, reason: 'audit_signing_unavailable' as const };
   }
 
   const supabase = tryCreateAdminClient();

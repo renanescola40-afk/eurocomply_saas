@@ -140,4 +140,33 @@ describe('audit chain', () => {
 
     vi.unstubAllEnvs();
   });
+  it('fails closed when strict verification lacks signing material', () => {
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', '');
+    try {
+      const record = buildAuditChainRecord(baseEvent, null);
+      expect(verifyAuditChain([record]).ok).toBe(true);
+      expect(verifyAuditChain([record], { requireSignatures: true })).toMatchObject({
+        ok: false, checked: 1, signatureVerificationUnavailable: true,
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('requires valid HMAC signatures when strict verification is enabled', () => {
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', 'synthetic-test-only-signing');
+    try {
+      const signed = buildAuditChainRecord(baseEvent, null);
+      expect(verifyAuditChain([signed], { requireSignatures: true })).toMatchObject({
+        ok: true, signatureVerificationUnavailable: false,
+      });
+      expect(verifyAuditChain([{ ...signed, signature: undefined }], { requireSignatures: true })).toMatchObject({
+        ok: false, signatureVerificationUnavailable: false,
+        failures: [expect.objectContaining({ reason: 'signature_mismatch' })],
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
 });

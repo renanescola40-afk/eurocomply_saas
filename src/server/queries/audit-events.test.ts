@@ -511,4 +511,72 @@ describe('audit event persistence', () => {
       }),
     );
   });
+
+  it('fails closed before any database access when enterprise signing material is missing', async () => {
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', '');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'audit_signing_unavailable',
+    });
+    expect(tryCreateAdminClient).not.toHaveBeenCalled();
+  });
+
+  it('also requires signing material when RELEASE_TARGET selects enterprise', async () => {
+    vi.stubEnv('RELEASE_TARGET', 'enterprise');
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', '   ');
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'audit_signing_unavailable',
+    });
+    expect(tryCreateAdminClient).not.toHaveBeenCalled();
+  });
+
+  it('never downgrades missing transactional RPC in enterprise mode even when compatibility fallbacks are set', async () => {
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', 'synthetic-test-only-signing-material');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '42883', message: 'function append_audit_event_chained does not exist' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent, isNonTransactionalAuditAppendFallbackAllowed } =
+      await import('./audit-events');
+    expect(isNonTransactionalAuditAppendFallbackAllowed()).toBe(false);
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'transactional_append_unavailable',
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unexpectedly unsigned chain despite configured enterprise material', async () => {
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', 'synthetic-test-only-signing-material');
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({ error: null }));
+    const { buildAuditChainRecord } = await import('@/server/security/audit-chain');
+    vi.mocked(buildAuditChainRecord).mockImplementationOnce((event, previousHash) => ({
+      ...event, previousHash, eventHash: 'synthetic-unsigned-hash',
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'transactional_append_unavailable',
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
 });
