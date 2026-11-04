@@ -35,7 +35,7 @@ jobs:
   pr-source-validation:
     docker:
       - image: cimg/node:22.16.0
-    resource_class: small
+    resource_class: medium
     working_directory: ~/project
     steps:
       - checkout
@@ -68,6 +68,8 @@ jobs:
           command: npm run lint
       - run:
           name: Typecheck
+          environment:
+            NODE_OPTIONS: --max-old-space-size=3072
           command: npm run typecheck
       - run:
           name: Vitest unit suite
