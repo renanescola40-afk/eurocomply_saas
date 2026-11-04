@@ -2,6 +2,10 @@ version: 2.1
 
 # Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
 parameters:
+  # Manual, source-only validation for Dependabot PR #2590; never auto-run.
+  run_pr2590_workflow_validation:
+    type: boolean
+    default: false
   run_main_source:
     type: boolean
     default: false
@@ -24,6 +28,56 @@ parameters:
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
+  # Isolated GitHub Actions upgrade check. No deployment, provider write, or credentials.
+  pr2590-github-actions-validation:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact source and reject privileged credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "dependabot/github_actions/actions/setup-python-7"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "Forbidden provider variable in source-only validation: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Check setup-python v7 and source workflow regression
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/pr2590-workflow-validation
+            test "$(grep -Fc 'uses: actions/setup-python@v7' .github/workflows/full-security-suite.yml)" = "1"
+            test "$(grep -Fc 'uses: actions/setup-python@v7' .github/workflows/semgrep.yml)" = "1"
+            if grep -Fq 'uses: actions/setup-python@v6' .github/workflows/full-security-suite.yml .github/workflows/semgrep.yml; then
+              echo "setup-python v6 reference remains in the upgraded workflows" >&2
+              exit 1
+            fi
+            node --test tests/ci/github-actions-budget-regression.test.mjs 2>&1 | tee artifacts/pr2590-workflow-validation/node-tests.tap
+      - run:
+          name: Run SHA-256 verified actionlint on affected GitHub workflows
+          command: |
+            set -euo pipefail
+            version="1.7.12"
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+              "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            /tmp/actionlint .github/workflows/full-security-suite.yml .github/workflows/semgrep.yml \
+              2>&1 | tee artifacts/pr2590-workflow-validation/actionlint.log
+            printf 'validated_sha=%s\n' "$CIRCLE_SHA1" | tee artifacts/pr2590-workflow-validation/source-sha.txt
+      - store_artifacts:
+          path: artifacts/pr2590-workflow-validation
+          destination: pr2590-exact-sha-source-only
+
   synthetic-backup-components:
     machine:
       image: ubuntu-2204:2026.05.1
@@ -521,6 +575,15 @@ jobs:
           destination: enterprise-postgres-synthetic-exact-sha
 
 workflows:
+
+  pr2590-github-actions-manual:
+    when: << pipeline.parameters.run_pr2590_workflow_validation >>
+    jobs:
+      - pr2590-github-actions-validation:
+          filters:
+            branches:
+              only:
+                - dependabot/github_actions/actions/setup-python-7
 
   enterprise-source-proof-manual:
     when: << pipeline.parameters.run_enterprise_source >>
