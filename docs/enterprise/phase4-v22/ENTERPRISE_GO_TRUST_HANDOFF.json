@@ -67,7 +67,16 @@
         "log_download": "BlobNotFound",
         "classification": "RUNNER_ADMISSION_OR_PROVIDER_BLOCKER_SUSPECTED; GitHub billing causality NOT VERIFIED",
         "safe_action": "Inspect GitHub Actions billing/usage and run admission in account UI; do not re-run failing jobs without provider diagnosis",
-        "mixed_status_observation": "On PR #2604 exact first head 6424193fa1a7c32174b8b23c92bee52eb8ca7ae7, 2 newer qualified-review/closeout-plan checks reported success while several checks failed or were skipped. Failures cannot all be labeled provider billing without per-job admission evidence; successful reports are not human approval or mandatory source proof."
+        "mixed_status_observation": "On PR #2604 exact first head 6424193fa1a7c32174b8b23c92bee52eb8ca7ae7, 2 newer qualified-review/closeout-plan checks reported success while several checks failed or were skipped. Failures cannot all be labeled provider billing without per-job admission evidence; successful reports are not human approval or mandatory source proof.",
+        "cross_provider_comparison": {
+          "source_sha": "7d57576b62eea3959cf79a7528d2086e82ec5118",
+          "pull_request": 2604,
+          "buildkite_checks_success": 2,
+          "github_actions_checks_failure": 3,
+          "supabase_check_skipped": 1,
+          "check_scope": "Sample at exact Phase-4 handoff SHA, not current canonical candidate; success checks do not imply formal acceptance",
+          "finding": "Multiple hosted providers run; GitHub Actions jobs repeatedly fail within seconds with no steps, but billing causality is NOT verified."
+        }
       },
       "note": "Branch protected=false does not prove absence of every effective policy; requested direct ruleset/protection detail is unavailable."
     },
@@ -98,6 +107,15 @@
         "claim_boundary": "A provider securityIssues metadata flag is NOT proof that any secret leaked to clients or logs; account permission scope, project role and deployment bundle must be tested. No values were fetched or stored.",
         "next_test": "Compare Preview/QA/Production variable targets and effective key identifiers through non-disclosing provider attestations. Verify no privileged key ships to NEXT_PUBLIC/client bundles, then perform QA negative cross-environment tests without retrieving secret values.",
         "status": "NOT_VERIFIED"
+      },
+      "live_unprivileged_smoke_attempt": {
+        "methods": "Bounded read-only public GET attempts via browser fetch and independent local request",
+        "paths": [
+          "/api/health",
+          "/api/ready"
+        ],
+        "outcome": "NOT_VERIFIED_PUBLIC_FETCH_BLOCKED_BY_TOOL_OR_DNS",
+        "evidence_boundary": "Client-side lookup tool failed to access site and local container could not resolve the hostname. This cannot be interpreted as application downtime or an endpoint failure. No authenticated production request sent."
       }
     },
     "legal": {
@@ -105,7 +123,35 @@
       "dpa": "CANONICAL_REVIEW_DRAFT_EXISTS / NOT_YET_EFFECTIVE",
       "privacy_and_transfer": "Provider role/transfer facts remain partial",
       "qualified_counsel_approval": "NOT_OBTAINED",
-      "registered_identifiers": "Not copied into this handoff"
+      "registered_identifiers": "Not copied into this handoff",
+      "repo_claims_review": {
+        "checked_baseline": "main@6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+        "documented_non_claims": [
+          "docs/trust/ISO27001_SOC2_READINESS.md",
+          "docs/trust/SECURITY_FAQ.md",
+          "docs/trust/PENTEST_READINESS.md",
+          "src/lib/trust-center/content.ts",
+          "scripts/security/check-public-claims.mjs"
+        ],
+        "result": "REPOSITORY_DISCLOSURE_GUARDS_PRESENT_NOT_BUYER_OR_RELEASE_ACCEPTED",
+        "qualification": "Non-certification text exists and source guard covers prohibited wording; no exact deployed release claims audit nor independent legal/procurement review was performed."
+      }
+    },
+    "gitlab": {
+      "checked_at_utc": "2026-11-04",
+      "project_id": 88025157,
+      "repository": "risck-comply-group/eurocomply_saas",
+      "default_branch": "main",
+      "main_protected": true,
+      "current_user_can_push_to_main": true,
+      "main_commit_sha": "84a99f813bdce601c119bff27c1d82c5356295d6",
+      "merge_requires_successful_pipeline": false,
+      "merge_requires_resolved_discussions": false,
+      "approvals_before_merge": 0,
+      "latest_main_pipeline": "FORBIDDEN_403_NOT_VERIFIED",
+      "source_of_truth": "Connected GitLab project/branch readback; read-only",
+      "assessment": "The protected flag alone is not equivalent enforced independently approved release governance; GitLab source SHA differs from canonical GitHub main and candidate. An alternate release-control mechanism cannot be asserted operational from these settings.",
+      "no_cost_remediation": "Qualified repo owner should first confirm maintainer/developer push permissions, required approvals and CI/pipeline enforcement in project settings. Changes to release governance need a reviewed change and proof of deployment isolation. Do not adopt GitLab as canonical unilaterally."
     }
   },
   "controls": [
@@ -120,11 +166,13 @@
       "source_refs": [
         "https://api.github.com/repos/renanescola40-afk/eurocomply_saas/branches/main",
         "https://github.com/renanescola40-afk/eurocomply_saas/pull/2601",
-        "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/41826352801"
+        "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/41826352801",
+        "GitLab project 88025157 main branch/project settings connected readback 2026-11-04"
       ],
       "unmet_requirements": [
         "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
-        "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails"
+        "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails",
+        "GitLab main is marked protected, but current principal can push; zero required approvals, pipeline success and resolved discussions are not enforced. GitLab main SHA diverges and cannot be treated as an equivalent release-control boundary."
       ],
       "remediation_owner": "platform/repository owner",
       "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
@@ -293,7 +341,8 @@
       "accepted_at": null,
       "source_refs": [
         "docs/trust/CLAIMS_AND_COPY_AUDIT.md",
-        "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md"
+        "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md",
+        "scripts/security/check-public-claims.mjs"
       ],
       "unmet_requirements": [
         "No qualified signed claim inventory approved for exact released capabilities",
