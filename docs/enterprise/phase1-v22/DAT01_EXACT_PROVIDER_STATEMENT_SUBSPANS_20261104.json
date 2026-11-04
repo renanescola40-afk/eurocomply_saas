@@ -214,7 +214,8 @@
     "Do not count a subspan as a whole-file source match or independent replay authorization",
     "Continue recovering other 32 historically unresolved sources",
     "Obtain independent review of five additional immutable-source exact-statement links; four are single-source candidates and version 20261013133341 belongs to CONSOLIDATION_2, whose other linked version remains unproven.",
-    "Do not treat these seven exact subspans as 137/137 replay provenance or change the immutable draft manifest without independent qualification."
+    "Do not treat these seven exact subspans as 137/137 replay provenance or change the immutable draft manifest without independent qualification.",
+    "CONSOLIDATION_2: review exact immutable provider-record SQL captures of both historically applied versions, their +23-byte aliasing difference, and decide an authorized source-bound replay plan; archival provider records are not independent proof of the originally executed migration files."
   ],
   "addendum": {
     "observedAt": "2026-11-04",
@@ -225,5 +226,65 @@
     "qualifiedSourceIdentitiesNew": 0,
     "wholeSourceProofsNew": 0,
     "formalPassNew": 0
+  },
+  "providerBackfilledConsolidation2Verification": {
+    "classification": "PROVIDER_LEDGER_RECOVERY_CAPTURE_ONLY_NOT_ORIGINAL_MIGRATION",
+    "originalProviderVersionsSeparate": true,
+    "groupId": "CONSOLIDATION_2",
+    "observedAt": "2026-11-04",
+    "sourceForProviderReadback": "Supabase production project tganhbbhfxcpblmgqprg; SELECT version,statements[1],sha256 and octet_length from supabase_migrations.schema_migrations (READ ONLY).",
+    "sourceForArchive": "GitLab project 88025157 original provider-record archival commits; also present on canonical GitHub main.",
+    "method": "Compare live applied provider statement verbatim to a UTF-8-decoded immutably committed provider-capture file, excluding only its clearly marked metadata comment header by using exact character substring offset. Verify archive SHA256 and provider statement SHA256. Independently compare the two distinct provider-applied statements using common prefix/suffix.",
+    "records": [
+      {
+        "version": "20261013133323",
+        "providerName": "fix_enterprise_provision_usage_conflict_ambiguity",
+        "providerSqlBytes": 9208,
+        "providerSqlSha256": "6eb4f7dfe9291502bc07fb2404af0bceeba5c9426e95ed7ef7c9f17f55c5d89e",
+        "sourceFile": "supabase/reconciliation/20261013133323_fix_enterprise_provision_usage_conflict_ambiguity_provider_record.sql",
+        "archiveCommit": "5eb2085acec2beb8143ac6951c0ec994a88d37c1",
+        "sourceGitBlobSha1": "b2aee3672567912ff9816e627b5f1786bbfdc466",
+        "fileSha256": "03d44a618fd96c29344e7dbef2186b2c59b9daf808c08aafc61d9796ab9ebfd2",
+        "sourceFileBytes": 9739,
+        "exactProviderSqlSubspanOffset": 531,
+        "endsAtEOF": true
+      },
+      {
+        "version": "20261013133341",
+        "providerName": "fix_enterprise_provision_usage_update_ambiguity",
+        "providerSqlBytes": 9231,
+        "providerSqlSha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6",
+        "sourceFile": "supabase/reconciliation/20261013133341_fix_enterprise_provision_usage_update_ambiguity_provider_record.sql",
+        "archiveCommit": "16dee2d756ff6f6668adf98efc0f5c1fc861435f",
+        "sourceGitBlobSha1": "a8998b99f2534b4e9a752d860ebee18279fb8c7d",
+        "fileSha256": "01d2dd0773ab85d8143c495571836c53fcf026b6e1ac4a496a995efd72acc25e",
+        "sourceFileBytes": 9760,
+        "exactProviderSqlSubspanOffset": 529,
+        "endsAtEOF": true
+      }
+    ],
+    "directComparison": {
+      "distinctProviderSqlSha256": true,
+      "oldProviderStatementBytes": 9208,
+      "newProviderStatementBytes": 9231,
+      "oldAndNewDeltaBytes": 23,
+      "commonPrefixCharacters": 8306,
+      "commonSuffixCharacters": 669,
+      "firstChangeLine": 171,
+      "semanticChange": "The second applied SQL explicitly aliases the usage-row UPDATE (AS usage_row) and qualifies WHERE via usage_row, resolving ambiguity. Do not treat these as duplicate identical SQL source bytes."
+    },
+    "restrictions": {
+      "originalAppliedMigrationSourceAuthenticated": false,
+      "archivedRecordsWereBackfilledAfterProviderApplication": true,
+      "wholeFileEqualityWithOriginalMigration": false,
+      "sourceBytesProofClaimsUpdated": false,
+      "nonexactMappingQualified": false,
+      "manifestAuthorizedForReplay": false,
+      "independentReviewerApproval": false,
+      "productionWrites": false,
+      "qaWrites": false,
+      "acceptedGateA12": false
+    },
+    "nextReviewerAction": "Determine and sign independent provenance/replay disposition for each of the two original provider versions versus the forward-only canonical reconciliation; keep migration order and do not perform an unreviewed two-to-one collapsing replay."
   }
 }
