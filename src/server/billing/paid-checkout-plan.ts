@@ -19,3 +19,20 @@ export function normalizePaidCheckoutPlanId(value: unknown): PaidCheckoutPlan | 
       return undefined;
   }
 }
+
+/**
+ * Public checkout discovery may include sales-led Business/Enterprise plans,
+ * whereas paid self-service mutations use normalizePaidCheckoutPlanId only.
+ * Never interpret historical free/basic persisted aliases as paid plans in a
+ * customer-supplied URL or API request.
+ */
+export type PublicCheckoutPlan = PaidCheckoutPlan | 'business' | 'enterprise';
+
+export function normalizePublicCheckoutPlanId(value: unknown): PublicCheckoutPlan | undefined {
+  const paid = normalizePaidCheckoutPlanId(value);
+  if (paid) return paid;
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'business' || normalized === 'enterprise') return normalized;
+  return undefined;
+}

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
-import { normalizePaidCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
+import { normalizePaidCheckoutPlanId, normalizePublicCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
 
 describe('paid self-serve Checkout plan input authority', () => {
   it('permits canonical paid Essential and Professional requests', () => {
@@ -55,5 +55,42 @@ describe('paid self-serve Checkout plan input authority', () => {
     expect(providerMutation).toBeGreaterThan(contractAuthority);
     expect(source).toContain('isSelfServePlan(plan) && normalizePaidCheckoutPlanId(parsed.data.plan) !== plan');
     expect(source).toContain("return noStoreJson({ error: 'sales_assisted_plan_required' }, { status: 400 });");
+  });
+
+  it('recognizes canonical public paid and sales-assisted plans without mislabeling free/basic', () => {
+    expect(normalizePublicCheckoutPlanId('essential')).toBe('starter');
+    expect(normalizePublicCheckoutPlanId('growth')).toBe('professional');
+    expect(normalizePublicCheckoutPlanId('business')).toBe('business');
+    expect(normalizePublicCheckoutPlanId('enterprise')).toBe('enterprise');
+    for (const raw of ['free', 'basic', 'FREE', '', 'trial', null, undefined, 0]) {
+      expect(normalizePublicCheckoutPlanId(raw)).toBeUndefined();
+    }
+  });
+
+  it('guards checkout intent, legacy link and displayed checkout before showing paid paths', async () => {
+    const [intent, legacy, page] = await Promise.all([
+      readFile(new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url), 'utf8'),
+      readFile(new URL('../../src/app/[locale]/billing/checkout/[plan]/page.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../src/app/[locale]/checkout/page.tsx', import.meta.url), 'utf8'),
+    ]);
+    expect(intent).toContain('getBillingPlan(normalizePublicCheckoutPlanId(planId))');
+    expect(legacy).toContain('const normalizedPlan = normalizePublicCheckoutPlanId(plan);');
+    const guard = page.indexOf('if (hasExplicitPlan && !normalizedRequestedPlan)');
+    expect(guard).toBeGreaterThan(-1);
+    expect(page).toContain("Object.prototype.hasOwnProperty.call(resolvedSearchParams, 'plan')");
+    expect(page.indexOf('getBillingPlan(normalizedRequestedPlan)')).toBeGreaterThan(guard);
+    expect(page.indexOf('await getCurrentUser()')).toBeGreaterThan(guard);
+    expect(page).toContain('redirect(`/${locale}/pricing?checkout=invalid_plan`)');
+  });
+
+  it('does not advertise Checkout readiness unless paid GA and public legal versions are effective', async () => {
+    const route = await readFile(new URL('../../src/app/api/billing/checkout-intent/route.ts', import.meta.url), 'utf8');
+    expect(route).toContain("process.env.RISCK_COMPLY_PAID_BILLING_REQUIRED === 'true'");
+    expect(route).toContain('&& isPublicSelfServeContractEffective()');
+    expect(route).toContain('checkoutReady: !plan.salesLed && publicPaidCheckoutReady');
+    expect(route).toContain("'public_paid_checkout_unavailable'");
+    expect(route).toContain('const alreadyOnPlan = entitlements.licensed &&');
+    expect(route).toContain('const priceId = plan.salesLed ? undefined : getStripePriceId(plan);');
+    expect(route).not.toContain('checkoutReady: !plan.salesLed && Boolean(priceId) && !alreadyOnPlan');
   });
 });
