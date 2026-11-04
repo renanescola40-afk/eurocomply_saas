@@ -152,6 +152,31 @@
       "source_of_truth": "Connected GitLab project/branch readback; read-only",
       "assessment": "The protected flag alone is not equivalent enforced independently approved release governance; GitLab source SHA differs from canonical GitHub main and candidate. An alternate release-control mechanism cannot be asserted operational from these settings.",
       "no_cost_remediation": "Qualified repo owner should first confirm maintainer/developer push permissions, required approvals and CI/pipeline enforcement in project settings. Changes to release governance need a reviewed change and proof of deployment isolation. Do not adopt GitLab as canonical unilaterally."
+    },
+    "candidate_retained_evidence": {
+      "checked_on": "2026-11-04",
+      "branch": "integration/enterprise-unified-candidate-20261102",
+      "note": "These files are retained source artifacts only, not new executions. Their statuses block formal acceptance, and provider acceptance must be rebound to current head SHA.",
+      "entries": [
+        {
+          "path": "docs/security/evidence/runtime/rollback-dry-run-validation.json",
+          "status": "Open",
+          "last_generated": "2026-07-06T09:00:00.000Z",
+          "verification": "No executed recent release-bound non-production rollback observed in this artifact; OPS-05 remains NOT_VERIFIED"
+        },
+        {
+          "path": "docs/security/evidence/runtime/branch-protection-required-checks.json",
+          "status": "Exception",
+          "verification": "No current durable provider enforcement proof; OPS-02 remains NOT_VERIFIED"
+        },
+        {
+          "path": "docs/security/evidence/runtime/enterprise-release-env-readiness.json",
+          "status": "Open",
+          "last_generated": "2026-07-09T00:00:00.000Z",
+          "verification": "Production environment preflight not accepted; OPS-06 remains NOT_VERIFIED"
+        }
+      ],
+      "current_sha": "Attribution to checked candidate branch snapshot; SHA must be refreshed by Executor 3 before integration"
     }
   },
   "controls": [
@@ -167,12 +192,14 @@
         "https://api.github.com/repos/renanescola40-afk/eurocomply_saas/branches/main",
         "https://github.com/renanescola40-afk/eurocomply_saas/pull/2601",
         "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/41826352801",
-        "GitLab project 88025157 main branch/project settings connected readback 2026-11-04"
+        "GitLab project 88025157 main branch/project settings connected readback 2026-11-04",
+        "docs/security/evidence/runtime/branch-protection-required-checks.json"
       ],
       "unmet_requirements": [
         "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
         "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails",
-        "GitLab main is marked protected, but current principal can push; zero required approvals, pipeline success and resolved discussions are not enforced. GitLab main SHA diverges and cannot be treated as an equivalent release-control boundary."
+        "GitLab main is marked protected, but current principal can push; zero required approvals, pipeline success and resolved discussions are not enforced. GitLab main SHA diverges and cannot be treated as an equivalent release-control boundary.",
+        "Retained branch-protection evidence artifact has status=Exception, so no current enforced-provider PASS is documented."
       ],
       "remediation_owner": "platform/repository owner",
       "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
@@ -226,11 +253,13 @@
       "accepted_at": null,
       "source_refs": [
         "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
-        "docs/operations/ROLLBACK_RUNBOOK.md"
+        "docs/operations/ROLLBACK_RUNBOOK.md",
+        "docs/security/evidence/runtime/rollback-dry-run-validation.json"
       ],
       "unmet_requirements": [
         "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
-        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted"
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
+        "Retained rollback evidence status=Open (generated 2026-07-06); not a recently executed release-bound QA rollback or acceptance."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
@@ -246,12 +275,14 @@
       "source_refs": [
         "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
         "docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md",
-        "Vercel project environment metadata readback 2026-11-04 (redacted; no values)"
+        "Vercel project environment metadata readback 2026-11-04 (redacted; no values)",
+        "docs/security/evidence/runtime/enterprise-release-env-readiness.json"
       ],
       "unmet_requirements": [
         "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
         "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
-        "Vercel Preview-targeted privileged variable names flagged securityIssues=readable-secret require scoped access/client bundle review; no disclosure or leak established."
+        "Vercel Preview-targeted privileged variable names flagged securityIssues=readable-secret require scoped access/client bundle review; no disclosure or leak established.",
+        "Retained production environment preflight status=Open (generated 2026-07-09); no accepted exact-release credential-isolation or provider configuration result."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
