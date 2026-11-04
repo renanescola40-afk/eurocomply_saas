@@ -433,7 +433,8 @@
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": [],
       "responsible_executor": "E3",
-      "next_eligible_action": "Reinspect Vercel production binding proof; only then independent gate-specific PR review"
+      "next_eligible_action": "Reinspect Vercel production binding proof; only then independent gate-specific PR review",
+      "evidence_reference_type": "REVIEW_PACKET_NOT_IMPLEMENTATION_TEST_SHA"
     },
     {
       "control_id": "BIL-02",
@@ -451,7 +452,9 @@
       "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
-      "outstanding_dependency": [],
+      "outstanding_dependency": [
+        "BIL-01"
+      ],
       "responsible_executor": "E2",
       "next_eligible_action": "Await E2 exact-SHA evidence: Genuine Stripe test event, webhook delivery IDs and idempotency readback"
     },
@@ -745,7 +748,8 @@
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": [
-        "QAT-01"
+        "QAT-01",
+        "OPS-01"
       ],
       "responsible_executor": "E3",
       "next_eligible_action": "Await E3 exact-SHA evidence: Signed or otherwise independently verifiable check IDs, exact-SHA provenance"
@@ -777,7 +781,8 @@
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": [],
       "responsible_executor": "E3",
-      "next_eligible_action": "Obtain qualified review of existing A-18 packet; after review run formal validator and only then promote"
+      "next_eligible_action": "Obtain qualified review of existing A-18 packet; after review run formal validator and only then promote",
+      "evidence_reference_type": "REVIEW_PACKET_NOT_IMPLEMENTATION_TEST_SHA"
     },
     {
       "control_id": "OPS-02",
@@ -815,6 +820,7 @@
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": [
+        "OPS-01",
         "QAT-02"
       ],
       "responsible_executor": "E4",
@@ -836,7 +842,9 @@
       "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
-      "outstanding_dependency": [],
+      "outstanding_dependency": [
+        "OPS-01"
+      ],
       "responsible_executor": "E4",
       "next_eligible_action": "Await E4 exact-SHA evidence: Provider alert check, incident drill, runbook and support route"
     },
@@ -858,6 +866,7 @@
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": [
+        "OPS-01",
         "DAT-04"
       ],
       "responsible_executor": "E4",
@@ -1178,14 +1187,15 @@
       "official_status": "NOT_ACCEPTED",
       "accepted": false,
       "current_evidence_status": "TECHNICAL_EVIDENCE_INCOMPLETE",
-      "evidence_sha": "6814961ab37840577b39860947cba29690228668",
+      "evidence_sha": null,
       "evidence_sha256": "426159d1ab27cd377a753639322e01a8e57d87f6e2df7775a5e27ff11dac2d04",
       "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": "Current exact six Vercel built-in Production Stripe Price bindings cannot be confirmed; apparent matching variable names belong to a custom environment; qualified independent gate-specific GitHub approval absent",
       "responsible_executor": "E3",
-      "next_eligible_action": "Reinspect Vercel production binding proof; only then independent gate-specific PR review"
+      "next_eligible_action": "Reinspect Vercel production binding proof; only then independent gate-specific PR review",
+      "review_packet_head_sha": "6814961ab37840577b39860947cba29690228668"
     },
     {
       "gate_id": "A-10",
@@ -1345,14 +1355,15 @@
       "official_status": "NOT_ACCEPTED",
       "accepted": false,
       "current_evidence_status": "READY_FOR_QUALIFIED_REVIEW_NOT_ACCEPTED",
-      "evidence_sha": "1dc9b63f6f13ea9b090b2840610582a39d3ac90e",
+      "evidence_sha": null,
       "evidence_sha256": "f70fecb8f8487732c7b0e4da145e1aa63a07a1d83d67de62b6b6bd3bb9589754",
       "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
       "review_result": "NOT_APPROVED",
       "formal_acceptance_outcome": "NOT_ACCEPTED",
       "outstanding_dependency": "Required qualified independent gate-specific review and formal acceptance artifact not supplied; main SHA is not the deployed production SHA and must not be misrepresented",
       "responsible_executor": "E3",
-      "next_eligible_action": "Obtain qualified review of existing A-18 packet; after review run formal validator and only then promote"
+      "next_eligible_action": "Obtain qualified review of existing A-18 packet; after review run formal validator and only then promote",
+      "review_packet_head_sha": "1dc9b63f6f13ea9b090b2840610582a39d3ac90e"
     },
     {
       "gate_id": "A-19",
