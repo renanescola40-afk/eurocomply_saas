@@ -214,6 +214,33 @@
       "security_boundary": "A Vercel preview or production credential cannot be assumed QA-isolated without provider-side account+role+environment evidence.",
       "safe_next_step": "Provision two encrypted custom QA environment variables only after an existing separately isolated Redis instance and token are confirmed; add QA-only HEALTHCHECK_TOKEN separately and redeploy only QA after approval-free scoped configuration. Do not print or commit values.",
       "validation_boundary": "Even after Redis, QA requires a healthcheck bearer token for /api/ready; other provider readiness may be intentionally unavailable by QA_BOOTSTRAP_NO_BILLING. Therefore do not demand 200 when services are disabled by design."
+    },
+    "rollback_target_readiness": {
+      "candidate_history_source": "Vercel get_deployment and GET /api/health on two immutable preview deployments",
+      "prior_previews": [
+        {
+          "deployment_id": "dpl_ByT6PpmQbAuZDojJzv6jvtxNHnuh",
+          "source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+          "provider_state": "READY",
+          "health_get_utc": "2026-11-04T14:09:51Z",
+          "health_http": 200,
+          "no_store": true
+        },
+        {
+          "deployment_id": "dpl_RbBDhWfWN1YdqeVJjEEz2GYFNc3i",
+          "source_sha": "111f9010d49c4321706faed9b9936089b17e4488",
+          "provider_state": "READY",
+          "health_get_utc": "2026-11-04T14:10:00Z",
+          "health_http": 200,
+          "no_store": true
+        }
+      ],
+      "functional_validation": "NOT_PERFORMED",
+      "rollback_alias_switch": "NOT_PERFORMED",
+      "restore_rehearsal": "NOT_PERFORMED",
+      "exact_release_candidate_binding": "NOT_PROVEN",
+      "OPS_05": "NOT_VERIFIED",
+      "note": "These previews are NOT approved known-good rollback targets; public health does not prove customer workflows or provider separation."
     }
   },
   "remediation_and_retest": {
@@ -239,5 +266,107 @@
       "OPS-06"
     ],
     "all_GO_decisions": "NO-GO"
+  },
+  "public_route_probe_20261104": {
+    "source": "Vercel authenticated GET observed 2026-11-04T14:06:43Z–14:07:42Z",
+    "endpoints": [
+      {
+        "path": "/pt",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/pricing",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/login",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/signup",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/book-demo",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/dashboard",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/api/health",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      }
+    ],
+    "total_readbacks": 14,
+    "successful_status_200": 14,
+    "no_store_count": 14,
+    "production_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "production_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+    "qa_deployment_id": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+    "qa_source_sha": "NOT_ATTESTED",
+    "caveats": [
+      "Dashboard HTTP 200 does not prove authenticated use or tenant isolation.",
+      "Public GET is not signup/login/form-submission/Stripe E2E.",
+      "No canonical candidate exact-SHA deployment smoke or GO acceptance."
+    ],
+    "formal_status": "PARTIAL_OPS-03_ONLY_NO_PASS"
+  },
+  "anonymous_organization_api_probe": {
+    "path": "GET /api/ai-systems",
+    "result": "INCONCLUSIVE_FAILED_AT_VERCEL_DEPLOYMENT_AUTHENTICATION",
+    "application_http_status": "NOT_ATTESTED",
+    "source_authorization": "src/app/api/ai-systems/route.ts calls requireApiUser() before organization access",
+    "caution": "A 401 from Vercel deployment protection is not an application auth 401; no tenant isolation PASS."
   }
 }
