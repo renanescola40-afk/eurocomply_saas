@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.enterprise-gate-closure-v23.acceptance-ledger.v1",
-  "generated_at": "2026-11-04T14:03:22.575Z",
+  "generated_at": "2026-11-04T14:07:23.508Z",
   "repository": "renanescola40-afk/eurocomply_saas",
   "canonical_candidate_branch": "integration/enterprise-unified-candidate-20261102",
   "candidate_commit_sha": "1ec52301e7609dae4f22f334bbc95d29c3463148",
@@ -72,7 +72,15 @@
     "recomputed_sha256_matches_index_for_all_three_unique_artifacts": true,
     "distinct_artifacts_checked": 3,
     "records_covered": 4,
-    "note": "SHA-256 recomputed on GitHub fetched UTF-8 artifact bytes; validates file integrity only, not factual correctness, provider freshness, or independent approval."
+    "note": "SHA-256 recomputed on GitHub fetched UTF-8 artifact bytes; validates file integrity only, not factual correctness, provider freshness, or independent approval.",
+    "historical_manifest_inconsistency": {
+      "file": "docs/enterprise/evidence/EVIDENCE_SHA256_MANIFEST.json",
+      "artifact": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+      "manifest_sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae",
+      "recomputed_and_index_sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
+      "assigned_executor": "VE3",
+      "effect": "Integrity metadata not fully reconciled; no Evidence Factory PASS claimed. The current index itself matches recomputed bytes."
+    }
   },
   "acceptance_contract": {
     "validator_path": "scripts/enterprise-evidence/validate-evidence.mjs",
@@ -472,7 +480,8 @@
       ],
       "remaining_conditions": [
         "Fresh Vercel six production environment price-key bindings in provider readback",
-        "Qualified independent human review against exact applicable source and hashed gate acceptance artifact"
+        "Qualified independent human review against exact applicable source and hashed gate acceptance artifact",
+        "Vercel environment list response was truncated (100 shown, 21 omitted); six same-named encrypted variables seen had a QA custom-environment ID and do not establish current Production price bindings. No secret values recorded."
       ]
     },
     {
@@ -961,7 +970,8 @@
         "Current Vercel API confirms production READY and exact baseline SHA with www.risckcomply.com deployment alias"
       ],
       "remaining_conditions": [
-        "Independent qualified reviewer, genuine GitHub review approval URL and gate acceptance artifact digest"
+        "Independent qualified reviewer, genuine GitHub review approval URL and gate acceptance artifact digest",
+        "Separate historical SHA-256 manifest remains stale for provider Vercel artifact: EVIDENCE_SHA256_MANIFEST.json records e5eb5e1d..., whereas actual artifact SHA-256 and corrected Evidence Factory index are 701913ec...; acceptance metadata must be reconciled before independent gate signoff."
       ]
     },
     {
@@ -1547,11 +1557,13 @@
         "docs/enterprise/evidence/NORMAL2_BILLING_QA_READ_ONLY_CHECK_2026-11-03.json"
       ],
       "verified_partial_evidence_not_pass": [
-        "Independent current Stripe LIVE read-only API refresh matched 6 active Prices and 3 active Products"
+        "Independent current Stripe LIVE read-only API refresh matched 6 active Prices and 3 active Products",
+        "Production binding existence/values not established by sampled custom QA env metadata."
       ],
       "remaining_conditions": [
         "Fresh Vercel six production environment price-key bindings in provider readback",
-        "Qualified independent human review against exact applicable source and hashed gate acceptance artifact"
+        "Qualified independent human review against exact applicable source and hashed gate acceptance artifact",
+        "Vercel environment list response was truncated (100 shown, 21 omitted); six same-named encrypted variables seen had a QA custom-environment ID and do not establish current Production price bindings. No secret values recorded."
       ]
     },
     {
@@ -1819,13 +1831,16 @@
       "missing_required_evidence": "Independent qualified approval URL and exact-SHA gate acceptance artifact + digest absent. The deployed production source SHA is frozen 70d3545f..., distinct from candidate 1ec52301..., which is valid for identity proof only.",
       "next_acceptance_action": "VE3 prepare A-18 reviewed production-identity package; qualified reviewer verify currently READY deployment, alias and frozen SHA.",
       "additional_existing_evidence_refs": [
-        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json",
+        "docs/enterprise/evidence/EVIDENCE_SHA256_MANIFEST.json",
+        "docs/enterprise/closure-v22/EVIDENCE_FACTORY_ARCHIVE_DIGEST_CORRECTION_20261104.json"
       ],
       "verified_partial_evidence_not_pass": [
         "Current Vercel API confirms production READY and exact baseline SHA with www.risckcomply.com deployment alias"
       ],
       "remaining_conditions": [
-        "Independent qualified reviewer, genuine GitHub review approval URL and gate acceptance artifact digest"
+        "Independent qualified reviewer, genuine GitHub review approval URL and gate acceptance artifact digest",
+        "Separate historical SHA-256 manifest remains stale for provider Vercel artifact: EVIDENCE_SHA256_MANIFEST.json records e5eb5e1d..., whereas actual artifact SHA-256 and corrected Evidence Factory index are 701913ec...; acceptance metadata must be reconciled before independent gate signoff."
       ]
     },
     {
