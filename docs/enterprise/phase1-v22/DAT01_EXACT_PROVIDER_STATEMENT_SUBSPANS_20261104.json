@@ -1,0 +1,82 @@
+{
+  "schema": "risck-comply.dat01.provider-statement-immutable-git-source-subspan.v1",
+  "observedAt": "2026-11-04",
+  "evidenceBoundary": "READ_ONLY_PROD_SELECT_AND_GITLAB_HISTORICAL_FILE_FETCH",
+  "control": "DAT-01",
+  "gate": "A-12",
+  "methodology": "For each single-statement applied production ledger version, compare the live provider statement exact JS string against an immutable historical GitLab repository file; record full source SHA256 and exact character offset. No SQL rewriting or whitespace normalization for these two matches.",
+  "sourceArchive": "docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json",
+  "records": [
+    {
+      "order": 117,
+      "version": "20261004082501",
+      "providerName": "validate_audit_logs_actor_user_fk",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 82,
+      "providerStatementSha256": "db12bfe5613df5425519632bd17fed43b3f3215c8917b1c2df58b6d55f31ee41",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "9b997b1f8eb14f4947d83eb856476c1cfc429055",
+        "file": "supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+        "blobSha1": "51853c8d20baded57d6da7c54d901dd67aa1727b",
+        "sourceSha256": "ef34adade10fd4879b1fcaa10c39f1205950811e706f41f8fb60d081e9f072d2",
+        "sourceCharacterLength": 288
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 205,
+        "charEndExclusive": 287,
+        "matchingCharacters": 82,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 119,
+      "version": "20261004110936",
+      "providerName": "add_sales_lead_email_templates",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 585,
+      "providerStatementSha256": "561206132e6a308b736564265583b4cc975a76738f80093225d43dc1d401785d",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "35e1f5aca770a00261c9456e8cf48c22b09c2caa",
+        "file": "supabase/migrations/20261004110936_add_sales_lead_email_templates.sql",
+        "blobSha1": "edda404e8787baf6b2e4af9a039b0890e0ef095d",
+        "sourceSha256": "c35fc19bcdcb7ec23d4ea53b7a31b5c630b556c98cedae73a6156ac1460d8c37",
+        "sourceCharacterLength": 931
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 131,
+        "charEndExclusive": 716,
+        "matchingCharacters": 585,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    }
+  ],
+  "guardrails": {
+    "wholeFileSourceProofClaimsBefore": 103,
+    "wholeFileSourceProofClaimsAfter": 103,
+    "unresolvedWholeFileSourcesBefore": 34,
+    "unresolvedWholeFileSourcesAfter": 34,
+    "newProviderStatementSubspanLinks": 2,
+    "independentReviewerApprovals": 0,
+    "postgres17Replays": 0,
+    "formalGateA12": "BLOCKED",
+    "productionWrites": 0,
+    "qaWrites": 0,
+    "statementPayloadsPublished": false
+  },
+  "nextActions": [
+    "Qualified review of wrapper/extra source content around matched applied statement and original version identity",
+    "Audit historical timestamps without inferring apply time",
+    "Do not count a subspan as a whole-file source match or independent replay authorization",
+    "Continue recovering other 32 historically unresolved sources"
+  ]
+}
