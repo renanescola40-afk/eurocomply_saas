@@ -1,0 +1,88 @@
+{
+  "schema": "risck-comply.ve1.clerk-qa-transaction-rollback-rehearsal.v1",
+  "observedDate": "2026-11-04",
+  "owner": "VE1",
+  "stage": "QA_SQL_REHEARSAL_PASSED_NOT_DEPLOYED",
+  "gateIds": [
+    "A-01",
+    "A-02"
+  ],
+  "atomicControls": [
+    "SEC-01",
+    "SEC-02",
+    "SEC-04"
+  ],
+  "source": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "mainSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+    "migrationPath": "supabase/migrations/20261103080000_enterprise_clerk_text_subject_mfa_reconciliation.sql",
+    "migrationGitBlobSha1": "31073c868fa14e66ebf5b1df2c917fafefac9177",
+    "existingVe1Pr": 2603,
+    "prHeadBeforeEvidence": "4aa27aabb3accfbd8b0e7c66c54537b9f8599504",
+    "migrationCopyBehavior": "Used unchanged source migration except replacing terminal COMMIT with QA test DO block, ROLLBACK and post-rollback SELECT."
+  },
+  "environment": {
+    "supabaseProjectId": "zrxrrfbllsxtleyxjpsz",
+    "name": "risck-comply-v15c-isolated-qa-20261022",
+    "database": "PostgreSQL 17.11",
+    "productionChanged": false,
+    "qaPersistentChanges": false,
+    "connectionRole": "Provider SQL administrative context, not actual end-user authenticated JWT"
+  },
+  "procedure": {
+    "execution": "Single SQL tool operation, BEGIN through validation DO then explicit ROLLBACK; second independent read-only SQL call verified original definitions.",
+    "preflightAndPostconditions": "Migration's existing preflight and postcondition DO blocks completed without raised exceptions.",
+    "assertions": 11,
+    "assertionBreakdown": [
+      {
+        "cases": 8,
+        "description": "Read and manage functions deny nonexistent organization for four request.jwt.claim.sub values: Clerk-text synthetic, malformed UUID, UUID-format missing user, and empty string; each returned FALSE and did not raise 22P02."
+      },
+      {
+        "cases": 2,
+        "description": "Both Enterprise functions deny NULL organization ID with strict FALSE."
+      },
+      {
+        "cases": 1,
+        "description": "Both functions remain SECURITY DEFINER with hardened pg_catalog search_path; anon denied, authenticated and service_role EXECUTE retained; no direct auth.uid() inside replacement definitions."
+      }
+    ],
+    "testInputBoundary": "SQL simulated request.jwt.claim.sub, NOT a cryptographically signed JWT or full HTTP session.",
+    "transactionResult": "QA SQL operation returned post-ROLLBACK verification JSON with all four booleans true",
+    "postRollbackVerification": {
+      "originalReadMd5": "d22463f096060aa22683ee61a74e5875",
+      "originalManageMd5": "4dcb3d1b3cd395ae9241bb6441336d9a",
+      "sameFingerprintsConfirmedInSeparateQuery": true,
+      "readAndManageStillUseAuthUidDirectly": true,
+      "noPublicReadRpc": true,
+      "noPublicManageRpc": true
+    }
+  },
+  "result": {
+    "sqlAssertionsPassed": 11,
+    "sqlAssertionsFailed": 0,
+    "migrationRehearsal": "PASS",
+    "persistentQaMigrationApplied": false,
+    "productionMigrationApplied": false,
+    "signedJwtE2e": "NOT_VERIFIED",
+    "realMfaAal2": "NOT_VERIFIED",
+    "qualifiedIndependentReview": "NOT_VERIFIED",
+    "fullCiExactSha": "NOT_VERIFIED",
+    "formalAcceptance": "NOT_ACCEPTED",
+    "acceptedGateCountAdded": 0
+  },
+  "remaining": [
+    "Independent source review of forward migration and active role/tenant MFA semantics",
+    "Authorized QA promotion of existing reviewed forward migration if/when permitted",
+    "Real signed-JWT AAL1/AAL2, expiry and revocation E2E with QA identities",
+    "Cross-tenant and access-negative API/Storage tests",
+    "Exact candidate-SHA full CI",
+    "Qualified independent G1 acceptance review and ledger update"
+  ],
+  "failClosedNotes": [
+    "Do not count simulated claims as identity-provider E2E.",
+    "No production SQL writes, no release, no Stripe LIVE.",
+    "No replay/production migration authorization given by this artifact.",
+    "Existing PR remains Draft; owner controls canonical merge."
+  ]
+}
