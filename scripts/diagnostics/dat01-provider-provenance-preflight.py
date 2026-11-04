@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DAT-01 read-only source provenance preflight; never authorizes production writes."""
+"""DAT-01 read-only source provenance preflight; never authorizes SQL replay or production writes."""
 import hashlib
 import json
 from pathlib import Path
@@ -25,12 +25,12 @@ def inspect(root=Path(".")):
         digest=hashlib.sha256(source.read_bytes()).hexdigest()
         if not (entry.get("statement_count")==1 and digest==entry.get("statement_sha256") and digest==entry.get("source_sha256") and source.relative_to(root).as_posix()==entry.get("source_file")):
             unverified.append(str(entry["version"]))
-    return {"status":"BLOCKED" if unverified else "PREFLIGHT_OK","verified":137-len(unverified),"unverified":len(unverified),"migration_execution_authorized":False,"formal_gate_accepted":False,"production_writes":False}
+    return {"status":"BLOCKED" if unverified else "PREFLIGHT_OK","verified":137-len(unverified),"unverified":len(unverified),"migration_execution_authorized":False,"qualified_independent_review_approved":False,"postgres17_replay_completed":False,"formal_gate_accepted":False,"production_writes":False}
 
 if __name__=="__main__":
     try:
         result=inspect()
     except (ValueError,KeyError,OSError) as exc:
-        result={"status":"BLOCKED","reason":type(exc).__name__,"formal_gate_accepted":False}
+        result={"status":"BLOCKED","reason":type(exc).__name__,"migration_execution_authorized":False,"qualified_independent_review_approved":False,"postgres17_replay_completed":False,"formal_gate_accepted":False,"production_writes":False}
     print(json.dumps(result,sort_keys=True))
     raise SystemExit(0 if result["status"]=="PREFLIGHT_OK" else 2)
