@@ -111,6 +111,15 @@
       "reviewer": "PENDING",
       "replay": "0/137",
       "note": "Exactly matching contiguous historical source subspans do not imply identity-qualified whole-file migration replay."
+    },
+    "latestProviderGitlabPartialProof": {
+      "path": "docs/enterprise/phase1-v22/DAT01_34_MISSING_SOURCE_LIVE_STRING_TRIAGE_20261104.json",
+      "missingWholeSourceBytes": 34,
+      "sevenSingleStatementSubspanMatches": 7,
+      "partialMultiStatementOneRow": "11/15",
+      "fullFileByteClaimsRemain": "103/137",
+      "qualifiedReview": "PENDING",
+      "replayPerformed": "0/137"
     }
   },
   "acceptance": {
@@ -168,7 +177,7 @@
       "implementation": "PR #2599 integrated source; no duplicate change.",
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
       "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
-      "provider_readback": "QA/PROD app_private.is_org_member definition hash e66823b6d1667a32f24e8dec7c90547e; has_org_role 364143ed2878ca970a59ae4987491cb2.",
+      "provider_readback": "QA/PROD app_private.is_org_member definition hash e66823b6d1667a32f24e8dec7c90547e; has_org_role 364143ed2878ca970a59ae4987491cb2.; NEW 2026-11-04: real QA+PROD catalog 115/115 public RLS/FORCE RLS; all 128 public security-definers deny direct anon/auth EXECUTE; 31 public search_path definers are service-only; no anon/auth CREATE on public schema. Latest Vercel READY production SHA 70d3545... does not match newly merged main 6f7079...; exact-main hosted CI and TLS/client-bundle proof absent.",
       "negative_test_evidence": "10/10 archived QA SQL claim-simulation probes reported in #2599; NOT signed JWT E2E.; QA synthetic Clerk text subject also reproduces 22P02 on enterprise_member_can_manage; delegated has_org_role correctly returns false.",
       "remaining_blocker": "Authenticated role-escalation/removal/last-owner deny tests and independent review",
       "status": "NOT_VERIFIED",
@@ -188,7 +197,7 @@
       "implementation": "Existing security-definer source retained; no privileged grants changed.",
       "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
       "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
-      "provider_readback": "Three app_private helpers share QA/PROD definition fingerprints and pg_catalog search_path.; four checked private helpers are SECURITY DEFINER pg_catalog, anon EXECUTE=false, authenticated/service_role=true in both QA and PROD. Does not prove all privileged functions.",
+      "provider_readback": "Three app_private helpers share QA/PROD definition fingerprints and pg_catalog search_path.; four checked private helpers are SECURITY DEFINER pg_catalog, anon EXECUTE=false, authenticated/service_role=true in both QA and PROD. Does not prove all privileged functions.; NEW 2026-11-04: real QA+PROD catalog 115/115 public RLS/FORCE RLS; all 128 public security-definers deny direct anon/auth EXECUTE; 31 public search_path definers are service-only; no anon/auth CREATE on public schema. Latest Vercel READY production SHA 70d3545... does not match newly merged main 6f7079...; exact-main hosted CI and TLS/client-bundle proof absent.",
       "negative_test_evidence": "Forbidden RPC and privilege invocation under signed JWT NOT_VERIFIED.",
       "remaining_blocker": "Review all privileged functions/grants and unauthorized invocation",
       "status": "NOT_VERIFIED",
@@ -247,7 +256,7 @@
       "implementation": "PR #2600 client-env scanner and access parser byte-identical in canonical candidate; no duplicate code.",
       "test_command": "node --test tests/security/client-env-access.test.mjs",
       "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
-      "provider_readback": "QA/PROD security advisor auth_leaked_password_protection WARN=1 each; backend-only 33 RLS-no-policy INFO each, not evidence of exposure.",
+      "provider_readback": "QA/PROD security advisor auth_leaked_password_protection WARN=1 each; backend-only 33 RLS-no-policy INFO each, not evidence of exposure.; NEW 2026-11-04: real QA+PROD catalog 115/115 public RLS/FORCE RLS; all 128 public security-definers deny direct anon/auth EXECUTE; 31 public search_path definers are service-only; no anon/auth CREATE on public schema. Latest Vercel READY production SHA 70d3545... does not match newly merged main 6f7079...; exact-main hosted CI and TLS/client-bundle proof absent.",
       "negative_test_evidence": "Indirect env reference regression covered by #2600; full bundle/no-store/TLS negative provider validation NOT_VERIFIED.",
       "remaining_blocker": "Exact-SHA CI, client bundle/TLS/log sanitization evidence, review password-protection warning; no PROD config changes",
       "status": "NOT_VERIFIED"
@@ -360,6 +369,28 @@
       "hostedCodeTestResult": "NOT_EXECUTED_OR_UNAVAILABLE",
       "CircleCIExactSHA": "NOT_VERIFIED",
       "reviewer": "PENDING"
+    },
+    "canonicalMerge20261104": {
+      "mergedPR": 2598,
+      "mergeCommit": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "sourcePR2608Merged": true,
+      "ownPR2603Base": "main",
+      "currentMainCircleCiExactSha": "NOT_VERIFIED",
+      "mainNoConfirmedGithubWorkflowRunsAtMergeSha": true,
+      "sourceQAT01": "NOT_VERIFIED",
+      "note": "Merged code does not imply formal control acceptance, exact main SHA CI or production deployment"
+    },
+    "SEC02_SEC04_providerReadback": {
+      "evidence": "docs/enterprise/phase1-v22/SEC02_SEC04_DEFINER_ACL_VERCEL_READBACK_20261104.json",
+      "productionAndQaPublicRlsAndForceRls": "115/115",
+      "directAnonPrivilegeOn128PublicSecurityDefiners": 0,
+      "directAuthenticatedPrivilegeOn128PublicSecurityDefiners": 0,
+      "serviceOnlyDefinersWithPublicSearchPath": 31,
+      "publicSchemaCreateByAnonOrAuthenticated": false,
+      "currentMainProductionDeployed": false,
+      "prodDeploymentSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "mainMergeSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "boundary": "Provider metadata only, not signed-JWT E2E or direct TLS proof"
     }
   }
 }
