@@ -160,6 +160,29 @@
         "release_sha": "70d3545f414d063379d481fd238aed563e05edda",
         "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
         "formal_effect": "NO_PASS_PUBLIC_DISCLOSURE_ONLY"
+      },
+      "public_route_probe_20261104": {
+        "count": 14,
+        "successful_http_200": 14,
+        "no_store": 14,
+        "routes": [
+          "/pt",
+          "/pt/pricing",
+          "/pt/login",
+          "/pt/signup",
+          "/pt/book-demo",
+          "/pt/dashboard",
+          "/api/health"
+        ],
+        "environments": [
+          "production",
+          "qa"
+        ],
+        "prod_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+        "qa_source_sha": "NOT_ATTESTED",
+        "qa_private_unauthenticated_api_test": "INCONCLUSIVE_VERCEL_PROTECTION_LAYER",
+        "note": "Public reachability only. No authenticated flows verified.",
+        "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       }
     },
     "legal": {
@@ -221,6 +244,27 @@
         }
       ],
       "current_sha": "Attribution to checked candidate branch snapshot; SHA must be refreshed by Executor 3 before integration"
+    },
+    "supabase": {
+      "readback_date_utc": "2026-11-04",
+      "qa": {
+        "ref": "zrxrrfbllsxtleyxjpsz",
+        "status": "ACTIVE_HEALTHY",
+        "region": "eu-west-1",
+        "qa_vercel_public_url_keys_match": true,
+        "qa_csp_supabase_ref_matches": true
+      },
+      "production": {
+        "ref": "tganhbbhfxcpblmgqprg",
+        "status": "ACTIVE_HEALTHY",
+        "region": "eu-west-1",
+        "production_csp_supabase_ref_matches": true
+      },
+      "cross_environment_public_csp_ref_leak": false,
+      "admin_credentials_isolation": "NOT_VERIFIED",
+      "negative_cross_env_key_tests": "NOT_PERFORMED",
+      "effect": "Partial OPS-06 support only, not signed acceptance.",
+      "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
     }
   },
   "controls": [
@@ -264,7 +308,8 @@
       "unmet_requirements": [
         "No deployment-bound authenticated customer smoke proof for current production SHA",
         "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage",
-        "QA GET /api/ready and /api/ready/release return 503 before authenticated readiness due to missing effective Upstash Redis; live provider logs corroborate, so uptime of /api/health cannot satisfy readiness."
+        "QA GET /api/ready and /api/ready/release return 503 before authenticated readiness due to missing effective Upstash Redis; live provider logs corroborate, so uptime of /api/health cannot satisfy readiness.",
+        "14/14 read-only public route GET checks returned HTTP 200 (7 routes each on production+QA) with no-store, but exact candidate SHA and any authenticated customer workflow are unverified."
       ],
       "remediation_owner": "SRE/operations",
       "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
@@ -302,7 +347,8 @@
       "source_refs": [
         "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
         "docs/operations/ROLLBACK_RUNBOOK.md",
-        "docs/security/evidence/runtime/rollback-dry-run-validation.json"
+        "docs/security/evidence/runtime/rollback-dry-run-validation.json",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
@@ -333,7 +379,8 @@
         "Vercel Preview-targeted privileged variable names flagged securityIssues=readable-secret require scoped access/client bundle review; no disclosure or leak established.",
         "Retained production environment preflight status=Open (generated 2026-07-09); no accepted exact-release credential-isolation or provider configuration result.",
         "QA cannot prove separated runtime dependencies while Upstash Redis is not configured; QA release SHA also not independently attested.",
-        "QA custom environment lacks UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN and HEALTHCHECK_TOKEN; no approved independently isolated QA Redis instance was discovered and Vercel integration inventory is inaccessible (403)."
+        "QA custom environment lacks UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN and HEALTHCHECK_TOKEN; no approved independently isolated QA Redis instance was discovered and Vercel integration inventory is inaccessible (403).",
+        "Current QA and production Supabase projects are distinct and ACTIVE_HEALTHY, QA public URL variables and public CSP refs each match their own instance; administrative token isolation and negative cross-env access tests remain unverified."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
