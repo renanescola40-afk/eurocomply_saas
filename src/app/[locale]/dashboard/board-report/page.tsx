@@ -89,7 +89,7 @@ export default function BoardReportPage() {
 
         {loadError ? <p data-print-hide role="alert" className="rounded-lg border border-amber-400/20 p-3 text-sm text-amber-200">{loadError}</p> : null}
 
-        {!data ? (
+        {loadError ? null : !data ? (
           <Card data-print-card className="rounded-xl border-white/[0.08] bg-white/[0.025] text-white"><CardContent className="py-12 text-center text-white/45">{t.empty}</CardContent></Card>
         ) : (
           <>
