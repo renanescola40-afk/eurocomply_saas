@@ -38,6 +38,9 @@ class ProvenancePreflightTest(unittest.TestCase):
         self.assertEqual(code,0)
         self.assertEqual(report["status"],"PREFLIGHT_OK")
         self.assertEqual(report["verified"],137)
+        self.assertFalse(report["migration_execution_authorized"])
+        self.assertFalse(report["qualified_independent_review_approved"])
+        self.assertFalse(report["postgres17_replay_completed"])
         self.assertFalse(report["formal_gate_accepted"])
         self.assertFalse(report["production_writes"])
 
@@ -71,6 +74,20 @@ class ProvenancePreflightTest(unittest.TestCase):
         code,report=self.run_preflight()
         self.assertEqual(code,2)
         self.assertEqual(report["unverified"],1)
+
+    def test_forged_provider_approval_flag_does_not_authorize_replay(self):
+        evidence_path=self.root/"docs/enterprise/evidence/G1_PROD_PROVIDER_SQL_STATEMENT_SHA256_2026-10-22.json"
+        evidence=json.loads(evidence_path.read_text())
+        evidence["independent_review_approved"]=True
+        evidence["replay_approved"]=True
+        evidence_path.write_text(json.dumps(evidence))
+        code,report=self.run_preflight()
+        self.assertEqual(code,0)
+        self.assertEqual(report["verified"],137)
+        self.assertFalse(report["migration_execution_authorized"])
+        self.assertFalse(report["qualified_independent_review_approved"])
+        self.assertFalse(report["postgres17_replay_completed"])
+        self.assertFalse(report["formal_gate_accepted"])
 
 if __name__=="__main__":
     unittest.main()
