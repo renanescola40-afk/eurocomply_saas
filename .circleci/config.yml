@@ -83,7 +83,7 @@ jobs:
           command: npm run typecheck
       - run:
           name: Vitest unit suite
-          command: npm run test -- --reporter=dot
+          command: npm run test -- --reporter=verbose
       - run:
           name: Evidence Vault upload-recovery regression suite
           command: node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs
@@ -141,7 +141,7 @@ jobs:
           command: npm run typecheck
       - run:
           name: Vitest unit suite
-          command: npm run test -- --reporter=dot
+          command: npm run test -- --reporter=verbose
       - run:
           name: Evidence Vault upload-recovery regression suite
           command: node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs
