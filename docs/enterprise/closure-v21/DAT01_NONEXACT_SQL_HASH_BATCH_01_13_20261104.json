@@ -1,0 +1,144 @@
+{
+  "schema": "risck-comply.dat01.nonexact-source-hash-triage.v1",
+  "observedDate": "2026-11-04",
+  "batch": "nonexact entries #1-13 (1-based)",
+  "candidateReadHead": "2cbad36b7c739ee78280ef46c3bfe833fa482f7b",
+  "crosswalkBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+  "ledgerBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+  "lexerBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+  "method": "Exact historical SQL source text compared against archived provider SHA256 UTF8 and byte length, with conservative lexer and single-entry representations. All nonexact identity mappings explicitly remain review-required regardless of hash.",
+  "checked": 13,
+  "hashMatches": 5,
+  "unmatched": 8,
+  "rows": [
+    {
+      "version": "20260831115851",
+      "mapping": "provider_record_to_canonical_source",
+      "gitBlob": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+      "statementCount": 1,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "matchedBy": null,
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260902193810",
+      "mapping": "canonical_name_match",
+      "gitBlob": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+      "statementCount": 1,
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "matchedBy": "RAW",
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260902193849",
+      "mapping": "canonical_name_match",
+      "gitBlob": "0aca9099c57aabe9afa5cf240bfe9375a7b7c51c",
+      "statementCount": 1,
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "matchedBy": "RAW",
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260902202558",
+      "mapping": "provider_record_to_canonical_source",
+      "gitBlob": "a7864789c6f3b4672d78ebeb8737bc9278c9c02e",
+      "statementCount": 1,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "matchedBy": null,
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260909230946",
+      "mapping": "canonical_name_match",
+      "gitBlob": "0324110de0279d5619f0b7023f8fc0249f287966",
+      "statementCount": 1,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "matchedBy": null,
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260909231011",
+      "mapping": "canonical_name_match",
+      "gitBlob": "4c6751127df4dd74f2d1b2ce58ef3b4f8b10500c",
+      "statementCount": 1,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "matchedBy": null,
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260909232229",
+      "mapping": "canonical_name_match",
+      "gitBlob": "985b87aab915b76cdb1e00a48110669e277551f6",
+      "statementCount": 1,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "matchedBy": null,
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260924141739",
+      "mapping": "canonical_name_match",
+      "gitBlob": "9591e772493d2dc84893407448927c8e8e7ef6f8",
+      "statementCount": 1,
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "matchedBy": "PREFIX_LF",
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260924142553",
+      "mapping": "canonical_name_match",
+      "gitBlob": "4000b04cdf04e465eee4043dbc8e57b543c41b0d",
+      "statementCount": 1,
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "matchedBy": "PREFIX_LF",
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20260924143358",
+      "mapping": "canonical_name_match",
+      "gitBlob": "d82a1946504bbb9dc3c5f5d6c3312331eeb64f51",
+      "statementCount": 1,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "matchedBy": null,
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20261003220421",
+      "mapping": "canonical_name_match",
+      "gitBlob": "763afbeeda820e042a8d8680918c404017cee4db",
+      "statementCount": 1,
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "matchedBy": "TRIM_END",
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20261003220519",
+      "mapping": "canonical_name_match",
+      "gitBlob": "95d287db168e532c07450706f56685ba3347e10f",
+      "statementCount": 1,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "matchedBy": null,
+      "qualifiedReviewRequired": true
+    },
+    {
+      "version": "20261004082501",
+      "mapping": "canonical_name_match",
+      "gitBlob": "51853c8d20baded57d6da7c54d901dd67aa1727b",
+      "statementCount": 1,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "matchedBy": null,
+      "qualifiedReviewRequired": true
+    }
+  ],
+  "status": {
+    "DAT01": "BLOCKED",
+    "nonExactIdentityApproved": 0,
+    "migrationsApplied": 0,
+    "formalGateAccepted": false
+  },
+  "noProductionWrites": true,
+  "comments": [
+    "Hashes help source reconciliation only: version/name mapping and consolidations need qualified review.",
+    "Two provider_record_to_canonical_source identities share a source with another mapping; no execution manifest inferred.",
+    "No automatic PASS from matching hashes."
+  ]
+}

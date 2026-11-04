@@ -5,6 +5,7 @@ run-name: Canonical safe promotion scorecard for ${{ github.event.workflow_run.h
 on:
   workflow_run:
     workflows: [Enterprise Safe Runtime Bootstrap]
+    branches: [main]
     types: [completed]
   workflow_dispatch:
     inputs:

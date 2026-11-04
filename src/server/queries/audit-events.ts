@@ -87,11 +87,16 @@ function isMissingAuditEventsTable(error: SupabaseError) {
 }
 
 function isMissingAuditChainColumns(error: SupabaseError) {
-  return error.code === '42703' || error.code === 'PGRST204' || /(previous_hash|event_hash|hash_algorithm|hash_signature|actor_user_id)/i.test(error.message ?? '');
+  // A message mentioning an audit column may describe an authorization error,
+  // not a missing column. Never use it to justify a legacy-write downgrade.
+  return error.code === '42703' || error.code === 'PGRST204';
 }
 
 function isMissingAuditChainRpc(error: SupabaseError) {
-  return error.code === '42883' || error.code === 'PGRST202' || /append_audit_event_chained|function/i.test(error.message ?? '');
+  // Message-only matching can mistake an authorization/operational error for
+  // a missing RPC and permit an explicitly configured downgrade to direct
+  // insertion. Only recognized undefined-function / schema-cache codes qualify.
+  return error.code === '42883' || error.code === 'PGRST202';
 }
 
 function isAuditChainPreviousHashMismatch(error: SupabaseError) {
@@ -108,8 +113,16 @@ function isAuditChainAppendContention(error: SupabaseError) {
 
 const isPreviousHashMismatch = isAuditChainPreviousHashMismatch;
 
+function isEnterpriseSignedAuditMode() {
+  // Enterprise release gates must never silently accept unsigned events or
+  // downgrade a failed transactional RPC to direct/legacy inserts.
+  return (process.env.RISCK_COMPLY_ENTERPRISE_RELEASE ?? '').trim().toLowerCase() === 'true'
+    || (process.env.RELEASE_TARGET ?? '').trim().toLowerCase() === 'enterprise';
+}
+
 function isFallbackEnabled(name: string) {
-  return (process.env[name] ?? '').trim().toLowerCase() === 'true';
+  return !isEnterpriseSignedAuditMode()
+    && (process.env[name] ?? '').trim().toLowerCase() === 'true';
 }
 
 export function isNonTransactionalAuditAppendFallbackAllowed() {
@@ -121,8 +134,11 @@ function isLegacyAuditAppendFallbackAllowed() {
 }
 
 function isBlockedMetadataKey(key: string) {
-  const normalized = key.trim().toLowerCase();
-  return BLOCKED_METADATA_KEYS.some((blocked) => normalized.includes(blocked));
+  // Treat separator and Unicode-width variants of credential names alike.
+  const normalized = key.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return BLOCKED_METADATA_KEYS.some((blocked) =>
+    normalized.includes(blocked.replace(/[^a-z0-9]/g, '')),
+  );
 }
 
 function sanitizeString(value: string) {
@@ -345,6 +361,10 @@ async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: Nor
     }
 
     const { id, createdAt, chain } = buildChainedPayload(input, previousHashRead.hash);
+    if (isEnterpriseSignedAuditMode() && !chain.signature) {
+      // Keep this distinct from a missing-RPC error, preventing any fallback.
+      return { ok: false as const, error: { code: 'AUDIT_SIGNING_UNAVAILABLE' } };
+    }
 
     const { error } = await supabase.rpc(CHAIN_APPEND_RPC, buildAuditChainRpcParams(input, chain, id, createdAt));
 
@@ -390,6 +410,12 @@ export async function createAuditEvent(input: AuditEventInput) {
 
   if (!normalizedInput) {
     return { persisted: false, reason: 'invalid_audit_event_input' as const };
+  }
+
+  if (isEnterpriseSignedAuditMode() && !(process.env.AUDIT_CHAIN_SIGNING_SECRET ?? '').trim()) {
+    // No secret content, user IDs or event metadata in diagnostic logs.
+    console.warn('[audit] enterprise_signing_material_unavailable');
+    return { persisted: false, reason: 'audit_signing_unavailable' as const };
   }
 
   const supabase = tryCreateAdminClient();

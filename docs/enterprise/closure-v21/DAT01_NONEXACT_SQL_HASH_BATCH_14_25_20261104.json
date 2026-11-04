@@ -1,0 +1,121 @@
+{
+  "schema": "risck-comply.dat01.nonexact-source-hash-triage.v1",
+  "observedDate": "2026-11-04",
+  "batch": "nonexact entries 14-25",
+  "sourceRef": "233288bbd0fbeb231e198757093858fe28d3124d",
+  "crosswalkBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+  "ledgerBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+  "lexerBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+  "method": "Conservative exact-byte UTF8 SHA256 provider-statement comparison, source GitHub readback and SHA256 selfcheck. Nonexact identities never auto-promoted, including hash matches.",
+  "checked": 12,
+  "hashMatches": 8,
+  "unmatched": 4,
+  "records": [
+    {
+      "version": "20261004103137",
+      "mapping": "canonical_name_match",
+      "gitBlob": "82c385142c9f4d6ac18dbc62affa75ad9a379096",
+      "matchedBy": null,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261006125506",
+      "mapping": "canonical_name_match",
+      "gitBlob": "62ea5e6eb2e7c93eb81c19e99675b685943ee0c2",
+      "matchedBy": "RAW",
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261006125509",
+      "mapping": "canonical_name_match",
+      "gitBlob": "cb53d8749531ce438482a07002fd3f8074c58d88",
+      "matchedBy": "RAW",
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261006125511",
+      "mapping": "canonical_name_match",
+      "gitBlob": "e00d5f11c7fcc0d3120749b90988618dd30dbbef",
+      "matchedBy": "RAW",
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261006125514",
+      "mapping": "canonical_name_match",
+      "gitBlob": "702a9accd566e17b43b3d318f62a0d02bba39878",
+      "matchedBy": "RAW",
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261006125518",
+      "mapping": "canonical_name_match",
+      "gitBlob": "aadaa1856cb57acb8dac072463c82e8e2b884518",
+      "matchedBy": "RAW",
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261006125623",
+      "mapping": "canonical_name_match",
+      "gitBlob": "640e6f2f7f5b5fd443b70063e56d12dc627125b9",
+      "matchedBy": "RAW",
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261006130430",
+      "mapping": "canonical_name_match",
+      "gitBlob": "7b8546ea62b1de88b27a3b872a6206e12c52fe2c",
+      "matchedBy": "RAW",
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261010075142",
+      "mapping": "canonical_name_match",
+      "gitBlob": "50083d15b3340dc8106eb4dd75cd5a3067db89f0",
+      "matchedBy": null,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261013133323",
+      "mapping": "superseded_by_forward_reconciliation",
+      "gitBlob": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+      "matchedBy": null,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261013133341",
+      "mapping": "superseded_by_forward_reconciliation",
+      "gitBlob": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+      "matchedBy": null,
+      "status": "NONEXACT_UNMATCHED_REVIEW",
+      "identityReviewRequired": true
+    },
+    {
+      "version": "20261015205458",
+      "mapping": "canonical_name_match",
+      "gitBlob": "c16446c0502fe961745102e3a187978f6cbf6692",
+      "matchedBy": "RAW",
+      "status": "NONEXACT_HASH_MATCH_REVIEW",
+      "identityReviewRequired": true
+    }
+  ],
+  "nonExactOverall": {
+    "checked": 25,
+    "hashMatches": 13,
+    "unmatched": 12,
+    "approvedIdentityMappings": 0
+  },
+  "gateStatus": "DAT-01 BLOCKED",
+  "replay": "0/137",
+  "noDatabaseWrites": true,
+  "formalNewGatePass": 0
+}

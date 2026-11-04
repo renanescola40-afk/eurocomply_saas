@@ -1,0 +1,72 @@
+{
+  "schema": "risck-comply.enterprise.bil02-test-provider-blocker.v1",
+  "observedAt": "2026-11-04T10:15:24.467Z",
+  "subject": "BIL-02",
+  "gate": "A-10",
+  "evidenceDecision": "NOT_VERIFIED_BLOCKER_READBACK",
+  "executionScope": "read-only Stripe TEST webhook endpoint inventory and aggregate-only Supabase QA SQL",
+  "source": {
+    "repo": "renanescola40-afk/eurocomply_saas",
+    "pr": 2597,
+    "focusedHeadAtEvidenceReadback": "3b691073782aa02be1780435658f3fc2ac4f49c7",
+    "canonicalPr": 2598,
+    "providerSourceShaAttested": false
+  },
+  "stripeTest": {
+    "accountContext": "acct_1U6IuJGt3cgjPOtq",
+    "livemode": false,
+    "webhookEndpointCount": 1,
+    "endpointId": "we_1ULOe9Gt3cgjPOtqNFF0MPKi",
+    "endpointStatus": "disabled",
+    "endpointConfiguredEventTypes": [
+      "checkout.session.completed",
+      "customer.subscription.created",
+      "customer.subscription.updated",
+      "customer.subscription.deleted",
+      "invoice.payment_failed",
+      "invoice.paid"
+    ],
+    "endpointTargetsVerifiedQa": false,
+    "endpointTargetsOldPreview": true,
+    "endpointUrlOmittedForSecurity": true,
+    "signedTestDeliveryObserved": false,
+    "invalidSignatureProofObserved": false,
+    "duplicateReplayProofObserved": false
+  },
+  "supabaseQa": {
+    "projectRef": "zrxrrfbllsxtleyxjpsz",
+    "readOnlyStatement": true,
+    "statementTimeoutMs": 5000,
+    "qaOrganizations": 2,
+    "qaSubscriptions": 0,
+    "qaWebhookEvents": 0,
+    "qaCheckoutAttempts": 0,
+    "qaLifecycleRequests": 0,
+    "customerRowsRead": false
+  },
+  "releasePrerequisites": {
+    "sourceExactQaDeploymentAttested": false,
+    "qaStripeWebhookEffectiveConfigurationAttested": false,
+    "signedTestProviderEventProcessed": false,
+    "idempotentReplayPersisted": false,
+    "independentNativeReviewerApproved": false,
+    "gateAccepted": false
+  },
+  "followup": [
+    "Verify reviewed exact-SHA candidate builds and source-attested isolated Vercel QA deployment",
+    "Confirm TEST-only Stripe secret and QA Supabase project before safe endpoint binding",
+    "Retain disabled old endpoint until a new correct TEST QA endpoint has verified signature configuration",
+    "Execute genuine Stripe TEST webhook delivery and negative signature, duplicate replay and persisted readbacks",
+    "Run exact-SHA hosted CI and obtain separately eligible independent GitHub review",
+    "Integrate standalone verify-g1-bil02-evidence.mjs into master scope verifier, then record PASS only when external provider evidence is corroborated"
+  ],
+  "safety": {
+    "secretValuesRead": false,
+    "rawWebhookUrlsStored": false,
+    "liveStripeMutations": false,
+    "productionWrites": false,
+    "qaWrites": false,
+    "emailsSent": false,
+    "newCostsAuthorized": false
+  }
+}

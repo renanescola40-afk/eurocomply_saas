@@ -63,7 +63,8 @@ describe('incident response and continuity megapack', () => {
     );
 
     expect(installedBraceExpansion.length).toBeGreaterThan(0);
-    expect(installedVersions.has('1.1.21')).toBe(true);
+    // The current dependency graph has only brace-expansion 5; keep the
+    // assertion aligned to installed packages while rejecting known vulnerable releases.
     expect(installedVersions.has('5.0.12')).toBe(true);
     expect(
       installedBraceExpansion.filter(({ version }) =>

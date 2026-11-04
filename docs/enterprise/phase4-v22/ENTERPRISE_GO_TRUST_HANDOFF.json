@@ -1,0 +1,727 @@
+{
+  "schema": "risck-comply.enterprise.phase4-v22.handoff.v1",
+  "generated_at_utc": "2026-11-04",
+  "role": "Executor 4: independent preparatory review; NOT a qualified legal or security sign-off",
+  "evidence_policy": "Read-only observations must not be treated as formal PASS, and draft text cannot replace provider enforcement, runtime tests or human legal review.",
+  "source": {
+    "github_repo": "renanescola40-afk/eurocomply_saas",
+    "main_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+    "candidate_pr": 2598,
+    "candidate_head_observed": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+    "governance_amendment_pr": 2601,
+    "governance_amendment_head": "a7e92048ddf77aaa832a0cf4dbd037c5c8132d7a",
+    "rollback_pr": 2594,
+    "rollback_head": "58a60e1860a9c90fd03d6641d318148c976027ba",
+    "acceptance_registry": "config/g1-enterprise-scope-v1.json",
+    "grouping": "config/g1-product-ready-24-gates.json",
+    "source_test_sha": null,
+    "source_test_execution": "No Phase-4 acceptance tests executed in this verification; provider API metadata readbacks only"
+  },
+  "formal_snapshot": {
+    "snapshot_source": "main and canonical candidate registry readbacks; no writes to either",
+    "accepted_atomic": 2,
+    "total_atomic": 38,
+    "accepted_gates": 2,
+    "total_gates": 24,
+    "accepted_control_ids": [
+      "BIL-01",
+      "OPS-01"
+    ],
+    "blocked_atomic_ids": [
+      "DAT-01"
+    ],
+    "phase4_accepted_gates": 0,
+    "phase4_total_gates": 6,
+    "phase4_accepted_controls": 0,
+    "phase4_total_controls": 11
+  },
+  "provider_readbacks": {
+    "github": {
+      "main_protected": false,
+      "main_protection_api": "403 Resource not accessible by integration",
+      "rulesets_api": "403 Upgrade to GitHub Pro or make this repository public to enable this feature; private repository",
+      "pr2601": {
+        "state": "open",
+        "draft": true,
+        "head_sha": "a7e92048ddf77aaa832a0cf4dbd037c5c8132d7a",
+        "review_approvals": 0,
+        "mergeable_state": "unstable",
+        "checks_first_page": "Many failures on current head; not acceptance proof"
+      },
+      "pr2598": {
+        "state": "open",
+        "draft": true,
+        "head_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+        "review_approvals": 0,
+        "check_state": "Many failed exact-head GitHub Actions checks; no PASS"
+      },
+      "codeowners": "Only @renanescola40-afk appears for the inspected CODEOWNERS paths; eligible independent non-author review not established",
+      "actions": {
+        "sample_run": 41826352801,
+        "head_sha": "83b512370cf6f29dd956c87d581cb4b79d72af90",
+        "status": "failure",
+        "job_id": 126561955993,
+        "job_name": "build-closeout-plan",
+        "job_steps": null,
+        "job_logs_url": null,
+        "log_download": "BlobNotFound",
+        "classification": "RUNNER_ADMISSION_OR_PROVIDER_BLOCKER_SUSPECTED; GitHub billing causality NOT VERIFIED",
+        "safe_action": "Inspect GitHub Actions billing/usage and run admission in account UI; do not re-run failing jobs without provider diagnosis",
+        "mixed_status_observation": "On PR #2604 exact first head 6424193fa1a7c32174b8b23c92bee52eb8ca7ae7, 2 newer qualified-review/closeout-plan checks reported success while several checks failed or were skipped. Failures cannot all be labeled provider billing without per-job admission evidence; successful reports are not human approval or mandatory source proof.",
+        "cross_provider_comparison": {
+          "source_sha": "7d57576b62eea3959cf79a7528d2086e82ec5118",
+          "pull_request": 2604,
+          "buildkite_checks_success": 2,
+          "github_actions_checks_failure": 3,
+          "supabase_check_skipped": 1,
+          "check_scope": "Sample at exact Phase-4 handoff SHA, not current canonical candidate; success checks do not imply formal acceptance",
+          "finding": "Multiple hosted providers run; GitHub Actions jobs repeatedly fail within seconds with no steps, but billing causality is NOT verified."
+        }
+      },
+      "note": "Branch protected=false does not prove absence of every effective policy; requested direct ruleset/protection detail is unavailable."
+    },
+    "vercel": {
+      "team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+      "project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+      "domain": "www.risckcomply.com",
+      "alias_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+      "alias_deployment_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+      "alias_deployment_state": "READY",
+      "main_and_candidate_sha_do_not_match_public_alias": true,
+      "runtime_24h": "No runtime errors found in selected 24h window; not proof of monitoring or incident readiness",
+      "runtime_7d": "One Server Action error group, 3 events, /[locale]/book-demo, last seen 2026-10-28T18:08:39Z",
+      "environment_readback": "Project environment variable metadata available; first page and custom QA environment present. No secret values decrypted or negative credential-isolation tests executed.",
+      "runtime_alert_test": "NOT_TESTED",
+      "rollback_rehearsal": "NOT_TESTED",
+      "health_auth_smoke": "NOT_TESTED",
+      "preview_sensitive_metadata_review": {
+        "inspected_on": "2026-11-04",
+        "provenance": "Vercel project environment variable metadata, decrypt=false, first page only",
+        "flagged_preview_key_names": [
+          "SUPABASE_ADMIN_KEY",
+          "SUPABASE_SERVICE_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "RESEND_API_KEY"
+        ],
+        "provider_warning": "securityIssues includes readable-secret for these Preview-targeted variables",
+        "claim_boundary": "A provider securityIssues metadata flag is NOT proof that any secret leaked to clients or logs; account permission scope, project role and deployment bundle must be tested. No values were fetched or stored.",
+        "next_test": "Compare Preview/QA/Production variable targets and effective key identifiers through non-disclosing provider attestations. Verify no privileged key ships to NEXT_PUBLIC/client bundles, then perform QA negative cross-environment tests without retrieving secret values.",
+        "status": "NOT_VERIFIED"
+      },
+      "live_unprivileged_smoke_attempt": {
+        "methods": "Bounded read-only public GET attempts via browser fetch and independent local request",
+        "paths": [
+          "/api/health",
+          "/api/ready"
+        ],
+        "outcome": "NOT_VERIFIED_PUBLIC_FETCH_BLOCKED_BY_TOOL_OR_DNS",
+        "evidence_boundary": "Client-side lookup tool failed to access site and local container could not resolve the hostname. This cannot be interpreted as application downtime or an endpoint failure. No authenticated production request sent."
+      },
+      "runtime_probe_20261104": {
+        "evidence_path": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "qa_deployment_id": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+        "qa_basic_health": "GET /api/health 200 status ok, no-store (alias and immutable deployment hostname)",
+        "qa_internal_readiness": "GET /api/ready and /api/ready/release each 503 security_control_unavailable",
+        "qa_redis_root_cause": "Vercel QA function runtime logs 2026-11-04T13:41:59Z and 13:42:02Z: Upstash Redis is not configured; health-internal fail-closed",
+        "qa_exact_release_sha": "NOT_ATTESTED",
+        "production_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+        "production_basic_health": "2026-11-04T13:44:08Z GET www.risckcomply.com/api/health returned HTTP 200 status ok; no-store",
+        "production_deployment_sha": "70d3545f414d063379d481fd238aed563e05edda",
+        "effect": "Basic health observable, but QA readiness blocked by missing effective Redis; no new accepted atomic or gate."
+      },
+      "qa_redis_restoration_20261104": {
+        "provider_env": "qa",
+        "qa_custom_env_id": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+        "configured_var_count": 20,
+        "upstash_url": "NOT_PRESENT_IN_QA_ENV",
+        "upstash_token": "NOT_PRESENT_IN_QA_ENV",
+        "healthcheck_token": "NOT_PRESENT_IN_QA_ENV",
+        "existing_redis_instance": "NOT_DISCOVERED",
+        "integration_configuration_visibility": "FORBIDDEN_403",
+        "action": "NO_VAR_WRITTEN_BECAUSE_NO_APPROVED_QA_REDIS_CONNECTION_OR_TOKEN",
+        "next_decision": "Use pre-existing separately isolated QA Redis or arrange authorization for new infra before adding encrypted QA-only variables. Do not create a paid resource or reuse Production credentials.",
+        "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      },
+      "live_public_trust_20261104": {
+        "routes_verified_200": [
+          "/pt/trust",
+          "/pt/security",
+          "/pt/subprocessors",
+          "/pt/terms",
+          "/pt/privacy",
+          "/pt/data-processing"
+        ],
+        "qualifiers_visible": [
+          "No issued SOC 2 report",
+          "No completed ISO 27001 certification",
+          "Legal Terms and Privacy are review drafts",
+          "Subprocessor/provider legal and transfer facts still require qualified reconciliation"
+        ],
+        "release_sha": "70d3545f414d063379d481fd238aed563e05edda",
+        "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "formal_effect": "NO_PASS_PUBLIC_DISCLOSURE_ONLY"
+      },
+      "public_route_probe_20261104": {
+        "count": 14,
+        "successful_http_200": 14,
+        "no_store": 14,
+        "routes": [
+          "/pt",
+          "/pt/pricing",
+          "/pt/login",
+          "/pt/signup",
+          "/pt/book-demo",
+          "/pt/dashboard",
+          "/api/health"
+        ],
+        "environments": [
+          "production",
+          "qa"
+        ],
+        "prod_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+        "qa_source_sha": "NOT_ATTESTED",
+        "qa_private_unauthenticated_api_test": "INCONCLUSIVE_VERCEL_PROTECTION_LAYER",
+        "note": "Public reachability only. No authenticated flows verified.",
+        "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      },
+      "production_rollback_immutable_preflight_20261104": {
+        "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "current_production": {
+          "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+          "source_sha": "70d3545f414d063379d481fd238aed563e05edda"
+        },
+        "two_prior_production_deployments": [
+          {
+            "id": "dpl_AhroVz3nzXxnSnYkMkNiZ8vjXtDt",
+            "source_sha": "bc5a70706aafb8f3a0cd8d9680394b4797834357",
+            "github_ancestor": true,
+            "commit_distance": 4
+          },
+          {
+            "id": "dpl_5HWQHYcrwR1regv1qeVSTj2kjxkY",
+            "source_sha": "66ffc10dbbd89fb71aa4d170c74a128e78066d66",
+            "github_ancestor": true,
+            "commit_distance": 33
+          }
+        ],
+        "direct_immutable_public_routes": [
+          "/api/health",
+          "/pt",
+          "/pt/login",
+          "/pt/pricing"
+        ],
+        "verified_responses": 12,
+        "status": "12/12 HTTP 200 with no-store + HSTS; GitHub ancestry verified via compare_commits",
+        "dry_run_script_run": false,
+        "actual_alias_rollback": false,
+        "actual_alias_restore": false,
+        "authenticated_customer_workflow": false,
+        "target_accepted_as_known_good": false,
+        "exact_candidate_release_validated": false,
+        "formal_effect": "PARTIAL_OPS-05_EVIDENCE_ONLY_NO_GATE_ACCEPTANCE"
+      }
+    },
+    "legal": {
+      "contracting_identity": "Owner-designated draft exists, authoritative registration details not verified in checked evidence",
+      "dpa": "CANONICAL_REVIEW_DRAFT_EXISTS / NOT_YET_EFFECTIVE",
+      "privacy_and_transfer": "Provider role/transfer facts remain partial",
+      "qualified_counsel_approval": "NOT_OBTAINED",
+      "registered_identifiers": "Not copied into this handoff",
+      "repo_claims_review": {
+        "checked_baseline": "main@6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+        "documented_non_claims": [
+          "docs/trust/ISO27001_SOC2_READINESS.md",
+          "docs/trust/SECURITY_FAQ.md",
+          "docs/trust/PENTEST_READINESS.md",
+          "src/lib/trust-center/content.ts",
+          "scripts/security/check-public-claims.mjs"
+        ],
+        "result": "REPOSITORY_DISCLOSURE_GUARDS_PRESENT_NOT_BUYER_OR_RELEASE_ACCEPTED",
+        "qualification": "Non-certification text exists and source guard covers prohibited wording; no exact deployed release claims audit nor independent legal/procurement review was performed."
+      }
+    },
+    "gitlab": {
+      "checked_at_utc": "2026-11-04",
+      "project_id": 88025157,
+      "repository": "risck-comply-group/eurocomply_saas",
+      "default_branch": "main",
+      "main_protected": true,
+      "current_user_can_push_to_main": true,
+      "main_commit_sha": "84a99f813bdce601c119bff27c1d82c5356295d6",
+      "merge_requires_successful_pipeline": false,
+      "merge_requires_resolved_discussions": false,
+      "approvals_before_merge": 0,
+      "latest_main_pipeline": "FORBIDDEN_403_NOT_VERIFIED",
+      "source_of_truth": "Connected GitLab project/branch readback; read-only",
+      "assessment": "The protected flag alone is not equivalent enforced independently approved release governance; GitLab source SHA differs from canonical GitHub main and candidate. An alternate release-control mechanism cannot be asserted operational from these settings.",
+      "no_cost_remediation": "Qualified repo owner should first confirm maintainer/developer push permissions, required approvals and CI/pipeline enforcement in project settings. Changes to release governance need a reviewed change and proof of deployment isolation. Do not adopt GitLab as canonical unilaterally."
+    },
+    "candidate_retained_evidence": {
+      "checked_on": "2026-11-04",
+      "branch": "integration/enterprise-unified-candidate-20261102",
+      "note": "These files are retained source artifacts only, not new executions. Their statuses block formal acceptance, and provider acceptance must be rebound to current head SHA.",
+      "entries": [
+        {
+          "path": "docs/security/evidence/runtime/rollback-dry-run-validation.json",
+          "status": "Open",
+          "last_generated": "2026-07-06T09:00:00.000Z",
+          "verification": "No executed recent release-bound non-production rollback observed in this artifact; OPS-05 remains NOT_VERIFIED"
+        },
+        {
+          "path": "docs/security/evidence/runtime/branch-protection-required-checks.json",
+          "status": "Exception",
+          "verification": "No current durable provider enforcement proof; OPS-02 remains NOT_VERIFIED"
+        },
+        {
+          "path": "docs/security/evidence/runtime/enterprise-release-env-readiness.json",
+          "status": "Open",
+          "last_generated": "2026-07-09T00:00:00.000Z",
+          "verification": "Production environment preflight not accepted; OPS-06 remains NOT_VERIFIED"
+        }
+      ],
+      "current_sha": "Attribution to checked candidate branch snapshot; SHA must be refreshed by Executor 3 before integration"
+    },
+    "supabase": {
+      "readback_date_utc": "2026-11-04",
+      "qa": {
+        "ref": "zrxrrfbllsxtleyxjpsz",
+        "status": "ACTIVE_HEALTHY",
+        "region": "eu-west-1",
+        "qa_vercel_public_url_keys_match": true,
+        "qa_csp_supabase_ref_matches": true
+      },
+      "production": {
+        "ref": "tganhbbhfxcpblmgqprg",
+        "status": "ACTIVE_HEALTHY",
+        "region": "eu-west-1",
+        "production_csp_supabase_ref_matches": true
+      },
+      "cross_environment_public_csp_ref_leak": false,
+      "admin_credentials_isolation": "NOT_VERIFIED",
+      "negative_cross_env_key_tests": "NOT_PERFORMED",
+      "effect": "Partial OPS-06 support only, not signed acceptance.",
+      "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+    },
+    "github_actions_20261104": {
+      "evidence_ref": "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json",
+      "sampled_candidate_sha": "2489cde5411bc245726052960be696a3cc74e3db",
+      "checks": 75,
+      "failed": 62,
+      "skipped": 13,
+      "succeeded": 0,
+      "full_security_suite_workflow_run_id": 41846169700,
+      "full_security_suite_failed_jobs": 8,
+      "full_security_suite_zero_runner_id_jobs": 8,
+      "full_security_suite_zero_step_jobs": 8,
+      "job_logs": "NOT_AVAILABLE_BLOB_NOT_FOUND",
+      "root_cause": "UNCONFIRMED_PRE_RUNNER_ADMISSION",
+      "authoritative_evaluation": "NOT_VERIFIED",
+      "note": "Point-in-time exact-SHA evidence; re-read candidate head before comparing later.",
+      "github_run_billed_ms": 0,
+      "checked_job_count_with_zero_billable_ms": 9,
+      "checked_runs": [
+        41846169700,
+        41846170053
+      ],
+      "diagnosis": "CONFIRMED_NO_RUNNER_EXECUTION_IN_9_JOBS; ADMISSION_CAUSE_NOT_CONFIRMED"
+    },
+    "qualified_review_portal_20261104": {
+      "evidence_ref": "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json",
+      "source_migration": "supabase/migrations/20260726140000_qualified_reviewer_portal.sql",
+      "source_migration_version": "20260726140000",
+      "migration_recorded_in_production": false,
+      "migration_recorded_in_isolated_qa": false,
+      "checked_relations_absent_in_both": 6,
+      "relation_names": [
+        "qualified_review_assignments",
+        "qualified_reviewers",
+        "qualified_review_submissions",
+        "qualified_reviewer_invites",
+        "qualified_reviewer_sessions",
+        "qualified_reviewer_attestations"
+      ],
+      "provider_access": "Supabase read-only pg_catalog + supabase_migrations.schema_migrations",
+      "limitation": "Does not prove no independent external qualified legal opinion exists; portal-based process cannot rely on non-existent relations.",
+      "production_schema_writes": 0,
+      "qa_schema_writes": 0,
+      "remediation_owner": "Executor 3 database/integration + qualified reviewer owner"
+    }
+  },
+  "controls": [
+    {
+      "id": "OPS-02",
+      "gate": "A-19",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "https://api.github.com/repos/renanescola40-afk/eurocomply_saas/branches/main",
+        "https://github.com/renanescola40-afk/eurocomply_saas/pull/2601",
+        "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/41826352801",
+        "GitLab project 88025157 main branch/project settings connected readback 2026-11-04",
+        "docs/security/evidence/runtime/branch-protection-required-checks.json",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
+        "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails",
+        "GitLab main is marked protected, but current principal can push; zero required approvals, pipeline success and resolved discussions are not enforced. GitLab main SHA diverges and cannot be treated as an equivalent release-control boundary.",
+        "Retained branch-protection evidence artifact has status=Exception, so no current enforced-provider PASS is documented.",
+        "Canonical candidate SHA 2489cde5411bc245726052960be696a3cc74e3db showed 62 failed and 13 skipped of 75 check runs; Full Security Suite 8/8 jobs had runner_id=0, zero steps and no available logs; runner admission cause not confirmed."
+      ],
+      "remediation_owner": "platform/repository owner",
+      "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
+    },
+    {
+      "id": "OPS-03",
+      "gate": "A-20",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "https://vercel.com/renanescola40-afks-projects/eurocomply-saas/CmyiHWky6g41su26PE1nyGwwCS1f",
+        "docs/operations/OBSERVABILITY_SMOKE_TEST.md",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "No deployment-bound authenticated customer smoke proof for current production SHA",
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage",
+        "QA GET /api/ready and /api/ready/release return 503 before authenticated readiness due to missing effective Upstash Redis; live provider logs corroborate, so uptime of /api/health cannot satisfy readiness.",
+        "14/14 read-only public route GET checks returned HTTP 200 (7 routes each on production+QA) with no-store, but exact candidate SHA and any authenticated customer workflow are unverified."
+      ],
+      "remediation_owner": "SRE/operations",
+      "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
+    },
+    {
+      "id": "OPS-04",
+      "gate": "A-20",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/operations/OBSERVABILITY_ALERTS.md",
+        "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
+        "https://vercel.com/renanescola40-afks-projects/eurocomply-saas",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "No deployment-bound authenticated customer smoke proof for current production SHA",
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage",
+        "Only Vercel logs of health/internal-denied probes observed; no delivery+acknowledgment of a high-severity synthetic alert, on-call response or verified support drill."
+      ],
+      "remediation_owner": "SRE/operations",
+      "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
+    },
+    {
+      "id": "OPS-05",
+      "gate": "A-21",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
+        "docs/operations/ROLLBACK_RUNBOOK.md",
+        "docs/security/evidence/runtime/rollback-dry-run-validation.json",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
+        "Retained rollback evidence status=Open (generated 2026-07-06); not a recently executed release-bound QA rollback or acceptance.",
+        "Confirmed source-ancestry of two prior READY production-target Vercel deployments and public GET smoke 12/12 across previous+current immutable builds, but no isolated rollback/recovery rehearsal and no previous known-good functional acceptance."
+      ],
+      "remediation_owner": "SRE/security",
+      "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
+    },
+    {
+      "id": "OPS-06",
+      "gate": "A-21",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
+        "docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md",
+        "Vercel project environment metadata readback 2026-11-04 (redacted; no values)",
+        "docs/security/evidence/runtime/enterprise-release-env-readiness.json",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
+        "Vercel Preview-targeted privileged variable names flagged securityIssues=readable-secret require scoped access/client bundle review; no disclosure or leak established.",
+        "Retained production environment preflight status=Open (generated 2026-07-09); no accepted exact-release credential-isolation or provider configuration result.",
+        "QA cannot prove separated runtime dependencies while Upstash Redis is not configured; QA release SHA also not independently attested.",
+        "QA custom environment lacks UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN and HEALTHCHECK_TOKEN; no approved independently isolated QA Redis instance was discovered and Vercel integration inventory is inaccessible (403).",
+        "Current QA and production Supabase projects are distinct and ACTIVE_HEALTHY, QA public URL variables and public CSP refs each match their own instance; administrative token isolation and negative cross-env access tests remain unverified."
+      ],
+      "remediation_owner": "SRE/security",
+      "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
+    },
+    {
+      "id": "TRU-01",
+      "gate": "A-22",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/legal-assurance/LEGAL_ENTITY_FACTS.md",
+        "docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending"
+      ],
+      "remediation_owner": "founder/qualified legal reviewer",
+      "next_executable_action": "Privately verify current authoritative legal-entity facts, chain of title and qualified applicability/signatory acceptance without putting private identifiers in git"
+    },
+    {
+      "id": "TRU-06",
+      "gate": "A-22",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md",
+        "docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending",
+        "Qualified-review portal source migration 20260726140000 is not recorded in either production or isolated-QA schema migrations; six corresponding public qualified reviewer relations are absent in both databases. Legal acceptance must use a separately verified external review channel or an independently approved and staged migration, never pretend portal is functioning."
+      ],
+      "remediation_owner": "founder/qualified legal reviewer",
+      "next_executable_action": "Privately verify current authoritative legal-entity facts, chain of title and qualified applicability/signatory acceptance without putting private identifiers in git"
+    },
+    {
+      "id": "TRU-02",
+      "gate": "A-23",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/trust/DPA_DRAFT.md",
+        "docs/legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
+        "Final customer data flow, provider roles, transfer mechanisms, retention/DSR and technical behavior not reconciled and signed off"
+      ],
+      "remediation_owner": "privacy/legal/product",
+      "next_executable_action": "Cross-check versioned Terms, Privacy and DPA with FUN-05, provider evidence and current runtime, obtain qualified legal review and executable DPA/notice decisions"
+    },
+    {
+      "id": "TRU-03",
+      "gate": "A-23",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/trust/SUBPROCESSORS.md",
+        "docs/trust/RETENTION_POLICY_DRAFT.md",
+        "docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
+        "Final customer data flow, provider roles, transfer mechanisms, retention/DSR and technical behavior not reconciled and signed off"
+      ],
+      "remediation_owner": "privacy/legal/product",
+      "next_executable_action": "Cross-check versioned Terms, Privacy and DPA with FUN-05, provider evidence and current runtime, obtain qualified legal review and executable DPA/notice decisions"
+    },
+    {
+      "id": "TRU-04",
+      "gate": "A-24",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/trust/CLAIMS_AND_COPY_AUDIT.md",
+        "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md",
+        "scripts/security/check-public-claims.mjs",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "docs/enterprise/phase4-v22/CONTROL_PLANE_ACCEPTANCE_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "No qualified signed claim inventory approved for exact released capabilities",
+        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted",
+        "Published production trust pages visibly avoid unqualified certification and mark Terms/Privacy as review drafts; no complete page-claim inventory or qualified approval on the exact canonical release SHA."
+      ],
+      "remediation_owner": "legal/assurance/procurement",
+      "next_executable_action": "Validate actual EU AI Act assistance claims, current product feature proof, pentest scope, support intake and buyer evidence; obtain qualified release-bound approval"
+    },
+    {
+      "id": "TRU-05",
+      "gate": "A-24",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md",
+        "docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md",
+        "docs/trust/PENTEST_READINESS.md",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      ],
+      "unmet_requirements": [
+        "No qualified signed claim inventory approved for exact released capabilities",
+        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted"
+      ],
+      "remediation_owner": "legal/assurance/procurement",
+      "next_executable_action": "Validate actual EU AI Act assistance claims, current product feature proof, pentest scope, support intake and buyer evidence; obtain qualified release-bound approval"
+    }
+  ],
+  "gates": [
+    {
+      "id": "A-19",
+      "atomic_controls": [
+        "OPS-02"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
+        "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails",
+        "GHA Full Security Suite at snapshot SHA 2489cde5 had 8/8 failed jobs with zero steps and runner_id=0; no qualified approved PR reviews across #2598/#2604/#2601/#2594.",
+        "Provider timing API confirms 0 GitHub Actions billable runtime on all 8 failed Full Security Suite jobs and failed Lockfile Plan job (9/9), matching runner_id=0 and 0 steps. Runner admission/billing root cause remains unverified; no source-test verdict."
+      ],
+      "remediation_owner": "platform/repository owner",
+      "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
+    },
+    {
+      "id": "A-20",
+      "atomic_controls": [
+        "OPS-03",
+        "OPS-04"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "No deployment-bound authenticated customer smoke proof for current production SHA",
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage",
+        "QA basic health works but internal readiness is blocked 503 fail-closed: Vercel logs confirm Upstash Redis not configured in QA (2026-11-04). No alert delivery/ack proof."
+      ],
+      "remediation_owner": "SRE/operations",
+      "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
+    },
+    {
+      "id": "A-21",
+      "atomic_controls": [
+        "OPS-05",
+        "OPS-06"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
+        "QA environment cannot currently pass protected readiness because effective Upstash Redis configuration is missing; deploy-source SHA unverified.",
+        "Provider-verified previous production source SHAs are ancestors and health routes pass; mandatory rollback alias-switch/restore rehearsal and QA credential isolation negative tests are still missing."
+      ],
+      "remediation_owner": "SRE/security",
+      "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
+    },
+    {
+      "id": "A-22",
+      "atomic_controls": [
+        "TRU-01",
+        "TRU-06"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending",
+        "Qualified reviewer portal schema and migration 20260726140000 are absent in production and QA; independently signed legal acceptance via any channel not evidenced."
+      ],
+      "remediation_owner": "founder/qualified legal reviewer",
+      "next_executable_action": "Privately verify current authoritative legal-entity facts, chain of title and qualified applicability/signatory acceptance without putting private identifiers in git"
+    },
+    {
+      "id": "A-23",
+      "atomic_controls": [
+        "TRU-02",
+        "TRU-03"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
+        "Final customer data flow, provider roles, transfer mechanisms, retention/DSR and technical behavior not reconciled and signed off"
+      ],
+      "remediation_owner": "privacy/legal/product",
+      "next_executable_action": "Cross-check versioned Terms, Privacy and DPA with FUN-05, provider evidence and current runtime, obtain qualified legal review and executable DPA/notice decisions"
+    },
+    {
+      "id": "A-24",
+      "atomic_controls": [
+        "TRU-04",
+        "TRU-05"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "No qualified signed claim inventory approved for exact released capabilities",
+        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted",
+        "Qualified reviewer portal schema is not deployed; qualified AI assurance and external procurement review evidence still missing."
+      ],
+      "remediation_owner": "legal/assurance/procurement",
+      "next_executable_action": "Validate actual EU AI Act assistance claims, current product feature proof, pentest scope, support intake and buyer evidence; obtain qualified release-bound approval"
+    }
+  ],
+  "go_board": {
+    "internal_enterprise_go": {
+      "status": "NO_GO",
+      "reason": "Only 2/24 formal gates accepted"
+    },
+    "paid_customer_go": {
+      "status": "NO_GO",
+      "reason": "Commercial/legal privacy and operational prerequisites unaccepted; no verified paid release readiness"
+    },
+    "production_release_go": {
+      "status": "NO_GO",
+      "reason": "Exact candidate SHA not deployed or approved; rollback, merge protection, reviews and operational controls not accepted"
+    },
+    "external_procurement_go": {
+      "status": "NO_GO",
+      "reason": "Qualified legal/privacy/assurance approvals and buyer-specific requirements remain outstanding"
+    }
+  },
+  "handoff_to_executor_3": {
+    "integration_branch": "integration/enterprise-unified-candidate-20261102",
+    "write_authority": "Executor 3 only",
+    "request": "Review this standalone evidence PR and merge only under the existing authenticated human-merge and CI policy. Refresh all exact SHAs and provider facts; do not transfer acceptance statuses. When qualified reviewers and negative tests exist, submit each control to the formal validator.",
+    "priority": [
+      "A-19 actual protective enforcement and CI admission (platform owner)",
+      "A-20 QA smoke/alert drill and incident operation proof",
+      "A-21 QA rollback and credential isolation proof",
+      "A-22/A-23/A-24 private legal facts, counsel and procurement review"
+    ],
+    "no_production_writes": true,
+    "no_paid_changes": true,
+    "credentials_in_file": false,
+    "legal_private_documents": "Keep registry extracts, contracts and legal advice outside Git history in access-controlled records."
+  }
+}

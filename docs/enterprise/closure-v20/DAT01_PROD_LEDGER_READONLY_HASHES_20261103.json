@@ -1,0 +1,994 @@
+{
+  "schema": "risck-comply.dat01-prod-ledger-hash-readback.v1",
+  "OBSERVED_AT": "2026-11-03T18:35:37.016Z",
+  "source": "Supabase PostgreSQL read-only select supabase_migrations.schema_migrations",
+  "production_project": "tganhbbhfxcpblmgqprg",
+  "ledger_versions": 137,
+  "distinct_versions": 137,
+  "hash_method": "SHA256(UTF8(array_to_string(statements, newline)))",
+  "hash_boundary": "Hash of provider ledger statements joined with LF; not by itself a source file SHA256 or executable migration manifest.",
+  "statement_counts": {
+    "single": 62,
+    "multiple": 75
+  },
+  "confirmed_pr2559_historical_sql_hashes": [
+    {
+      "version": "20261013133323",
+      "expected": "6eb4f7dfe9291502bc07fb2404af0bceeba5c9426e95ed7ef7c9f17f55c5d89e",
+      "matches": true
+    },
+    {
+      "version": "20261013133341",
+      "expected": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6",
+      "matches": true
+    }
+  ],
+  "source_crosswalk": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+  "crosswalk_source_files": 135,
+  "consolidation_groups": 2,
+  "unresolved_source_parity": "123/137 historical SQL hash mismatches require qualified investigation; not recomputed by this record",
+  "replay_status": "BLOCKED",
+  "replay_performed": false,
+  "production_writes": false,
+  "rows": [
+    {
+      "version": "20260605190000",
+      "name": "organizations",
+      "statement_count": 3,
+      "joined_bytes": 411,
+      "joined_statement_sha256": "ee3a1f9bf97ed6d7576a0d825db79191907b3b5d21e95dceb119c1c8442b5496"
+    },
+    {
+      "version": "20260605190100",
+      "name": "organization_members",
+      "statement_count": 2,
+      "joined_bytes": 451,
+      "joined_statement_sha256": "6ae6b5d72bee885b9fa96bd0d5191e12720d897e51cc723556cf58ee0b1cd45c"
+    },
+    {
+      "version": "20260605190200",
+      "name": "audit_logs",
+      "statement_count": 2,
+      "joined_bytes": 446,
+      "joined_statement_sha256": "06e7cb89d19a88f0933d09ad67380f26966d2e5f1c5955f43ee5991c2a4ec6c1"
+    },
+    {
+      "version": "20260605190300",
+      "name": "profiles",
+      "statement_count": 2,
+      "joined_bytes": 301,
+      "joined_statement_sha256": "56c6a75fe99f299127fc5785ede9bfefc5acb5abaaadb25698aeedab98caf697"
+    },
+    {
+      "version": "20260605190400",
+      "name": "subscriptions",
+      "statement_count": 2,
+      "joined_bytes": 536,
+      "joined_statement_sha256": "1bb030e88266e16c25f6d0afa228556b30dd91eb85d88d484f397dbf3187082d"
+    },
+    {
+      "version": "20260605190500",
+      "name": "basic_rls_policies",
+      "statement_count": 6,
+      "joined_bytes": 1066,
+      "joined_statement_sha256": "29cc5e012b03e27924066f3578a30ccf04c5da62aa5b9ac19f3816fe6d70a0f8"
+    },
+    {
+      "version": "20260605190600",
+      "name": "rbac",
+      "statement_count": 4,
+      "joined_bytes": 1105,
+      "joined_statement_sha256": "0f6dd147133e474447abfb520d81d13cbdf73a5377b1420a7918df05b0bbadc1"
+    },
+    {
+      "version": "20260605190700",
+      "name": "rbac_helpers",
+      "statement_count": 2,
+      "joined_bytes": 680,
+      "joined_statement_sha256": "5efdbd87064194af299e26bc9cf7dd7aae6c1ce9fc8b5eb805db1dd24895073f"
+    },
+    {
+      "version": "20260605190800",
+      "name": "admin_rls_policies",
+      "statement_count": 5,
+      "joined_bytes": 925,
+      "joined_statement_sha256": "e046b65767706dc5d77430c6961f430ea6226b34781140363f2c2f94fb539fe1"
+    },
+    {
+      "version": "20260605190900",
+      "name": "compliance_tasks",
+      "statement_count": 5,
+      "joined_bytes": 1288,
+      "joined_statement_sha256": "010ad981075660711ca183a1f43fa8a08cdc9a73aaf4ddc95b28a65d0d580b27"
+    },
+    {
+      "version": "20260605191000",
+      "name": "documents",
+      "statement_count": 5,
+      "joined_bytes": 1149,
+      "joined_statement_sha256": "b29566d45b436f9ce495d9a7c313fcd7c280181d907b6041afb3e7055224b116"
+    },
+    {
+      "version": "20260605191100",
+      "name": "vendors",
+      "statement_count": 4,
+      "joined_bytes": 1104,
+      "joined_statement_sha256": "4bc907817eab882e9829f9ba2b07f37eab35f6e95b005a4fff9004031a8d7d17"
+    },
+    {
+      "version": "20260605191200",
+      "name": "risks",
+      "statement_count": 4,
+      "joined_bytes": 1198,
+      "joined_statement_sha256": "0117f71f0e771beba6a034bee1cb407a3d8d015d9f05e9dcb744ebc0d07d0472"
+    },
+    {
+      "version": "20260605211500",
+      "name": "invitations",
+      "statement_count": 3,
+      "joined_bytes": 796,
+      "joined_statement_sha256": "0c12079c42dd7fadf2c59d420aa9ff533227477dddf2ba8da18283e5f967437e"
+    },
+    {
+      "version": "20260605220000",
+      "name": "document_storage",
+      "statement_count": 3,
+      "joined_bytes": 1093,
+      "joined_statement_sha256": "f7579c95be6c09652cb5fa09ba09353e8a44a5fd62bc68e9256f9b6f12fa0e39"
+    },
+    {
+      "version": "20260605222000",
+      "name": "stripe_webhook_events",
+      "statement_count": 2,
+      "joined_bytes": 267,
+      "joined_statement_sha256": "a607f8ee61af0037c5b7dbb20e1ae9365f777f3e45ca065405b1832c39fb0384"
+    },
+    {
+      "version": "20260726070000",
+      "name": "permissions_catalog_rls_hotfix",
+      "statement_count": 15,
+      "joined_bytes": 1166,
+      "joined_statement_sha256": "51165bd874a1d55bc1d6d1f955ebd40c629f0b0a039c81cc331f93580351f23e"
+    },
+    {
+      "version": "20260804224915",
+      "name": "live_security_definer_acl_hardening",
+      "statement_count": 1,
+      "joined_bytes": 3767,
+      "joined_statement_sha256": "db0054e387bdc8657317a4fa3b0870b3563c2e01144db9afceedb8735024af58"
+    },
+    {
+      "version": "20260804230433",
+      "name": "move_rls_helpers_to_private_schema",
+      "statement_count": 1,
+      "joined_bytes": 3271,
+      "joined_statement_sha256": "31426eb2a17a61a62a9ab760a03ea0885dc31763ecb48445cbbb8fb852c61c0e"
+    },
+    {
+      "version": "20260805223500",
+      "name": "remove_permissive_tenant_rls_bypasses",
+      "statement_count": 1,
+      "joined_bytes": 2224,
+      "joined_statement_sha256": "5461708cb3e8f110f007a50d9c39c02c319a8735f48a1644c1f4b8a640ddb05b"
+    },
+    {
+      "version": "20260807091341",
+      "name": "reconcile_membership_rls_and_remove_permissive_bypasses",
+      "statement_count": 1,
+      "joined_bytes": 6397,
+      "joined_statement_sha256": "8130b5fc8c8424a544160c51d87f71e5f77e8c22647561379412ad4b68954261"
+    },
+    {
+      "version": "20260812160405",
+      "name": "harden_security_definer_search_paths",
+      "statement_count": 1,
+      "joined_bytes": 1908,
+      "joined_statement_sha256": "f37a8f3989dcc74238f24304dfca7546d0f5baff31127c45187f211ec0d1a7a8"
+    },
+    {
+      "version": "20260812164435",
+      "name": "lock_stripe_events_processed_backend_only",
+      "statement_count": 1,
+      "joined_bytes": 1439,
+      "joined_statement_sha256": "31955363af89eecadfbefc295ef2fa8479ffe66252108f649ca1c8f414dd2d21"
+    },
+    {
+      "version": "20260812213753",
+      "name": "guard_enterprise_entitlement_snapshots_against_stale_observations",
+      "statement_count": 1,
+      "joined_bytes": 2409,
+      "joined_statement_sha256": "5bfe17904a1592818c9e0844a8665e18fd231f83bed872ad8eb7b34db3161f73"
+    },
+    {
+      "version": "20260812221912",
+      "name": "reconcile_billing_lifecycle_requests_runtime",
+      "statement_count": 1,
+      "joined_bytes": 3460,
+      "joined_statement_sha256": "958d41a3befd7c5b9027b14c0a1395245ae3316809466c128ef132c1757636a7"
+    },
+    {
+      "version": "20260812224650",
+      "name": "tighten_permissions_catalog_authenticated_grants",
+      "statement_count": 1,
+      "joined_bytes": 3092,
+      "joined_statement_sha256": "1e5e53de7deb2aaa7f47938e6464e409b4050983d6139286f5c41cc9b79dc65c"
+    },
+    {
+      "version": "20260812225906",
+      "name": "consolidate_canonical_rls_and_client_grants",
+      "statement_count": 1,
+      "joined_bytes": 12213,
+      "joined_statement_sha256": "fc4dda32f68424d370138523112e7139e867663122da24f93cf0d032165f45b6"
+    },
+    {
+      "version": "20260812230229",
+      "name": "optimize_ai_incidents_rls_and_deduplicate_ai_systems_index",
+      "statement_count": 1,
+      "joined_bytes": 4952,
+      "joined_statement_sha256": "d541750f96365fc6463c5a273ed0f07e01d9192ae5e8ce1fd8396b2efb0252d4"
+    },
+    {
+      "version": "20260812230541",
+      "name": "add_missing_foreign_key_covering_indexes",
+      "statement_count": 1,
+      "joined_bytes": 9854,
+      "joined_statement_sha256": "66d50806359138d61b34c99ac5a95c176a6a2822ec3b5854091918ccafe37750"
+    },
+    {
+      "version": "20260812230911",
+      "name": "tighten_monitoring_preferences_horizontal_read_isolation",
+      "statement_count": 1,
+      "joined_bytes": 2126,
+      "joined_statement_sha256": "674273458fb6d3e9e8a6add4fc014b437b5124b9e84e0980f7b7bd0429eddeff"
+    },
+    {
+      "version": "20260813102900",
+      "name": "add_durable_billing_lifecycle_replay_contract",
+      "statement_count": 1,
+      "joined_bytes": 2792,
+      "joined_statement_sha256": "50bbbb967ab320a9c5b91c4f88ef2a859d12c906163857711a1ca0414bee2863"
+    },
+    {
+      "version": "20260813102951",
+      "name": "harden_remaining_public_security_definer_search_paths",
+      "statement_count": 1,
+      "joined_bytes": 3489,
+      "joined_statement_sha256": "b63d95b4d7cc3390de2f83c8b1b40f003d0f890f9c8310839454ce7bb0cc069f"
+    },
+    {
+      "version": "20260813124224",
+      "name": "reconcile_organization_add_ons",
+      "statement_count": 1,
+      "joined_bytes": 3171,
+      "joined_statement_sha256": "195d4560e2b9cab3f628135ecd974b1f111187a58f47c1f12aa083c225155aff"
+    },
+    {
+      "version": "20260822120617",
+      "name": "atomic_vendor_risk_quota_mutations",
+      "statement_count": 1,
+      "joined_bytes": 8982,
+      "joined_statement_sha256": "0c72e61ac821d9ad99347a0466550f1f327e1c30e5061f035a7495e2c8eaa506"
+    },
+    {
+      "version": "20260822123538",
+      "name": "v19_optimize_organization_add_ons_rls_initplan",
+      "statement_count": 3,
+      "joined_bytes": 474,
+      "joined_statement_sha256": "6db543d1ed4341adbd134d7972bb5a9da2515742cf4b826f2cb8c39137e1b89d"
+    },
+    {
+      "version": "20260822123540",
+      "name": "v19_reconcile_step_up_challenges_runtime",
+      "statement_count": 25,
+      "joined_bytes": 6302,
+      "joined_statement_sha256": "d25918e4eed11b8c990938ebf954db8665310fb3acff4f7e94c5473ec808b4fc"
+    },
+    {
+      "version": "20260822123542",
+      "name": "v19_reconcile_subscription_schema_defaults",
+      "statement_count": 10,
+      "joined_bytes": 3072,
+      "joined_statement_sha256": "e3477161bd5e3ae5b17935a9aa30fbcfe3be4195eb77cca6dff1366fd4449eb5"
+    },
+    {
+      "version": "20260822123544",
+      "name": "v19_reconcile_controlled_document_storage",
+      "statement_count": 32,
+      "joined_bytes": 9865,
+      "joined_statement_sha256": "8231591a771ac42d50fc92d224d54ff4eaf26aaf7bcd6f70b88ad148493b3d74"
+    },
+    {
+      "version": "20260822123546",
+      "name": "v19_force_tasks_rls",
+      "statement_count": 6,
+      "joined_bytes": 1123,
+      "joined_statement_sha256": "2b70282619560e5fb7f1c0e8b1d28350e67c6292b56c1046ddec3244cbe8cbf9"
+    },
+    {
+      "version": "20260822123548",
+      "name": "v19_reconcile_enterprise_break_glass_governance",
+      "statement_count": 39,
+      "joined_bytes": 13080,
+      "joined_statement_sha256": "499aa039cb47082a32596c0f885cbfc812432aa46469ae290d76eda7b7266cda"
+    },
+    {
+      "version": "20260822123550",
+      "name": "v19_reconcile_enterprise_licensing_control_plane",
+      "statement_count": 51,
+      "joined_bytes": 40667,
+      "joined_statement_sha256": "f50c5b3d40951fd4ddb428c5f4b3bb18ff31a689aa6ff9210401a4ae282a83fb"
+    },
+    {
+      "version": "20260822123552",
+      "name": "v19_reconcile_enterprise_integrations_scim",
+      "statement_count": 79,
+      "joined_bytes": 29432,
+      "joined_statement_sha256": "aff6538f76d9f8e57b3844527c26eebec7030e904e4e6f130cfebd8f37de162e"
+    },
+    {
+      "version": "20260822123554",
+      "name": "v19_harden_scim_identity_connection_delete_boundary",
+      "statement_count": 5,
+      "joined_bytes": 1175,
+      "joined_statement_sha256": "a82c07f4cb56636a72e3aae4be5f359332f7c2318c53a0d024dbeb0f934ed3d9"
+    },
+    {
+      "version": "20260822123556",
+      "name": "v19_bridge_enterprise_contract_mode_compatibility",
+      "statement_count": 7,
+      "joined_bytes": 1019,
+      "joined_statement_sha256": "ba9cd970f896eb867d72b1ca3da7c0e8f307f444c5bc4d894fd966e6d1ade6e0"
+    },
+    {
+      "version": "20260822123558",
+      "name": "v19_reconcile_enterprise_billing_lifecycle",
+      "statement_count": 25,
+      "joined_bytes": 19873,
+      "joined_statement_sha256": "74c22a364baf400c1dfb45035e2622bb281a9df76846724f209b0eaf047f36f2"
+    },
+    {
+      "version": "20260822123600",
+      "name": "v19_finalize_enterprise_contract_mode_compatibility",
+      "statement_count": 19,
+      "joined_bytes": 13858,
+      "joined_statement_sha256": "c71fd929a5dbf8c8d078e6bf3e592f568f403f2225e27768255d4d89ea7e1970"
+    },
+    {
+      "version": "20260822123602",
+      "name": "v19_reconcile_enterprise_contract_control_rpcs",
+      "statement_count": 13,
+      "joined_bytes": 25571,
+      "joined_statement_sha256": "bac33c5b2a95ec3bd26e8688c196ca4139eb6777bb360beef812492a3caa5c66"
+    },
+    {
+      "version": "20260822123604",
+      "name": "v19_reconcile_enterprise_core_active_runtime",
+      "statement_count": 115,
+      "joined_bytes": 26945,
+      "joined_statement_sha256": "459d16186895a8e0a8bccd48ce42a7c3365d2ed1d4649617aacd088506605dba"
+    },
+    {
+      "version": "20260822123606",
+      "name": "v19_reconcile_live_rls_validation_inventory_privileges",
+      "statement_count": 10,
+      "joined_bytes": 3439,
+      "joined_statement_sha256": "c571d9c92bc5ca1cfdb0a161bc670fa98889a74fc614d05130aee90f4d3d544f"
+    },
+    {
+      "version": "20260822123608",
+      "name": "v19_reconcile_new_organization_compatibility_envelope",
+      "statement_count": 9,
+      "joined_bytes": 6928,
+      "joined_statement_sha256": "594644105c8db0041c1d56d13cfd31f20644502ce84bcf2e583b9a773f88176e"
+    },
+    {
+      "version": "20260822123610",
+      "name": "v19_reconcile_enterprise_invitation_seat_authority",
+      "statement_count": 16,
+      "joined_bytes": 22929,
+      "joined_statement_sha256": "474bec02ea7aad26668f4fdfbe92bd01fefda9c29a7ea7625e2f2e0015d75bea"
+    },
+    {
+      "version": "20260822123612",
+      "name": "v19_harden_enterprise_invitation_actor_boundary",
+      "statement_count": 11,
+      "joined_bytes": 4583,
+      "joined_statement_sha256": "47e16ca0479e5552afa55c69197c5b945c51cacfd818674ff5d5eb037c2992d9"
+    },
+    {
+      "version": "20260822123614",
+      "name": "v19_preserve_completed_onboarding_state",
+      "statement_count": 10,
+      "joined_bytes": 3263,
+      "joined_statement_sha256": "4afc6ddd03f43a6af0fb1cb5dcf45e8900bd811295a6315aa44161670d3a7c8a"
+    },
+    {
+      "version": "20260822123616",
+      "name": "v19_reconcile_active_onboarding_runtime",
+      "statement_count": 22,
+      "joined_bytes": 24231,
+      "joined_statement_sha256": "f356f40eb6208418285b7977ec3c787feed66e08eb8b665fff336531af801622"
+    },
+    {
+      "version": "20260822123618",
+      "name": "v19_harden_active_onboarding_enterprise_boundaries",
+      "statement_count": 12,
+      "joined_bytes": 9224,
+      "joined_statement_sha256": "4ff53ac319efe41c706ca135fed4771fa02dbf594d231e784a20013fcc8a691d"
+    },
+    {
+      "version": "20260822123620",
+      "name": "v19_guard_compliance_task_browser_mutations",
+      "statement_count": 12,
+      "joined_bytes": 2359,
+      "joined_statement_sha256": "ecfc4c494117cb8b6b2183627100f52282caa26fe15cf3c6fc06313f23a305e7"
+    },
+    {
+      "version": "20260822123622",
+      "name": "v19_reconcile_gap_remediation_persistence",
+      "statement_count": 139,
+      "joined_bytes": 25331,
+      "joined_statement_sha256": "ec986ab89a68617e73e49f9319ce9d17b93d1e37d48501abe5e291e2b16f8966"
+    },
+    {
+      "version": "20260822123624",
+      "name": "v19_harden_gap_personal_task_write_boundary",
+      "statement_count": 28,
+      "joined_bytes": 12737,
+      "joined_statement_sha256": "3619a60bdc7431a117ff6fdd83e1e73a32b69226c8d754d8e25db6bc6239828a"
+    },
+    {
+      "version": "20260822123626",
+      "name": "v19_reconcile_enterprise_evidence_vault",
+      "statement_count": 66,
+      "joined_bytes": 27940,
+      "joined_statement_sha256": "ea8bda044f5a52c48d73c2b22b20ff6e1d74b6c9a75034bce2d67a3e13a57861"
+    },
+    {
+      "version": "20260823123000",
+      "name": "payment_first_commercial_data_plane",
+      "statement_count": 15,
+      "joined_bytes": 9958,
+      "joined_statement_sha256": "05bfd3993cedc1d2dab6375ed16512ca0eebfda0cb79698647e743de04c84a0b"
+    },
+    {
+      "version": "20260823131500",
+      "name": "payment_first_gap_analysis_and_storage",
+      "statement_count": 27,
+      "joined_bytes": 10112,
+      "joined_statement_sha256": "06b36ef5ebb688a8674a7048048df324a81c6b41d5b1501de075ff7ae29de897"
+    },
+    {
+      "version": "20260824185900",
+      "name": "prepare_enterprise_trusted_access_legacy_compatibility",
+      "statement_count": 7,
+      "joined_bytes": 7570,
+      "joined_statement_sha256": "2aebdc0344eff218d96e0d0dfd3ce9a63d642110d3e900701a2cb3b64d2d0b57"
+    },
+    {
+      "version": "20260824190000",
+      "name": "reconcile_enterprise_trusted_access_runtime",
+      "statement_count": 144,
+      "joined_bytes": 57344,
+      "joined_statement_sha256": "8b87af25cd45c580c11687a8673e6fef3549877a992514948077bfb2f374d2f8"
+    },
+    {
+      "version": "20260824190100",
+      "name": "finalize_enterprise_trusted_access_operation_contract",
+      "statement_count": 8,
+      "joined_bytes": 4612,
+      "joined_statement_sha256": "c52e25426d840ed809dc8403d407cb6a8bd82e049ac0ca015e6557e41233a37f"
+    },
+    {
+      "version": "20260824190200",
+      "name": "harden_enterprise_trusted_access_runtime_contract",
+      "statement_count": 13,
+      "joined_bytes": 11323,
+      "joined_statement_sha256": "ea1296d0f0d47d92a77ecf27b0e9cdec531b79559b2b56d0357527a210d64d18"
+    },
+    {
+      "version": "20260825092500",
+      "name": "atomic_document_commercial_quota",
+      "statement_count": 18,
+      "joined_bytes": 11293,
+      "joined_statement_sha256": "2686933053dae5acb9f28241e0fe9a108540fc00be3e1d9e9aa08e51423e6cdd"
+    },
+    {
+      "version": "20260825171500",
+      "name": "harden_active_membership_rls_authority",
+      "statement_count": 16,
+      "joined_bytes": 17344,
+      "joined_statement_sha256": "2fa6e05cf7319f78f32327aebec7bca3978ae02d11126a7852765d52ab376409"
+    },
+    {
+      "version": "20260831115851",
+      "name": "deterministic_commercial_contract_source_precedence",
+      "statement_count": 1,
+      "joined_bytes": 5795,
+      "joined_statement_sha256": "821d15c0ae6c0a5bbb544153012bd7d6056ebbe1ef20a0e2fabdd77338238b80"
+    },
+    {
+      "version": "20260902193810",
+      "name": "reconcile_deterministic_commercial_contract_source_precedence",
+      "statement_count": 1,
+      "joined_bytes": 5924,
+      "joined_statement_sha256": "894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac"
+    },
+    {
+      "version": "20260902193849",
+      "name": "reconcile_enterprise_sso_production_runtime",
+      "statement_count": 1,
+      "joined_bytes": 13941,
+      "joined_statement_sha256": "494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb"
+    },
+    {
+      "version": "20260902202558",
+      "name": "reconcile_linkedin_marketing_queue_runtime",
+      "statement_count": 1,
+      "joined_bytes": 2612,
+      "joined_statement_sha256": "88ad165648dcaf47a5984aedcd59b9f2bb30f8316c10e64163b4c10669e29252"
+    },
+    {
+      "version": "20260903090000",
+      "name": "verify_v28_provider_ledger_reconciliation",
+      "statement_count": 3,
+      "joined_bytes": 6820,
+      "joined_statement_sha256": "5d635b5b69ebd528e9e95ba76968084c1a0e7686dc70f93bbac414502c2f5837"
+    },
+    {
+      "version": "20260903100000",
+      "name": "reconcile_enterprise_step_up_runtime",
+      "statement_count": 28,
+      "joined_bytes": 12796,
+      "joined_statement_sha256": "f181510be0b2ef02c8dd70fa007f8a9959e17790095fee197933c13754db6393"
+    },
+    {
+      "version": "20260903114500",
+      "name": "reconcile_onboarding_atomic_text_arrays",
+      "statement_count": 8,
+      "joined_bytes": 20021,
+      "joined_statement_sha256": "05e5babbcd9679e241b48b37517ca8d1300bc04aac55bc1e4224978806c4a143"
+    },
+    {
+      "version": "20260904065919",
+      "name": "reconcile_ai_governance_runtime_schema_20260904",
+      "statement_count": 1,
+      "joined_bytes": 14974,
+      "joined_statement_sha256": "bceedb8d738c8bda3cb07e9f8849e85a670ea4439ffd669747fb630d980e042d"
+    },
+    {
+      "version": "20260904065952",
+      "name": "reconcile_ai_system_atomic_rpcs_20260904",
+      "statement_count": 1,
+      "joined_bytes": 7796,
+      "joined_statement_sha256": "642f48be06c110bdaf2f6c8c47fee6bbedd3984e780a846c2da2722f6e486cdc"
+    },
+    {
+      "version": "20260905075429",
+      "name": "fail_fast_audit_chain_advisory_contention",
+      "statement_count": 1,
+      "joined_bytes": 3008,
+      "joined_statement_sha256": "0b32cd5b0ebd5c51bfe4aa30db0ba9ba6448a5dfd4aefe5233f44ac70c6eb8df"
+    },
+    {
+      "version": "20260907142133",
+      "name": "p0_audit_chain_fail_closed_nonretryable_conflicts_20260907",
+      "statement_count": 1,
+      "joined_bytes": 3120,
+      "joined_statement_sha256": "3bd65011f7b2824d9bb5da539dee659c75646d5bcce8218e0bbfec636fecaeb0"
+    },
+    {
+      "version": "20260908000000",
+      "name": "reconcile_final_public_release_payment_storage_hardening",
+      "statement_count": 31,
+      "joined_bytes": 18270,
+      "joined_statement_sha256": "25906e36b7a45761fea7b0d40f2c4bddeb6fc4657f2ee05e81c7fcfa5f781248"
+    },
+    {
+      "version": "20260908003000",
+      "name": "billing_ai_system_commercial_quota",
+      "statement_count": 13,
+      "joined_bytes": 10249,
+      "joined_statement_sha256": "1e0a593a1ba64ac7ba4ae7ee46687546fb5d20e9b0b3a85918b812216c938adc"
+    },
+    {
+      "version": "20260908003500",
+      "name": "billing_self_serve_member_capacity",
+      "statement_count": 9,
+      "joined_bytes": 14943,
+      "joined_statement_sha256": "1931c2870ec5c08f6eccac67ced56acbfd48001c764b6abcce6e8115fd3e2529"
+    },
+    {
+      "version": "20260908004000",
+      "name": "billing_document_storage_quota",
+      "statement_count": 12,
+      "joined_bytes": 7885,
+      "joined_statement_sha256": "891a1b257a7ef4207e869f649087479c60e93e7dd033f71f8e5ccc6a0db1b651"
+    },
+    {
+      "version": "20260908004500",
+      "name": "billing_entitlement_catalog_truth",
+      "statement_count": 5,
+      "joined_bytes": 2318,
+      "joined_statement_sha256": "f3fdbcd09df126d4e026e3a322a69fa7403f6cf03a0e2d734286a6c165fa17b0"
+    },
+    {
+      "version": "20260908005000",
+      "name": "billing_initial_checkout_singleflight",
+      "statement_count": 22,
+      "joined_bytes": 6492,
+      "joined_statement_sha256": "e130acd66b2753ae519d9ce5fd4b5867ad008cd1469d79e1e206ed04b433eb69"
+    },
+    {
+      "version": "20260908006000",
+      "name": "billing_completed_checkout_authority_guard",
+      "statement_count": 15,
+      "joined_bytes": 7503,
+      "joined_statement_sha256": "2fdf9478aae0fed68db7d72b13c2b7daa6a572baa749f102c8a8f5a9f100be27"
+    },
+    {
+      "version": "20260908006400",
+      "name": "reconcile_paid_governance_runtime_foundations",
+      "statement_count": 155,
+      "joined_bytes": 59011,
+      "joined_statement_sha256": "21706726be7aa226b599891ed5a92a168a3f505360067beac2520f4384e4a24a"
+    },
+    {
+      "version": "20260908006500",
+      "name": "billing_professional_task_plan_isolation",
+      "statement_count": 42,
+      "joined_bytes": 17277,
+      "joined_statement_sha256": "87fdd3d8a91af407fa9441512984e16aa21a72b52f887720b87c2778d9eef2fd"
+    },
+    {
+      "version": "20260908006600",
+      "name": "billing_business_feature_plan_isolation",
+      "statement_count": 6,
+      "joined_bytes": 4052,
+      "joined_statement_sha256": "9b780914478a084d0cd6e568ca7ea23d722bd7b64f443e14a6279ef78a27d8a0"
+    },
+    {
+      "version": "20260908006700",
+      "name": "billing_governance_workflow_plan_isolation",
+      "statement_count": 34,
+      "joined_bytes": 24901,
+      "joined_statement_sha256": "272c910a3744baed4b6745d13a91b60781e31f7cc98e0744c48360a60efba73a"
+    },
+    {
+      "version": "20260908006800",
+      "name": "harden_cross_tenant_reference_integrity",
+      "statement_count": 39,
+      "joined_bytes": 23211,
+      "joined_statement_sha256": "284bb0c2ff6527c6fec6b5d8f5c93be063ee3c9321b79eef452d4718b5b68028"
+    },
+    {
+      "version": "20260909006900",
+      "name": "harden_security_advisor_rpc_surface",
+      "statement_count": 1,
+      "joined_bytes": 5115,
+      "joined_statement_sha256": "d476e7bccc26e35ee42f1a542b7367bbed14106861c204c1741da7589615eeee"
+    },
+    {
+      "version": "20260909230946",
+      "name": "reconcile_data_governance_enterprise_foundation",
+      "statement_count": 1,
+      "joined_bytes": 7202,
+      "joined_statement_sha256": "0b27879c8931dd9d70f25202c91c258182bad613d3373c49e904949e1dd4435e"
+    },
+    {
+      "version": "20260909231011",
+      "name": "harden_data_subject_request_lifecycle",
+      "statement_count": 1,
+      "joined_bytes": 7437,
+      "joined_statement_sha256": "de6ce60712a80565113b7bc106c6639d7f1bec188d381ec1a9efb157c42d26ed"
+    },
+    {
+      "version": "20260909232229",
+      "name": "finalize_backend_only_force_rls_and_trigger_acl",
+      "statement_count": 1,
+      "joined_bytes": 2830,
+      "joined_statement_sha256": "1bc1f8f133c138d72d948ee6b1eccc9243fe51780a4b925b6dba9b731b5b6788"
+    },
+    {
+      "version": "20260910113000",
+      "name": "reconcile_fria_operational_runtime_v43",
+      "statement_count": 41,
+      "joined_bytes": 18014,
+      "joined_statement_sha256": "35391c899fe8906179ff6d880385352a9b6c54d6038dac6b73ea0736c3ec30ee"
+    },
+    {
+      "version": "20260910113500",
+      "name": "article5_policy_replay_compatibility_v43",
+      "statement_count": 3,
+      "joined_bytes": 1480,
+      "joined_statement_sha256": "b3825b88986554c76393d0830cddfc4b82de0490a5500466eb37e822daa00660"
+    },
+    {
+      "version": "20260910114000",
+      "name": "reconcile_prohibited_practices_runtime_v43",
+      "statement_count": 103,
+      "joined_bytes": 37308,
+      "joined_statement_sha256": "f2a745ebe391a8ac79683fae7bc7bf611ef450c944c73fd898c4595ce0ab7411"
+    },
+    {
+      "version": "20260910115000",
+      "name": "atomic_data_subject_request_lifecycle_audit_v43",
+      "statement_count": 12,
+      "joined_bytes": 8648,
+      "joined_statement_sha256": "831cbbacec1e1597363a7b68881dab593d0dbecd0c20746b475dd073f38d8616"
+    },
+    {
+      "version": "20260920101246",
+      "name": "reconcile_sales_console_production_runtime",
+      "statement_count": 1,
+      "joined_bytes": 8798,
+      "joined_statement_sha256": "468e086aa09cb68f1d7d628af68b9ad0d9319a97604d3c3c91723c3fdb2406d6"
+    },
+    {
+      "version": "20260920172552",
+      "name": "restore_sales_console_admin_actor_scope",
+      "statement_count": 1,
+      "joined_bytes": 3359,
+      "joined_statement_sha256": "e29d438586bb5ae3521f19adc855753d5d7a93d74b80e6a095fe991f54f27318"
+    },
+    {
+      "version": "20260922112154",
+      "name": "reconcile_transactional_email_delivery_logs_v1",
+      "statement_count": 1,
+      "joined_bytes": 2850,
+      "joined_statement_sha256": "3a4af676fb07d8f1565a22d657a888fb1d59f19f74b92a08057e71209ea33ae9"
+    },
+    {
+      "version": "20260922112907",
+      "name": "harden_transactional_email_delivery_log_policies_v1",
+      "statement_count": 1,
+      "joined_bytes": 1075,
+      "joined_statement_sha256": "8bb11aa94e48620561cf74c4e47464b777beb35e7d6ec479368e522ab917c7bd"
+    },
+    {
+      "version": "20260922203500",
+      "name": "reconcile_team_membership_runtime_rpcs",
+      "statement_count": 1,
+      "joined_bytes": 8109,
+      "joined_statement_sha256": "ec8b6213e5a1b73ec6d0b49dfccf5bdabff0fac6dadf1c14a1ccb9c9727e0420"
+    },
+    {
+      "version": "20260924141739",
+      "name": "tenant_wide_mfa_terminal",
+      "statement_count": 1,
+      "joined_bytes": 2191,
+      "joined_statement_sha256": "023fc0af949877edfc43fd10a12d0b4aa60b8bd884f82330fa07ff0625e1a3fb"
+    },
+    {
+      "version": "20260924142553",
+      "name": "tenant_mfa_app_private_rls_authority",
+      "statement_count": 1,
+      "joined_bytes": 1635,
+      "joined_statement_sha256": "47c93b26e13524655ea1905b06d11fc6904f773619389727cc519d655cbac762"
+    },
+    {
+      "version": "20260924143358",
+      "name": "tenant_mfa_public_rpc_acl_hardening",
+      "statement_count": 1,
+      "joined_bytes": 1804,
+      "joined_statement_sha256": "66fcbd24e9810398b1470ca22ec60f63462830fc1402a7bc8cbbc6fe7ea7d050"
+    },
+    {
+      "version": "20260929101551",
+      "name": "optimize_rls_auth_initplan_terminal",
+      "statement_count": 1,
+      "joined_bytes": 7643,
+      "joined_statement_sha256": "bb40fccf46f8dcf72c8f92197d12fba06b4fd9fe89685e134387d883f22aa847"
+    },
+    {
+      "version": "20260929101638",
+      "name": "add_critical_fk_indexes_terminal",
+      "statement_count": 1,
+      "joined_bytes": 2685,
+      "joined_statement_sha256": "d329f40a847a60368b6068d65c668220968869b0561f5313403880155c872bd8"
+    },
+    {
+      "version": "20260929102134",
+      "name": "consolidate_compliance_tasks_select_policies_terminal",
+      "statement_count": 1,
+      "joined_bytes": 393,
+      "joined_statement_sha256": "626cabba53ffb1424f309b95df904605bed21f4fb827ac3d93228610ca9cba8f"
+    },
+    {
+      "version": "20261003115056",
+      "name": "add_subscriptions_billing_interval_for_stripe_runtime",
+      "statement_count": 1,
+      "joined_bytes": 125,
+      "joined_statement_sha256": "9e7ec2190615d03e0292f9cf8d309a65fef91b527a4bc52256853f9da03b55a3"
+    },
+    {
+      "version": "20261003134528",
+      "name": "fix_ai_system_text_array_rpc_contract",
+      "statement_count": 1,
+      "joined_bytes": 9241,
+      "joined_statement_sha256": "dea017549e2569cfa5d4d8f5298a1a435ead801ac7f5bb77cb879d0a34313704"
+    },
+    {
+      "version": "20261003171225",
+      "name": "reconcile_risk_schema_contract",
+      "statement_count": 1,
+      "joined_bytes": 1786,
+      "joined_statement_sha256": "1186770ebdef087aa24312c2544d19be5f3a1b24787ec6867b8f7667439901d9"
+    },
+    {
+      "version": "20261003173930",
+      "name": "reconcile_ai_incident_atomic_rpc",
+      "statement_count": 1,
+      "joined_bytes": 4263,
+      "joined_statement_sha256": "1112bfa0b431e99ab473871d1f2e41ce0163c235a3b2535be44ba28b672dc3cf"
+    },
+    {
+      "version": "20261003205557",
+      "name": "fix_team_invitation_persistence_42702",
+      "statement_count": 1,
+      "joined_bytes": 2338,
+      "joined_statement_sha256": "5371aab27e28dfb4e3ad38397cc897fb20f6dcbac255a2e3371acf9675e30332"
+    },
+    {
+      "version": "20261003220421",
+      "name": "fix_team_invitation_acceptance_42702",
+      "statement_count": 1,
+      "joined_bytes": 2938,
+      "joined_statement_sha256": "33937e182c16a8cc3d483561214605eee9f5376a7cead13da65f7568cd21f9e1"
+    },
+    {
+      "version": "20261003220519",
+      "name": "fix_team_invitation_membership_conflict_42702",
+      "statement_count": 1,
+      "joined_bytes": 2616,
+      "joined_statement_sha256": "2cdf4141ab8bec955a5838243cd64f5142b670dcc01a7113576596df68a2c9cd"
+    },
+    {
+      "version": "20261004082501",
+      "name": "validate_audit_logs_actor_user_fk",
+      "statement_count": 1,
+      "joined_bytes": 82,
+      "joined_statement_sha256": "db12bfe5613df5425519632bd17fed43b3f3215c8917b1c2df58b6d55f31ee41"
+    },
+    {
+      "version": "20261004103137",
+      "name": "force_rls_sales_console_backend_only",
+      "statement_count": 1,
+      "joined_bytes": 859,
+      "joined_statement_sha256": "85db3506d8a55a24d20be470e0735c4f6227de5624bf1e7b083942e243d8417b"
+    },
+    {
+      "version": "20261004110936",
+      "name": "add_sales_lead_email_templates",
+      "statement_count": 1,
+      "joined_bytes": 585,
+      "joined_statement_sha256": "561206132e6a308b736564265583b4cc975a76738f80093225d43dc1d401785d"
+    },
+    {
+      "version": "20261005001641",
+      "name": "harden_sync_legacy_risk_score_trigger_acl",
+      "statement_count": 1,
+      "joined_bytes": 1186,
+      "joined_statement_sha256": "83df4db3bbb83926e6de111c1d3b11166c3750594c10b41bb55047e98aa7642e"
+    },
+    {
+      "version": "20261006125506",
+      "name": "20260721180000_annex_iv_technical_documentation_governance",
+      "statement_count": 1,
+      "joined_bytes": 19000,
+      "joined_statement_sha256": "652786fda5b8b9e78ca40bb02272693987afa2a711eacc32e395d38726fa2c4b"
+    },
+    {
+      "version": "20261006125509",
+      "name": "20260721180100_annex_iv_package_section_integrity",
+      "statement_count": 1,
+      "joined_bytes": 879,
+      "joined_statement_sha256": "a984d66947fe8c0a913907f1460100e612ebcbd68f551f5efa85bf5eb8896100"
+    },
+    {
+      "version": "20261006125511",
+      "name": "20260722200000_annex_iv_operational_workflow",
+      "statement_count": 1,
+      "joined_bytes": 9261,
+      "joined_statement_sha256": "ea03f251ec326c93c2d48778b813fe3531d4db94aa65db9677e2db0408009952"
+    },
+    {
+      "version": "20261006125514",
+      "name": "20260803133000_article_50_product_integration",
+      "statement_count": 1,
+      "joined_bytes": 10168,
+      "joined_statement_sha256": "d56475e7132fb8f0a5d7131763ab44a2d7bed6922e63b80637994bd7239bc9e7"
+    },
+    {
+      "version": "20261006125518",
+      "name": "20260803133100_article_50_claim_evidence_constraints",
+      "statement_count": 1,
+      "joined_bytes": 1802,
+      "joined_statement_sha256": "3608522681bf77f7f0c2380cd18e5d50b84ff4409976493a5ed513b945d839f9"
+    },
+    {
+      "version": "20261006125623",
+      "name": "20261006140000_harden_annex_iv_trigger_function_acl",
+      "statement_count": 1,
+      "joined_bytes": 532,
+      "joined_statement_sha256": "d5465b63bbce5dadb4636ccd739231947832e90197b399ea356fbc4af0f094be"
+    },
+    {
+      "version": "20261006130430",
+      "name": "20261006140500_reconcile_gap_task_reference_integrity",
+      "statement_count": 1,
+      "joined_bytes": 1406,
+      "joined_statement_sha256": "a6e961666eacd8c3b2bf1418097863b213e8bbec5bf2129a133e80d7d29174d2"
+    },
+    {
+      "version": "20261010075142",
+      "name": "harden_active_membership_governance_read",
+      "statement_count": 1,
+      "joined_bytes": 2064,
+      "joined_statement_sha256": "29bad3ef3fbb77aafc5ef789829f1f41acdcc0d1b4cd91fb2019e81c4b7430c6"
+    },
+    {
+      "version": "20261013133323",
+      "name": "fix_enterprise_provision_usage_conflict_ambiguity",
+      "statement_count": 1,
+      "joined_bytes": 9208,
+      "joined_statement_sha256": "6eb4f7dfe9291502bc07fb2404af0bceeba5c9426e95ed7ef7c9f17f55c5d89e"
+    },
+    {
+      "version": "20261013133341",
+      "name": "fix_enterprise_provision_usage_update_ambiguity",
+      "statement_count": 1,
+      "joined_bytes": 9231,
+      "joined_statement_sha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6"
+    },
+    {
+      "version": "20261015205458",
+      "name": "enterprise_entitlement_v3_compatibility",
+      "statement_count": 1,
+      "joined_bytes": 3635,
+      "joined_statement_sha256": "e9c82b1680d17240bb84a103784706ab7c4c36e6ac3c3eeb8d523090624e519d"
+    },
+    {
+      "version": "20261015235500",
+      "name": "enterprise_private_membership_mfa_gate",
+      "statement_count": 10,
+      "joined_bytes": 4053,
+      "joined_statement_sha256": "a09dc70c881ec1e84fba5b9aa1763638106267c3649225b123ce3eb79efe2eae"
+    },
+    {
+      "version": "20261018023000",
+      "name": "guard_last_active_owner_removal",
+      "statement_count": 7,
+      "joined_bytes": 3660,
+      "joined_statement_sha256": "ec668d15409487f986de04d435290c5f9f696da3a2e66544abe2f34211a3cee7"
+    },
+    {
+      "version": "20261018113000",
+      "name": "atomic_member_removal_with_chained_audit",
+      "statement_count": 7,
+      "joined_bytes": 5245,
+      "joined_statement_sha256": "56fa95aaaf45f03e724ac28a1992577a1e5d57b51d6ded52bad92ff5ae238af3"
+    },
+    {
+      "version": "20261018160000",
+      "name": "atomic_member_role_change_with_chained_audit",
+      "statement_count": 7,
+      "joined_bytes": 6451,
+      "joined_statement_sha256": "8ecaa2651d30ac7556b82e63686c9ee6204e9750e84aa8d9d0d89d2ccf01e143"
+    },
+    {
+      "version": "20261018183000",
+      "name": "guard_last_active_owner_seat_release",
+      "statement_count": 7,
+      "joined_bytes": 8104,
+      "joined_statement_sha256": "48a345a00e2f3da324742a8c7804026d55ac5c754f5b3c40daaf11e0720f4021"
+    },
+    {
+      "version": "20261018190000",
+      "name": "reconcile_audited_membership_usage_counters",
+      "statement_count": 10,
+      "joined_bytes": 14182,
+      "joined_statement_sha256": "87c1fff9f05edc509b651ed333ec26a53ef799955a27e954b723c1c8bc46b119"
+    }
+  ]
+}

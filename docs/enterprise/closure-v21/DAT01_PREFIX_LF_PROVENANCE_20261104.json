@@ -1,0 +1,88 @@
+{
+  "schema": "risck-comply.dat01.provider-leading-newline-provenance.v21.3",
+  "observedAt": "2026-11-04T10:04:55.405Z",
+  "subject": "A-12/DAT-01",
+  "candidateHeadBeforeEvidenceCommit": "dfc09f62b42c44241d2a0366ca2bc48c3145f42a",
+  "sourceSnapshot": {
+    "crosswalkPath": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+    "crosswalkBlobSha": "3c3d7c83549d08a2a106f70aff51efed71681769",
+    "archivedProviderHashPath": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+    "archivedProviderHashBlobSha": "8705c36a875058d5fbe97bdd3033fe498426aa26"
+  },
+  "method": "For exact-version original source SQL blobs, compute SHA256 of UTF8('\\n'+sourceFileText) and compare with frozen production ledger SHA256 of the sole statement. Exact bytes and counts must match. Read-only; no SQL replay.",
+  "sourceVariant": "PREFIX_SINGLE_LF_SINGLE_LEDGER_ENTRY",
+  "verifiedMatches": [
+    {
+      "version": "20260812213753",
+      "name": "guard_enterprise_entitlement_snapshots_against_stale_observations",
+      "sourceBlob": "48765f25c68880330f33233a2fc1f5c6aded3f24",
+      "sourceBytes": 2408,
+      "providerBytes": 2409,
+      "ledgerStatementCount": 1,
+      "sha256Matched": true
+    },
+    {
+      "version": "20260812230541",
+      "name": "add_missing_foreign_key_covering_indexes",
+      "sourceBlob": "3acc203840ae224bbe2bc44bfe44950b077dc988",
+      "sourceBytes": 9853,
+      "providerBytes": 9854,
+      "ledgerStatementCount": 1,
+      "sha256Matched": true
+    },
+    {
+      "version": "20260812230911",
+      "name": "tighten_monitoring_preferences_horizontal_read_isolation",
+      "sourceBlob": "4378394c1bf3940462513f9fc5b23d1c57cd6841",
+      "sourceBytes": 2125,
+      "providerBytes": 2126,
+      "ledgerStatementCount": 1,
+      "sha256Matched": true
+    },
+    {
+      "version": "20260813102951",
+      "name": "harden_remaining_public_security_definer_search_paths",
+      "sourceBlob": "d174618375ccd5f21e355cac7877ba788080b794",
+      "sourceBytes": 3488,
+      "providerBytes": 3489,
+      "ledgerStatementCount": 1,
+      "sha256Matched": true
+    }
+  ],
+  "aggregateScope": {
+    "productionLedger": 137,
+    "exactVersionMappings": 112,
+    "nonExactMappings": 25,
+    "checkedExactSubset": "first 34 exact-version mappings from 137 crosswalk entries",
+    "sourceHashMatchesInSubset": 24,
+    "unmatchedInSubset": 10,
+    "otherExactMappingsNotYetChecked": 78,
+    "nonExactMappingsNotYetReviewed": 25,
+    "countingRule": "24 verified matches are a sample of 34, not 24/137 source replay and not gate pass"
+  },
+  "historicalProvenanceConcern": "Git history shows several SQL files were revised on 2026-10-01 for historical replay compatibility; source bytes and original provider bytes differ materially for additional rows, requiring a qualified source-history decision.",
+  "verification": {
+    "testCommand": "node --test scripts/diagnostics/g5-02-sql-hash-proof.test.mjs tests/release/dat01-source-parity-negative.test.mjs",
+    "node": "v22.16.0",
+    "passed": 22,
+    "failed": 0,
+    "sourceBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+    "testsBlob": "e3e95ef2c03ac74fc3e6c994fc73d77ca2c04466",
+    "sourceVariantGuards": [
+      "only single provider SQL array entry",
+      "conservative SQL lexer first",
+      "only exactly one leading LF",
+      "no nonexact historical identity approval",
+      "hash and UTF8 byte count exact",
+      "no SQL execution"
+    ],
+    "hostedCircleCi": "NOT_EXECUTED_ON_CURRENT_SHA",
+    "providerStatementParity": "SAMPLE_ONLY"
+  },
+  "productionSqlWrites": 0,
+  "qaSqlWrites": 0,
+  "migrationsReplayed": 0,
+  "formalAcceptance": "NOT_GRANTED",
+  "qualifiedReview": "PENDING",
+  "nextExecutableAction": "Run full 137-row diagnostic at exact candidate SHA from complete checked-out source, review historical Git commits for unresolved statements and the 25 nonexact mappings, qualified review of two consolidated groups, then isolated PostgreSQL 17 replay. CircleCI #431 FAIL first failing command remains unavailable in normal chat."
+}

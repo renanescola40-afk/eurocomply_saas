@@ -44,7 +44,8 @@ if (!existsSync(checkoutPagePath)) {
 } else {
   const checkoutPage = readFileSync(checkoutPagePath, 'utf8');
 
-  requireToken(checkoutPage, 'normalizeBillingPlanId', 'Deprecated checkout page must normalize legacy plan identifiers before redirecting.');
+  requireToken(checkoutPage, 'normalizePublicCheckoutPlanId', 'Deprecated checkout page must use the public checkout plan boundary before redirecting.');
+  forbidToken(checkoutPage, 'normalizeBillingPlanId', 'Deprecated checkout page must not accept persisted free/basic aliases as paid checkout plans.');
   requireToken(checkoutPage, 'normalizeLocale', 'Deprecated checkout page must normalize locale before building local redirects.');
   requireToken(checkoutPage, '/checkout?plan=', 'Deprecated checkout page must redirect to the canonical checkout page.');
   requireToken(checkoutPage, 'pricing?checkout=invalid_plan', 'Deprecated checkout page must route invalid plans to a controlled pricing error state.');
@@ -79,3 +80,4 @@ if (failures.length > 0) {
 } else {
   console.log('Billing page boundary security: ok');
 }
+

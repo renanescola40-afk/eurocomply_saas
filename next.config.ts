@@ -164,6 +164,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   experimental: {
+    // Keep production and CI builds within the repository's 4 GB CircleCI executor.
+    // The full build remains enabled; limiting workers reduces peak parallel memory use.
+    cpus: 1,
     serverActions: {
       bodySizeLimit: '12mb',
     },

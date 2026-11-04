@@ -1,0 +1,139 @@
+{
+  "schema": "risck-comply.dat01.cross-source-exact-hash-batch.v1",
+  "observedDate": "2026-11-04",
+  "batch": "exact-version mappings 85..98",
+  "snapshot": "b369563394dd650465f27b45fe85ed7b7a874ad5",
+  "sourceCrosswalkBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+  "productionLedgerEvidenceBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+  "sourceLexerBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+  "passed": 8,
+  "unmatched": 6,
+  "rows": [
+    {
+      "version": "20260908006700",
+      "sourceBlob": "9599cb78128856a711b7c7a08ca7f74eef60da72",
+      "statementCount": 34,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908006800",
+      "sourceBlob": "2df91b10927effde5bed1de68e7df3d94118aed5",
+      "statementCount": 39,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260909006900",
+      "sourceBlob": "0714aa5f5f60c551238fd31500c60f3c33faab3d",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "requiresHistoricalSourceReview": true
+    },
+    {
+      "version": "20260910113000",
+      "sourceBlob": "232ced00e39be0e92a6b217152086bce0bba03c9",
+      "statementCount": 41,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260910113500",
+      "sourceBlob": "45197b2e33e7c0d7308c1fbb14a8df265e002de1",
+      "statementCount": 3,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260910114000",
+      "sourceBlob": "a9c16218d4d0c50a1884fa64da0a1aebef11eda3",
+      "statementCount": 103,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260910115000",
+      "sourceBlob": "467729375033891a5f240a3989231ce14b1a7bc1",
+      "statementCount": 12,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260920101246",
+      "sourceBlob": "3b6205b6fcea2f6241ee8e3fdf6c9a511fbef666",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "PREFIX_LF"
+    },
+    {
+      "version": "20260920172552",
+      "sourceBlob": "78d8dcc5d46e01652279ab614a750942b099f0f8",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "RAW"
+    },
+    {
+      "version": "20260922112154",
+      "sourceBlob": "9aba3aecf04e0477a71b6bca1879d092b2411d5a",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "requiresHistoricalSourceReview": true
+    },
+    {
+      "version": "20260922112907",
+      "sourceBlob": "1163ec79781783de19dba4bbf5c27d2e5f0eb076",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "requiresHistoricalSourceReview": true
+    },
+    {
+      "version": "20260922203500",
+      "sourceBlob": "4dabf323a9c2ddf425def2bf7eaa7c719debbb43",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "requiresHistoricalSourceReview": true
+    },
+    {
+      "version": "20260929101551",
+      "sourceBlob": "19ad9071d65b2757a3f3e7a106cb49de6019f4ed",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "requiresHistoricalSourceReview": true
+    },
+    {
+      "version": "20260929101638",
+      "sourceBlob": "7ea230bf05a2a70ee39038aa83baeb7e9a550cb8",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "requiresHistoricalSourceReview": true
+    }
+  ],
+  "cumulative": {
+    "previousExactHashMatchesAtLeast": 72,
+    "newVerified": 8,
+    "verifiedExactLowerBound": 80,
+    "exactVersionMappingsReviewed": 98,
+    "totalExactVersionMappings": 112,
+    "remainingExactMappings": 14,
+    "unresolvedIn98": 18,
+    "nonExactMappingsRequireReview": 25
+  },
+  "interpretation": "8 proven exact-source byte/digest representations. Six historically revised or otherwise different source files cannot be equated to archived provider bytes by the existing four conservative variants; no inferred matching via forced normalization.",
+  "DAT01": {
+    "gate": "BLOCKED",
+    "replay": "0/137",
+    "independentApproval": "PENDING",
+    "newFormalPass": 0
+  },
+  "safety": {
+    "productionWrites": 0,
+    "qaWrites": 0,
+    "CITriggered": 0,
+    "newCosts": 0
+  },
+  "limits": [
+    "Archived production hash evidence, not a fresh SQL execution.",
+    "No migration replay or reviewed consolidation semantics.",
+    "Hash mismatch may reflect historical revisions; inspect Git history instead of modifying historical SQL to chase PASS."
+  ]
+}
