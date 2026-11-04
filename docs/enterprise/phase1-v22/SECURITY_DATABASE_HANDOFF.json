@@ -391,6 +391,53 @@
       "prodDeploymentSha": "70d3545f414d063379d481fd238aed563e05edda",
       "mainMergeSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
       "boundary": "Provider metadata only, not signed-JWT E2E or direct TLS proof"
+    },
+    "sec03_sql_two_tenant_mfa_rehearsal": {
+      "date": "2026-11-04",
+      "qaProject": "zrxrrfbllsxtleyxjpsz",
+      "environment": "ISOLATED_QA",
+      "artifact": "tests/security/ve1-qa-two-tenant-rls-mfa-readonly.sql",
+      "githubHeadContainingArtifact": "2690470467b0df25dcd6c1677fbae1c706bb4d6f",
+      "artifactGitBlobSha1": "d5b841c73f2d729a5cf6d128b7558afac0516b0b",
+      "runMode": "SINGLE_POSTGRESQL_BEGIN_READ_ONLY_TRANSACTION_WITH_SET_LOCAL_ROLE_AUTHENTICATED_AND_ROLLBACK",
+      "assertionsPassed": 36,
+      "assertionsFailed": 0,
+      "securityResults": {
+        "twoRealQaOrganizations": true,
+        "fiveActiveQaClerkMemberships": true,
+        "bothTenantsRequireMfa": true,
+        "bidirectionalOrganizationIsolation": true,
+        "bidirectionalMembershipIsolation": true,
+        "unknownClerkSubjectDenied": true,
+        "aal1OwnOrganizationDenied": true,
+        "aal1OwnMembershipDenied": true,
+        "aal1PrivilegedMembershipDenied": true,
+        "aal2OwnOrganizationVisible": true,
+        "aal2OtherOrganizationDenied": true
+      },
+      "postRollback": {
+        "organizations": 2,
+        "memberships": 5,
+        "anyPersistentQaChanges": false,
+        "productionWrites": false
+      },
+      "scopeLimitations": [
+        "request.jwt.claim.sub and request.jwt.claims were simulated in a transaction, not produced by a cryptographically signed Clerk JWT.",
+        "PostgreSQL role impersonation validates SQL/RLS control behavior but not browser, API, export or Storage access paths.",
+        "QA ai_systems, documents, audit_logs and storage.objects tables had zero rows and therefore no seeded cross-tenant resource fixtures; no false-positive broad SEC-03 PASS.",
+        "No signed-JWT AAL2, expiry/revocation E2E was performed.",
+        "No independently accepted gate or atomic control; source main differs from the VE1 PR head and hosted CI exact-SHA is blocked."
+      ],
+      "formalAcceptance": "NOT_ACCEPTED",
+      "controls": [
+        "SEC-01",
+        "SEC-03"
+      ],
+      "gates": [
+        "A-01",
+        "A-03"
+      ],
+      "next": "Reproduce signed JWT browser/API session and MFA, then real tenant A/B seeded AI System/Document/Storage/export negative tests and independent review on exact CI SHA."
     }
   }
 }
