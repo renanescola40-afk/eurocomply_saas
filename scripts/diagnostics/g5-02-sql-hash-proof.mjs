@@ -45,6 +45,8 @@ export function compareLedger({ ledger,crosswalk,provider,readSource }) {
       const candidates=[['SPLIT_STATEMENTS_LF',statements.join('\n'),statements.length]];
       if(p.statement_count===1){
         candidates.push(['RAW_FILE_SINGLE_LEDGER_ENTRY',source,1]);
+        // Production migration records can retain a single leading LF before the canonical source.
+        candidates.push(['PREFIX_SINGLE_LF_SINGLE_LEDGER_ENTRY','\n'+source,1]);
         if(source.trimEnd()!==source) candidates.push(['TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY',source.trimEnd(),1]);
       }
       const verified=candidates.find(([,text,count])=>count===p.statement_count&&Buffer.byteLength(text,'utf8')===p.joined_bytes&&digest(text)===p.joined_statement_sha256);
@@ -55,7 +57,7 @@ export function compareLedger({ ledger,crosswalk,provider,readSource }) {
     results.push({version:v,name:p.name,mapping:e.mapping,status,...(matchedBy?{matchedBy}:{}),...(reason?{reason}:{} )});
   }
   const count=status=>results.filter(x=>x.status===status).length;
-  return {schema:'risck-comply.dat01.source-hash.v2',sourceRepresentationChecks:['SPLIT_STATEMENTS_LF','RAW_FILE_SINGLE_LEDGER_ENTRY','TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY'],counts:{total:137,exactMatch:count('EXACT_HASH_MATCH'),exactMismatch:count('EXACT_HASH_MISMATCH'),nonExactMatchNeedsReview:count('NON_EXACT_HASH_MATCH_REVIEW'),nonExactNeedsReview:count('NON_EXACT_MAPPING_REVIEW'),unverified:count('SOURCE_UNVERIFIED')},results,sqlReplay:'NOT_EXECUTED',formalAcceptance:'NOT_GRANTED',status:'DIAGNOSTIC_ONLY'};
+  return {schema:'risck-comply.dat01.source-hash.v3',sourceRepresentationChecks:['SPLIT_STATEMENTS_LF','RAW_FILE_SINGLE_LEDGER_ENTRY','PREFIX_SINGLE_LF_SINGLE_LEDGER_ENTRY','TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY'],counts:{total:137,exactMatch:count('EXACT_HASH_MATCH'),exactMismatch:count('EXACT_HASH_MISMATCH'),nonExactMatchNeedsReview:count('NON_EXACT_HASH_MATCH_REVIEW'),nonExactNeedsReview:count('NON_EXACT_MAPPING_REVIEW'),unverified:count('SOURCE_UNVERIFIED')},results,sqlReplay:'NOT_EXECUTED',formalAcceptance:'NOT_GRANTED',status:'DIAGNOSTIC_ONLY'};
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===resolve(process.argv[1])){
   const root=resolve(process.cwd()),migrationRoot=realpathSync(resolve(root,'supabase/migrations'));
