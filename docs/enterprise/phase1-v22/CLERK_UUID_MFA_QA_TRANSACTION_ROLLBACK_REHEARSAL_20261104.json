@@ -69,7 +69,9 @@
     "qualifiedIndependentReview": "NOT_VERIFIED",
     "fullCiExactSha": "NOT_VERIFIED",
     "formalAcceptance": "NOT_ACCEPTED",
-    "acceptedGateCountAdded": 0
+    "acceptedGateCountAdded": 0,
+    "sqlRoleAssertionsPassed": 10,
+    "totalSqlAssertionsPassed": 21
   },
   "remaining": [
     "Independent source review of forward migration and active role/tenant MFA semantics",
@@ -84,5 +86,24 @@
     "No production SQL writes, no release, no Stripe LIVE.",
     "No replay/production migration authorization given by this artifact.",
     "Existing PR remains Draft; owner controls canonical merge."
-  ]
+  ],
+  "additionalAuthenticatedSqlRoleRehearsal": {
+    "actualMigrationBlobSha1": "31073c868fa14e66ebf5b1df2c917fafefac9177",
+    "qaProjectId": "zrxrrfbllsxtleyxjpsz",
+    "execution": "Separate QA SQL transaction: source migration (COMMIT replaced) + SET LOCAL ROLE authenticated + 10 SQL assertions + RESET ROLE + ROLLBACK.",
+    "sqlRole": "authenticated",
+    "assertionsPassed": 10,
+    "assertionsFailed": 0,
+    "eightNegativeNonexistentOrgCases": "4 simulated request.jwt.claim.sub strings × read/manage; all FALSE under authenticated SQL role.",
+    "twoNullOrgCases": "Read and manage returned FALSE with NULL organization under authenticated SQL role.",
+    "independentlyVerifiedAfterRollback": {
+      "readOriginalFingerprintRetained": true,
+      "manageOriginalFingerprintRetained": true,
+      "sqlRoleRestored": "postgres"
+    },
+    "limitations": [
+      "SQL SET LOCAL ROLE authenticated is not an HTTP session and not a cryptographically signed identity-provider JWT.",
+      "No permanent QA migration, no production change, no complete MFA/expiry/revocation E2E."
+    ]
+  }
 }
