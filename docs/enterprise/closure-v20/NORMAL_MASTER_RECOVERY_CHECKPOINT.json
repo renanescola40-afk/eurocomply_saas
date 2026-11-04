@@ -1,21 +1,21 @@
 {
-  "schema": "risck-comply.normal-master-recovery-v20.1",
-  "OBSERVED_AT": "2026-11-03T18:35:37.016Z",
+  "schema": "risck-comply.normal-master-recovery-v20.2",
+  "OBSERVED_AT": "2026-11-04T00:38:04.104Z",
   "PREDECESSOR_WORK012": {
     "checkpoint": "docs/enterprise/closure-v19/WORK_MASTER_CHECKPOINT.json",
     "last_known_ci_sha": "feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6"
   },
-  "CURRENT_MASTER": "NORMAL_CHAT_MASTER_V20.1",
+  "CURRENT_MASTER": "NORMAL_CHAT_MASTER_V20.2",
   "GITHUB_MAIN_SHA": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
   "GITLAB_MAIN_SHA": "84a99f813bdce601c119bff27c1d82c5356295d6",
   "INTEGRATION_PR": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
-  "INTEGRATION_HEAD_SHA": "3c6764049529759de53257acabf917f5865f6d62",
-  "INTEGRATION_HEAD_FIELD_SCOPE": "Verified candidate head immediately before this checkpoint/security source commit. Commit writing this file advances HEAD; fetch PR head for authoritative newest SHA.",
+  "INTEGRATION_HEAD_SHA": "02f55cd22d05d270af890a4bac1ea9c986a463fc",
+  "INTEGRATION_HEAD_FIELD_SCOPE": "Confirmed immediately before V20.2 metadata audit commit; new commit advances candidate HEAD, read PR for current source SHA.",
   "LATEST_CIRCLECI_PIPELINE": 866,
   "LATEST_CIRCLECI_JOB": 428,
   "CIRCLECI_SOURCE_SHA": "feb9905bb3cbe84f1fbf04efa38b2f87e6d954a6",
   "CIRCLECI_RESULT": "HISTORICAL_FAIL_SOURCE_LEDGER_MISMATCH_0_OF_137; CURRENT_HEAD_NOT_EXECUTED",
-  "CIRCLECI_CURRENT_SHA_VALIDATION": "NOT_EXECUTED",
+  "CIRCLECI_CURRENT_SHA_VALIDATION": "NOT_EXECUTED on V20.2 source",
   "CIRCLECI_LIVE_ACCESS": "UNAVAILABLE_IN_THIS_CHAT",
   "CIRCLECI_INCLUDED_CREDITS": "LAST_HISTORICAL_CHECK_19767_REMAINING_OF_30000; CURRENT_UNKNOWN; NO_TRIGGER",
   "GITHUB_ACTIONS_BILLING_STATUS": "NOT_CONFIRMED; 49 workflow failures observed on c6ea11e6; sampled CI and CodeQL jobs had zero steps and BlobNotFound logs; runner admission issue, not code-tested",
@@ -78,7 +78,11 @@
     "Computed SHA256 provider SQL-statement metadata for 137/137 migrations without extracting SQL bodies",
     "Fresh hashes of two PR #2559 hotfix versions match historical provider records",
     "Isolated AST client boundary scanner vectors: 15/15 PASS, not full repository tests",
-    "Integrated current #2600 AST scanner handoff into this metadata commit"
+    "Integrated current #2600 AST scanner handoff into this metadata commit",
+    "Integrated eight pinned Checkout and public-intent source snapshots from #2597 at ccc9677f91840625c41f4af1912786748ae90baf in canonical commit 02f55cd22d05d270af890a4bac1ea9c986a463fc",
+    "Verified matching Git blob of public checkout normalizer and ran Node 22 isolated 4/4 PASS",
+    "Read-only compared 137 ledger versions/names/hash metadata to 137 crosswalk entries: 137/137 match; 135 unique sources; 2 declared consolidations",
+    "Implemented DAT-01 metadata-integrity preflight script, 7 synthetic Node 22 tests PASS; this is not SQL parity or gate acceptance"
   ],
   "CURRENT_BLOCKERS": [
     "CircleCI exact current SHA and credits unavailable from this chat; no pipeline run",
@@ -88,11 +92,13 @@
     "Full npm CI, security suites, authenticated QA runtime, Stripe TEST signed webhook, tenant isolation, release prove not executed",
     "Specialist PR updates need exact latest source review and SHA reconciliation"
   ],
-  "NEXT_EXECUTABLE_ACTION": "Re-read #2598 final head and source #2597/#2599/#2600; run source-quality on exact new head via authorized no-cost CircleCI operator if included balance confirmed, investigate DAT-01 provenance manifest against recorded production statement hashes; independent gate validator only after complete evidence.",
+  "NEXT_EXECUTABLE_ACTION": "Run Node 22 metadata preflight in checked-out canonical source tree, then obtain and review canonical SQL statement provenance and two consolidation execution semantics; run current-head exact-SHA CircleCI only after Free credits and enabled access are confirmed; do not mark DAT-01 PASS from metadata-only validation.",
   "GO": {
     "INTERNAL_ENTERPRISE": "NO_GO",
     "PAID_CUSTOMER": "NOT_VERIFIED",
     "PRODUCTION_RELEASE": "NO_GO",
     "EXTERNAL_PROCUREMENT": "NOT_VERIFIED"
-  }
+  },
+  "DAT01_METADATA_PROVENANCE_STATUS": "CONSISTENT_METADATA_ONLY_137_OF_137",
+  "DAT01_CROSSWALK_METADATA_REPORT": "docs/enterprise/closure-v20/DAT01_CROSSWALK_METADATA_TRIAGE_20261104.json"
 }
