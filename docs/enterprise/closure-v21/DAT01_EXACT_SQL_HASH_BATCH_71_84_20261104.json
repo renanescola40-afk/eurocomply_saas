@@ -1,0 +1,138 @@
+{
+  "schema": "risck-comply.dat01.cross-source-exact-hash-batch.v1",
+  "observedDate": "2026-11-04",
+  "batch": "exact version mappings 71-84",
+  "sourceRef": "efc45f758e56a7d8e66978634eacb39413c1a882",
+  "ledgerBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+  "crosswalkBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+  "sourceLexerBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+  "comparison": "Exact GitHub source SQL SHA256 and UTF8 byte count, conservative SQL lexer, tested SHA256 vectors, four known storage variants for sole ledger statement.",
+  "verified": 12,
+  "mismatched": 2,
+  "rows": [
+    {
+      "version": "20260904065919",
+      "gitBlob": "4b92b289335d27a71b3db019cd3346f223ad0675",
+      "statementCount": 1,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "RAW"
+    },
+    {
+      "version": "20260904065952",
+      "gitBlob": "2022e1d95941d703ca96649ef63e3469fae9ba67",
+      "statementCount": 1,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "RAW"
+    },
+    {
+      "version": "20260905075429",
+      "gitBlob": "2fea83e2ed4a0b0198cd0d156221d9265bee6e48",
+      "statementCount": 1,
+      "status": "EXACT_HASH_MISMATCH",
+      "reviewRequired": true
+    },
+    {
+      "version": "20260907142133",
+      "gitBlob": "2fec78987fe08eb1aa2e2f06a080fa8a6e882dbc",
+      "statementCount": 1,
+      "status": "EXACT_HASH_MISMATCH",
+      "reviewRequired": true
+    },
+    {
+      "version": "20260908000000",
+      "gitBlob": "59776363b3b888149a7328c7c40d4c5a4478cd15",
+      "statementCount": 31,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908003000",
+      "gitBlob": "043a92254d71756e83739e94cad532e63c555f6f",
+      "statementCount": 13,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908003500",
+      "gitBlob": "cb63c261c602ebbe052c3653b63a8efc177ffab7",
+      "statementCount": 9,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908004000",
+      "gitBlob": "d77639186774755cb07e7da331f175030b02417d",
+      "statementCount": 12,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908004500",
+      "gitBlob": "10704bdc812aaf75c3e90c9a9d24173817f45827",
+      "statementCount": 5,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908005000",
+      "gitBlob": "5cc0f4d2831fd94ac4ff1e639a6db6f4d669b996",
+      "statementCount": 22,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908006000",
+      "gitBlob": "3a3ed99fa97117520b515fd85fec6acc01c399bd",
+      "statementCount": 15,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908006400",
+      "gitBlob": "6efd43f0e6d1943bc5882f7ee3c5d749398dceae",
+      "statementCount": 155,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908006500",
+      "gitBlob": "54d4c2d7944c68ece093988e7c6b863e444d88cc",
+      "statementCount": 42,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260908006600",
+      "gitBlob": "5e8eac31df71dadc962a0cb6d105fbeaab2b81c9",
+      "statementCount": 6,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    }
+  ],
+  "cumulative": {
+    "previousLowerBound": 60,
+    "newVerified": 12,
+    "verifiedLowerBound": 72,
+    "first84ExactMappings": 84,
+    "exactMappingsTotal": 112,
+    "remainingUnexaminedExact": 28,
+    "unresolvedInFirst84": 12,
+    "nonexactMappingsRequireReview": 25
+  },
+  "acceptance": {
+    "DAT_01": "BLOCKED",
+    "replay": "0/137",
+    "qualifiedReview": "PENDING",
+    "newGatePass": 0
+  },
+  "safety": {
+    "prodWrites": 0,
+    "qaWrites": 0,
+    "CI": 0
+  },
+  "limitations": [
+    "Two single-entry SQL versions do not match any allowed unmodified variant; investigate original commit history without claiming source parity.",
+    "Frozen provider statement hashes are not current DB execution or a 137 migration replay.",
+    "Other 28 exact versions and 25 nonexact mappings not covered by this batch."
+  ]
+}

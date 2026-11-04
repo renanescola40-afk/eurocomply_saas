@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 import { BillingActionButton } from '@/app/[locale]/dashboard/organizations/billing/billing-action-button';
 import { PublicFooter } from '@/components/marketing/public-footer';
@@ -10,6 +11,7 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { getSafeLocale } from '@/lib/seo/public-metadata';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
+import { normalizePublicCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 const DEFAULT_PLAN_ID = 'professional';
@@ -92,7 +94,14 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const recoveryCopy = paymentRecoveryCopy[locales.includes(locale as Locale) ? (locale as Locale) : 'en'];
   const selectedPlanId = firstSearchParam(resolvedSearchParams.plan);
   const checkoutStatus = firstSearchParam(resolvedSearchParams.checkout);
-  const selectedPlan = getBillingPlan(selectedPlanId) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
+  // An absent plan defaults to Professional. A supplied unknown or historical
+  // 'free'/'basic' plan must not silently render a paid subscription.
+  const hasExplicitPlan = Object.prototype.hasOwnProperty.call(resolvedSearchParams, 'plan');
+  const normalizedRequestedPlan = hasExplicitPlan ? normalizePublicCheckoutPlanId(selectedPlanId) : undefined;
+  if (hasExplicitPlan && !normalizedRequestedPlan) {
+    redirect(`/${locale}/pricing?checkout=invalid_plan`);
+  }
+  const selectedPlan = getBillingPlan(normalizedRequestedPlan) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
   const selectedPlanIsSalesLed = selectedPlan.salesLed;
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id).catch(() => null) : null;

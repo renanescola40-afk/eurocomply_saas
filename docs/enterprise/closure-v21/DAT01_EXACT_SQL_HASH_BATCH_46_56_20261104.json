@@ -1,0 +1,118 @@
+{
+  "schema": "risck-comply.dat01.cross-source-exact-hash-batch.v1",
+  "observedDate": "2026-11-04",
+  "sourceSnapshot": "a4a5a5f4856787d10abcbc20c3bed92db7dc33d2",
+  "batch": "exact-version mappings #46-#56",
+  "frozenCrosswalkBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+  "providerLedgerBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+  "lexerSourceBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+  "comparison": "Exact source Git blob SQL split by conservative existing lexer, joined LF, UTF8 SHA-256 + byte length matched against archived production-ledger provider metadata. Independent SHA256 validated against abc/empty known vectors.",
+  "total": 11,
+  "exactHashMatches": 11,
+  "matches": [
+    {
+      "version": "20260822123600",
+      "sourceBlob": "57c1c1a8a11f5441495edf24e6ae3802df53402b",
+      "statementCount": 19,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123602",
+      "sourceBlob": "c07fd48c9db0bf0943045c7a9bf068d6fc98d587",
+      "statementCount": 13,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123604",
+      "sourceBlob": "52770208f1b72b8b16d43f28e519fdf01705a2dc",
+      "statementCount": 115,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123606",
+      "sourceBlob": "41c2f1fbc60654861c27538f8a19f3b1951688d5",
+      "statementCount": 10,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123608",
+      "sourceBlob": "dd1c7b8036c0d52eeb1fe6c8f62d35d5498ba5ca",
+      "statementCount": 9,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123610",
+      "sourceBlob": "d2676db91f8aa7a78816fac18593f4192b323956",
+      "statementCount": 16,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123612",
+      "sourceBlob": "8df78cab6c0bd03d961690574caa12aa7aadeedd",
+      "statementCount": 11,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123614",
+      "sourceBlob": "efee76ca503f53a12b3192f666a405bd42f26d67",
+      "statementCount": 10,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123616",
+      "sourceBlob": "d6e2271b5acb50b03fbef8caf08e113278da8cfd",
+      "statementCount": 22,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123618",
+      "sourceBlob": "c0116de6b28baed530b01afd820cbcd7e2111358",
+      "statementCount": 12,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    },
+    {
+      "version": "20260822123620",
+      "sourceBlob": "2be4204589aa30f85cce0cc97507178832e529fe",
+      "statementCount": 12,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "status": "EXACT_HASH_MATCH"
+    }
+  ],
+  "cumulative": {
+    "previouslyVerifiedFirst34": 24,
+    "newBatch35to45": 11,
+    "newBatch46to56": 11,
+    "verifiedExactLowerBound": 46,
+    "first56ExactMappings": 56,
+    "exactVersionTotal": 112,
+    "nonexactMappings": 25,
+    "productionLedgerTotal": 137
+  },
+  "gate": {
+    "DAT_01": "BLOCKED",
+    "replayExecuted": 0,
+    "independentReviewer": "PENDING",
+    "acceptedFormalPass": 0
+  },
+  "safety": {
+    "dbWrites": 0,
+    "migrationRuns": 0,
+    "paidJobs": 0,
+    "emails": 0
+  },
+  "limitations": [
+    "Archived ledger hash evidence, not a fresh production statement readback",
+    "10 of first 34 exact mappings remain unverified under the checked variants",
+    "Complete source parity and 137-step replay not yet established"
+  ]
+}

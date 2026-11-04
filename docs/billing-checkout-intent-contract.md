@@ -43,7 +43,7 @@ Legacy/commercial aliases remain accepted for backwards compatibility where the 
 - `essential` -> `starter`;
 - `growth` -> `professional`;
 - `pro` -> `professional`;
-- `basic` / `free` -> `starter`.
+- `basic` / `free` are **historical persisted-data aliases only**. Public checkout URLs, Checkout Intent and paid mutations reject these labels rather than interpreting them as a €49 paid Essential plan.
 
 Business is not an alias for Professional. Enterprise has no fixed public checkout price; it carries a starting commercial reference and remains sales-assisted. Public pricing and checkout links should use the current catalog ids rather than legacy Starter/Growth-era aliases.
 
@@ -77,10 +77,19 @@ Business is not an alias for Professional. Enterprise has no fixed public checko
 
 For Business or Enterprise, `checkoutReady` remains false and `nextAction` is `contact_sales`.
 
+For Essential and Professional, `checkoutReady` is true only when the explicit
+`RISCK_COMPLY_PAID_BILLING_REQUIRED === 'true'` release flag is enabled, both
+Terms and Privacy are effective, the canonical plan price is configured and
+the organization does not already hold that plan. During review or before the
+paid release, `checkoutReady` stays false and `nextAction` is
+`public_paid_checkout_unavailable`. This signal must not override the final
+security/contract checks in `POST /api/billing/checkout`. The example above
+illustrates a **future approved paid release**, not current QA or production readiness.
+
 ## Error responses
 
 - `401 authentication_required` when no authenticated user is present.
-- `400 invalid_plan` when the requested plan is not in the billing catalog.
+- `400 invalid_plan` when the plan is unknown or uses ambiguous free/basic public checkout labels.
 - `409 organization_required` when the user has not created or joined an organization yet.
 - `403 insufficient_role_permission` when the user is not allowed to manage billing.
 - `429 rate_limited` when the distributed billing-intent limit is exceeded.

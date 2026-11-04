@@ -1,0 +1,105 @@
+{
+  "evidence_version": "1.0",
+  "evidence_date": "2026-11-03",
+  "evidence_owner": "NORMAL_PRODUCT_TRUST",
+  "classification": "READ_ONLY_PROVIDER_METADATA_AND_ISOLATED_SOURCE_VALIDATION",
+  "publication_scope": "draft_pull_request_only",
+  "source_repository": "renanescola40-afk/eurocomply_saas",
+  "source_branch": "normal2/product-enterprise-v18-checkout-price-authority-20261102",
+  "source_commit_before_evidence": "ef03bc037788748332291cc2950daa6c1583eb6a",
+  "formal_acceptance": {
+    "owned_gates_accepted": 0,
+    "owned_gates_total": 10,
+    "owned_gates_remaining_percent": 100,
+    "accepted_not_inferred_from_unit_or_static_tests": true
+  },
+  "code_corrections": {
+    "initial_checkout_boundary": "src/app/api/billing/checkout/route.ts",
+    "subscription_mutation_boundary": "src/app/api/billing/subscription/route.ts",
+    "public_checkout_discovery": "src/app/api/billing/checkout-intent/route.ts",
+    "legacy_checkout_url": "src/app/[locale]/billing/checkout/[plan]/page.tsx",
+    "public_checkout_page": "src/app/[locale]/checkout/page.tsx",
+    "parser": "src/server/billing/paid-checkout-plan.ts",
+    "outcome": "Client-provided free/basic labels rejected before paid conversion; legitimate paid/sales-led labels retained in correct scope; public Checkout readiness requires exact paid GA flag and effective Terms+Privacy; explicit empty plan URL denied."
+  },
+  "verification": {
+    "node_version": "v22.16.0",
+    "typescript_version": "5.8.3",
+    "local_parser_git_blob_sha": "87308fc950d9c9a4c9dc52f98311ba55b8297394",
+    "provider_parser_blob_sha": "87308fc950d9c9a4c9dc52f98311ba55b8297394",
+    "local_pure_parser_tests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "local_pure_parser_typescript": "PASS",
+    "remote_source_contract_checks": {
+      "passed": 10,
+      "failed": 0
+    },
+    "full_repository_test_and_build": "NOT_EXECUTED",
+    "hosted_circleci_exact_source": "NOT_VERIFIED",
+    "authenticated_e2e_and_webhook_delivery": "NOT_EXECUTED",
+    "reviewer": "PENDING_INDEPENDENT"
+  },
+  "vercel_qa_readback": {
+    "project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+    "custom_environment_id": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+    "custom_environment_slug": "qa",
+    "type": "preview",
+    "custom_environment_specific_variables_returned": 20,
+    "canonical_price_names_present": [
+      "STRIPE_PRICE_ESSENTIAL_MONTHLY",
+      "STRIPE_PRICE_ESSENTIAL_ANNUAL",
+      "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
+      "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
+      "STRIPE_PRICE_BUSINESS_MONTHLY",
+      "STRIPE_PRICE_BUSINESS_ANNUAL"
+    ],
+    "critical_names_not_listed_among_these_20": [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "RISCK_COMPLY_PAID_BILLING_REQUIRED"
+    ],
+    "caveat": "This inventory is of QA custom-environment-specific entries only; does NOT prove effective runtime environment values or rule out inheritance. No values/secrets retrieved or persisted.",
+    "qa_alias": "eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app",
+    "resolved_deployment_id": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+    "resolved_deployment_ready_state": "READY",
+    "resolved_deployment_source_commit": "UNPROVEN_MISSING_GIT_METADATA",
+    "no_browser_qa_e2e_performed": true
+  },
+  "stripe_test_readback": {
+    "disabled_test_webhook_endpoint_count": 1,
+    "webhook_is_active": false,
+    "webhook_target_is_older_protected_preview": true,
+    "canonical_test_catalog_read_only": true,
+    "other_active_zero_price_professional_monthly_found": true,
+    "caveat": "0-priced test Price is a catalog ambiguity only, not evidence it was bound to an actual Checkout."
+  },
+  "deployment_provenance": {
+    "production_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "production_deployed_git_sha": "70d3545f414d063379d481fd238aed563e05edda",
+    "github_main_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+    "git_sha_aligned": false,
+    "production_changed_by_this_work": false
+  },
+  "blocking_requirements": [
+    "Integrate reviewed source in canonical PR #2598",
+    "Obtain CircleCI exact-SHA PASS with logs",
+    "Attest QA deployment commit and effective non-secret config",
+    "Reconcile disabled Stripe TEST webhook target without blind activation",
+    "Execute authenticated TEST Checkout and webhook→persisted entitlement evidence",
+    "Verify lifecycle and tenant-negative E2E",
+    "Qualified independent acceptance review",
+    "Effective legal publication authority"
+  ],
+  "restrictions_observed": [
+    "No production writes",
+    "No Stripe LIVE mutations or charges",
+    "No email",
+    "No new spend",
+    "No QA credential retrieval",
+    "No merge or deployment"
+  ]
+}

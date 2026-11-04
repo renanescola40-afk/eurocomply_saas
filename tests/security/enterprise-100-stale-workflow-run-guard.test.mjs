@@ -4,7 +4,14 @@ import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/enterprise-100-closure.yml', 'utf8');
 
-const JOB_GUARD = "if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.head_sha == github.sha }}";
+const JOB_GUARD = `if: >-
+      github.event_name != 'workflow_run' ||
+      (
+        github.event.workflow_run.head_sha == github.sha &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.conclusion != 'skipped' &&
+        github.event.workflow_run.conclusion != 'cancelled'
+      )`;
 const DYNAMIC_JOB_NAME = "name: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha != github.sha && 'Stale Enterprise closure trigger (ignored)' || 'Enterprise closure contract' }}";
 const EXPECTED_SHA_BINDING = 'ENTERPRISE_CLOSURE_EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}';
 

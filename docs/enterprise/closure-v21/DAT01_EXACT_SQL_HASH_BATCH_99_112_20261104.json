@@ -1,0 +1,144 @@
+{
+  "schema": "risck-comply.dat01.cross-source-exact-hash-batch.v1",
+  "observedDate": "2026-11-04",
+  "batch": "exact-version mappings 99-112",
+  "sourceRef": "c88dcb1646eb0188ec71b99614a4f48e6d2daa32",
+  "sourceCrosswalkBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+  "ledgerSourceBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+  "lexerBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+  "method": "Conservative exact SQL lexer, permitted whole-file byte variants for single-array-entry ledger rows, SHA-256 UTF8 and byte-length compare, known SHA256 vector self-tests",
+  "matched": 7,
+  "unmatched": 7,
+  "rows": [
+    {
+      "version": "20260929102134",
+      "sourceBlob": "cdb8a02ce3a5f69fb0aa0b4a32217c1f6a690c4c",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "historicalSourceReconciliationNeeded": true
+    },
+    {
+      "version": "20261003115056",
+      "sourceBlob": "6758cc1dc9ad6e70b2953997e669d7c4bda361a7",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "TRIM_END"
+    },
+    {
+      "version": "20261003134528",
+      "sourceBlob": "5a59d89727dc96806b06aa3531cc0573440218ea",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "historicalSourceReconciliationNeeded": true
+    },
+    {
+      "version": "20261003171225",
+      "sourceBlob": "7a3e170a4dae7ee929cfe9b29a04191fef6ff9dd",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "historicalSourceReconciliationNeeded": true
+    },
+    {
+      "version": "20261003173930",
+      "sourceBlob": "52670f84e28088f5fc358b790b233bfb1916e0ec",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "historicalSourceReconciliationNeeded": true
+    },
+    {
+      "version": "20261003205557",
+      "sourceBlob": "187fa89cea71f639b141cd689164a39899ce2bde",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "historicalSourceReconciliationNeeded": true
+    },
+    {
+      "version": "20261004110936",
+      "sourceBlob": "edda404e8787baf6b2e4af9a039b0890e0ef095d",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "historicalSourceReconciliationNeeded": true
+    },
+    {
+      "version": "20261005001641",
+      "sourceBlob": "33f5bde1d52ba1bd8aad0a40af579eb36b3a9156",
+      "statementCount": 1,
+      "result": "EXACT_HASH_MISMATCH",
+      "historicalSourceReconciliationNeeded": true
+    },
+    {
+      "version": "20261015235500",
+      "sourceBlob": "80584468e0a398624fe3de2420a1ba67dfae98bb",
+      "statementCount": 10,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20261018023000",
+      "sourceBlob": "0b386fa27be4de7b5ea0b4990fcb3a6210308c17",
+      "statementCount": 7,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20261018113000",
+      "sourceBlob": "e847835397baabbd66c4f784f1ec7a65bbf427b1",
+      "statementCount": 7,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20261018160000",
+      "sourceBlob": "7b18983f9039903c23f6fdcb1cf1b54709eff344",
+      "statementCount": 7,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20261018183000",
+      "sourceBlob": "a58eb29d9d797fae12842109e73525dc05fa9427",
+      "statementCount": 7,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20261018190000",
+      "sourceBlob": "749d8a67dff4c45d37a9efdc6c044afacc05f522",
+      "statementCount": 10,
+      "result": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    }
+  ],
+  "cumulative": {
+    "first34Matched": 24,
+    "batch35to45": 11,
+    "batch46to56": 11,
+    "batch57to70": 14,
+    "batch71to84": 12,
+    "batch85to98": 8,
+    "batch99to112": 7,
+    "totalKnownExactSourceMatches": 87,
+    "exactVersionSourcesExamined": 112,
+    "unresolvedExactHashMismatch": 25,
+    "nonexactMappingsNotApproved": 25,
+    "providerLedgerTotal": 137
+  },
+  "gate": {
+    "DAT01": "BLOCKED",
+    "replay": "0/137",
+    "reviewer": "PENDING",
+    "newFormalPass": 0
+  },
+  "safety": {
+    "prodSqlWrites": 0,
+    "qaSqlWrites": 0,
+    "migrationsApplied": 0,
+    "ciJobs": 0
+  },
+  "limitations": [
+    "Archived ledger metadata evidence, not live replay or current schema equivalence",
+    "Some original SQL files changed over history; no normalizing bytes to force hash parity",
+    "25 mapped nonexact identities and two consolidated source groups remain for provenance review",
+    "No gate acceptance or 100% readiness claim."
+  ]
+}

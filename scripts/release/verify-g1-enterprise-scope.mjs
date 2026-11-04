@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { verifySEC05Evidence } from './verify-g1-sec05-evidence.mjs';
+import { verifyBIL02Evidence } from './verify-g1-bil02-evidence.mjs';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const STATES = new Set(['NOT_VERIFIED', 'EVIDENCE_VERIFIED_PENDING_REVIEW', 'BLOCKED', 'PASS']);
@@ -64,6 +65,8 @@ function verifyEvidenceContent(id, proof, scopeSha) {
       }
     }
     if (rows.length !== 6 || seen.size !== 6 || [...expected.keys()].some(key => !seen.has(key))) fail('incomplete six-price coverage');
+  } else if (id === 'BIL-02') {
+    for (const reason of verifyBIL02Evidence(proof, scopeSha)) fail(reason);
   } else if (id === 'SEC-05') {
     for (const reason of verifySEC05Evidence(proof, scopeSha)) fail(reason);
   } else {

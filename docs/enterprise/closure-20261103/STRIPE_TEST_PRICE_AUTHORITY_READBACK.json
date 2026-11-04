@@ -1,0 +1,88 @@
+{
+  "schema": "risck-comply.billing.stripe-test.readonly-price-evidence.v1",
+  "observedDate": "2026-11-03",
+  "provider": "Stripe",
+  "accountName": "RISCK COMPLY SAAS",
+  "livemode": false,
+  "operation": "GET /v1/prices?active=true&currency=eur&limit=100&expand[]=data.product",
+  "readOnly": true,
+  "hasMore": false,
+  "totalActiveEurPrices": 7,
+  "canonicalPlans": [
+    {
+      "plan": "Essential",
+      "period": "month",
+      "amountCents": 4900,
+      "activePriceCount": 1
+    },
+    {
+      "plan": "Essential",
+      "period": "year",
+      "amountCents": 49000,
+      "activePriceCount": 1
+    },
+    {
+      "plan": "Professional",
+      "period": "month",
+      "amountCents": 14900,
+      "activePriceCount": 1
+    },
+    {
+      "plan": "Professional",
+      "period": "year",
+      "amountCents": 149000,
+      "activePriceCount": 1
+    },
+    {
+      "plan": "Business",
+      "period": "month",
+      "amountCents": 39900,
+      "activePriceCount": 1
+    },
+    {
+      "plan": "Business",
+      "period": "year",
+      "amountCents": 399000,
+      "activePriceCount": 1
+    }
+  ],
+  "divergentActivePrices": [
+    {
+      "plan": "Professional",
+      "period": "month",
+      "amountCents": 0,
+      "priceId": "price_1ULUfOGt3cgjPOtqXZB8kUy7",
+      "mode": "TEST",
+      "productActive": true,
+      "observation": "Noncanonical free recurring Professional price remains active in TEST; no evidence this price is currently selected by Checkout."
+    }
+  ],
+  "codeSnapshot": {
+    "candidateShaBeforeEvidenceCommit": "8268062ceaeeefb60c746d4e635c6cd497049066",
+    "billingSourcePr": 2597,
+    "billingSourceSha": "963e7b157e84a39c247d3ba090dc3e1d6092bdd2",
+    "checkoutPriceValidateAtLine": 416,
+    "checkoutSessionCreateAtLine": 579,
+    "reusedCheckoutLineItemsVerified": true,
+    "status": "SOURCE_ORDER_REVIEW_ONLY_NOT_RUNTIME_QA"
+  },
+  "safeguards": {
+    "sourceGuardRejectsNoncanonicalAmount": true,
+    "sourceGuardChecksStripeLivemode": true,
+    "sourceGuardMustShipWithIndependentTestApproval": true,
+    "QAAuthenticatedPaidJourney": "NOT_VERIFIED",
+    "testWebhookProof": "NOT_VERIFIED",
+    "releaseStatus": "DRAFT_UNMERGED",
+    "productionMutation": false,
+    "pricesModified": 0,
+    "chargesCreated": 0,
+    "CircleCITriggered": false
+  },
+  "gateBoundary": {
+    "BIL_01": "HISTORICAL_SOURCE_PASS_NOT_NEWLY_ACCEPTED",
+    "BIL_02": "NOT_VERIFIED",
+    "BIL_03": "NOT_VERIFIED",
+    "A_09": "NO_NEW_FORMAL_ACCEPTANCE",
+    "A_10": "NOT_VERIFIED"
+  }
+}

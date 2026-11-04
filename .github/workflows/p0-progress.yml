@@ -11,6 +11,7 @@ on:
   workflow_run:
     workflows:
       - P0 Runtime Evidence
+    branches: [main]
     types: [completed]
 
 permissions:
@@ -25,6 +26,15 @@ concurrency:
 
 jobs:
   classify-source:
+    # Skip unsuccessful, non-main or stale producer completions before a runner is allocated.
+    # The existing artifact/SHA proof remains mandatory for an authoritative report.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_sha == github.sha &&
+        github.event.workflow_run.conclusion == 'success'
+      )
     name: Classify P0 progress source
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -74,7 +84,8 @@ jobs:
   p0-progress:
     needs: classify-source
     name: ${{ needs.classify-source.outputs.authoritative == 'true' && 'Report P0 enterprise progress' || 'Stale P0 progress trigger (ignored)' }}
-    if: always()
+    # Do not allocate a second runner for a stale/artifact-less producer.
+    if: ${{ needs.classify-source.result == 'success' && needs.classify-source.outputs.authoritative == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
