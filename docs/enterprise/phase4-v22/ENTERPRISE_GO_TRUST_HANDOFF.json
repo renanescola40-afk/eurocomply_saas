@@ -116,6 +116,18 @@
         ],
         "outcome": "NOT_VERIFIED_PUBLIC_FETCH_BLOCKED_BY_TOOL_OR_DNS",
         "evidence_boundary": "Client-side lookup tool failed to access site and local container could not resolve the hostname. This cannot be interpreted as application downtime or an endpoint failure. No authenticated production request sent."
+      },
+      "runtime_probe_20261104": {
+        "evidence_path": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "qa_deployment_id": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+        "qa_basic_health": "GET /api/health 200 status ok, no-store (alias and immutable deployment hostname)",
+        "qa_internal_readiness": "GET /api/ready and /api/ready/release each 503 security_control_unavailable",
+        "qa_redis_root_cause": "Vercel QA function runtime logs 2026-11-04T13:41:59Z and 13:42:02Z: Upstash Redis is not configured; health-internal fail-closed",
+        "qa_exact_release_sha": "NOT_ATTESTED",
+        "production_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+        "production_basic_health": "2026-11-04T13:44:08Z GET www.risckcomply.com/api/health returned HTTP 200 status ok; no-store",
+        "production_deployment_sha": "70d3545f414d063379d481fd238aed563e05edda",
+        "effect": "Basic health observable, but QA readiness blocked by missing effective Redis; no new accepted atomic or gate."
       }
     },
     "legal": {
@@ -214,11 +226,13 @@
       "accepted_at": null,
       "source_refs": [
         "https://vercel.com/renanescola40-afks-projects/eurocomply-saas/CmyiHWky6g41su26PE1nyGwwCS1f",
-        "docs/operations/OBSERVABILITY_SMOKE_TEST.md"
+        "docs/operations/OBSERVABILITY_SMOKE_TEST.md",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "No deployment-bound authenticated customer smoke proof for current production SHA",
-        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage"
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage",
+        "QA GET /api/ready and /api/ready/release return 503 before authenticated readiness due to missing effective Upstash Redis; live provider logs corroborate, so uptime of /api/health cannot satisfy readiness."
       ],
       "remediation_owner": "SRE/operations",
       "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
@@ -234,11 +248,13 @@
       "source_refs": [
         "docs/operations/OBSERVABILITY_ALERTS.md",
         "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
-        "https://vercel.com/renanescola40-afks-projects/eurocomply-saas"
+        "https://vercel.com/renanescola40-afks-projects/eurocomply-saas",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "No deployment-bound authenticated customer smoke proof for current production SHA",
-        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage"
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage",
+        "Only Vercel logs of health/internal-denied probes observed; no delivery+acknowledgment of a high-severity synthetic alert, on-call response or verified support drill."
       ],
       "remediation_owner": "SRE/operations",
       "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
@@ -276,13 +292,15 @@
         "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
         "docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md",
         "Vercel project environment metadata readback 2026-11-04 (redacted; no values)",
-        "docs/security/evidence/runtime/enterprise-release-env-readiness.json"
+        "docs/security/evidence/runtime/enterprise-release-env-readiness.json",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
         "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
         "Vercel Preview-targeted privileged variable names flagged securityIssues=readable-secret require scoped access/client bundle review; no disclosure or leak established.",
-        "Retained production environment preflight status=Open (generated 2026-07-09); no accepted exact-release credential-isolation or provider configuration result."
+        "Retained production environment preflight status=Open (generated 2026-07-09); no accepted exact-release credential-isolation or provider configuration result.",
+        "QA cannot prove separated runtime dependencies while Upstash Redis is not configured; QA release SHA also not independently attested."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
@@ -428,7 +446,8 @@
       "reviewer_status": "REVIEW_PENDING",
       "blockers": [
         "No deployment-bound authenticated customer smoke proof for current production SHA",
-        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage"
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage",
+        "QA basic health works but internal readiness is blocked 503 fail-closed: Vercel logs confirm Upstash Redis not configured in QA (2026-11-04). No alert delivery/ack proof."
       ],
       "remediation_owner": "SRE/operations",
       "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
@@ -443,7 +462,8 @@
       "reviewer_status": "REVIEW_PENDING",
       "blockers": [
         "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
-        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted"
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
+        "QA environment cannot currently pass protected readiness because effective Upstash Redis configuration is missing; deploy-source SHA unverified."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
