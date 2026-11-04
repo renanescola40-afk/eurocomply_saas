@@ -94,3 +94,38 @@ operation, full canonical-hash verification on representative redacted proof
 records, trusted anchor and signing-secret policy / rotation evidence, and
 an owner-reviewed disposition of historical unsigned and hashless records.
 No migration or production database write is justified by this count alone.
+
+## Enterprise signed transactional audit fail-closed guard (2026-11-04)
+
+**Root cause:** the normal writer accepts a hash-chained event without an HMAC
+signature when `AUDIT_CHAIN_SIGNING_SECRET` is absent, because signing is
+optional in the shared chain helper. Compatibility flags also allow direct or
+legacy fallback after a typed missing-RPC error even in an Enterprise release.
+Production read-only structural evidence showed 393/421 events without HMAC
+signatures, including 330 in October 2026; this is NOT evidence of tampering.
+
+**Scoped source fix:** when `RISCK_COMPLY_ENTERPRISE_RELEASE=true` or
+`RELEASE_TARGET=enterprise`, reject audit persistence before accessing the
+database if the signing secret is empty; reject any unexpectedly unsigned
+chained payload before RPC; refuse both nontransactional and legacy fallback
+even if compatibility flags are true. Do not print the signing key. Normal
+non-enterprise behavior and the existing explicit compatibility flags are
+otherwise unchanged. No SQL migration, customer-data update, provider secret
+change or production deploy is included.
+
+**Regressions:** 4 new Vitest cases cover absent secret under both Enterprise
+selectors, explicit fallback flags with typed missing RPC, and an unsigned
+chain despite configured signing material. Required exact-head
+`npx vitest run src/server/queries/audit-events.test.ts`,
+`npm run security:audit-chain`, `npm run typecheck`, `npm test`,
+`npm run build`, plus CircleCI and reviewed Enterprise QA signed event
+writes/rollback. **These tests remain NOT_EXECUTED against full repository**
+until a checked-out exact-SHA runner is available; do not infer a PASS from
+the source or from prior isolated tests.
+
+**Deployment caveat:** activating Enterprise mode without configured signing
+material will intentionally reject audit writes. Ensure secrets are present
+and validate rollback and customer error behavior BEFORE any release.
+Historical unsigned or hashless records require separate owner-approved
+disposition; this source change does not sign historical events. SEC-06 and
+A-03 remain NOT_VERIFIED.
