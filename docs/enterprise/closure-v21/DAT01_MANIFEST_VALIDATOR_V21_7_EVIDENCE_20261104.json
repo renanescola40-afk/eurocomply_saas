@@ -1,0 +1,98 @@
+{
+  "schema": "risck-comply.dat01.ledger-manifest-validator-exact-git-blob-evidence.v21.7",
+  "observedAt": "2026-11-04T14:28:43.585Z",
+  "canonicalCandidateRef": "integration/enterprise-unified-candidate-20261102",
+  "sourceCandidateParentHead": "15c44473da52c39fc53beeeed04eba46ede83236",
+  "artifacts": {
+    "validator": {
+      "path": "scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs",
+      "gitBlobSha": "ebe83bd44531bdf7398cc38bedfc6cc048b77941",
+      "publishedCommit": "693a6f480b065f1e5208b5927efbce6342680973"
+    },
+    "regression": {
+      "path": "scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs",
+      "gitBlobSha": "b25ed359320aee6b38f7135c2ff9f728b2a59df2",
+      "publishedCommit": "92b2add6369be946805d3731aa3a43d4121801a2"
+    },
+    "manifest": {
+      "path": "docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json",
+      "gitBlobSha": "a5c0b46c57c134f76da5f22a3f1858b7e1127287"
+    },
+    "crosswalk": {
+      "path": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+      "gitBlobSha": "3c3d7c83549d08a2a106f70aff51efed71681769"
+    },
+    "frozenProviderHashes": {
+      "path": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+      "gitBlobSha": "8705c36a875058d5fbe97bdd3033fe498426aa26"
+    }
+  },
+  "localNode22": {
+    "runtime": "v22.16.0",
+    "command": "node --test scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs",
+    "executedFrom": "local extracted package source with Git hash-object equal to GitHub published blob hashes",
+    "tests": 14,
+    "passed": 14,
+    "failed": 0,
+    "scope": "synthetic integrity/negative-regression fixtures; no SQL executed, no independent gate acceptance",
+    "verifiedClasses": [
+      "137 unique ledger entries",
+      "source-path identity",
+      "provider SHA256 identity",
+      "crosswalk order",
+      "nonexact identity review",
+      "premature executable and reviewer flags",
+      "two consolidation groups",
+      "untrusted historical source blob",
+      "falsified aggregate counters"
+    ]
+  },
+  "canonicalFrozenManifestReadback": {
+    "method": "Independent read-only JS structural verification of the actual JSON contents returned by GitHub connector. This is a second implementation of consistency checks, NOT a real canonical Node CLI run.",
+    "checkedRows": 137,
+    "uniqueVersions": 137,
+    "sourceByteProven": 103,
+    "sourceByteUnresolved": 34,
+    "exactMappingIdentities": 112,
+    "nonexactMappingIdentities": 25,
+    "consolidationGroups": 2,
+    "sourceCategories": {
+      "CURRENT_CANONICAL_SOURCE_BYTES_VERIFIED": 87,
+      "IMMUTABLE_HISTORICAL_GIT_SOURCE_BYTES_VERIFIED": 2,
+      "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING": 13,
+      "ALTERNATIVE_SOURCE_FILE_BYTES_VERIFIED_IDENTITY_PENDING": 1,
+      "NO_PROVEN_WHOLE_SOURCE_BYTES": 34
+    },
+    "executableRows": 0,
+    "reviewApprovedRows": 0,
+    "postgres17ReplayCount": 0,
+    "check": "PASS"
+  },
+  "limitations": [
+    "Full canonical validator CLI has not run in an independent complete checked-out GitHub tree at the current candidate SHA.",
+    "14 Node tests are local and do not supersede CircleCI or GitHub required checks.",
+    "Static draft assumptions freeze the 103-byte-proven baseline and must be deliberately revised when new independently verified evidence is approved.",
+    "All 137 historical version identities still need a formally approved manifest and 137/137 disposable PostgreSQL17 replay.",
+    "CircleCI #431 is FAIL on an older SHA; its first failing command still unavailable; current source SHA has no validated CircleCI PASS."
+  ],
+  "formal": {
+    "DAT01": "BLOCKED",
+    "gateA12": "NOT_ACCEPTED",
+    "newFormalPASS": 0,
+    "formalAccepted": 2,
+    "formalTotal": 24,
+    "formalRemainingPercent": 91.67,
+    "atomicAccepted": 2,
+    "atomicTotal": 38,
+    "atomicRemainingPercent": 94.74
+  },
+  "safety": {
+    "productionSqlWrites": 0,
+    "qaSqlWrites": 0,
+    "StripeLiveCharges": 0,
+    "outboundEmails": 0,
+    "newCosts": 0,
+    "productionDeployments": 0,
+    "mainMerges": 0
+  }
+}

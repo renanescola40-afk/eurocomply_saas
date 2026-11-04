@@ -40,7 +40,7 @@ function createQueryBuilder(previousHashes: Array<string | null>) {
       const eventHash = previousHashes.shift() ?? null;
       return { data: eventHash ? { event_hash: eventHash } : null, error: null };
     }),
-    insert: vi.fn(async () => ({ error: null })),
+    insert: vi.fn(async (): Promise<{ error: { code?: string; message?: string } | null }> => ({ error: null })),
   };
 }
 
@@ -294,6 +294,62 @@ describe('audit event persistence', () => {
     expect(queryBuilder.insert).not.toHaveBeenCalled();
   });
 
+  it('does not downgrade to direct or legacy insert on permission-denied RPC errors even when fallbacks are configured', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '42501', message: 'permission denied for function append_audit_event_chained' },
+    }));
+    const supabase = { from: vi.fn(() => queryBuilder), rpc };
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { createAuditEvent } = await import('./audit-events');
+    const result = await createAuditEvent(baseInput);
+
+    expect(result).toEqual({ persisted: false, reason: 'transactional_append_unavailable' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a generic RPC failure mentioning a function as proof the RPC is missing', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: 'P0001', message: 'function append_audit_event_chained failed validation' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'transactional_append_unavailable',
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('still recognizes the typed PostgREST schema-cache missing-RPC code for the explicit fallback', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    const queryBuilder = createQueryBuilder(['hash-a', 'hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: 'PGRST202', message: 'Could not find the function in the schema cache' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toMatchObject({
+      persisted: true,
+      transactional: false,
+      rpcUnavailable: true,
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).toHaveBeenCalledTimes(1);
+  });
+
   it('allows direct chained insert only through an explicit non-enterprise fallback flag', async () => {
     vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
     const queryBuilder = createQueryBuilder(['hash-a', 'hash-a']);
@@ -327,6 +383,45 @@ describe('audit event persistence', () => {
     );
   });
 
+  it('rejects a legacy downgrade when direct append is denied for an audit column', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+    const queryBuilder = createQueryBuilder(['hash-a', 'hash-a']);
+    queryBuilder.insert.mockResolvedValueOnce({
+      error: { code: '42501', message: 'permission denied for column previous_hash' },
+    });
+    const rpc = vi.fn(async () => ({
+      error: { code: '42883', message: 'function append_audit_event_chained does not exist' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'direct_append_failed',
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a separately enabled legacy fallback for a typed missing audit column', async () => {
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+    const queryBuilder = createQueryBuilder(['hash-a', 'hash-a']);
+    queryBuilder.insert.mockResolvedValueOnce({
+      error: { code: '42703', message: 'column previous_hash does not exist' },
+    });
+    const rpc = vi.fn(async () => ({
+      error: { code: '42883', message: 'function append_audit_event_chained does not exist' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({ persisted: true, legacy: true });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).toHaveBeenCalledTimes(2);
+  });
+
   it('sanitizes audit metadata before hashing and persistence', async () => {
     const { sanitizeAuditMetadata } = await import('./audit-events');
 
@@ -350,6 +445,25 @@ describe('audit event persistence', () => {
         ipAddress: '203.0.113.10',
         userAgent: 'Vitest',
       },
+    });
+  });
+
+  it('redacts separator- and Unicode-obfuscated credential names from nested audit metadata', async () => {
+    const { sanitizeAuditMetadata } = await import('./audit-events');
+
+    expect(sanitizeAuditMetadata({
+      'x-api-key': 'must-not-persist',
+      'API.KEY': 'must-not-persist',
+      'pa-ss-word': 'must-not-persist',
+      'ａｕｔｈｏｒｉｚａｔｉｏｎ': 'must-not-persist',
+      safeEvent: 'document.opened',
+      nested: [
+        { 'client-api-key': 'must-not-persist', ok: true },
+        { 'access.to-ken': 'must-not-persist', detail: 'kept' },
+      ],
+    })).toEqual({
+      safeEvent: 'document.opened',
+      nested: [{ ok: true }, { detail: 'kept' }],
     });
   });
 
@@ -397,4 +511,72 @@ describe('audit event persistence', () => {
       }),
     );
   });
+
+  it('fails closed before any database access when enterprise signing material is missing', async () => {
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', '');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'audit_signing_unavailable',
+    });
+    expect(tryCreateAdminClient).not.toHaveBeenCalled();
+  });
+
+  it('also requires signing material when RELEASE_TARGET selects enterprise', async () => {
+    vi.stubEnv('RELEASE_TARGET', 'enterprise');
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', '   ');
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'audit_signing_unavailable',
+    });
+    expect(tryCreateAdminClient).not.toHaveBeenCalled();
+  });
+
+  it('never downgrades missing transactional RPC in enterprise mode even when compatibility fallbacks are set', async () => {
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', 'synthetic-test-only-signing-material');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'true');
+    vi.stubEnv('AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK', 'true');
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({
+      error: { code: '42883', message: 'function append_audit_event_chained does not exist' },
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent, isNonTransactionalAuditAppendFallbackAllowed } =
+      await import('./audit-events');
+    expect(isNonTransactionalAuditAppendFallbackAllowed()).toBe(false);
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'transactional_append_unavailable',
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unexpectedly unsigned chain despite configured enterprise material', async () => {
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', 'synthetic-test-only-signing-material');
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({ error: null }));
+    const { buildAuditChainRecord } = await import('@/server/security/audit-chain');
+    vi.mocked(buildAuditChainRecord).mockImplementationOnce((event, previousHash) => ({
+      ...event, previousHash, eventHash: 'synthetic-unsigned-hash',
+    }));
+    tryCreateAdminClient.mockReturnValue({ from: vi.fn(() => queryBuilder), rpc });
+
+    const { createAuditEvent } = await import('./audit-events');
+    expect(await createAuditEvent(baseInput)).toEqual({
+      persisted: false,
+      reason: 'transactional_append_unavailable',
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(queryBuilder.insert).not.toHaveBeenCalled();
+  });
+
 });

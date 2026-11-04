@@ -1,0 +1,551 @@
+{
+  "schema": "risck-comply.phase4.provider-runtime-readback.v1",
+  "captured_date_utc": "2026-11-04",
+  "evidence_class": "PROVIDER_LIVE_READBACK",
+  "authorized_scope": "read-only QA and production observations, no production mutation or provider credential retrieval",
+  "source": "Authenticated Vercel connector: get_deployment, get_alias, web_fetch_vercel_url and get_runtime_logs",
+  "provenance": {
+    "project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+    "note": "Responses observed 2026-11-04 13:41-13:44 UTC; sanitized, no cookies, bearer tokens, secrets or share links stored"
+  },
+  "production": {
+    "hostname": "www.risckcomply.com",
+    "alias_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "deployment_state": "READY",
+    "deployment_target": "production",
+    "observed_source_commit_sha": "70d3545f414d063379d481fd238aed563e05edda",
+    "live_http_get_health": {
+      "time_utc": "2026-11-04T13:44:08Z",
+      "status": 200,
+      "body": {
+        "status": "ok"
+      },
+      "no_store": true,
+      "strict_transport_security_present": true,
+      "x_content_type_options": "nosniff"
+    },
+    "exact_canonical_candidate_sha_proven": false,
+    "customer_authenticated_flows_tested": false,
+    "note": "Health endpoint verifies only the basic publicly reachable process; source SHA is older than the currently observed integration candidate",
+    "public_trust_disclosure_readback": {
+      "checked_at_utc": "2026-11-04",
+      "method": "read-only GET, Vercel authenticated fetch; reduced visible HTML/text extraction, no full personal data retained",
+      "routes": [
+        {
+          "path": "/pt/trust",
+          "http_status": 200,
+          "page_heading": "Trust Center",
+          "no_soc2_report_disclosed": true,
+          "no_iso27001_certification_disclosed": true,
+          "legal_drafts_explicit": true
+        },
+        {
+          "path": "/pt/subprocessors",
+          "http_status": 200,
+          "page_heading": "Subprocessors",
+          "provider_contract_limitations_disclosed": true
+        },
+        {
+          "path": "/pt/privacy",
+          "http_status": 200,
+          "page_heading": "How RISCK COMPLY handles personal data",
+          "marked_as_review_draft": true
+        },
+        {
+          "path": "/pt/terms",
+          "http_status": 200,
+          "page_heading": "Business service terms for RISCK COMPLY",
+          "marked_as_review_draft": true
+        },
+        {
+          "path": "/pt/security",
+          "http_status": 200
+        },
+        {
+          "path": "/pt/data-processing",
+          "http_status": 200
+        }
+      ],
+      "finding": "Live production trust/legal routes are accessible and publicly disclose review/certification limitations. This is publication evidence, NOT a signed DPA, legal approval or exhaustive claim audit.",
+      "released_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+      "cross_candidate_drift": "Cannot bind to new candidate release PR #2598 until accepted SHA and deployment provenance match.",
+      "no_new_gate_acceptance": true
+    },
+    "public_ops_disclosure_readback": {
+      "checked_at_utc": "2026-11-04",
+      "read_only_routes": [
+        {
+          "route": "/pt/status",
+          "http_status": 200,
+          "visible_heading": "Verified public incident communication.",
+          "support_content_present": true
+        },
+        {
+          "route": "/pt/vulnerability-disclosure",
+          "http_status": 200,
+          "visible_heading": "Vulnerability Disclosure",
+          "contact_link_present": true,
+          "review_qualification_present": true
+        },
+        {
+          "route": "/pt/sla",
+          "http_status": 200,
+          "visible_heading": "Availability, support and incident handling without unsupported uptime promises.",
+          "support_content_present": true,
+          "review_qualification_present": true
+        }
+      ],
+      "evidence_effect": "Confirms presence of bounded public status, vulnerability intake guidance and SLA disclosures on existing production deployment, not an operational support ticket acknowledgment, on-call rota, incident drill, or acceptance of external SLA obligations.",
+      "formal_gate_acceptance_change": 0
+    },
+    "rollback_candidate_preflight_20261104": {
+      "schema": "risck-comply.rollback-candidate-read-only-preflight.v1",
+      "probe_window_utc": "2026-11-04T15:09:37Z–15:11:01Z",
+      "sources": [
+        "Vercel get_deployment read-only deployment/source metadata",
+        "Vercel web_fetch_vercel_url direct immutable deployment GET (four routes each)",
+        "GitHub compare_commits base=priorSHA head=currentProductionSHA"
+      ],
+      "current": {
+        "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+        "provider_target": "production",
+        "provider_state": "READY",
+        "source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+        "health_body_status": "ok",
+        "routes": [
+          {
+            "route": "/api/health",
+            "http_status": 200,
+            "no_store": true,
+            "hsts": true
+          },
+          {
+            "route": "/pt",
+            "http_status": 200,
+            "no_store": true,
+            "hsts": true
+          },
+          {
+            "route": "/pt/login",
+            "http_status": 200,
+            "no_store": true,
+            "hsts": true
+          },
+          {
+            "route": "/pt/pricing",
+            "http_status": 200,
+            "no_store": true,
+            "hsts": true
+          }
+        ]
+      },
+      "previous_production_candidates": [
+        {
+          "deployment_id": "dpl_AhroVz3nzXxnSnYkMkNiZ8vjXtDt",
+          "provider_target": "production",
+          "provider_state": "READY",
+          "source_sha": "bc5a70706aafb8f3a0cd8d9680394b4797834357",
+          "github_compare_status": "ahead",
+          "github_merge_base": "bc5a70706aafb8f3a0cd8d9680394b4797834357",
+          "github_ahead_by_from_target_to_current": 4,
+          "github_behind_by_from_target_to_current": 0,
+          "ancestor_of_current_production_sha": true,
+          "routes": [
+            {
+              "route": "/api/health",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt/login",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt/pricing",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            }
+          ]
+        },
+        {
+          "deployment_id": "dpl_5HWQHYcrwR1regv1qeVSTj2kjxkY",
+          "provider_target": "production",
+          "provider_state": "READY",
+          "source_sha": "66ffc10dbbd89fb71aa4d170c74a128e78066d66",
+          "github_compare_status": "ahead",
+          "github_merge_base": "66ffc10dbbd89fb71aa4d170c74a128e78066d66",
+          "github_ahead_by_from_target_to_current": 33,
+          "github_behind_by_from_target_to_current": 0,
+          "ancestor_of_current_production_sha": true,
+          "routes": [
+            {
+              "route": "/api/health",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt/login",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            },
+            {
+              "route": "/pt/pricing",
+              "http_status": 200,
+              "no_store": true,
+              "hsts": true
+            }
+          ]
+        }
+      ],
+      "completed_checks": {
+        "provider_exact_sha_metadata_readback": true,
+        "prior_production_target_ready": true,
+        "prior_source_commit_ancestor_of_published_current": true,
+        "immutable_deployment_direct_public_smoke_routes": 12,
+        "public_route_http_200_count": 12,
+        "public_response_no_store_count": 12,
+        "public_response_hsts_count": 12
+      },
+      "limitations": {
+        "app_authenticated_core_workflow": "NOT_EXECUTED",
+        "target_qa_or_production_runtime_release_sha_via_token": "NOT_ATTESTED",
+        "independent_functional_known_good_approval": "NOT_ISSUED",
+        "database_migration_backward_compatibility": "NOT_TESTED",
+        "target_secrets_and_provider_isolation": "NOT_TESTED",
+        "rollback_alias_mutation": "NOT_EXECUTED",
+        "restoration_alias_mutation": "NOT_EXECUTED",
+        "rehearsal_in_an_isolated_QA_environment": "NOT_EXECUTED",
+        "canonical_candidate_sha_validation": "NOT_EXECUTED",
+        "gitlab_or_circle_ci_exact_sha_approval": "NOT_ATTESTED",
+        "run_rollback_dry_run_script": "NOT_EXECUTED"
+      },
+      "OPS_05_status": "PARTIAL_PROVIDER_PREFLIGHT_NOT_ACCEPTED",
+      "release_status": "NO_GO",
+      "provenance_note": "No link credentials, bearer tokens, environment secret values, production writes, Vercel alias mutations, deployment creations, or paid services."
+    }
+  },
+  "qa": {
+    "hostname": "eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app",
+    "immutable_deployment_hostname": "eurocomply-saas-d4zalec76-renanescola40-afks-projects.vercel.app",
+    "deployment_id": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+    "deployment_state": "READY",
+    "release_commit_sha": "NOT_ATTESTED_BY_AVAILABLE_DEPLOYMENT_METADATA",
+    "tests": [
+      {
+        "method": "GET",
+        "route": "/api/health",
+        "hostname": "qa_alias",
+        "time_utc": "2026-11-04T13:41:02Z",
+        "http_status": 200,
+        "body_status": "ok",
+        "no_store": true,
+        "hsts": true,
+        "nosniff": true,
+        "assessment": "PASS_BASIC_PUBLIC_HEALTH_ONLY"
+      },
+      {
+        "method": "GET",
+        "route": "/api/health",
+        "hostname": "immutable_deployment",
+        "time_utc": "2026-11-04T13:41:08Z",
+        "http_status": 200,
+        "body_status": "ok",
+        "no_store": true,
+        "hsts": true,
+        "nosniff": true,
+        "assessment": "PASS_BASIC_PUBLIC_HEALTH_ONLY"
+      },
+      {
+        "method": "GET",
+        "route": "/api/ready/release",
+        "hostname": "qa_alias",
+        "time_utc": "2026-11-04T13:41:59Z",
+        "http_status": 503,
+        "body_error": "security_control_unavailable",
+        "no_store": true,
+        "assessment": "BLOCKED_AT_PRE_AUTH_RATE_LIMIT"
+      },
+      {
+        "method": "GET",
+        "route": "/api/ready",
+        "hostname": "qa_alias",
+        "time_utc": "2026-11-04T13:42:02Z",
+        "http_status": 503,
+        "body_error": "security_control_unavailable",
+        "no_store": true,
+        "assessment": "BLOCKED_AT_PRE_AUTH_RATE_LIMIT"
+      }
+    ],
+    "log_correlation": [
+      {
+        "timestamp_utc": "2026-11-04T13:41:59.304Z",
+        "route": "/api/ready/release",
+        "level": "error",
+        "source": "Vercel function log",
+        "message": "[security:rate-limit] Upstash Redis is not configured.",
+        "policy": "health-internal",
+        "failure_mode": "fail-closed"
+      },
+      {
+        "timestamp_utc": "2026-11-04T13:42:02.295Z",
+        "route": "/api/ready",
+        "level": "error",
+        "source": "Vercel function log",
+        "message": "[security:rate-limit] Upstash Redis is not configured.",
+        "policy": "health-internal",
+        "failure_mode": "fail-closed"
+      }
+    ],
+    "observability_smoke_get": {
+      "http_status": "NOT_ATTESTED_BY_WEB_FETCH_CONNECTOR",
+      "log_indication": "Vercel function log records security_denied with missing_or_invalid_healthcheck_token for a GET to /api/observability/smoke",
+      "alert_routing": "NOT_TESTED",
+      "note": "An earlier GET fetch hit deployment authentication retry. Do not promote the function log event into an independently confirmed HTTP 401 or end-to-end alert delivery."
+    },
+    "root_cause": {
+      "status": "CONFIRMED_ON_THIS_DEPLOYMENT",
+      "reason": "The QA deployment is missing the effective Upstash Redis runtime configuration; its fail-closed internal readiness rate-limit prevents the protected readiness and release-provenance paths from executing.",
+      "checked_source_paths": [
+        "src/server/security/rate-limit.ts",
+        "src/server/security/api-guards.ts",
+        "src/app/api/ready/route.ts",
+        "src/app/api/ready/release/route.ts"
+      ],
+      "missing_runtime_inputs_to_verify": [
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN"
+      ],
+      "do_not_infer": "This 503 does not establish Stripe or Supabase downtime and does not prove a specific missing variable individually; one or both effective values may be missing.",
+      "security_policy": "Keep fail-closed; do not bypass rate-limit, use production Redis credentials, or create unapproved paid infrastructure."
+    },
+    "restoration_attempt": {
+      "checked_at_utc": "2026-11-04",
+      "provider": "Vercel custom environment",
+      "custom_environment_id": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+      "custom_environment_slug": "qa",
+      "scoped_project_env_metadata_entries": 20,
+      "required_keys_status": {
+        "UPSTASH_REDIS_REST_URL": "ABSENT_IN_QA_CUSTOM_ENV",
+        "UPSTASH_REDIS_REST_TOKEN": "ABSENT_IN_QA_CUSTOM_ENV",
+        "HEALTHCHECK_TOKEN": "ABSENT_IN_QA_CUSTOM_ENV"
+      },
+      "existing_QA_redis_instance": "NOT_DISCOVERED",
+      "integration_configuration_visibility": "FORBIDDEN_403",
+      "vercel_project_count_in_connected_team": 1,
+      "action_taken": "READ_ONLY_RECONNAISSANCE_NO_ENV_WRITE",
+      "restoration_status": "BLOCKED_MISSING_APPROVED_ISOLATED_QA_REDIS_ENDPOINT_AND_TOKEN",
+      "no_costs": "No Redis instance created, no billable plan enabled, no production variables copied",
+      "security_boundary": "A Vercel preview or production credential cannot be assumed QA-isolated without provider-side account+role+environment evidence.",
+      "safe_next_step": "Provision two encrypted custom QA environment variables only after an existing separately isolated Redis instance and token are confirmed; add QA-only HEALTHCHECK_TOKEN separately and redeploy only QA after approval-free scoped configuration. Do not print or commit values.",
+      "validation_boundary": "Even after Redis, QA requires a healthcheck bearer token for /api/ready; other provider readiness may be intentionally unavailable by QA_BOOTSTRAP_NO_BILLING. Therefore do not demand 200 when services are disabled by design."
+    },
+    "rollback_target_readiness": {
+      "candidate_history_source": "Vercel get_deployment and GET /api/health on two immutable preview deployments",
+      "prior_previews": [
+        {
+          "deployment_id": "dpl_ByT6PpmQbAuZDojJzv6jvtxNHnuh",
+          "source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+          "provider_state": "READY",
+          "health_get_utc": "2026-11-04T14:09:51Z",
+          "health_http": 200,
+          "no_store": true
+        },
+        {
+          "deployment_id": "dpl_RbBDhWfWN1YdqeVJjEEz2GYFNc3i",
+          "source_sha": "111f9010d49c4321706faed9b9936089b17e4488",
+          "provider_state": "READY",
+          "health_get_utc": "2026-11-04T14:10:00Z",
+          "health_http": 200,
+          "no_store": true
+        }
+      ],
+      "functional_validation": "NOT_PERFORMED",
+      "rollback_alias_switch": "NOT_PERFORMED",
+      "restore_rehearsal": "NOT_PERFORMED",
+      "exact_release_candidate_binding": "NOT_PROVEN",
+      "OPS_05": "NOT_VERIFIED",
+      "note": "These previews are NOT approved known-good rollback targets; public health does not prove customer workflows or provider separation."
+    }
+  },
+  "remediation_and_retest": {
+    "operator_action": "Using an existing authorized, isolated QA Upstash instance, provision or restore both variables via the Vercel QA/Preview environment without printing or persisting values; verify actual deployment environment inheritance; redeploy only QA, no production deployment.",
+    "verification_sequence": [
+      "Read Vercel QA runtime logs and verify no Redis not configured/error entries for new GET readiness requests.",
+      "GET QA /api/health -> 200 with no-store.",
+      "GET QA /api/ready/release without bearer -> expected 401 (or fail-closed 503 if backend still unavailable); 401 alone proves only token protection, not release provenance.",
+      "Use authorized QA-only HEALTHCHECK_TOKEN to GET /api/ready/release, check expected exact QA deployment SHA and sanitized provenance.",
+      "With separately authorized QA-only token, GET /api/ready must exercise readiness dependencies. Require expected result based on configured QA services, not force a 200.",
+      "Execute isolated monitoring smoke only after validating QA-only Sentry/alert routing; verify alert received and redacted, record escalation owner and acknowledgement; test incident drill.",
+      "Do not mark OPS-03, OPS-04, A-20 or any Production GO as PASS without exact-SHA release-bound and independent review evidence."
+    ],
+    "new_costs_approved": false,
+    "production_mutations_approved": false
+  },
+  "formal_acceptance": {
+    "phase4_gates_accepted_from_this_evidence": 0,
+    "phase4_atomic_accepted_from_this_evidence": 0,
+    "relevant_controls": [
+      "OPS-03",
+      "OPS-04",
+      "OPS-06"
+    ],
+    "all_GO_decisions": "NO-GO"
+  },
+  "public_route_probe_20261104": {
+    "source": "Vercel authenticated GET observed 2026-11-04T14:06:43Z–14:07:42Z",
+    "endpoints": [
+      {
+        "path": "/pt",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/pricing",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/login",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/signup",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/book-demo",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/pt/dashboard",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      },
+      {
+        "path": "/api/health",
+        "production": {
+          "status": 200,
+          "no_store": true
+        },
+        "qa": {
+          "status": 200,
+          "no_store": true
+        }
+      }
+    ],
+    "total_readbacks": 14,
+    "successful_status_200": 14,
+    "no_store_count": 14,
+    "production_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "production_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+    "qa_deployment_id": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+    "qa_source_sha": "NOT_ATTESTED",
+    "caveats": [
+      "Dashboard HTTP 200 does not prove authenticated use or tenant isolation.",
+      "Public GET is not signup/login/form-submission/Stripe E2E.",
+      "No canonical candidate exact-SHA deployment smoke or GO acceptance."
+    ],
+    "formal_status": "PARTIAL_OPS-03_ONLY_NO_PASS"
+  },
+  "anonymous_organization_api_probe": {
+    "path": "GET /api/ai-systems",
+    "result": "INCONCLUSIVE_FAILED_AT_VERCEL_DEPLOYMENT_AUTHENTICATION",
+    "application_http_status": "NOT_ATTESTED",
+    "source_authorization": "src/app/api/ai-systems/route.ts calls requireApiUser() before organization access",
+    "caution": "A 401 from Vercel deployment protection is not an application auth 401; no tenant isolation PASS."
+  },
+  "environment_provenance_20261104": {
+    "checked_at_utc": "2026-11-04T14:12:13Z",
+    "supabase_source": "Supabase connected list_projects/get_project, read-only metadata",
+    "vercel_source": "Vercel QA-scoped env-key readback + public route Content-Security-Policy",
+    "qa": {
+      "supabase_project_ref": "zrxrrfbllsxtleyxjpsz",
+      "supabase_project_name": "risck-comply-v15c-isolated-qa-20261022",
+      "supabase_status": "ACTIVE_HEALTHY",
+      "supabase_region": "eu-west-1",
+      "public_env_url_keys_verified": [
+        "SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_URL"
+      ],
+      "public_env_url_refs_both_match_qa": true,
+      "browser_csp_supabase_refs": [
+        "zrxrrfbllsxtleyxjpsz"
+      ],
+      "browser_csp_contains_production_ref": false
+    },
+    "production": {
+      "supabase_project_ref": "tganhbbhfxcpblmgqprg",
+      "supabase_project_name": "eurocomply_saas",
+      "supabase_status": "ACTIVE_HEALTHY",
+      "supabase_region": "eu-west-1",
+      "browser_csp_supabase_refs": [
+        "tganhbbhfxcpblmgqprg"
+      ],
+      "browser_csp_contains_qa_ref": false,
+      "production_server_credential_ref": "NOT_VERIFIED_WITH_THIS_METHOD"
+    },
+    "status": "POSITIVE_PARTIAL_PROVENANCE_NOT_FULL_NEGATIVE_ISOLATION",
+    "accepted_security_limit": "The separate frontend CSP allowlists and QA public URL values support app environment segregation but do not prove cross-environment key rejection, admin token isolation, tenant security or DB IAM controls.",
+    "production_data_access": "NONE",
+    "secret_values_recorded": false,
+    "OPS_06_formal_status": "NOT_VERIFIED"
+  }
+}

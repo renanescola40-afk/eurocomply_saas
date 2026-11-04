@@ -8,6 +8,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
+import { normalizePublicCheckoutPlanId } from '@/lib/billing/paid-checkout-plan';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 function getOnboardingHref(locale: string, planId?: string) {
@@ -16,7 +17,7 @@ function getOnboardingHref(locale: string, planId?: string) {
 }
 
 function normalizePlanId(planId: string | null) {
-  return getBillingPlan(planId)?.id;
+  return getBillingPlan(normalizePublicCheckoutPlanId(planId))?.id;
 }
 
 function isAllowedLocalizedContinuation(path: string, locale: string) {

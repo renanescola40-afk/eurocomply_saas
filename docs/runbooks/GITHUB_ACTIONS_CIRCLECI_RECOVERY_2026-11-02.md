@@ -36,3 +36,9 @@ Quality/build PASS is a separate SOURCE-ONLY result. It cannot turn an unexecute
 Operator: trigger exactly once on `fix/actions-p0-runner-storm-20261102` with `run_actions_recovery_quality=true` and `run_actions_recovery=false`, after smoke PASS. Retain the exact source SHA and link. If it fails, do not repeatedly rerun before analyzing the logs.
 
 Restore previous behavior by reverting the isolated change. No billing, plan or main-branch change is authorized.
+
+## Correction on unified candidate (2026-11-03)
+
+An independent code review identified an exact-branch mismatch: the manual smoke workflow filtered for `fix/actions-p0-runner-storm-20261102`, while its job guard accepted only `ci/circleci-gh-actions-one-shot-20261102`. This fails before tests. The quality manual lane had the same mismatch. The unified candidate now aligns each manual branch filter with the corresponding runtime branch guard, adds manual opt-in for the candidate, and keeps the automatic one-shot workflow restricted to the old isolated one-shot branch. Both opt-in parameters remain `false` by default.
+
+CircleCI #416 still reports `failure` for `ci/circleci: github-actions-recovery-quality`. This branch-filter bug is a confirmed defect in the manual workflow, **not** proof that it caused #416. No first failing step from #416 has been retrieved; cause remains UNKNOWN_PENDING_CIRCLECI_LOG. Do not blindly rerun. Run manual smoke, then manual quality only if a human explicitly confirms currently available included Free credits and the current exact candidate SHA. Never use CI success to bypass CodeQL, Gitleaks, QAT-01 or independent gate approval.

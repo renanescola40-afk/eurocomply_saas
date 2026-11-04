@@ -149,9 +149,10 @@ jobs:
           name: Verify exact GitHub recovery branch and no privileged credentials
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "fix/actions-p0-runner-storm-20261102" || {
-              echo "Unexpected branch" >&2; exit 1
-            }
+            case "${CIRCLE_BRANCH:-}" in
+              fix/actions-p0-runner-storm-20261102|integration/enterprise-unified-candidate-20261102) ;;
+              *) echo "Unexpected branch for manual recovery smoke" >&2; exit 1 ;;
+            esac
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing source SHA}" || {
               echo "Refusing non-identical checkout SHA" >&2; exit 1
             }
@@ -173,12 +174,42 @@ jobs:
               tests/ci/github-actions-budget-regression.test.mjs \
               tests/enterprise/p0-progress-concurrency.test.mjs \
               tests/security/enterprise-100-stale-workflow-run-guard.test.mjs
+      - run:
+          name: Integrated candidate source-only billing security and evidence regressions
+          command: |
+            set -euo pipefail
+            # Preserve legacy recovery-branch smoke: these new files exist only in the unified candidate.
+            if [ "${CIRCLE_BRANCH:-}" != "integration/enterprise-unified-candidate-20261102" ]; then
+              echo "Integrated source contracts apply to the candidate branch only"
+              exit 0
+            fi
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing exact SHA}"
+            node --test --test-reporter=tap \
+              tests/security/client-env-access.test.mjs \
+              tests/ci/circleci-readonly-diagnose.test.mjs \
+              tests/ci/enterprise-evidence-exact-sha-contract.test.mjs \
+              tests/ci/circleci-memory-diagnostics-contract.test.mjs \
+              tests/security/membership-usage-counter-drift.test.mjs \
+              tests/release/sec05-acceptance-verifier.test.mjs \
+              tests/release/g1-sec05-evidence.test.mjs \
+              tests/release/g1-bil02-evidence.test.mjs \
+              tests/security/sec05-qa-nontls-probe.test.mjs \
+              tests/release/g1-enterprise-scope-acceptance.test.mjs \
+              tests/enterprise-evidence/validate-evidence.test.mjs
+            node --test --test-reporter=tap \
+              tests/billing/checkout-recovery-lease-contract.test.mjs
+            node --experimental-strip-types --test --test-reporter=tap \
+              tests/billing/checkout-price-authority.test.mjs
+            node --test --test-reporter=tap \
+              tests/billing/phase2-qa-webhook-preflight.test.mjs
+            node --experimental-strip-types --test --test-reporter=tap \
+              tests/product/evidence-upload-recovery.test.mjs
 
   # Second-stage opt-in; never auto-trigger, deploy, write to production or use provider secrets.
   github-actions-recovery-quality:
     docker:
       - image: cimg/node:22
-    resource_class: medium
+    resource_class: large
     working_directory: ~/project
     steps:
       - checkout
@@ -186,16 +217,16 @@ jobs:
           name: Verify exact branch, source SHA and non-privileged environment
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "fix/actions-p0-runner-storm-20261102" || {
-              echo "Recovery quality must run only on its isolated branch" >&2
-              exit 1
-            }
+            case "${CIRCLE_BRANCH:-}" in
+              fix/actions-p0-runner-storm-20261102|ci/circleci-gh-actions-one-shot-20261102|integration/enterprise-unified-candidate-20261102) ;;
+              *) echo "Recovery quality must run only on an approved branch" >&2; exit 1 ;;
+            esac
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI commit}" || {
               echo "Refusing a checkout that does not match the pipeline SHA" >&2
               exit 1
             }
             node -e "if (Number(process.versions.node.split('.')[0]) !== 22) process.exit(1)"
-            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY; do
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
               if [ -n "${!key:-}" ]; then
                 echo "Forbidden credential present in source quality job: $key" >&2
                 exit 1
@@ -220,12 +251,62 @@ jobs:
           name: Application unit tests
           command: npm run test
       - run:
+          name: DAT-01 fail-closed 137-row source manifest consistency (not replay)
+          command: |
+            set -euo pipefail
+            node --test --test-reporter=tap scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs
+            node scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs
+      - run:
           name: Next.js CI build using non-production placeholders
           environment:
             NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
             NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
-            NODE_OPTIONS: --max-old-space-size=3072
-          command: npm run build
+            NODE_OPTIONS: --max-old-space-size=5120
+          command: |
+            set -euo pipefail
+            # Bounded numeric-only cgroup readback; never dump environment or tokens.
+            mem=/sys/fs/cgroup/memory.events
+            limit=/sys/fs/cgroup/memory.max
+            if [ -r "$limit" ]; then
+              printf 'CI_CGROUP_MEMORY_LIMIT=%s\n' "$(cat "$limit")"
+            fi
+            before=0
+            if [ -r "$mem" ]; then
+              before=$(awk '$1=="oom_kill" {print $2}' "$mem")
+              printf 'CI_OOM_KILL_BEFORE=%s\n' "${before:-0}"
+            fi
+            set +e
+            npm run build
+            status=$?
+            set -e
+            after=0
+            if [ -r "$mem" ]; then
+              after=$(awk '$1=="oom_kill" {print $2}' "$mem")
+              printf 'CI_OOM_KILL_AFTER=%s\n' "${after:-0}"
+            fi
+            printf 'CI_BUILD_EXIT=%s\n' "$status"
+            if [ "$status" -eq 137 ]; then
+              if [ "${after:-0}" -gt "${before:-0}" ]; then
+                echo 'CI_BUILD_CLASS=CGROUP_OOM_KILL_OBSERVED'
+              else
+                echo 'CI_BUILD_CLASS=EXIT_137_OOM_UNCONFIRMED'
+              fi
+            fi
+            exit "$status"
+      - run:
+          name: Validate built routes and archive source-quality evidence
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/circleci-quality
+            npm run quality:routes 2>&1 | tee artifacts/circleci-quality/quality-routes.log
+            node --test --test-reporter=tap tests/ci/circleci-quality-proof.test.mjs \
+              tests/ci/circleci-memory-diagnostics-contract.test.mjs \
+              tests/ci/circleci-github-actions-recovery-contract.test.mjs \
+              2>&1 | tee artifacts/circleci-quality/evidence-contracts.tap
+            node scripts/ci/create-circleci-quality-proof.mjs
+      - store_artifacts:
+          path: artifacts/circleci-quality
+          destination: source-quality-exact-sha
 
   # Opt-in small executor; no npm install, network calls, real provider tokens or deploys.
   qa-preflight-offline:
@@ -591,7 +672,10 @@ jobs:
           name: Verify review branch, exact SHA and provider secret isolation
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "ci/circleci-enterprise-gates-20261027"
+            case "${CIRCLE_BRANCH:-}" in
+              ci/circleci-enterprise-gates-20261027|integration/enterprise-unified-candidate-20261102) ;;
+              *) echo "Unexpected branch for synthetic PostgreSQL replay: ${CIRCLE_BRANCH:-missing}" >&2; exit 1 ;;
+            esac
             test -n "${CIRCLE_SHA1:-}"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY; do
@@ -629,6 +713,7 @@ workflows:
             branches:
               only:
                 - fix/actions-p0-runner-storm-20261102
+                - integration/enterprise-unified-candidate-20261102
 
   github-actions-recovery-quality-manual:
     # Independent quality phase. Enable only after a successful small smoke test.
@@ -639,6 +724,17 @@ workflows:
             branches:
               only:
                 - fix/actions-p0-runner-storm-20261102
+                - integration/enterprise-unified-candidate-20261102
+
+  github-actions-quality-one-shot-20261102:
+    # Execute the source-only full-quality job once via a guarded branch push.
+    # No manual API pipeline arguments. All external services/production unavailable.
+    jobs:
+      - github-actions-recovery-quality:
+          filters:
+            branches:
+              only:
+                - ci/circleci-gh-actions-one-shot-20261102
 
   enterprise-source-proof-manual:
     when: << pipeline.parameters.run_enterprise_source >>
@@ -658,6 +754,7 @@ workflows:
             branches:
               only:
                 - ci/circleci-enterprise-gates-20261027
+                - integration/enterprise-unified-candidate-20261102
       - enterprise-pg-synthetic-replay:
           requires:
             - approve-enterprise-postgres-synthetic
@@ -665,6 +762,7 @@ workflows:
             branches:
               only:
                 - ci/circleci-enterprise-gates-20261027
+                - integration/enterprise-unified-candidate-20261102
   g5-02-pg-replay-manual:
     # Owner approved G5-02 run on 2026-10-23; branch-scoped, no provider credentials.
     # CircleCI can run on this branch's push; no automated retries configured.
@@ -737,3 +835,4 @@ workflows:
 # G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
+

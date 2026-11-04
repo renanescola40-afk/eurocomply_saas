@@ -57,7 +57,7 @@ test('second-stage full quality CI stays opt-in and pinned to recovery SHA with 
   assert.match(recovery, /when: << pipeline\.parameters\.run_actions_recovery_quality >>/);
   assert.match(recovery, /only:\n\s+- fix\/actions-p0-runner-storm-20261102/);
   assert.match(quality, /image: cimg\/node:22/);
-  assert.match(quality, /resource_class: medium/);
+  assert.match(quality, /resource_class: large/);
   assert.match(quality, /CIRCLE_BRANCH:-/);
   assert.match(quality, /CIRCLE_SHA1:\?/);
   assert.match(quality, /git rev-parse HEAD/);
@@ -80,5 +80,50 @@ test('source-only smoke guard inspects only its job and cannot accidentally abso
   assert.match(quality, /npm ci --ignore-scripts --no-audit --no-fund/);
   assert.match(quality, /npm run build/);
   assert.match(smoke, /resource_class: small/);
-  assert.match(quality, /resource_class: medium/);
+  assert.match(quality, /resource_class: large/);
 });
+
+
+test('manual smoke and quality guards agree with branch filters; candidate opt-in only', () => {
+  const candidate = 'integration/enterprise-unified-candidate-20261102';
+  const recoveryBranch = 'fix/actions-p0-runner-storm-20261102';
+  const oneShotBranch = 'ci/circleci-gh-actions-one-shot-20261102';
+  const smoke = circleJob('github-actions-recovery-smoke');
+  const quality = circleJob('github-actions-recovery-quality');
+  const manualSmoke = config.split('\n  github-actions-recovery-manual:\n', 2)[1]
+    ?.split('\n  github-actions-recovery-quality-manual:\n', 1)[0] ?? '';
+  const manualQuality = config.split('\n  github-actions-recovery-quality-manual:\n', 2)[1]
+    ?.split('\n  github-actions-quality-one-shot-20261102:\n', 1)[0] ?? '';
+  const oneShot = config.split('\n  github-actions-quality-one-shot-20261102:\n', 2)[1]
+    ?.split('\n  enterprise-source-proof-manual:\n', 1)[0] ?? '';
+  for (const approved of [candidate, recoveryBranch]) {
+    assert.ok(smoke.includes(approved), 'smoke guard rejects: ' + approved);
+    assert.ok(quality.includes(approved), 'quality guard rejects: ' + approved);
+    assert.ok(manualSmoke.includes('- ' + approved), 'smoke workflow filter rejects: ' + approved);
+    assert.ok(manualQuality.includes('- ' + approved), 'quality workflow filter rejects: ' + approved);
+  }
+  assert.ok(quality.includes(oneShotBranch), 'existing quality one-shot guard removed');
+  assert.ok(oneShot.includes('- ' + oneShotBranch), 'one-shot branch filter removed');
+  assert.ok(!oneShot.includes(candidate), 'candidate must never auto-run in CircleCI');
+  assert.match(manualSmoke, /when: << pipeline\.parameters\.run_actions_recovery >>/);
+  assert.match(manualQuality, /when: << pipeline\.parameters\.run_actions_recovery_quality >>/);
+});
+
+
+test('unified candidate smoke runs source-only security billing and evidence contracts without npm or provider writes',()=>{
+ const smoke = circleJob('github-actions-recovery-smoke');
+ for (const marker of [
+  'integration/enterprise-unified-candidate-20261102',
+  'tests/security/client-env-access.test.mjs',
+  'tests/ci/circleci-readonly-diagnose.test.mjs',
+  'tests/ci/enterprise-evidence-exact-sha-contract.test.mjs',
+  'tests/billing/checkout-price-authority.test.mjs',
+  'node --experimental-strip-types --test'
+ ]) assert.ok(smoke.includes(marker),'candidate source-only test missing: '+marker);
+ assert.doesNotMatch(smoke,/npm ci|npm run build|stripe checkout|store_artifacts:/);
+ const automatic=config.split('\n  github-actions-quality-one-shot-20261102:\n',2)[1]
+  ?.split('\n  enterprise-source-proof-manual:\n',1)[0] ?? '';
+ assert.doesNotMatch(automatic,/integration\/enterprise-unified-candidate-20261102/);
+ assert.match(config,/run_actions_recovery:\n    type: boolean\n    default: false/);
+});
+
