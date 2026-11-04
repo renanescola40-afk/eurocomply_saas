@@ -70,7 +70,16 @@ concurrency:
 
 jobs:
   contract:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.head_sha == github.sha }}
+    # An ignored or superseded producer has no fresh authoritative evidence.
+    # Preserve failed producers for explicit NO_GO reconciliation.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (
+        github.event.workflow_run.head_sha == github.sha &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.conclusion != 'skipped' &&
+        github.event.workflow_run.conclusion != 'cancelled'
+      )
     name: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha != github.sha && 'Stale Enterprise closure trigger (ignored)' || 'Enterprise closure contract' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30

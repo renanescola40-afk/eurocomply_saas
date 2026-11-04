@@ -5,6 +5,7 @@ run-name: Retain legal rules runtime evidence for ${{ inputs.release_sha || gith
 on:
   workflow_run:
     workflows: [Legal Rules Runtime Validation]
+    branches: [main]
     types: [completed]
   workflow_dispatch:
     inputs:

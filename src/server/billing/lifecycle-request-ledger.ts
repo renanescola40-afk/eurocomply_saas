@@ -50,8 +50,11 @@ export class BillingLifecycleRequestError extends Error {
       | 'billing_schedule_conflict'
       | 'billing_subscription_not_reactivatable'
       | 'billing_subscription_not_active'
-      | 'billing_subscription_cancel_pending',
-    public readonly status: 409,
+      | 'billing_subscription_cancel_pending'
+      | 'billing_price_configuration_invalid'
+      | 'billing_add_on_catalog_invalid'
+      | 'billing_add_on_price_configuration_invalid',
+    public readonly status: 409 | 503,
   ) {
     super(code);
     this.name = 'BillingLifecycleRequestError';

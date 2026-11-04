@@ -24,7 +24,15 @@ concurrency:
 jobs:
   autofix:
     name: Diagnose and repair the same PR branch
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure' }}
+    # A repository push failure has no PR to repair. Reject it before runner allocation.
+    # Only CI failures from PR events are eligible; manual dispatch remains supported.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.conclusion == 'failure'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

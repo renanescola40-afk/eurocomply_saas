@@ -1,0 +1,143 @@
+{
+  "schema": "risck-comply.dat01.nonexact-consolidation-and-subspan-triage.v1",
+  "observedAt": "2026-11-04T11:29:14.648Z",
+  "candidateSourceSnapshotSha": "75fcb01585108a7af576580593605fcf8bec3e60",
+  "currentBranchHeadBeforePublication": "367540595290dbc0ff3a552d52cb32b75aae7e48",
+  "inputs": {
+    "frozenProductionLedgerGitBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+    "crosswalkGitBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+    "priorNonexactReportGitBlob": "9bd2c328248dc0121fca42af495505438d50179e",
+    "liveProviderSqlReadOnly": true
+  },
+  "summary": {
+    "nonExactMappingsTotal": 25,
+    "alreadyByteEqualCurrentMappedSource": 13,
+    "additionalExactHistoricalByteSource": 1,
+    "sourceByteRecoverableAmongNonExact": 14,
+    "nonExactNoWholeFileSourceReproduced": 11,
+    "identityMappingsStillReviewerPending": 25,
+    "fullSqlReplay": "0/137",
+    "formalAcceptance": "NOT_GRANTED",
+    "sourceByteEvidenceNotEquivalentToExecutableReplay": true
+  },
+  "additionalHistoricalSource": {
+    "crosswalkOrder": 68,
+    "provider": {
+      "version": "20260831115851",
+      "bytes": 5795,
+      "sha256": "821d15c0ae6c0a5bbb544153012bd7d6056ebbe1ef20a0e2fabdd77338238b80"
+    },
+    "currentCrosswalkSource": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+    "alternativeGitSource": "supabase/migrations/20260831100000_deterministic_commercial_contract_source_precedence.sql",
+    "alternativeGitBlobSha": "189c025264fb2295de1e91dbf3e94f9477cd3eda",
+    "verifiedRepresentation": "TRIM_END",
+    "verifiedSourceCharacterCount": 5796,
+    "sourceTextAfterTrimEndCharCount": 5795,
+    "comparison": "EXACT_PROVIDER_STATEMENT_STRING_EQUALS_TRIMMED_SOURCE_FILE",
+    "identityContract": "ALTERNATIVE_SOURCE_FOUND; requires reviewed version mapping and apply-once semantics, do not silently rewrite frozen crosswalk",
+    "relatedProviderSecond": {
+      "version": "20260902193810",
+      "bytes": 5924,
+      "sha256": "894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac"
+    },
+    "secondCanonicalSource": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+    "secondCanonicalGitBlobSha": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+    "secondCanonicalMatch": "RAW_FILE_EXACT",
+    "historyDifference": "The two provider SQL texts differ in introductory reconciliation comments, function COMMENT ON description, and a final newline; their distinct version IDs must remain separate in any reviewed ledger-bound manifest."
+  },
+  "secondConsolidationGroup": {
+    "providerFirst": {
+      "version": "20261013133323",
+      "bytes": 9208,
+      "sha256": "6eb4f7dfe9291502bc07fb2404af0bceeba5c9426e95ed7ef7c9f17f55c5d89e"
+    },
+    "providerSecond": {
+      "version": "20261013133341",
+      "bytes": 9231,
+      "sha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6"
+    },
+    "sharedCurrentSource": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+    "sharedSourceGitBlob": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+    "secondProviderSqlPreservedWithinSource": {
+      "exactSubstring": true,
+      "sourceOffsetCharacters": 663,
+      "lengthCharacters": 9231,
+      "sourceCharsBefore": 663,
+      "sourceCharsAfter": 2197
+    },
+    "firstProviderSqlPreservedWithinSource": {
+      "exactSubstring": false
+    },
+    "providerSqlDelta": [
+      {
+        "first": "update public.organization_usage set",
+        "second": "update public.organization_usage as usage_row set"
+      },
+      {
+        "first": "where organization_id=p_organization_id;",
+        "second": "where usage_row.organization_id=p_organization_id;"
+      }
+    ],
+    "classification": "TWO_DISTINCT_HISTORICAL_PROVIDER_STATEMENTS; second is a literal subspan of forward source, first has older unqualified UPDATE and WHERE; reviewer must determine correct ordered apply-once manifest."
+  },
+  "otherExactHistoricalStatementSubspans": [
+    {
+      "crosswalkOrder": 106,
+      "version": "20260924143358",
+      "sourceGitBlob": "d82a1946504bbb9dc3c5f5d6c3312331eeb64f51",
+      "provider": {
+        "version": "20260924143358",
+        "bytes": 1804,
+        "sha256": "66fcbd24e9810398b1470ca22ec60f63462830fc1402a7bc8cbbc6fe7ea7d050"
+      },
+      "sourceTotalCharacters": 2104,
+      "providerSqlStartOffsetCharacters": 290,
+      "providerSqlCharacters": 1804,
+      "sourceCharsBefore": 290,
+      "sourceCharsAfter": 10,
+      "wholeFileByteMatch": false
+    },
+    {
+      "crosswalkOrder": 117,
+      "version": "20261004082501",
+      "sourceGitBlob": "51853c8d20baded57d6da7c54d901dd67aa1727b",
+      "provider": {
+        "version": "20261004082501",
+        "bytes": 82,
+        "sha256": "db12bfe5613df5425519632bd17fed43b3f3215c8917b1c2df58b6d55f31ee41"
+      },
+      "sourceTotalCharacters": 288,
+      "providerSqlStartOffsetCharacters": 205,
+      "providerSqlCharacters": 82,
+      "sourceCharsBefore": 205,
+      "sourceCharsAfter": 1,
+      "wholeFileByteMatch": false
+    }
+  ],
+  "sourceByteCoverageAcrossAllLedgerEntries": {
+    "exactCurrentSourceMatches": 87,
+    "exactHistoricalSourceMatches": 2,
+    "nonExactCurrentSourceMatches": 13,
+    "nonExactAlternativeSourceMatches": 1,
+    "fullSourceByteRecoveredEntriesAtLeast": 103,
+    "otherSourceBytesStillUnresolved": 34,
+    "total": 137,
+    "explicitCaveat": "103/137 is a lower-bound source-byte forensic inventory, NOT 103 migrations replayed, source-version identity acceptance, schema equivalence, release acceptance or any formal gate."
+  },
+  "reviewRequirements": [
+    "Approval of alternative crosswalk source path for order 68 without changing production historical identity",
+    "Explicit two-step handling of commercial precedence versions 20260831115851 and 20260902193810",
+    "Separate reconciliation of the two provider applied SQL versions 20261013133323/341 before any forward-only consolidation",
+    "Independent reviewer verification of 25 nonexact mappings and two consolidation groups",
+    "137/137 executable vetted manifest before isolated PostgreSQL 17 replay, tests and formal gate approval"
+  ],
+  "safety": {
+    "prodWrites": 0,
+    "qaWrites": 0,
+    "paidCIJobs": 0,
+    "mainMerges": 0,
+    "deploymentCount": 0,
+    "outboundEmails": 0,
+    "StripeLiveTransactions": 0
+  }
+}

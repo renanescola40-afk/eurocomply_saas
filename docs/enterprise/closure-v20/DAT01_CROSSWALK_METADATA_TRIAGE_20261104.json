@@ -1,0 +1,53 @@
+{
+  "schema": "risck-comply.dat01-crosswalk-metadata-triage.v20.2",
+  "OBSERVED_AT": "2026-11-04T00:41:02.644Z",
+  "source_commit_before_this_report": "02f55cd22d05d270af890a4bac1ea9c986a463fc",
+  "data_sources": {
+    "ledger": "scripts/diagnostics/g5-02-prod-ledger-versions.json",
+    "crosswalk": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+    "provider_hashes": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json"
+  },
+  "read_only_triage": {
+    "production_ledger_versions": 137,
+    "crosswalk_entries": 137,
+    "provider_hash_entries": 137,
+    "ordered_version_matches": 137,
+    "ordered_name_matches": 137,
+    "provider_hash_format_matches": 137,
+    "distinct_mapped_source_files": 135,
+    "mapped_categories": {
+      "exact_version": 112,
+      "canonical_name_match": 21,
+      "provider_record_to_canonical_source": 2,
+      "superseded_by_forward_reconciliation": 2
+    },
+    "consolidated_source_groups": 2,
+    "unresolved_metadata_identity_mismatches": 0,
+    "source_file_existence_in_repository": "VERIFIED_135_OF_135_BY_GITHUB_DIRECTORY_METADATA",
+    "raw_source_sql_to_ledger_statement_equivalence": "NOT_VERIFIED",
+    "isolated_postgresql17_replay": "NOT_EXECUTED",
+    "migration_sql_files_in_directory": 361,
+    "latest_candidate_sha_before_this_report": "96e6ebfc71a76193a49ed244dc03b9420c4ebdcf"
+  },
+  "new_source_contract": {
+    "script": "scripts/diagnostics/g5-02-crosswalk-integrity.mjs",
+    "tests": "scripts/diagnostics/g5-02-crosswalk-integrity.test.mjs",
+    "local_node22_test_command": "node --test scripts/diagnostics/g5-02-crosswalk-integrity.test.mjs",
+    "local_test_count": 7,
+    "local_test_pass": 7,
+    "local_test_fail": 0,
+    "local_exact_blob_hash_verification": true,
+    "test_scope": "synthetic fixture source-only; full repository and CircleCI exact-SHA not executed"
+  },
+  "status": "CONSISTENT_METADATA_ONLY",
+  "DAT01_GATE": "BLOCKED",
+  "formal_acceptance": "NOT_GRANTED",
+  "replay_authorization": "NOT_GRANTED",
+  "qualified_review": "PENDING",
+  "limits": [
+    "Ledger statement-hash and repository file-hash methods are not the same canonicalization contract",
+    "Consolidations are mappings for provenance; they are not an apply-once execution manifest",
+    "SQL bytes and historical semantic parity require qualified verification",
+    "No production write, production migration, Stripe LIVE transaction or deployment occurred"
+  ]
+}

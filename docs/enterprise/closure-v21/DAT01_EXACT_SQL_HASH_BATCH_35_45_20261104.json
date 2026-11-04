@@ -1,0 +1,120 @@
+{
+  "schema": "risck-comply.dat01.cross-source-exact-hash-batch.v1",
+  "observedDate": "2026-11-04",
+  "sourceSnapshot": "76e32b5ed53dd4045abf457dffd642b955634439",
+  "crosswalk": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+  "crosswalkBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+  "providerSnapshot": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+  "providerBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+  "lexer": "scripts/diagnostics/g5-02-sql-hash-proof.mjs",
+  "lexerBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+  "algorithm": "For each of 11 exact-version crosswalk entries, GitHub fetch_file source text -> exact committed conservative splitStatements() -> joined with LF -> SHA-256 UTF8 and byte-length versus frozen provider data; independent pure-JS SHA-256 verified against FIPS 'abc' and empty test vectors.",
+  "batch": "exact-version mappings #35-45 (1-based)",
+  "total": 11,
+  "exactHashMatches": 11,
+  "matches": [
+    {
+      "production_version": "20260822123538",
+      "sourceGitBlob": "60116bf40f074604ed356d3a25357d719f185452",
+      "statement_count": 3,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123540",
+      "sourceGitBlob": "94ad57eb4428142a3f4a51e79e5d63cb2a2a9546",
+      "statement_count": 25,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123542",
+      "sourceGitBlob": "37f2936e8ab0fdec7da6f4621f1ea8a7792763db",
+      "statement_count": 10,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123544",
+      "sourceGitBlob": "1fc6a4caa7f90d03a719c2dc066f39ab3de81caa",
+      "statement_count": 32,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123546",
+      "sourceGitBlob": "510d3339ea154dd45be8bb62b56e23b650e6efe1",
+      "statement_count": 6,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123548",
+      "sourceGitBlob": "3c077cc29f56438e459adc04d61f0d513afb7d95",
+      "statement_count": 39,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123550",
+      "sourceGitBlob": "b087248ae2db91317395cd4d22fa95587ca870b5",
+      "statement_count": 51,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123552",
+      "sourceGitBlob": "a4de62e8f8d77825df8edda1c90bf5c173c49a53",
+      "statement_count": 79,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123554",
+      "sourceGitBlob": "589b19dd90191dbe090111132bc55dcd8df3bf7e",
+      "statement_count": 5,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123556",
+      "sourceGitBlob": "b0c3462e7d38f702c16758312d3c79855fd172fa",
+      "statement_count": 7,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    },
+    {
+      "production_version": "20260822123558",
+      "sourceGitBlob": "cba971cfc7bdbe62b95f6814514c8752d81096aa",
+      "statement_count": 25,
+      "matchedBy": "SPLIT_STATEMENTS_LF",
+      "result": "EXACT_HASH_MATCH"
+    }
+  ],
+  "overallPerspective": {
+    "previouslyVerifiedExactSampleMatches": 24,
+    "newUniqueExactMatches": 11,
+    "totalKnownVerifiedExactMappingsAtLeast": 35,
+    "exactVersionMappingsTotal": 112,
+    "nonExactMappingTotal": 25,
+    "productionLedgerTotal": 137,
+    "fullSourceEquality": "NOT_VERIFIED",
+    "replay": "0/137",
+    "formalGate": "DAT-01 BLOCKED"
+  },
+  "safety": {
+    "repositoryOnlyReadback": true,
+    "migrationsExecuted": 0,
+    "qaWrites": 0,
+    "productionWrites": 0,
+    "newCosts": 0,
+    "ciJobs": 0,
+    "emails": 0
+  },
+  "limits": [
+    "This batch uses the frozen production hash evidence; it does not establish current live DB parity.",
+    "Only 11 new crosswalk entries tested in this batch. 35 is a cumulative lower bound based on separate earlier 24 reported by Work012.",
+    "SQL statement hashes do not prove migration replay or full schema/runtime equivalence.",
+    "No independent reviewer approval, 24/24 formal gate closure or production GO."
+  ]
+}

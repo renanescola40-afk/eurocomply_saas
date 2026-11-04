@@ -1,0 +1,90 @@
+{
+  "schema": "risck-comply.dat01.full-crosswalk-source-hash-triage.v1",
+  "observedDate": "2026-11-04",
+  "subject": "A-12 / DAT-01",
+  "purpose": "Bounded, read-only source-to-provider-hash provenance. NOT a migration replay or release approval.",
+  "providerSnapshot": {
+    "source": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+    "blob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+    "totalVersions": 137,
+    "frozen": true
+  },
+  "crosswalk": {
+    "source": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+    "blob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+    "totalMappings": 137,
+    "exactVersionMappings": 112,
+    "otherMappings": 25,
+    "distinctSourceFiles": 135,
+    "consolidationGroups": 2
+  },
+  "verifiedSourceHashRepresentation": {
+    "totalMappingsCovered": 137,
+    "exactVersion": {
+      "checked": 112,
+      "hashMatches": 87,
+      "noMatchingRepresentation": 25,
+      "ratePercent": 77.68
+    },
+    "nonExactVersion": {
+      "checked": 25,
+      "hashMatchesPendingIdentityReview": 13,
+      "noMatchingRepresentation": 12,
+      "identityApproved": 0,
+      "ratePercent": 52
+    },
+    "all": {
+      "hashMatches": 100,
+      "unmatched": 37,
+      "sourceHashAgreementPercent": 72.99,
+      "sourceIdentityAndSemanticParity": "NOT_VERIFIED",
+      "sqlReplay": "NOT_EXECUTED",
+      "migrationsAppliedInQA": 0,
+      "migrationsAppliedInProd": 0
+    },
+    "sourceBytesRules": [
+      "Conservative committed SQL lexer splitting per semicolon with lexical contexts, LF join when provider recorded multiple array entries.",
+      "For statement_count=1, allow exact raw file text, one prefixed LF or trailing whitespace trimming, but never arbitrary normalization.",
+      "SHA-256 verified against known ABC/empty test vectors and frozen provider hash plus UTF8 byte counts.",
+      "No tests may auto-credit a nonexact mapping as an exact historical migration.",
+      "An archived hash is not the same as live QA schema, native PostgreSQL migration replay, transactional acceptance or deployment source SHA."
+    ]
+  },
+  "evidenceFiles": [
+    "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+    "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_35_45_20261104.json",
+    "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_46_56_20261104.json",
+    "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_57_70_20261104.json",
+    "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_71_84_20261104.json",
+    "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+    "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+    "docs/enterprise/closure-v21/DAT01_NONEXACT_SQL_HASH_BATCH_01_13_20261104.json",
+    "docs/enterprise/closure-v21/DAT01_NONEXACT_SQL_HASH_BATCH_14_25_20261104.json"
+  ],
+  "nextVerifiedWork": [
+    "For 25 exact SHA mismatches, recover authentic original migration source via historical git+original provider ledger SQL bytes, verify byte-level equality and review semantic differences without modifying shipped SQL.",
+    "Review all 25 nonexact historical version/name identities, especially two consolidated source groups; even 13 matching hashes require approval of identity mapping.",
+    "Build a real 137-step, qualified reviewable, exact-version, nonrepeating execution manifest and rollback plan; mapped filenames are not an executable source manifest.",
+    "Execute against disposable PG17 with formal tests, native migration equivalence, catalog, RLS/grants and transactional acceptance. No writes to production.",
+    "Run successful exact-candidate CI; current CircleCI #431 historical failure step log unavailable in this chat. Require qualified independent reviewer and protected main merge governance."
+  ],
+  "decision": {
+    "status": "BLOCKED",
+    "atomic": "DAT-01",
+    "formalGate": "A-12",
+    "independentApproved": false,
+    "formalGateNewPass": 0,
+    "formalEnterpriseAcceptedBaseline": 2,
+    "totalFormalEnterpriseGates": 24,
+    "formalRemainingPct": 91.67
+  },
+  "constraints": {
+    "noDatabaseWrites": true,
+    "noMigrationsExecuted": true,
+    "noNewCosts": true,
+    "noStripeLive": true,
+    "noEmails": true,
+    "noMainMerge": true,
+    "noProductionDeploy": true
+  }
+}

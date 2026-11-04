@@ -6,6 +6,8 @@ import { getBillingPlanIdForStripePriceId } from '@/lib/billing/plans';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { classifyProviderFailure } from '@/server/providers/failure';
+import { validateCheckoutPriceAuthority } from '@/server/billing/checkout-price-authority';
+import { getStripeEventModeFromSecretKey } from '@/server/billing/stripe-event-mode';
 import { isPlanAtLeast, type CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 import {
   getBillingAddOnSlugForStripePriceId,
@@ -29,7 +31,8 @@ import {
   type BillingLifecycleReplaySnapshot,
 } from './lifecycle-request-ledger';
 import { getStripeClient } from './stripe';
-import { getStripePriceId, normalizeBillingInterval, normalizeBillingPlanId, type BillingInterval } from './plans';
+import { BILLING_PLANS, getStripePriceId, isSelfServePlan, normalizeBillingInterval, normalizeBillingPlanId, type BillingInterval } from './plans';
+import { resolveSubscriptionCurrentPlan } from './subscription-current-plan-authority';
 
 export type { BillingLifecycleAction } from './lifecycle-request-ledger';
 export { BillingLifecycleRequestError } from './lifecycle-request-ledger';
@@ -520,7 +523,19 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   assertProviderLifecycleState(input.action, subscription);
 
   const baseItem = getBaseSubscriptionItem(subscription);
-  const currentPlan = normalizeBillingPlanId(authority.plan ?? subscription.metadata.plan) ?? 'starter';
+  // Stripe's allowlisted base Price is the plan-of-record for mutations.
+  // Persisted and provider metadata must agree; never assume paid Essential
+  // when a source label is unknown, absent or stale after a Stripe change.
+  const currentPlan = resolveSubscriptionCurrentPlan(
+    getBillingPlanIdForStripePriceId(baseItem.price.id),
+    [
+      { raw: authority.plan, normalized: normalizeBillingPlanId(authority.plan) },
+      { raw: subscription.metadata.plan, normalized: normalizeBillingPlanId(subscription.metadata.plan) },
+    ],
+  );
+  if (!currentPlan) {
+    throw new BillingLifecycleRequestError('billing_provider_outcome_uncertain', 409);
+  }
   const interval = input.interval ? normalizeBillingInterval(input.interval) : getCurrentBillingInterval(baseItem);
   const targetPlan = input.plan ?? currentPlan;
   assertPlanTransition(input.action, currentPlan, targetPlan);
@@ -529,6 +544,7 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
     : input.action === 'upgrade' || input.action === 'downgrade'
       ? getEligibleProviderAddOnSelectionsForPlan(subscription, baseItem.id, targetPlan)
       : normalizeAddOnSelections(input.addOns, targetPlan);
+
   const claim = await claimBillingLifecycleRequest({
     organizationId: input.organizationId,
     requestedBy: input.userId,
@@ -582,6 +598,66 @@ export async function mutateSubscriptionLifecycle(input: SubscriptionLifecycleIn
   }
 
   if (!providerWasAlreadyCompleted) {
+    // A durable claim is required for correct idempotent recovery. Only new
+    // provider mutations need fresh Price preflight: completed/provider-succeeded
+    // requests must finish their existing audit even if catalog Prices change.
+    try {
+      // Subscription upgrades, scheduled downgrades and add-on amendments must not
+      // rely on a configured Price ID alone. Verify the canonical self-serve Price
+      // before issuing any Stripe mutation.
+      // Cancellation and reactivation do not select a new Price.
+      if (input.action !== 'cancel' && input.action !== 'reactivate' && isSelfServePlan(targetPlan)) {
+        const targetPriceId = getStripePriceId(targetPlan, interval);
+        let providerPrice: Stripe.Price;
+        try {
+          providerPrice = await stripe.prices.retrieve(targetPriceId, { expand: ['product'] });
+        } catch (error) {
+          throw classifyProviderFailure('stripe', 'subscription_price_retrieve', error);
+        }
+        const lifecyclePriceAuthority = validateCheckoutPriceAuthority(providerPrice, {
+          priceId: targetPriceId,
+          expectedAmountCents: interval === 'year'
+            ? BILLING_PLANS[targetPlan].annualPriceCents
+            : BILLING_PLANS[targetPlan].monthlyPriceCents,
+          expectedInterval: interval,
+          expectedMode: getStripeEventModeFromSecretKey(),
+        });
+        if (!lifecyclePriceAuthority.ok) {
+          throw new BillingLifecycleRequestError('billing_price_configuration_invalid', 503);
+        }
+      }
+      // Enabled add-ons also carry priced subscription items. Validate each
+      // canonical active add-on Price before a provider write so an incorrect env
+      // binding cannot grant a paid capability for €0 or a different cadence.
+      if (input.action !== 'cancel' && input.action !== 'reactivate') {
+        for (const selection of addOns) {
+          const addOn = getBillingAddOn(selection.slug);
+          if (!addOn || !isAddOnAvailableForPlan(addOn, targetPlan)) {
+            throw new BillingLifecycleRequestError('billing_add_on_catalog_invalid', 503);
+          }
+          const addOnPriceId = getStripeAddOnPriceId(selection.slug, interval);
+          let providerAddOnPrice: Stripe.Price;
+          try {
+            providerAddOnPrice = await stripe.prices.retrieve(addOnPriceId, { expand: ['product'] });
+          } catch (error) {
+            throw classifyProviderFailure('stripe', 'subscription_add_on_price_retrieve', error);
+          }
+          const addOnPriceAuthority = validateCheckoutPriceAuthority(providerAddOnPrice, {
+            priceId: addOnPriceId,
+            expectedAmountCents: (interval === 'year' ? addOn.priceAnnual : addOn.priceMonthly) * 100,
+            expectedInterval: interval,
+            expectedMode: getStripeEventModeFromSecretKey(),
+          });
+          if (!addOnPriceAuthority.ok) {
+            throw new BillingLifecycleRequestError('billing_add_on_price_configuration_invalid', 503);
+          }
+        }
+      }
+    } catch (error) {
+      await failBillingLifecycleRequest(requestId, 'stripe_price_validation_failed');
+      throw error;
+    }
+
     await markBillingLifecycleProviderInFlight(requestId);
 
     try {

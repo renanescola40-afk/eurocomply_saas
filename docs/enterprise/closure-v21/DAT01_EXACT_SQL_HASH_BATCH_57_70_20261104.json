@@ -1,0 +1,137 @@
+{
+  "schema": "risck-comply.dat01.cross-source-exact-hash-batch.v1",
+  "observedDate": "2026-11-04",
+  "batch": "exact-version mappings 57-70 (1-based)",
+  "sourceRef": "1ca03a191a2da1427792b21ac7bff3b5341e2492",
+  "providerLedgerBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+  "crosswalkBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+  "sqlLexerBlob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+  "verification": "read-only exact GitHub SQL source, conservative statement split and LF join, SHA256 UTF8 and byte-length checked against frozen provider ledger. Self-tested pure V8 SHA256 with ABC and empty vectors. No migration executed.",
+  "result": "14/14 EXACT_HASH_MATCH",
+  "rows": [
+    {
+      "version": "20260822123622",
+      "gitBlob": "b02afbd9a976c61c4368fdbe8c82ab2fbe5a9359",
+      "statementCount": 139,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260822123624",
+      "gitBlob": "2c6e1532cf7f165b78b4f1bdb6e028f7008b033e",
+      "statementCount": 28,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260822123626",
+      "gitBlob": "3a568151b214d7028b40cce23d5fc0d97502d848",
+      "statementCount": 66,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260823123000",
+      "gitBlob": "d2061b99c70315cfcea889b3aad28e6d807d3651",
+      "statementCount": 15,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260823131500",
+      "gitBlob": "2b13b1454eedaa8cc409d2440efdcce8dc1ab05f",
+      "statementCount": 27,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260824185900",
+      "gitBlob": "e5dc46c3597a88ee3bf933cfbe75b14fc974c12c",
+      "statementCount": 7,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260824190000",
+      "gitBlob": "223d73356141cbf30573b43c902a0e1067203c7e",
+      "statementCount": 144,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260824190100",
+      "gitBlob": "7d2c122fc15929864c8945c1a7fe3ada256fe428",
+      "statementCount": 8,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260824190200",
+      "gitBlob": "4e67fff9e8334e7ab8b5e46956190d4a94999ee2",
+      "statementCount": 13,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260825092500",
+      "gitBlob": "53aa8b5f366a7df61a3d470624cfbaae632988f9",
+      "statementCount": 18,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260825171500",
+      "gitBlob": "062d915bf0c6186e199a4204025a1300c1c030ba",
+      "statementCount": 16,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260903090000",
+      "gitBlob": "3ed785dae7be214128b57d75bbc596e0cbc011d7",
+      "statementCount": 3,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260903100000",
+      "gitBlob": "c414f74c6fb048088e9c1a091a67b19d4cc2773b",
+      "statementCount": 28,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    },
+    {
+      "version": "20260903114500",
+      "gitBlob": "7ab9a5db4cd66b2310355a98febb44870cfffee2",
+      "statementCount": 8,
+      "status": "EXACT_HASH_MATCH",
+      "matchedBy": "SPLIT_STATEMENTS_LF"
+    }
+  ],
+  "cumulative": {
+    "verifiedLowerBound": 60,
+    "first70ExactMappings": 70,
+    "exactMappingsTotal": 112,
+    "remainingExactUnchecked": 42,
+    "nonExactMappingsRequireReview": 25,
+    "productionLedgerTotal": 137
+  },
+  "formal": {
+    "DAT_01": "BLOCKED",
+    "replay": "0/137",
+    "qualifiedReview": "PENDING",
+    "newGatePass": 0
+  },
+  "safety": {
+    "dbMutations": 0,
+    "productionWrites": 0,
+    "qaWrites": 0,
+    "circleci": 0,
+    "paidJobs": 0
+  },
+  "limitations": [
+    "The first 70 exact mappings have at least 60 verified source matches; ten from first 34 remain unresolved.",
+    "Archived ledger metadata differs from a live migration replay and needs independent attestation.",
+    "No SQL applied and no 24/24 gate completion claim."
+  ]
+}
