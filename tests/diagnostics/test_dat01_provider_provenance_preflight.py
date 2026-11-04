@@ -61,6 +61,9 @@ class ProvenancePreflightTest(unittest.TestCase):
         code,report=self.run_preflight()
         self.assertEqual(code,2)
         self.assertEqual(report["status"],"BLOCKED")
+        self.assertFalse(report["migration_execution_authorized"])
+        self.assertFalse(report["qualified_independent_review_approved"])
+        self.assertFalse(report["postgres17_replay_completed"])
 
     def test_reordered_provider_entries_are_blocked(self):
         self.entries[0]["order"]=2
