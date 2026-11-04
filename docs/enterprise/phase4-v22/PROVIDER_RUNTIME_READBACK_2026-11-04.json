@@ -27,7 +27,51 @@
     },
     "exact_canonical_candidate_sha_proven": false,
     "customer_authenticated_flows_tested": false,
-    "note": "Health endpoint verifies only the basic publicly reachable process; source SHA is older than the currently observed integration candidate"
+    "note": "Health endpoint verifies only the basic publicly reachable process; source SHA is older than the currently observed integration candidate",
+    "public_trust_disclosure_readback": {
+      "checked_at_utc": "2026-11-04",
+      "method": "read-only GET, Vercel authenticated fetch; reduced visible HTML/text extraction, no full personal data retained",
+      "routes": [
+        {
+          "path": "/pt/trust",
+          "http_status": 200,
+          "page_heading": "Trust Center",
+          "no_soc2_report_disclosed": true,
+          "no_iso27001_certification_disclosed": true,
+          "legal_drafts_explicit": true
+        },
+        {
+          "path": "/pt/subprocessors",
+          "http_status": 200,
+          "page_heading": "Subprocessors",
+          "provider_contract_limitations_disclosed": true
+        },
+        {
+          "path": "/pt/privacy",
+          "http_status": 200,
+          "page_heading": "How RISCK COMPLY handles personal data",
+          "marked_as_review_draft": true
+        },
+        {
+          "path": "/pt/terms",
+          "http_status": 200,
+          "page_heading": "Business service terms for RISCK COMPLY",
+          "marked_as_review_draft": true
+        },
+        {
+          "path": "/pt/security",
+          "http_status": 200
+        },
+        {
+          "path": "/pt/data-processing",
+          "http_status": 200
+        }
+      ],
+      "finding": "Live production trust/legal routes are accessible and publicly disclose review/certification limitations. This is publication evidence, NOT a signed DPA, legal approval or exhaustive claim audit.",
+      "released_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+      "cross_candidate_drift": "Cannot bind to new candidate release PR #2598 until accepted SHA and deployment provenance match.",
+      "no_new_gate_acceptance": true
+    }
   },
   "qa": {
     "hostname": "eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app",
@@ -122,6 +166,27 @@
       ],
       "do_not_infer": "This 503 does not establish Stripe or Supabase downtime and does not prove a specific missing variable individually; one or both effective values may be missing.",
       "security_policy": "Keep fail-closed; do not bypass rate-limit, use production Redis credentials, or create unapproved paid infrastructure."
+    },
+    "restoration_attempt": {
+      "checked_at_utc": "2026-11-04",
+      "provider": "Vercel custom environment",
+      "custom_environment_id": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+      "custom_environment_slug": "qa",
+      "scoped_project_env_metadata_entries": 20,
+      "required_keys_status": {
+        "UPSTASH_REDIS_REST_URL": "ABSENT_IN_QA_CUSTOM_ENV",
+        "UPSTASH_REDIS_REST_TOKEN": "ABSENT_IN_QA_CUSTOM_ENV",
+        "HEALTHCHECK_TOKEN": "ABSENT_IN_QA_CUSTOM_ENV"
+      },
+      "existing_QA_redis_instance": "NOT_DISCOVERED",
+      "integration_configuration_visibility": "FORBIDDEN_403",
+      "vercel_project_count_in_connected_team": 1,
+      "action_taken": "READ_ONLY_RECONNAISSANCE_NO_ENV_WRITE",
+      "restoration_status": "BLOCKED_MISSING_APPROVED_ISOLATED_QA_REDIS_ENDPOINT_AND_TOKEN",
+      "no_costs": "No Redis instance created, no billable plan enabled, no production variables copied",
+      "security_boundary": "A Vercel preview or production credential cannot be assumed QA-isolated without provider-side account+role+environment evidence.",
+      "safe_next_step": "Provision two encrypted custom QA environment variables only after an existing separately isolated Redis instance and token are confirmed; add QA-only HEALTHCHECK_TOKEN separately and redeploy only QA after approval-free scoped configuration. Do not print or commit values.",
+      "validation_boundary": "Even after Redis, QA requires a healthcheck bearer token for /api/ready; other provider readiness may be intentionally unavailable by QA_BOOTSTRAP_NO_BILLING. Therefore do not demand 200 when services are disabled by design."
     }
   },
   "remediation_and_retest": {
