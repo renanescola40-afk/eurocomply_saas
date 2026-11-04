@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateDraftManifest } from './g5-02-ledger-manifest-draft-validator.mjs';
+import { validateDraftManifest, verifyFrozenGitBlob } from './g5-02-ledger-manifest-draft-validator.mjs';
+import { createHash } from 'node:crypto';
 const status = ['CURRENT_CANONICAL_SOURCE_BYTES_VERIFIED', 'IMMUTABLE_HISTORICAL_GIT_SOURCE_BYTES_VERIFIED', 'NO_PROVEN_WHOLE_SOURCE_BYTES', 'CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING', 'ALTERNATIVE_SOURCE_FILE_BYTES_VERIFIED_IDENTITY_PENDING'];
 function fixture() {
   const entries=[], rows=[], records=[];
@@ -35,3 +36,26 @@ test('consolidation groups cannot be silently disjoined',()=>{let f=fixture();f.
 test('missing provider ledger record fails',()=>{let f=fixture();f.ledger.rows.pop();assert.throws(()=>run(f),/DAT01_MANIFEST_PROVIDER_COUNT/);});
 test('declared reviewed/replayed values cannot be forged',()=>{let f=fixture();f.manifest.invariants.postgres17Replayed=137;assert.throws(()=>run(f),/DAT01_MANIFEST_DECLARED_INVARIANTS/);});
 test('fabricated proof with forged truth flag still changes immutable aggregate count',()=>{let f=fixture();f.manifest.records[90].sourceByteProof.status=status[0];f.manifest.records[90].sourceByteEqualityConfirmed=true;assert.throws(()=>run(f),/DAT01_MANIFEST_AGGREGATE_COUNTS/);});
+
+test('Git object pinning accepts only the exact byte-for-byte approved blob', () => {
+  const original = Buffer.from('{"count":137}\n');
+  const pin = createHash('sha1').update(`blob ${original.length}\0`).update(original).digest('hex');
+  assert.equal(verifyFrozenGitBlob(original, pin, 'MANIFEST'), pin);
+  assert.throws(() => verifyFrozenGitBlob(Buffer.from('{"count":137}'), pin, 'MANIFEST'), /DAT01_MANIFEST_PIN_MISMATCH_MANIFEST/);
+});
+test('tampering with a frozen provider snapshot is rejected even when other JSON could be edited', () => {
+  const original = Buffer.from('{"rows":[1,2]}');
+  const pin = createHash('sha1').update(`blob ${original.length}\0`).update(original).digest('hex');
+  const tampered = Buffer.from('{"rows":[1,3]}');
+  assert.throws(() => verifyFrozenGitBlob(tampered, pin, 'PROVIDER_LEDGER'), /DAT01_MANIFEST_PIN_MISMATCH_PROVIDER_LEDGER/);
+});
+test('frozen crosswalk bytes reject equivalent JSON with re-ordered whitespace', () => {
+  const original = Buffer.from('{"entries":[]}\n');
+  const pin = createHash('sha1').update(`blob ${original.length}\0`).update(original).digest('hex');
+  assert.throws(() => verifyFrozenGitBlob(Buffer.from('{ "entries": [] }\n'), pin, 'CROSSWALK'), /DAT01_MANIFEST_PIN_MISMATCH_CROSSWALK/);
+});
+test('invalid frozen Git object ID or arbitrary review role fails closed', () => {
+  const input = Buffer.from('x');
+  assert.throws(() => verifyFrozenGitBlob(input, 'not-git-hash', 'MANIFEST'), /DAT01_MANIFEST_PIN_FORMAT/);
+  assert.throws(() => verifyFrozenGitBlob(input, 'a'.repeat(40), 'ROLE;SQL'), /DAT01_MANIFEST_PIN_ROLE/);
+});
