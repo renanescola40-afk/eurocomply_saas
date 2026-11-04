@@ -31,6 +31,6 @@ if __name__=="__main__":
     try:
         result=inspect()
     except (ValueError,KeyError,OSError) as exc:
-        result={"status":"BLOCKED","reason":type(exc).__name__,"formal_gate_accepted":False}
+        result={"status":"BLOCKED","reason":type(exc).__name__,"migration_execution_authorized":False,"qualified_independent_review_approved":False,"postgres17_replay_completed":False,"formal_gate_accepted":False,"production_writes":False}
     print(json.dumps(result,sort_keys=True))
     raise SystemExit(0 if result["status"]=="PREFLIGHT_OK" else 2)
