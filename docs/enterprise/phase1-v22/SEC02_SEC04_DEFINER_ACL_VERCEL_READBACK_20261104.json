@@ -1,0 +1,82 @@
+{
+  "schema": "risck-comply.phase1-v22.sec02-sec04-definer-acl-vercel-readback.v1",
+  "observedAt": "2026-11-04",
+  "accessMode": "READ_ONLY_PRODUCTION_AND_ISOLATED_QA",
+  "source": {
+    "mainAfterCanonicalPR2598": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+    "mergePR": 2598,
+    "merged": true
+  },
+  "supabase": {
+    "production": {
+      "project": "tganhbbhfxcpblmgqprg",
+      "publicTableRlsEnabled": 115,
+      "publicTableForceRlsEnabled": 115,
+      "publicSecurityDefiners": 128,
+      "publicSecurityDefinerAnonExecute": 0,
+      "publicSecurityDefinerAuthenticatedExecute": 0,
+      "appPrivateSecurityDefiners": 13,
+      "appPrivateDefinerAnonExecute": 0,
+      "appPrivateDefinerAuthenticatedExecute": 7,
+      "publicDefinersWithSearchPathBeginningPublic": 31,
+      "publicSchemaCreatePrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "unpinnedSearchPathDefinersAcrossPublicAndAppPrivate": 0
+    },
+    "isolatedQA": {
+      "project": "zrxrrfbllsxtleyxjpsz",
+      "publicTableRlsEnabled": 115,
+      "publicTableForceRlsEnabled": 115,
+      "publicSecurityDefiners": 128,
+      "publicSecurityDefinerAnonExecute": 0,
+      "publicSecurityDefinerAuthenticatedExecute": 0,
+      "appPrivateSecurityDefiners": 13,
+      "appPrivateDefinerAnonExecute": 0,
+      "publicSchemaCreatePrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    "observedFindings": [
+      "No direct anonymous/authenticated EXECUTE privilege on the 128 public SECURITY DEFINER routines in either environment",
+      "31 public SECURITY DEFINER routines retain a search_path starting with public; they were observed as service-role-only, not proven safe in every indirect trigger or service path",
+      "13 private SECURITY DEFINER routines have no anonymous execute permission; seven allow authenticated execution; search path metadata pinned for all",
+      "Catalog readbacks cannot establish BOLA, signed JWT claim validation, storage URL isolation, or formal RBAC acceptance"
+    ]
+  },
+  "vercel": {
+    "project": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "team": "team_wu3LZI6ReFxO16xipv73GLwG",
+    "latestProductionReadyDeploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "latestProductionReadyDeploymentGitSha": "70d3545f414d063379d481fd238aed563e05edda",
+    "latestMainMergeSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+    "productionRunningCanonicalMergeSha": false,
+    "latestProductionDeployStatus": "READY",
+    "browserBundleSecretProofForNewMain": "NOT_VERIFIED",
+    "directTlsHandshakeProof": "NOT_VERIFIED",
+    "confidentialEnvironmentVariablesRead": false,
+    "anyProductionDeploymentTriggered": false
+  },
+  "acceptance": {
+    "supports": "SEC-02/SEC-04 metadata and SEC-05 deployment SHA gap",
+    "phase1AtomicPassesNew": 0,
+    "gatesAcceptedNew": 0,
+    "auditResult": "METADATA_REVIEW_ONLY",
+    "signedJwtE2E": "NOT_VERIFIED",
+    "fullRPCAndPrivilegeNegativeMatrix": "NOT_VERIFIED",
+    "independentReviewer": "PENDING",
+    "formalA02": "NOT_ACCEPTED",
+    "formalA04": "NOT_ACCEPTED"
+  },
+  "safety": {
+    "productionDatabaseWrites": false,
+    "qaWrites": false,
+    "deploymentsTriggered": false,
+    "secretsExposed": false,
+    "newCosts": false
+  }
+}
