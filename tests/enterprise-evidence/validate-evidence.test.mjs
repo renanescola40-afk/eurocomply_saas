@@ -80,3 +80,38 @@ test('atomic PASS cannot use future, pre-evidence or whitespace-only acceptance'
  assert.ok(validateEvidenceRecord({...acceptance,accepted_at:'2026-10-01T00:00:00Z'},{expectedSha:sha,now}).includes('pass_acceptance_time_invalid'));
  assert.ok(validateEvidenceRecord({...acceptance,accepted_by:'   ',accepted_at:'2026-11-01T11:00:00Z'},{expectedSha:sha,now}).includes('pass_requires_independent_acceptance'));
 });
+
+
+test('source PASS with forged acceptance metadata and nonexistent artifact is NOT_VERIFIED',()=>{
+ const mandatory=Array.from({length:38},(_,i)=>({
+  id:'X-'+i,status:'NOT_VERIFIED',evidenceRefs:[],acceptedBy:null,acceptedAt:null,
+ }));
+ mandatory[0]={id:'SEC-01',status:'PASS',acceptedBy:'Unverified reviewer',
+  acceptedAt:'2026-11-02T10:00:00Z',evidenceRefs:['docs/enterprise/evidence/NONEXISTENT_ACCEPTANCE_PROOF.json']};
+ const groups=Array.from({length:24},(_,i)=>({
+  id:'A-'+String(i+1).padStart(2,'0'),atomicCriteria:[i===0?'SEC-01':'X-'+i],
+ }));
+ const r=reconcile({scope:{mandatory},gates:{groups},index:{
+  fixed_scope:{atomic_controls:38,formal_gates:24},evidence_records:[],gates:[],
+ },expectedSha:sha,now:new Date('2026-11-04T00:00:00Z')});
+ assert.equal(r.controls[0].status,'NOT_VERIFIED');
+ assert.equal(r.summary.controls_pass,0);
+ assert.equal(r.gates[0].status,'NOT_ELIGIBLE');
+ assert.equal(r.summary.gates_accepted,0);
+ assert.equal(r.valid,false);
+ assert.ok(r.errors.includes('source_pass_unverified:SEC-01'));
+});
+
+test('historical source PASS retains only two legitimate provider-backed controls',()=>{
+ const frozen=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gateMap=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
+ const r=reconcile({scope:frozen,gates:gateMap,index,expectedSha:index.source.commit_sha,
+   now:new Date('2026-11-04T12:00:00Z')});
+ assert.equal(r.summary.controls_pass,2);
+ assert.equal(r.controls.find(c=>c.control_id==='BIL-01').status,'PASS');
+ assert.equal(r.controls.find(c=>c.control_id==='OPS-01').status,'PASS');
+ assert.equal(r.gates.find(g=>g.gate_id==='A-09').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
+ assert.equal(r.gates.find(g=>g.gate_id==='A-18').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
+ assert.equal(r.summary.gates_accepted,0);
+});
