@@ -50,3 +50,47 @@ legacy insert. Accept only typed `42703` or `PGRST204` column errors.
 Negative and positive tests verify that a permission-denied insert stops before
 legacy fallback while a genuine missing-column error retains the explicit
 compatibility path. Neither branch is enabled by default or configured here.
+
+## SEC-06 structural readback, 2026-11-04 (not cryptographic assurance)
+
+A reproducible read-only PostgreSQL query is stored at
+`scripts/security/audit-chain-readonly-structural-proof.sql`. Executed as
+the exact query source through the connected Supabase SQL API, once each in
+QA (`zrxrrfbllsxtleyxjpsz`) and PROD (`tganhbbhfxcpblmgqprg`).
+It selects **only aggregate counts** and explicitly rolls back.
+
+| Observation | Isolated QA | PROD |
+|---|---:|---:|
+| Total audit events | 0 | 421 |
+| Distinct organizations with events | 0 | 13 |
+| Missing event hash | 0 | 4 |
+| Missing HMAC signature | 0 | 393 |
+| Unexpected hash algorithm | 0 | 0 |
+| Organizations with invalid number of roots | 0 | 0 |
+| Missing chain predecessor | 0 | 0 |
+| Fork points | 0 | 0 |
+| Repeated event hashes | 0 | 0 |
+| Backward-time edges | 0 | 0 |
+| Hashed events unreachable from an observed root | 0 | 0 |
+
+All four hashless events occurred in June 2026; missing signatures include
+330 October events. Dates derived from a separate monthly aggregate query,
+without event payloads, tenants or user IDs. A configured HMAC signing secret
+is *optional in the current `signAuditEventHash` helper*, and neither
+signature validity nor actual signing-secret availability was established.
+
+**Evidence boundary:** The SQL checks graph topology. It does not
+recompute SHA-256 over canonical event payloads, validate HMAC signatures,
+check a trusted external anchor, replay concurrent transactions, confirm
+runtime RPC connectivity, or perform authenticated tenant isolation.
+QA has no events, so a zero-anomaly QA result is an empty sample.
+This is a provider SQL readback, NOT a gate PASS, customer data finding,
+production security incident, or approval to alter production records.
+
+**Gate status:** A-03 / SEC-06 = NOT_VERIFIED. Required next evidence:
+isolated QA synthetic event replay with guaranteed rollback/cleanup,
+exact-SHA CircleCI checks, a signed-JWT and rollback-safe end-to-end audit
+operation, full canonical-hash verification on representative redacted proof
+records, trusted anchor and signing-secret policy / rotation evidence, and
+an owner-reviewed disposition of historical unsigned and hashless records.
+No migration or production database write is justified by this count alone.
