@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { evidenceSha256Hex, verifyExistingEvidenceObject } from './upload-recovery';
 
 export type EvidenceStatus = 'draft' | 'valid' | 'needs_review' | 'expired' | 'archived';
 export type EvidenceType =
@@ -246,11 +247,7 @@ function sanitizeFileName(fileName: string) {
   return safe || 'evidence.bin';
 }
 
-async function sha256Hex(file: File) {
-  const buffer = await file.arrayBuffer();
-  const digest = await crypto.subtle.digest('SHA-256', buffer);
-  return Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, '0')).join('');
-}
+
 
 /**
  * Validate bytes before reserving immutable attachment metadata, then insert
@@ -261,7 +258,7 @@ export async function uploadEvidenceFile(params: { organizationId: string; evide
   const fileMimeType = validateEvidenceUpload(params.file);
   const fileName = sanitizeFileName(params.file.name);
   const objectPath = `${params.organizationId}/${params.evidenceId}/${fileName}`;
-  const fileSha256 = await sha256Hex(params.file);
+  const fileSha256 = await evidenceSha256Hex(params.file);
   const fileSizeBytes = params.file.size;
 
   const { data: reservation, error: reservationError } = await supabase
@@ -300,7 +297,19 @@ export async function uploadEvidenceFile(params: { organizationId: string; evide
       cacheControl: '3600',
     });
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    // A lost success response or duplicate path may already contain our exact
+    // immutable bytes. Confirm with private Storage SELECT and SHA-256; never
+    // overwrite an existing object or claim success from an error alone.
+    const recovered = await verifyExistingEvidenceObject({
+      expectedSha256: fileSha256,
+      expectedSize: fileSizeBytes,
+      download: () => supabase.storage.from(EVIDENCE_BUCKET).download(
+        objectPath, {}, { cache: 'no-store' },
+      ),
+    });
+    if (!recovered) throw uploadError;
+  }
   return {
     bucket: EVIDENCE_BUCKET,
     objectPath,
