@@ -79,7 +79,25 @@
     "live_sql_source_bytes_returned": false,
     "live_provider_query_mode": "READ_ONLY_SELECT",
     "live_provider_mismatches": 0,
-    "note": "Live production ledger metadata checked against frozen 137-entry ledger on 2026-11-04; no differences. This does not prove migration source byte equality, review or replay."
+    "note": "Live production ledger metadata checked against frozen 137-entry ledger on 2026-11-04; no differences. This does not prove migration source byte equality, review or replay.",
+    "gitlabRevisionRecovery": {
+      "artifact": "docs/enterprise/phase1-v22/DAT01_GITLAB_HISTORICAL_REVISION_MAP_20261104.json",
+      "unresolvedEntriesWithHistoryCandidate": 34,
+      "distinctSourcePathsWithHistory": 33,
+      "remainingEntriesWithoutApprovedWholeSourceByteEquality": 34,
+      "queries": "GitLab main/path-scoped commit list (omit all=true, which returned false-empty history)",
+      "historicalCandidateExactByteMatchesNewlyConfirmed": 0,
+      "caution": "Historical path commit references are evidence of revision candidates only, not accepted SQL source proof or runnable manifest."
+    },
+    "independent137rowMetadataStructuralAudit": "PASS 137/137 using current archived manifest and frozen ledger, 6/6 tampered-archive detections in isolated V8 comparison",
+    "localNodeUnitTests": {
+      "nodeVersion": "v22.16.0",
+      "tests": "6/6 PASS",
+      "fixtures": "137 synthetic rows representative of 112 exact/25 nonexact, 103 claimed/34 unresolved, 2 consolidation groups",
+      "preflight": "STRUCTURALLY_CONSISTENT_BLOCKED",
+      "requireReplayAuthorizationExit": 2,
+      "limitation": "Not hosted exact-SHA CircleCI nor a migration replay nor full repository npm suite."
+    }
   },
   "acceptance": {
     "phase1_gate_accepted": 0,
@@ -229,8 +247,8 @@
       "root_cause": "137 production migration identities map to 135 sources; 34 missing byte proofs; 25 nonexact identities; two consolidation groups.",
       "implementation": "New read-only metadata preflight script and six regression tests in focused branch; draft never made executable.",
       "test_command": "node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
-      "test_results": "NODE_SYNTAX_CHECK_PASSED; SYNTHETIC_2_ROW_SMOKE_POSITIVE_AND_NEGATIVE_PASSED; FULL_137_REPO_TEST_NOT_RUN_YET",
-      "provider_readback": "Live PROD SQL metadata matches frozen ledger 137/137 across version, name, statement_count, joined_bytes and SHA256, zero mismatches. QA ledger 7 separate records. 34 source bytes unresolved and replay 0/137. Historical SHA pointer correction: archive SHA ...8c94c53d 404; real source Git blob ...1ae57ae3 verified by direct Git blob fetch and live SQL exact-text with one LF. Two historical entries independently revalidated; unchanged 103/137.",
+      "test_results": "PASS LOCAL SYNTHETIC: node --test 6/6, Node v22.16.0; metadata-only 137/137 real archive checks and 6/6 independent V8 tamper detections. Hosted exact-SHA CircleCI NOT_VERIFIED; SQL replay NOT_EXECUTED.",
+      "provider_readback": "Live PROD SQL metadata matches frozen ledger 137/137 across version, name, statement_count, joined_bytes and SHA256, zero mismatches. QA ledger 7 separate records. 34 source bytes unresolved and replay 0/137. Historical SHA pointer correction: archive SHA ...8c94c53d 404; real source Git blob ...1ae57ae3 verified by direct Git blob fetch and live SQL exact-text with one LF. Two historical entries independently revalidated; unchanged 103/137.; GitLab path-scoped commit history located for all 34 unresolved identities (33 distinct source paths), none newly upgraded to source-byte proof; historical evidence artifact linked.",
       "negative_test_evidence": "Source proof claims 103/137 archived, 34 unresolved; 0 approved reviewer signatures; no SQL replay; wrong-order/hash/premature-replay tests added.",
       "remaining_blocker": "Revalidate all 103 source bytes against provider, recover 34, independent identity review 25, two consolidation groups, approved manifest, PG17 137/137 isolated replay, validator PASS; qualified reviewer to reconcile incorrect historical source blob identity pointer.",
       "status": "BLOCKED"
