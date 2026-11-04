@@ -1,13 +1,13 @@
 {
-  "schema": "risck-comply.work012-recovery-handoff.v21.7",
+  "schema": "risck-comply.work012-recovery-handoff.v21.8",
   "createdAt": "2026-11-04T09:14:42.065Z",
   "owner": "NORMAL_CHAT_MASTER_V21.0",
   "canonicalPR": {
     "number": 2598,
     "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
     "branch": "integration/enterprise-unified-candidate-20261102",
-    "headBeforeCheckpointCommit": "86dbae18d84de587a531981c74921846d8631e24",
-    "headNote": "This is SHA immediately before V21.7 checkpoint commit. For authoritative exact SHA fetch PR #2598 and direct Git reference.",
+    "headBeforeCheckpointCommit": "e9198dea81daae1dae427ae9222610aaa1888d44",
+    "headNote": "Read GitHub PR #2598 and direct ref for current SHA; this is parent snapshot before V21.8 checkpoint commit.",
     "draft": true,
     "merged": false,
     "approvedReviewsAtObservation": 0,
@@ -60,7 +60,16 @@
     "candidateCurrentSourceQuality": "NOT_VERIFIED",
     "job431NoReexecutionInThisChat": true,
     "currentCandidateExactShaQuality": "NOT_VERIFIED",
-    "newPaidOrIncludedJobTriggeredByThisChat": false
+    "newPaidOrIncludedJobTriggeredByThisChat": false,
+    "manifestSourceOnlyValidationConfigured": true,
+    "manifestOptInJob": "github-actions-recovery-quality",
+    "manifestConfigBlob": "4eec80b4e8a765d3b256aad1e70a04cbc9f7a6a3",
+    "manifestStepCommit": "e9198dea81daae1dae427ae9222610aaa1888d44",
+    "manifestStepContains": "node --test --test-reporter=tap scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs && node scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs (two sequential shell lines)",
+    "newPipelineTriggeredByThisChat": false,
+    "creditsNow": "NOT_VERIFIED",
+    "defaultOff": true,
+    "notes": "Step wired only in pre-existing manual full-quality CircleCI job; no source SHA provider run yet."
   },
   "githubActions": {
     "problem": "workflow runs fail with zero job steps, likely provider runner-admission issue but root cause unconfirmed",
@@ -128,7 +137,12 @@
     "validatorNode22Result": "14/14 PASS (local)",
     "actual137RowManifestDataCheck": "Independent read-only JS structural validation PASS, NOT full Node CLI or CircleCI",
     "hostedCircleCiOnCurrentCandidate": "NOT_VERIFIED",
-    "noNewAcceptedGates": 0
+    "noNewAcceptedGates": 0,
+    "latestDAT01Integration": "14/14 local Node22 PASS exact source Git blobs + live 137 JSON structural readback PASS + CircleCI quality existing manual opt-in step configured",
+    "circleCIConfigCommit": "e9198dea81daae1dae427ae9222610aaa1888d44",
+    "circleCIConfigReadbackBlob": "4eec80b4e8a765d3b256aad1e70a04cbc9f7a6a3",
+    "circleCIJobExecuted": false,
+    "newFormalPASS": 0
   },
   "dat01": {
     "status": "BLOCKED",
@@ -262,7 +276,16 @@
       "executable": 0,
       "postgres17Replay": 0
     },
-    "sourceByteEquivalentCoverage": "103/137: 87 current exact, 2 immutable historic exact, 13 nonexact mapped, 1 nonexact alternative; no identity acceptance or replay"
+    "sourceByteEquivalentCoverage": "103/137: 87 current exact, 2 immutable historic exact, 13 nonexact mapped, 1 nonexact alternative; no identity acceptance or replay",
+    "manifestValidatorInManualCircleCIQuality": true,
+    "manifestValidatorNode22Passed": 14,
+    "manifestSourceOnlyCliInFullCheckout": "NOT_VERIFIED",
+    "manifestReal137StructuralMirror": "PASS_READ_ONLY",
+    "sourceBytesProven": 103,
+    "sourceBytesUnresolved": 34,
+    "nonexactIdentityReviewPending": 25,
+    "consolidationGroupsReviewPending": 2,
+    "independentReview": "PENDING"
   },
   "auditChainIndependentReadback": {
     "scope": "production metadata READ ONLY",
@@ -340,7 +363,7 @@
     "paidCITasks": false,
     "StripeLiveTransactions": false
   },
-  "nextExecutableAction": "Run scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs in independent full checked-out candidate at exact SHA (14 source-only tests already local PASS; 137 real JSON structural readback independently PASS), and retrieve CircleCI #431 authenticated first-error log. Independently resolve 34 source-byte gaps, review 25 nonexact identities and 2 consolidations, then approved disposable PostgreSQL17 137/137 replay before DAT-01 acceptance. Human final main merge only.",
-  "updatedAt": "2026-11-04T14:30:18.415Z",
+  "nextExecutableAction": "Obtain authenticated CircleCI #431 first failing step; if provider credits allow, authorized manual source-quality job at current PR #2598 exact SHA will now execute Node22 14 DAT01 tests and CLI 137-row draft consistency before Next.js build. For A-12 resolve 34 source-byte gaps and obtain 25 nonexact identity / 2 consolidation independent reviews before authorized isolated PostgreSQL17 137/137 replay. Preserve human final merge and no production writes.",
+  "updatedAt": "2026-11-04T14:34:43.996Z",
   "previousV21CheckpointCommit": "45258179902bc11669d953a25478c9a2e6d54b79"
 }
