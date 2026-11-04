@@ -71,6 +71,33 @@
       "released_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
       "cross_candidate_drift": "Cannot bind to new candidate release PR #2598 until accepted SHA and deployment provenance match.",
       "no_new_gate_acceptance": true
+    },
+    "public_ops_disclosure_readback": {
+      "checked_at_utc": "2026-11-04",
+      "read_only_routes": [
+        {
+          "route": "/pt/status",
+          "http_status": 200,
+          "visible_heading": "Verified public incident communication.",
+          "support_content_present": true
+        },
+        {
+          "route": "/pt/vulnerability-disclosure",
+          "http_status": 200,
+          "visible_heading": "Vulnerability Disclosure",
+          "contact_link_present": true,
+          "review_qualification_present": true
+        },
+        {
+          "route": "/pt/sla",
+          "http_status": 200,
+          "visible_heading": "Availability, support and incident handling without unsupported uptime promises.",
+          "support_content_present": true,
+          "review_qualification_present": true
+        }
+      ],
+      "evidence_effect": "Confirms presence of bounded public status, vulnerability intake guidance and SLA disclosures on existing production deployment, not an operational support ticket acknowledgment, on-call rota, incident drill, or acceptance of external SLA obligations.",
+      "formal_gate_acceptance_change": 0
     }
   },
   "qa": {
