@@ -1,0 +1,36 @@
+{
+  "schema": "risck-comply.dat01.node22-negative-source-regressions.v21.1",
+  "observedAt": "2026-11-04T09:36:32.689Z",
+  "gate": "A-12",
+  "atomicControl": "DAT-01",
+  "canonicalParentSha": "2e99a2cbd6a0fd5da55f6c273f3984649e8508bf",
+  "localNodeVersion": "v22.16.0",
+  "testCommand": "node --test scripts/diagnostics/g5-02-sql-hash-proof.test.mjs tests/release/dat01-source-parity-negative.test.mjs",
+  "results": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0
+  },
+  "exactGitBlobs": [
+    {
+      "path": "scripts/diagnostics/g5-02-sql-hash-proof.mjs",
+      "sha": "7b8b15392162e61dc995c7c352f3a0697c518677"
+    },
+    {
+      "path": "scripts/diagnostics/g5-02-sql-hash-proof.test.mjs",
+      "sha": "225c479f71e3b07234f012a63aa1be061f94292f"
+    },
+    {
+      "path": "tests/release/dat01-source-parity-negative.test.mjs",
+      "sha": "75a0b2bd227ae4f41d530059836a2123b6ce6d6a"
+    }
+  ],
+  "new7Tests": "Synthetic complete ledger never grants approval, provider hash tampering, source SQL tampering, non-exact identity review, order/name spoof, untrusted path/hash spoof, absent/incomplete source proof.",
+  "productionSqlRead": false,
+  "providerWrites": 0,
+  "sqlMigrationReplay": "0/137",
+  "ciStatus": "NOT_EXECUTED_ON_THIS_SHA",
+  "formalAccepted": "NO",
+  "independentReview": "PENDING",
+  "notes": "Source fixture-only tests; no confirmed successful exact-SHA CircleCI quality run and no runtime or PostgreSQL replay. Production remains untouched."
+}

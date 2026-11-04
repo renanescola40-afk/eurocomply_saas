@@ -22,3 +22,13 @@ test('retains all required trigger categories', () => {
   assert.match(header, /push:/);
   assert.match(header, /workflow_run:/);
 });
+
+test('only main-branch successful exact-SHA producer completions schedule P0 progress runner jobs', () => {
+  assert.match(header, /workflow_run:\s*[\s\S]*?branches: \[main\]/);
+  assert.match(workflow, /classify-source:\s*\n\s*# [^\n]*\n\s*# [^\n]*\n\s*if: >-/);
+  assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
+  assert.match(workflow, /github\.event\.workflow_run\.head_sha == github\.sha/);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(workflow, /needs\.classify-source\.result == 'success' && needs\.classify-source\.outputs\.authoritative == 'true'/);
+  assert.match(workflow, /artifact_count=.*select\(\.name == \$name and \.expired == false\)/);
+});

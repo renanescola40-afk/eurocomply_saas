@@ -19,6 +19,7 @@ on:
       - Public Production Final
       - Audit Chain Runtime Proof
       - Enterprise Production Gate
+    branches: [main]
     types: [completed]
 
 permissions:

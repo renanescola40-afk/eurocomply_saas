@@ -1,0 +1,27 @@
+{
+  "schema": "risck-comply.provider-readback.vercel-production-identity.v1",
+  "observed_at": "2026-11-01T19:28:00.000Z",
+  "source_system": "Vercel API",
+  "access_mode": "read-only",
+  "production_deployment": {
+    "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "state": "READY",
+    "target": "production",
+    "git_ref": "main",
+    "deployed_commit_sha": "70d3545f414d063379d481fd238aed563e05edda",
+    "project_name": "eurocomply-saas"
+  },
+  "canonical_github_main": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0"
+  },
+  "comparison": {
+    "deployment_matches_current_main": false,
+    "interpretation": "The production deployment is READY but its deployed SHA is older than the current GitHub main SHA. This is a source/deployment identity drift requiring governed release review; no deployment was initiated."
+  },
+  "limitations": [
+    "This readback proves provider-reported deployment identity and state only.",
+    "It does not establish application runtime smoke, customer journey health or approval to deploy.",
+    "No deployment, alias, environment or production setting was changed."
+  ]
+}

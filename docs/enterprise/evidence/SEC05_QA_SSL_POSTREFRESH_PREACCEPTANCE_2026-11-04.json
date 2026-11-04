@@ -1,0 +1,55 @@
+{
+  "schema": "risck-comply.sec05-qa-enforced-ssl-postrefresh-preacceptance.v1",
+  "subject": "SEC-05",
+  "gateId": "A-04",
+  "observedDate": "2026-11-04",
+  "source": {
+    "type": "owner-dashboard-plus-connected-supabase-readback",
+    "qaProjectRef": "zrxrrfbllsxtleyxjpsz",
+    "qaProjectName": "risck-comply-v15c-isolated-qa-20261022",
+    "screenshotToggleEnabled": true,
+    "ownerConfirmedPersistsAfterBrowserRefresh": true,
+    "directManagementAPIReadback": "NOT_AVAILABLE_WITH_CONNECTED_TOOL",
+    "verificationMethodLimits": "Owner-observed dashboard is not a Supabase Management API readback. This JSON is an accountable observation, not independent attestation of configuration."
+  },
+  "qaConnectivityReadback": {
+    "status": "ACTIVE_HEALTHY",
+    "postgresVersion": "17.11.0.003",
+    "sqlReadonlySessionEstablished": true,
+    "sslNegotiated": true,
+    "tlsVersion": "TLSv1.3",
+    "cipher": "TLS_AES_256_GCM_SHA384",
+    "serverSslCapability": "on",
+    "clientConnectionsAtLastReadback": 4,
+    "sslClientConnectionsAtLastReadback": 3,
+    "nonSslTcpConnectionsAtLastReadback": 1,
+    "nonSslNonloopbackConnectionsAtLastReadback": 0,
+    "activeClientObservationTime": "2026-11-04 ~11:27 Europe/Lisbon, approximate",
+    "scope": "instantaneous pg_stat_activity + pg_stat_ssl snapshot, not long-term traffic attestation"
+  },
+  "productionBoundary": {
+    "projectRef": "tganhbbhfxcpblmgqprg",
+    "sslEnforcementPreviouslyOwnerObservedEnabled": false,
+    "configurationChangedByThisExecutor": false,
+    "productionDeploymentOrDatabaseWrites": false
+  },
+  "qaNegativeProbe": {
+    "script": "scripts/security/sec05-qa-nontls-probe.mjs",
+    "scriptBlobSha": "2fa64f30e1c579ef33828a26f4ecaa0f54d568ab",
+    "oneTimeActualQaTest": "INCONCLUSIVE_DNS_UNAVAILABLE_IN_CHATGPT_EXECUTION_ENVIRONMENT",
+    "realQaRejectionEstablished": false,
+    "offlineFixtureTests": "7/7_PASS_WITH_SYNTHETIC_RESPONSES_NOT_LIVE_QA"
+  },
+  "remainingForSEC05": [
+    "trusted runner genuine QA SSL-off startup rejection and QA SSL-on regression",
+    "production enforcement remains off pending distinct owner-approved maintenance operation",
+    "current exact integrated SHA secret scanning and full Node/Next/CI proof",
+    "real production browser bundle inspect without raw secret values",
+    "independent reviewer provider-approved identity and formal accepted gate readback",
+    "provider-backed at-rest encryption attestation for QA and PROD"
+  ],
+  "status": "PREACCEPTANCE_PARTIAL",
+  "accepted": false,
+  "formalGateStatus": "NOT_VERIFIED",
+  "factLimits": "No API flag read, no QA negative proof, no production writes; the status is not a formal gate PASS."
+}

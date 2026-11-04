@@ -149,8 +149,15 @@ export async function GET(request: Request) {
       signature: event.hash_signature ?? undefined,
     })) satisfies AuditChainRecord[];
 
-  const verification = verifyAuditChain(chainRecords, { expectedPreviousHash });
+  const enterpriseSignedVerification = (process.env.RISCK_COMPLY_ENTERPRISE_RELEASE ?? '').trim().toLowerCase() === 'true'
+    || (process.env.RELEASE_TARGET ?? '').trim().toLowerCase() === 'enterprise';
+  const verification = verifyAuditChain(chainRecords, {
+    expectedPreviousHash,
+    ...(enterpriseSignedVerification ? { requireSignatures: true } : {}),
+  });
   const legacyEvents = events.length - chainRecords.length - (anchorEvent?.event_hash ? 1 : 0);
+  // Excluded unhashed records are not accepted as fully verified Enterprise evidence.
+  const integrityVerified = verification.ok && (!enterpriseSignedVerification || legacyEvents === 0);
   const checkedAt = new Date().toISOString();
   const verificationAuditEvent = await createAuditEvent({
     organizationId: organization.id,
@@ -167,7 +174,9 @@ export async function GET(request: Request) {
       legacyEvents,
       anchorEventId: anchorEvent?.id ?? null,
       expectedPreviousHash,
-      ok: verification.ok,
+      ok: integrityVerified,
+      enterpriseSignedVerification,
+      signatureVerificationUnavailable: verification.signatureVerificationUnavailable,
       lastHash: verification.lastHash,
       failureCount: verification.failures.length,
       failureSummary: summarizeFailures(verification.failures),
@@ -192,7 +201,9 @@ export async function GET(request: Request) {
     legacyEvents,
     anchorEventId: anchorEvent?.id ?? null,
     expectedPreviousHash,
-    ok: verification.ok,
+    ok: integrityVerified,
+    enterpriseSignedVerification,
+    signatureVerificationUnavailable: verification.signatureVerificationUnavailable,
     lastHash: verification.lastHash,
     failures: verification.failures,
     verificationAuditEvent: {

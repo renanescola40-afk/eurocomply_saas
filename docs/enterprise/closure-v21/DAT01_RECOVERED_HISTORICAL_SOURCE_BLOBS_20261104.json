@@ -1,0 +1,115 @@
+{
+  "schema": "risck-comply.dat01.immutable-historical-sql-provenance.v1",
+  "observedAt": "2026-11-04T10:21:11.651Z",
+  "candidateHeadBeforeReport": "b6e5594de20cfccfc6d12dcf4aa9fd4b18fa3587",
+  "owner": "Normal Chat Master, additive independent historical source forensic evidence",
+  "subject": "A-12 / DAT-01",
+  "mode": "READ_ONLY",
+  "method": "Read literal production Supabase schema_migrations.statements[1] for one-statement versions and compare exact UTF-8 JavaScript strings to immutable GitHub historical source blob text with exactly one leading LF. Independently read the live provider SHA256 and compare to archived immutable statement hash.",
+  "provider": {
+    "project": "tganhbbhfxcpblmgqprg",
+    "readOnly": true,
+    "ledgerTable": "supabase_migrations.schema_migrations",
+    "frozenHashGitBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26"
+  },
+  "evidence": [
+    {
+      "version": "20260812160405",
+      "name": "harden_security_definer_search_paths",
+      "sourcePath": "supabase/migrations/20260812160405_harden_security_definer_search_paths.sql",
+      "historicalGitCommit": "8359b7a79f06babd93ef58d7ae7ff77380532fe2",
+      "sourceGitBlob": "1deb46599425646bf1d0ea4f919c24de8c94c53d",
+      "sourceCharacterCount": 1907,
+      "providerSqlArrayEntries": 1,
+      "providerStatementUtf8Bytes": 1908,
+      "providerStatementSha256": "f37a8f3989dcc74238f24304dfca7546d0f5baff31127c45187f211ec0d1a7a8",
+      "transformation": "EXACTLY_ONE_LEADING_LF",
+      "comparison": "EXACT_CHARACTER_FOR_CHARACTER_MATCH",
+      "currentCanonicalHashMatch": false,
+      "sourceFileRevisedAfterHistoricalCommit": false
+    },
+    {
+      "version": "20260812225906",
+      "name": "consolidate_canonical_rls_and_client_grants",
+      "sourcePath": "supabase/migrations/20260812225906_consolidate_canonical_rls_and_client_grants.sql",
+      "historicalGitCommit": "807f9fd52919706ecc09af81d40c069f60b83e87",
+      "sourceGitBlob": "a3882820a0a9986d2724b4da69e8d818d33a17f1",
+      "sourceCharacterCount": 12212,
+      "providerSqlArrayEntries": 1,
+      "providerStatementUtf8Bytes": 12213,
+      "providerStatementSha256": "fc4dda32f68424d370138523112e7139e867663122da24f93cf0d032165f45b6",
+      "transformation": "EXACTLY_ONE_LEADING_LF",
+      "comparison": "EXACT_CHARACTER_FOR_CHARACTER_MATCH",
+      "currentCanonicalHashMatch": false,
+      "notes": "Current branch later modified same migration for historical clean-replay compatibility (commit 732a4801360d52ad25f5911914dd3de9ebbe2f58). Preserve both immutable versions and review which is appropriate for isolated replay."
+    }
+  ],
+  "additionalDifferenceClassification": [
+    {
+      "version": "20260807091341",
+      "sourceCommit": "b8e5009e4a933017c10867f15446d2fdf5689fa4",
+      "currentGitBlob": "4aa0d2137406845a799a734039014dddc4db8148",
+      "classification": "LINE_BREAK_FORMAT_ONLY",
+      "details": "Ledger has two-line SQL argument expression; current source joins it into one line, plus terminal empty line. Diff was line-by-line against provider, not cryptographic exact equality.",
+      "exactHashRecovered": false
+    },
+    {
+      "version": "20260812230229",
+      "currentGitBlob": "69d38cce42fe3c8081f9fcc28607f837f8e345be",
+      "classification": "COMMENTS_AND_PLPGSQL_LAYOUT_CHANGED",
+      "details": "Source has added comment and line-wrapped guard expressions relative to stored provider SQL. Requires reviewer equivalence, not credited as exact SQL source.",
+      "exactHashRecovered": false
+    },
+    {
+      "version": "20260813124224",
+      "currentGitBlob": "5033185fc5e33105e03ba48696e45357154303dc",
+      "classification": "TRANSACTION_WRAPPERS_AND_LAYOUT_CHANGED",
+      "details": "Current source includes explicit BEGIN/COMMIT wrapper absent in stored single provider SQL statement; independent replay semantics must be reviewed.",
+      "exactHashRecovered": false
+    },
+    {
+      "version": "20260822120617",
+      "currentGitBlob": "1fde4a94844589874a28c9ca4b8b18d5ce0384ae",
+      "classification": "COMMENTS_ADDED_NOT_EXACT_SOURCE",
+      "details": "Four comment lines and a final empty line are present in canonical source but absent from stored provider SQL. No executable SQL difference found by simple line diff, but no exact hash/source credit.",
+      "exactHashRecovered": false
+    }
+  ],
+  "counts": {
+    "canonicalCurrentExactMappingsChecked": 112,
+    "canonicalCurrentExactSourceHashMatches": 87,
+    "canonicalCurrentMismatches": 25,
+    "historicallyRecoveredImmutableSourceBlobs": 2,
+    "additionalHistoricalRecoveriesDisjointFromCurrentMatches": true,
+    "recoverableByteEquivalentSourceMappingsAtLeast": 89,
+    "sourceIdentitiesStillWithoutExactByteMatch": 23,
+    "nonExactMappingIdentitiesStillNeedingReview": 25,
+    "consolidationsNeedingSemanticsReview": 2,
+    "productionLedgerTotal": 137,
+    "executedIsolatedReplayCount": 0
+  },
+  "cautions": [
+    "Exact current or historical Git source to provider statement text match is not proof of date or provenance of original production apply action.",
+    "Historical Git commit timestamp can be later than migration version; do not infer application date.",
+    "Source match does not authorize replay or guarantee SQL semantics and environment safety.",
+    "Nonexact identity mappings and 2 consolidations remain blocked.",
+    "No formal Enterprise gate accepted and no exact-current-SHA CircleCI PASS."
+  ],
+  "formal": {
+    "gate": "DAT-01",
+    "status": "BLOCKED",
+    "accepted": false,
+    "independentReviewer": "NOT_APPROVED",
+    "formalScoreUnchanged": "2/24",
+    "atomicScoreUnchanged": "2/38"
+  },
+  "operations": {
+    "productionWrites": 0,
+    "qaWrites": 0,
+    "deploys": 0,
+    "CIJobsTriggered": 0,
+    "newCosts": 0,
+    "StripeLiveTransactions": 0,
+    "emails": 0
+  }
+}

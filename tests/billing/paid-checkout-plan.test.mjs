@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-import { normalizePaidCheckoutPlanId, normalizePublicCheckoutPlanId } from '../../src/server/billing/paid-checkout-plan.ts';
+import { normalizePaidCheckoutPlanId, normalizePublicCheckoutPlanId } from '../../src/lib/billing/paid-checkout-plan.ts';
 
 test('accepts canonical Essential/Professional plan IDs and their non-misleading legacy names', () => {
   assert.equal(normalizePaidCheckoutPlanId('essential'), 'starter');
@@ -94,6 +94,10 @@ test('signup, login, onboarding and middleware never upgrade free/basic URL inte
     readFile(new URL('../../src/middleware.ts', import.meta.url), 'utf8'),
   ]);
   assert.ok(signup.includes('getBillingPlan(normalizePublicCheckoutPlanId(planId))?.id'));
+  for (const client of [signup, login]) {
+    assert.ok(client.includes("from '@/lib/billing/paid-checkout-plan'"));
+    assert.ok(!client.includes("from '@/server/billing/paid-checkout-plan'"));
+  }
   assert.equal(login.split('getBillingPlan(normalizePublicCheckoutPlanId(planId))?.id').length - 1, 2);
   assert.ok(onboarding.includes('normalizePublicCheckoutPlanId(resolvedSearchParams.plan)'));
   assert.ok(onboarding.includes('if (hasExplicitPlan && !normalizedPublicPlan)'));
@@ -106,3 +110,4 @@ test('signup, login, onboarding and middleware never upgrade free/basic URL inte
   assert.ok(!allowlist.includes("'free'"));
   assert.ok(middleware.includes('CHECKOUT_PLAN_IDS.has(plan)'));
 });
+

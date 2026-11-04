@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import { buildVercelCliInvocation } from './vercel-cli-invocation.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
@@ -44,11 +45,8 @@ function safeUrl(value, { vercelDeployment = false, allowedHostname = null } = {
 }
 
 function runVercel(args, token) {
-  const result = spawnSync('npx', ['--yes', `vercel@${VERCEL_CLI_VERSION}`, ...args, '--token', token, '--yes'], {
-    encoding: 'utf8',
-    env: { ...process.env, VERCEL_TOKEN: token },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const invocation = buildVercelCliInvocation({ args, token, version: VERCEL_CLI_VERSION, env: process.env });
+  const result = spawnSync(invocation.command, invocation.argv, invocation.options);
   return {
     ok: !result.error && result.status === 0,
     exitCode: result.status ?? null,

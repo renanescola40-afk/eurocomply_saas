@@ -74,3 +74,117 @@ test('regression: removing tenant MFA from either helper fails the contract', ()
       /tenant_mfa_satisfied/);
   }
 });
+
+
+// The historical October migration is deliberately immutable. Guard the
+// November forward correction separately so future changes cannot reintroduce
+// auth.uid() UUID casting on Clerk text subjects or strip tenant MFA/role gates.
+const forwardMigration = readFileSync(
+  'supabase/migrations/20261103080000_enterprise_clerk_text_subject_mfa_reconciliation.sql',
+  'utf8',
+);
+
+function forwardWrapperBody(source, helper) {
+  const re = new RegExp('create or replace function app_private\\.' + helper +
+    '\\(p_organization_id uuid\\)([\\s\\S]*?)\\$function\\$;', 'i');
+  const match = source.match(re);
+  assert.ok(match, 'Missing Clerk-safe forward wrapper: ' + helper);
+  return match[1];
+}
+
+function assertForwardClerkWrapper(source, helper, delegated) {
+  const sql = forwardWrapperBody(source, helper);
+  assert.match(sql, /security definer/i);
+  assert.match(sql, /set search_path = pg_catalog/i);
+  assert.match(sql, /p_organization_id is not null/i);
+  assert.match(sql, delegated);
+  assert.doesNotMatch(sql, /auth\.uid\(\)/i);
+  assert.doesNotMatch(sql, /\borganization_members\b/i);
+  assert.doesNotMatch(sql, /current_setting\s*\(/i);
+}
+
+test('forward migration is ordered, transactional and refuses unsafe prerequisites', () => {
+  assert.match(forwardMigration, /^\s*begin\s*;/i);
+  assert.match(forwardMigration, /commit\s*;\s*$/i);
+  for (const dependency of [
+    'app_private.enterprise_member_can_read(uuid)',
+    'app_private.enterprise_member_can_manage(uuid)',
+    'app_private.is_org_member(uuid)',
+    'app_private.has_org_role(uuid,text[])',
+    'public.current_clerk_user_id()',
+    'public.current_legacy_user_id()',
+    'public.tenant_mfa_satisfied(uuid)',
+  ]) {
+    assert.ok(forwardMigration.includes("to_regprocedure('" + dependency + "')"),
+      'Missing dependency preflight: ' + dependency);
+  }
+  assert.match(forwardMigration, /search_path=pg_catalog/);
+  assert.match(forwardMigration, /current_clerk_user_id/);
+  assert.match(forwardMigration, /current_legacy_user_id/);
+  assert.match(forwardMigration, /tenant_mfa_satisfied/);
+  assert.ok(forwardMigration.indexOf('do $preflight$') <
+    forwardMigration.indexOf('create or replace function app_private.enterprise_member_can_read'));
+});
+
+test('forward read and manage wrappers preserve Clerk/UUID-safe membership and roles', () => {
+  assertForwardClerkWrapper(forwardMigration, 'enterprise_member_can_read',
+    /app_private\.is_org_member\(p_organization_id\)/);
+  assertForwardClerkWrapper(forwardMigration, 'enterprise_member_can_manage',
+    /app_private\.has_org_role\(\s*p_organization_id,\s*array\[/);
+  const sql = forwardWrapperBody(forwardMigration, 'enterprise_member_can_manage');
+  for (const role of ['owner', 'admin', 'editor', 'compliance_manager']) {
+    assert.ok(sql.includes("'" + role + "'"), 'Missing manager role: ' + role);
+  }
+});
+
+test('forward helpers stay private, deny anon, and retain authenticated/service grants', () => {
+  for (const helper of ['enterprise_member_can_read', 'enterprise_member_can_manage']) {
+    assert.ok(forwardMigration.includes(
+      'revoke all on function app_private.' + helper + '(uuid) from public, anon;'));
+    assert.ok(forwardMigration.includes(
+      'grant execute on function app_private.' + helper + '(uuid) to authenticated, service_role;'));
+  }
+  assert.match(forwardMigration, /has_function_privilege\('anon', helper_oid, 'EXECUTE'\)/);
+  assert.match(forwardMigration, /Enterprise Clerk-safe helper postcondition failed/);
+  assert.match(forwardMigration, /to_regprocedure\('public\.enterprise_member_can_read\(uuid\)'\) is not null/);
+  assert.match(forwardMigration, /to_regprocedure\('public\.enterprise_member_can_manage\(uuid\)'\) is not null/);
+});
+
+test('regression: removing either canonical membership/role delegation fails contract', () => {
+  const readDelegation = 'and app_private.is_org_member(p_organization_id);';
+  const manageDelegation = 'and app_private.has_org_role(';
+  assert.ok(forwardMigration.includes(readDelegation));
+  assert.ok(forwardMigration.includes(manageDelegation));
+  assert.throws(() => assertForwardClerkWrapper(
+    forwardMigration.replace(readDelegation, 'and true;'),
+    'enterprise_member_can_read', /app_private\.is_org_member\(p_organization_id\)/),
+    { name: 'AssertionError' });
+  assert.throws(() => assertForwardClerkWrapper(
+    forwardMigration.replace(manageDelegation, 'and true /* intentionally invalid */('),
+    'enterprise_member_can_manage', /app_private\.has_org_role\(/),
+    { name: 'AssertionError' });
+});
+
+test('metadata-only MFA audit accepts safe delegated Clerk/UUID guards but detects a removed guard', () => {
+  // This catches a real false NO_GO observed with the November migration:
+  // the historical audit required tenant_mfa_satisfied on the wrapper,
+  // while the new wrappers enforce it through the canonical private helpers.
+  assert.match(audit, /canonical_status as\s*\(/i);
+  for (const expected of [
+    'canonical_security_definer',
+    'canonical_pinned_search_path',
+    'canonical_mfa',
+    'canonical_clerk',
+    'canonical_uuid',
+    'canonical_active_member',
+    'canonical_authenticated_execution',
+    'canonical_anonymous_execution',
+    'app_private.is_org_member(p_organization_id)',
+    'app_private.has_org_role(',
+    'NO_GO_RUNTIME_MFA',
+    'PASS_METADATA_ONLY',
+  ]) assert.ok(audit.includes(expected), 'Missing fail-closed audit guard: ' + expected);
+  assert.match(audit, /not c\.canonical_anonymous_execution/i);
+  assert.match(audit, /and c\.canonical_mfa/i);
+  assert.match(audit, /not anonymous_execution\)=2/i);
+});

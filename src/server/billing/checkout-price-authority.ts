@@ -6,6 +6,7 @@
  * subscription state is mutated. Do not infer authority from product names or
  * client-supplied plan metadata.
  */
+
 /** Validation-only checkout must stay in Stripe TEST. A customer-facing paid
  * checkout may use only Stripe LIVE; never silently downgrade its mode. */
 export function checkoutStripeModeMatchesPurpose(
@@ -22,32 +23,21 @@ export type CheckoutPriceAuthorityInput = {
   expectedInterval?: 'month' | 'year';
 };
 
-type CheckoutStripePrice = {
-  id?: string;
-  livemode?: boolean;
-  active?: boolean;
-  type?: string;
-  currency?: string;
-  unit_amount?: number | null;
-  billing_scheme?: string;
-  recurring?: {
-    interval?: string;
-    interval_count?: number;
-    usage_type?: string;
-  } | null;
-  product?: string | {
-    id?: string;
-    active?: boolean;
-    deleted?: boolean;
-  } | null;
-};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
+/* Stripe's SDK models an expanded Product as Product | DeletedProduct and
+ * exactOptionalPropertyTypes makes that union incompatible with a hand-written
+ * narrower Product shape. Treat provider payload fields as unknown and validate
+ * each required field here so the compile-time bridge does not weaken runtime authority.
+ */
 export type CheckoutPriceAuthorityResult =
   | { ok: true; reason: 'canonical_price_confirmed' }
   | { ok: false; reason: 'mode_unavailable' | 'invalid_catalog_amount' | 'price_mismatch' };
 
 export function validateCheckoutPriceAuthority(
-  price: CheckoutStripePrice | null | undefined,
+  price: unknown,
   contract: CheckoutPriceAuthorityInput,
 ): CheckoutPriceAuthorityResult {
   if (!contract.expectedMode) return { ok: false, reason: 'mode_unavailable' };
@@ -55,30 +45,34 @@ export function validateCheckoutPriceAuthority(
     return { ok: false, reason: 'invalid_catalog_amount' };
   }
 
+  const priceRecord = isRecord(price) ? price : null;
+  const recurring = priceRecord && isRecord(priceRecord.recurring) ? priceRecord.recurring : null;
+  const product = priceRecord && isRecord(priceRecord.product) ? priceRecord.product : null;
+
   if (
-    !price
+    !priceRecord
     || !contract.priceId.startsWith('price_')
-    || price.id !== contract.priceId
-    || price.livemode !== (contract.expectedMode === 'live')
-    || price.active !== true
-    || price.type !== 'recurring'
-    || price.currency?.toLowerCase() !== 'eur'
-    || price.unit_amount !== contract.expectedAmountCents
-    || price.billing_scheme !== 'per_unit'
-    || price.recurring?.interval !== (contract.expectedInterval ?? 'month')
-    || price.recurring?.interval_count !== 1
-    || price.recurring?.usage_type !== 'licensed'
-    || !price.product
-    || typeof price.product === 'string'
-    || price.product.active !== true
-    || price.product.deleted === true
+    || priceRecord.id !== contract.priceId
+    || priceRecord.livemode !== (contract.expectedMode === 'live')
+    || priceRecord.active !== true
+    || priceRecord.type !== 'recurring'
+    || typeof priceRecord.currency !== 'string'
+    || priceRecord.currency.toLowerCase() !== 'eur'
+    || priceRecord.unit_amount !== contract.expectedAmountCents
+    || priceRecord.billing_scheme !== 'per_unit'
+    || !recurring
+    || recurring.interval !== (contract.expectedInterval ?? 'month')
+    || recurring.interval_count !== 1
+    || recurring.usage_type !== 'licensed'
+    || !product
+    || product.active !== true
+    || product.deleted === true
   ) {
     return { ok: false, reason: 'price_mismatch' };
   }
 
   return { ok: true, reason: 'canonical_price_confirmed' };
 }
-
 
 /** A reused hosted Session is safe only if it still contains exactly one
  * canonical base-plan Price with one licensed seat and no additional items. */

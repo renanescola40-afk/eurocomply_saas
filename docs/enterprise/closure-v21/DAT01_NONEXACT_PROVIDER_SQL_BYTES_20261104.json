@@ -1,0 +1,461 @@
+{
+  "schema": "risck-comply.dat01.nonexact-production-sql-provenance.v1",
+  "observedAt": "2026-11-04T11:23:09.415Z",
+  "owner": "Normal Chat Master V21.5",
+  "sourceCandidateSnapshotSha": "75fcb01585108a7af576580593605fcf8bec3e60",
+  "headObservedBeforePublication": "2ea151ac28fa3a2a58ec72789f3b6c2a07d2947c",
+  "inputIntegrity": {
+    "crosswalkPath": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+    "crosswalkGitBlob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+    "providerFrozenPath": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+    "providerFrozenGitBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+    "liveProviderReadbackVerifiedCount": 25,
+    "liveProviderReadbackSha256MatchesFrozen": 25,
+    "liveProviderReadbackSource": "Supabase PROD read-only schema_migrations, pgcrypto SHA256 of LF-joined recorded statements, octet_length and cardinality, no modification"
+  },
+  "comparisonMethod": "GitHub immutable source blobs fetched at candidate SHA, compared full JS strings directly with production schema_migrations.statements[1] (all 25 provider records have exactly 1 statement). Permitted conservative representations: RAW source text, one PREFIX_LF, TRIM_END or PREFIX_LF_TRIM_END, TRIM_BOTH. Exact JS string equality of Unicode scalar values implies matching UTF8 content; provider recorded SHA256 checked independently against frozen evidence. No SQL execution or textual patching.",
+  "counts": {
+    "totalNonExactMappings": 25,
+    "byteEqualCurrentSource": 13,
+    "byteDifferentCurrentSource": 12,
+    "mappingIdentityIndependentReviewStillRequired": 25,
+    "unresolvedSourceBytesIncludingNonExact": 12,
+    "currentExactIdentityByteMatch": 87,
+    "historicalExactIdentityAdditionalRecoveries": 2,
+    "exactIdentityStillUnrecovered": 23,
+    "totalProductionLedger": 137,
+    "consolidatedSourceGroupsNeedingApplyOnceReview": 2,
+    "migrationsReplayed": 0,
+    "formalGatesNewlyAccepted": 0
+  },
+  "identityCaveat": "Matching SQL bytes do not imply equivalent version identity, application chronology, a safe apply-once manifest, equivalence of consolidation groups or an accepted Enterprise gate. None of these 25 are credited to 112 exact_version acceptance.",
+  "records": [
+    {
+      "crosswalkOrder": 68,
+      "productionVersion": "20260831115851",
+      "productionName": "deterministic_commercial_contract_source_precedence",
+      "sourcePath": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+      "sourceGitBlobSha": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+      "mappingClassification": "provider_record_to_canonical_source",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 5795,
+      "providerJoinedSha256": "821d15c0ae6c0a5bbb544153012bd7d6056ebbe1ef20a0e2fabdd77338238b80",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 69,
+      "productionVersion": "20260902193810",
+      "productionName": "reconcile_deterministic_commercial_contract_source_precedence",
+      "sourcePath": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+      "sourceGitBlobSha": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 5924,
+      "providerJoinedSha256": "894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 70,
+      "productionVersion": "20260902193849",
+      "productionName": "reconcile_enterprise_sso_production_runtime",
+      "sourcePath": "supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+      "sourceGitBlobSha": "0aca9099c57aabe9afa5cf240bfe9375a7b7c51c",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 13941,
+      "providerJoinedSha256": "494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 71,
+      "productionVersion": "20260902202558",
+      "productionName": "reconcile_linkedin_marketing_queue_runtime",
+      "sourcePath": "supabase/migrations/20260902162000_linkedin_marketing_queue.sql",
+      "sourceGitBlobSha": "a7864789c6f3b4672d78ebeb8737bc9278c9c02e",
+      "mappingClassification": "provider_record_to_canonical_source",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 2612,
+      "providerJoinedSha256": "88ad165648dcaf47a5984aedcd59b9f2bb30f8316c10e64163b4c10669e29252",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 92,
+      "productionVersion": "20260909230946",
+      "productionName": "reconcile_data_governance_enterprise_foundation",
+      "sourcePath": "supabase/migrations/20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+      "sourceGitBlobSha": "0324110de0279d5619f0b7023f8fc0249f287966",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 7202,
+      "providerJoinedSha256": "0b27879c8931dd9d70f25202c91c258182bad613d3373c49e904949e1dd4435e",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 93,
+      "productionVersion": "20260909231011",
+      "productionName": "harden_data_subject_request_lifecycle",
+      "sourcePath": "supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql",
+      "sourceGitBlobSha": "4c6751127df4dd74f2d1b2ce58ef3b4f8b10500c",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 7437,
+      "providerJoinedSha256": "de6ce60712a80565113b7bc106c6639d7f1bec188d381ec1a9efb157c42d26ed",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 94,
+      "productionVersion": "20260909232229",
+      "productionName": "finalize_backend_only_force_rls_and_trigger_acl",
+      "sourcePath": "supabase/migrations/20260909144000_finalize_backend_only_force_rls_and_trigger_acl.sql",
+      "sourceGitBlobSha": "985b87aab915b76cdb1e00a48110669e277551f6",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 2830,
+      "providerJoinedSha256": "1bc1f8f133c138d72d948ee6b1eccc9243fe51780a4b925b6dba9b731b5b6788",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 104,
+      "productionVersion": "20260924141739",
+      "productionName": "tenant_wide_mfa_terminal",
+      "sourcePath": "supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+      "sourceGitBlobSha": "9591e772493d2dc84893407448927c8e8e7ef6f8",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 2191,
+      "providerJoinedSha256": "023fc0af949877edfc43fd10a12d0b4aa60b8bd884f82330fa07ff0625e1a3fb",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "PREFIX_LF"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 105,
+      "productionVersion": "20260924142553",
+      "productionName": "tenant_mfa_app_private_rls_authority",
+      "sourcePath": "supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+      "sourceGitBlobSha": "4000b04cdf04e465eee4043dbc8e57b543c41b0d",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 1635,
+      "providerJoinedSha256": "47c93b26e13524655ea1905b06d11fc6904f773619389727cc519d655cbac762",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "PREFIX_LF"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 106,
+      "productionVersion": "20260924143358",
+      "productionName": "tenant_mfa_public_rpc_acl_hardening",
+      "sourcePath": "supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+      "sourceGitBlobSha": "d82a1946504bbb9dc3c5f5d6c3312331eeb64f51",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 1804,
+      "providerJoinedSha256": "66fcbd24e9810398b1470ca22ec60f63462830fc1402a7bc8cbbc6fe7ea7d050",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 115,
+      "productionVersion": "20261003220421",
+      "productionName": "fix_team_invitation_acceptance_42702",
+      "sourcePath": "supabase/migrations/20261003221000_fix_team_invitation_acceptance_42702.sql",
+      "sourceGitBlobSha": "763afbeeda820e042a8d8680918c404017cee4db",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 2938,
+      "providerJoinedSha256": "33937e182c16a8cc3d483561214605eee9f5376a7cead13da65f7568cd21f9e1",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "TRIM_END"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 116,
+      "productionVersion": "20261003220519",
+      "productionName": "fix_team_invitation_membership_conflict_42702",
+      "sourcePath": "supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql",
+      "sourceGitBlobSha": "95d287db168e532c07450706f56685ba3347e10f",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 2616,
+      "providerJoinedSha256": "2cdf4141ab8bec955a5838243cd64f5142b670dcc01a7113576596df68a2c9cd",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 117,
+      "productionVersion": "20261004082501",
+      "productionName": "validate_audit_logs_actor_user_fk",
+      "sourcePath": "supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+      "sourceGitBlobSha": "51853c8d20baded57d6da7c54d901dd67aa1727b",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 82,
+      "providerJoinedSha256": "db12bfe5613df5425519632bd17fed43b3f3215c8917b1c2df58b6d55f31ee41",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 118,
+      "productionVersion": "20261004103137",
+      "productionName": "force_rls_sales_console_backend_only",
+      "sourcePath": "supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql",
+      "sourceGitBlobSha": "82c385142c9f4d6ac18dbc62affa75ad9a379096",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 859,
+      "providerJoinedSha256": "85db3506d8a55a24d20be470e0735c4f6227de5624bf1e7b083942e243d8417b",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 121,
+      "productionVersion": "20261006125506",
+      "productionName": "20260721180000_annex_iv_technical_documentation_governance",
+      "sourcePath": "supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql",
+      "sourceGitBlobSha": "62ea5e6eb2e7c93eb81c19e99675b685943ee0c2",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 19000,
+      "providerJoinedSha256": "652786fda5b8b9e78ca40bb02272693987afa2a711eacc32e395d38726fa2c4b",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 122,
+      "productionVersion": "20261006125509",
+      "productionName": "20260721180100_annex_iv_package_section_integrity",
+      "sourcePath": "supabase/migrations/20260721180100_annex_iv_package_section_integrity.sql",
+      "sourceGitBlobSha": "cb53d8749531ce438482a07002fd3f8074c58d88",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 879,
+      "providerJoinedSha256": "a984d66947fe8c0a913907f1460100e612ebcbd68f551f5efa85bf5eb8896100",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 123,
+      "productionVersion": "20261006125511",
+      "productionName": "20260722200000_annex_iv_operational_workflow",
+      "sourcePath": "supabase/migrations/20260722200000_annex_iv_operational_workflow.sql",
+      "sourceGitBlobSha": "e00d5f11c7fcc0d3120749b90988618dd30dbbef",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 9261,
+      "providerJoinedSha256": "ea03f251ec326c93c2d48778b813fe3531d4db94aa65db9677e2db0408009952",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 124,
+      "productionVersion": "20261006125514",
+      "productionName": "20260803133000_article_50_product_integration",
+      "sourcePath": "supabase/migrations/20260803133000_article_50_product_integration.sql",
+      "sourceGitBlobSha": "702a9accd566e17b43b3d318f62a0d02bba39878",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 10168,
+      "providerJoinedSha256": "d56475e7132fb8f0a5d7131763ab44a2d7bed6922e63b80637994bd7239bc9e7",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 125,
+      "productionVersion": "20261006125518",
+      "productionName": "20260803133100_article_50_claim_evidence_constraints",
+      "sourcePath": "supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql",
+      "sourceGitBlobSha": "aadaa1856cb57acb8dac072463c82e8e2b884518",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 1802,
+      "providerJoinedSha256": "3608522681bf77f7f0c2380cd18e5d50b84ff4409976493a5ed513b945d839f9",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 126,
+      "productionVersion": "20261006125623",
+      "productionName": "20261006140000_harden_annex_iv_trigger_function_acl",
+      "sourcePath": "supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql",
+      "sourceGitBlobSha": "640e6f2f7f5b5fd443b70063e56d12dc627125b9",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 532,
+      "providerJoinedSha256": "d5465b63bbce5dadb4636ccd739231947832e90197b399ea356fbc4af0f094be",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 127,
+      "productionVersion": "20261006130430",
+      "productionName": "20261006140500_reconcile_gap_task_reference_integrity",
+      "sourcePath": "supabase/migrations/20261006140500_reconcile_gap_task_reference_integrity.sql",
+      "sourceGitBlobSha": "7b8546ea62b1de88b27a3b872a6206e12c52fe2c",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 1406,
+      "providerJoinedSha256": "a6e961666eacd8c3b2bf1418097863b213e8bbec5bf2129a133e80d7d29174d2",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 128,
+      "productionVersion": "20261010075142",
+      "productionName": "harden_active_membership_governance_read",
+      "sourcePath": "supabase/migrations/20261009210000_harden_active_membership_governance_read.sql",
+      "sourceGitBlobSha": "50083d15b3340dc8106eb4dd75cd5a3067db89f0",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 2064,
+      "providerJoinedSha256": "29bad3ef3fbb77aafc5ef789829f1f41acdcc0d1b4cd91fb2019e81c4b7430c6",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 129,
+      "productionVersion": "20261013133323",
+      "productionName": "fix_enterprise_provision_usage_conflict_ambiguity",
+      "sourcePath": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+      "sourceGitBlobSha": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+      "mappingClassification": "superseded_by_forward_reconciliation",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 9208,
+      "providerJoinedSha256": "6eb4f7dfe9291502bc07fb2404af0bceeba5c9426e95ed7ef7c9f17f55c5d89e",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 130,
+      "productionVersion": "20261013133341",
+      "productionName": "fix_enterprise_provision_usage_update_ambiguity",
+      "sourcePath": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+      "sourceGitBlobSha": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+      "mappingClassification": "superseded_by_forward_reconciliation",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 9231,
+      "providerJoinedSha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6",
+      "sourceTextComparison": {
+        "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    },
+    {
+      "crosswalkOrder": 131,
+      "productionVersion": "20261015205458",
+      "productionName": "enterprise_entitlement_v3_compatibility",
+      "sourcePath": "supabase/migrations/20261015090000_enterprise_entitlement_v3_compatibility.sql",
+      "sourceGitBlobSha": "c16446c0502fe961745102e3a187978f6cbf6692",
+      "mappingClassification": "canonical_name_match",
+      "providerArrayStatementCount": 1,
+      "providerUtf8Bytes": 3635,
+      "providerJoinedSha256": "e9c82b1680d17240bb84a103784706ab7c4c36e6ac3c3eeb8d523090624e519d",
+      "sourceTextComparison": {
+        "result": "BYTE_EQUAL_SOURCE_TEXT",
+        "encoding": "UTF8",
+        "representation": "RAW"
+      },
+      "identityAcceptance": "PENDING_INDEPENDENT_REVIEW"
+    }
+  ],
+  "reviewInstructions": [
+    "Independently verify each source version identity and production-record mapping with manifest-reviewed provenance",
+    "Treat source file duplicates at crosswalk order 68/69 and 129/130 as distinct provider events, not a single valid replay step without qualification",
+    "Do not regenerate or invent historical migrations based on contents",
+    "Review 12 content differences from authentic historical Git sources and provider SQL, not heuristic whitespace rewriting",
+    "Replay only in authorized disposable PostgreSQL 17 after complete 137-entry approved manifest and safety checks"
+  ],
+  "status": {
+    "DAT01": "BLOCKED",
+    "gateA12": "NOT_ACCEPTED",
+    "sourceHashEvidence": "READ_ONLY_DIAGNOSTIC",
+    "isolatedReplay": "0/137",
+    "circleciExactHead": "NOT_VERIFIED",
+    "independentReviewer": "PENDING",
+    "formal": "2/24",
+    "atomic": "2/38"
+  },
+  "safety": {
+    "productionSqlMutation": false,
+    "qaSqlMutation": false,
+    "mainMerge": false,
+    "productionDeployment": false,
+    "paidCircleCiJob": false,
+    "outboundEmail": false,
+    "StripeLiveTransaction": false
+  }
+}

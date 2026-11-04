@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.com/schemas/enterprise-evidence-record.schema.json",
+  "title": "RISCK COMPLY Enterprise Evidence Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "control_id",
+    "gate_id",
+    "evidence_type",
+    "status",
+    "repository",
+    "branch",
+    "commit_sha",
+    "workflow_run_id",
+    "environment",
+    "generated_at",
+    "source_system",
+    "test_command_or_provider_query",
+    "result_summary",
+    "artifact_path",
+    "artifact_sha256",
+    "reproducibility_instructions",
+    "limitations",
+    "reviewer_status",
+    "acceptance_status"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "control_id": {
+      "type": "string",
+      "pattern": "^(SEC|FUN|BIL|DAT|QAT|OPS|TRU)-[0-9]{2}$"
+    },
+    "gate_id": {
+      "type": "string",
+      "pattern": "^A-(0[1-9]|1[0-9]|2[0-4])$"
+    },
+    "evidence_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED",
+        "NOT_VERIFIED",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "repository": {
+      "const": "renanescola40-afk/eurocomply_saas"
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "commit_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "workflow_run_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "environment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_system": {
+      "type": "string",
+      "minLength": 1
+    },
+    "test_command_or_provider_query": {
+      "type": "string",
+      "minLength": 1
+    },
+    "result_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reproducibility_instructions": {
+      "type": "string",
+      "minLength": 1
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reviewer_status": {
+      "enum": [
+        "NOT_REVIEWED",
+        "IN_REVIEW",
+        "ACCEPTED",
+        "REJECTED"
+      ]
+    },
+    "acceptance_status": {
+      "enum": [
+        "NOT_ACCEPTED",
+        "ACCEPTED",
+        "REJECTED"
+      ]
+    },
+    "applicability_rationale": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "accepted_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "accepted_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "PASS"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "reviewer_status": {
+            "const": "ACCEPTED"
+          },
+          "acceptance_status": {
+            "const": "ACCEPTED"
+          },
+          "accepted_by": {
+            "type": "string",
+            "minLength": 1
+          },
+          "accepted_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "NOT_APPLICABLE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "applicability_rationale": {
+            "type": "string",
+            "minLength": 20
+          },
+          "reviewer_status": {
+            "const": "ACCEPTED"
+          },
+          "acceptance_status": {
+            "const": "ACCEPTED"
+          }
+        }
+      }
+    }
+  ]
+}

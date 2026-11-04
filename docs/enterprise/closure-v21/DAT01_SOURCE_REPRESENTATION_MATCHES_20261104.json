@@ -1,0 +1,78 @@
+{
+  "schema": "risck-comply.dat01.source-representation-readonly-triage.v21.2",
+  "observedAt": "2026-11-04T09:46:57.665Z",
+  "baseCandidateSha": "329ca4ea33745143eae5df76f027ee8d599cba6f",
+  "subject": "A-12 / DAT-01",
+  "validatedInSessionBy": "Independent SHA-256 implementation tested against known ABC digest, immutable Git blob source fetch, frozen read-only provider evidence",
+  "frozenEvidence": {
+    "productionStatementLedger": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+    "crosswalk": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+    "totalProviderLedgerVersions": 137,
+    "exactVersionMappings": 112,
+    "nonExactVersionMappings": 25,
+    "consolidationGroups": 2
+  },
+  "sample": {
+    "scope": "First 34 exact-version mappings by crosswalk order, source read-only",
+    "previouslyConfirmedViaSplitStatements": 16,
+    "additionalConfirmedUsingRawRepresentation": 1,
+    "additionalConfirmedUsingOnlyTrimEnd": 2,
+    "minimumVerifiedRepresentations": 19,
+    "notConfirmedInSample": 15,
+    "remainingMappingsNotDirectlyExamined": 103,
+    "reportedSourceRepresentationModes": [
+      "SPLIT_STATEMENTS_LF",
+      "RAW_FILE_SINGLE_LEDGER_ENTRY",
+      "TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY"
+    ],
+    "additionalConfirmed": [
+      {
+        "version": "20260812164435",
+        "name": "lock_stripe_events_processed_backend_only",
+        "matchedBy": "RAW_FILE_SINGLE_LEDGER_ENTRY",
+        "sourceGitBlob": "740e5ca6be924e6812443e6ce11ec28069c1a678",
+        "providerStoredStatementCount": 1,
+        "sourceBytes": 1439,
+        "providerBytes": 1439
+      },
+      {
+        "version": "20260812221912",
+        "name": "reconcile_billing_lifecycle_requests_runtime",
+        "matchedBy": "TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY",
+        "sourceGitBlob": "29266a9a97b2647cb9fb96dec22164b1b4c76a0a",
+        "providerStoredStatementCount": 1,
+        "sourceBytes": 3461,
+        "providerBytes": 3460
+      },
+      {
+        "version": "20260812224650",
+        "name": "tighten_permissions_catalog_authenticated_grants",
+        "matchedBy": "TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY",
+        "sourceGitBlob": "220514e30fbaea3f85340b018dfb9b24ae93179c",
+        "providerStoredStatementCount": 1,
+        "sourceBytes": 3093,
+        "providerBytes": 3092
+      }
+    ],
+    "note": "The first 34 sample was tested across separate runs; the complete 137-row diagnostic has NOT run from an immutable full Git checkout. Some unmatched rows may use different historical SQL or other storage representations. Do not extrapolate."
+  },
+  "localQuality": {
+    "nodeVersion": "v22.16.0",
+    "command": "node --test scripts/diagnostics/g5-02-sql-hash-proof.test.mjs tests/release/dat01-source-parity-negative.test.mjs",
+    "total": 19,
+    "passed": 19,
+    "failed": 0,
+    "sourceTestedGitBlob": "52a5ff8b411d1643533e80deab57ef0b729f0d49",
+    "newNegativeTestGitBlob": "fce3ee758a54a84793743420b02666279f751f91",
+    "testCasesAdded": 5,
+    "confidenceLimit": "Local source-only tests, no exact-head CircleCI validation, no migration execution, no qualified external review"
+  },
+  "noProductionWrite": true,
+  "noQaWrite": true,
+  "noStripeLive": true,
+  "noPaidCircleCIJob": true,
+  "sqlReplay": "0/137",
+  "formalPass": "NOT_GRANTED",
+  "independentReview": "NOT_GRANTED",
+  "next": "Run full 137-row diagnostic in exact SHA checkout, inspect remaining nonmatching historical SQL, evaluate two consolidation semantics and 25 nonexact version identities, complete approved isolated PostgreSQL 17 replay before formal DAT-01 acceptance"
+}
