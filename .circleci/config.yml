@@ -15,6 +15,16 @@ parameters:
     type: boolean
     default: false
 
+  run_pr_head_validation:
+    type: boolean
+    default: false
+  pr_head_branch:
+    type: string
+    default: "none"
+  pr_head_sha:
+    type: string
+    default: "none"
+
   run_actions_recovery:
     type: boolean
     default: false
@@ -80,6 +90,85 @@ jobs:
       - store_artifacts:
           path: artifacts/pr-validation
           destination: pr-validation-exact-sha
+  pr-head-validation:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: medium
+    working_directory: ~/project
+    environment:
+      TARGET_PR_BRANCH: << pipeline.parameters.pr_head_branch >>
+      TARGET_PR_SHA: << pipeline.parameters.pr_head_sha >>
+    steps:
+      - checkout
+      - run:
+          name: Verify allowed PR head and fetch the exact source SHA
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/circleci-pr-validation-20261104"
+            config_sha="$(git rev-parse HEAD)"
+            test -n "${CIRCLE_SHA1:-}" && test "$config_sha" = "$CIRCLE_SHA1"
+            case "$TARGET_PR_BRANCH" in
+              ci/circleci-pr-validation-20261104|dependabot/github_actions/actions/setup-python-7|dependabot/npm_and_yarn/supabase-0f67fd58a4|phase1/security-dat01-v22|acceptance/a18-ops01-review-packet-20261104|acceptance/a09-bil01-review-packet-20261104|acceptance/e5-v25-20261104|test/phase2-evidence-vault-wiring-regex-20261104|normal2/product-enterprise-v18-checkout-price-authority-20261102|agent/v20-delegated-merge-policy-20261103|agent/sec05-client-env-failclosed-20261103) ;;
+              *) echo "Target branch is outside the approved open-PR scope" >&2; exit 1 ;;
+            esac
+            [[ "$TARGET_PR_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Target SHA must be a full lowercase Git SHA" >&2; exit 1; }
+            remote_sha="$(git ls-remote --exit-code origin "refs/heads/$TARGET_PR_BRANCH" | awk '{print $1}')"
+            test "$remote_sha" = "$TARGET_PR_SHA" || { echo "Target SHA does not match the current remote branch head" >&2; exit 1; }
+            git fetch --depth=1 origin "refs/heads/$TARGET_PR_BRANCH"
+            git checkout --detach "$TARGET_PR_SHA"
+            test "$(git rev-parse HEAD)" = "$TARGET_PR_SHA"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "Provider credential is forbidden in source-only PR validation: $key" >&2
+                exit 1
+              fi
+            done
+            mkdir -p artifacts/pr-validation
+            node - <<'NODE'
+            const fs = require('node:fs');
+            fs.writeFileSync('artifacts/pr-validation/identity.json', JSON.stringify({
+              kind: 'RISCK_PR_HEAD_SOURCE_ONLY_VALIDATION',
+              pipelineConfigBranch: process.env.CIRCLE_BRANCH,
+              pipelineConfigSha: process.env.CIRCLE_SHA1,
+              validatedSourceBranch: process.env.TARGET_PR_BRANCH,
+              validatedSourceSha: process.env.TARGET_PR_SHA,
+              productionWrites: 0,
+              providerCredentialsPresent: false
+            }, null, 2) + '\\n');
+            NODE
+      - run:
+          name: Install deterministic dependencies without lifecycle scripts
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Verify lockfile alignment
+          command: npm run security:package-lock
+      - run:
+          name: Lint
+          command: npm run lint
+      - run:
+          name: Typecheck
+          environment:
+            NODE_OPTIONS: --max-old-space-size=3072
+          command: npm run typecheck
+      - run:
+          name: Vitest unit suite
+          command: npm run test -- --reporter=dot
+      - run:
+          name: Evidence Vault upload-recovery regression suite
+          command: node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs
+      - run:
+          name: Run present specialist source regressions
+          command: |
+            set -euo pipefail
+            if [ -f tests/billing/stripe-price-plan-uniqueness.test.mjs ]; then
+              node --experimental-strip-types --test tests/billing/stripe-price-plan-uniqueness.test.mjs
+            fi
+            if [ -f tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs ]; then
+              node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs
+            fi
+      - store_artifacts:
+          path: artifacts/pr-validation
+          destination: validated-pr-head-exact-sha
   synthetic-backup-components:
     machine:
       image: ubuntu-2204:2026.05.1
@@ -883,6 +972,15 @@ workflows:
 # G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
+  pr-head-validation-manual:
+    when: << pipeline.parameters.run_pr_head_validation >>
+    jobs:
+      - pr-head-validation:
+          filters:
+            branches:
+              only:
+                - ci/circleci-pr-validation-20261104
+
   pr-source-validation:
     jobs:
       - pr-source-validation:
