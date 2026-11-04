@@ -1,0 +1,56 @@
+{
+  "schema": "risckcomply.enterprise.phase2.qa-evidence-vault-readonly-observation.v1",
+  "date": "2026-11-04",
+  "source": {
+    "provider": "Supabase QA Postgres through connected service, SELECT only",
+    "projectRef": "zrxrrfbllsxtleyxjpsz",
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "pr": 2605,
+    "branch": "phase2/product-billing-v22",
+    "sourceShaAtObservation": "bfc88fbe73b32a1b3e81b74cfcb42e446538634a"
+  },
+  "observations": {
+    "evidence_rls_force": true,
+    "audit_rls_force": true,
+    "enabled_vault_triggers": 4,
+    "canonical_storage_policies": 2,
+    "evidence_private_bucket": true,
+    "attachment_constraints": 3,
+    "anonymous_no_vault_access": true,
+    "authenticated_no_delete": true,
+    "qa_objects": 0,
+    "qa_items": 0
+  },
+  "reproduce": {
+    "sql": "select\n (select c.relrowsecurity and c.relforcerowsecurity from pg_class c where c.oid='public.evidence_items'::regclass) as evidence_rls_force,\n (select c.relrowsecurity and c.relforcerowsecurity from pg_class c where c.oid='public.evidence_item_audit_events'::regclass) as audit_rls_force,\n (select count(*) from pg_trigger t where t.tgrelid='public.evidence_items'::regclass and not t.tgisinternal and t.tgenabled='O') as enabled_vault_triggers,\n (select count(*) from pg_policies p where p.schemaname='storage' and p.tablename='objects' and p.policyname in ('rls_compliance_evidence_objects_insert_organization','rls_compliance_evidence_objects_select_organization')) as canonical_storage_policies,\n (select coalesce(bool_or(public=false),false) from storage.buckets where id='compliance-evidence') as evidence_private_bucket,\n (select count(*) from pg_constraint where conrelid='public.evidence_items'::regclass and conname in ('evidence_items_attachment_completeness_check','evidence_items_storage_path_contract_check','evidence_items_file_sha256_check')) as attachment_constraints,\n (select not has_table_privilege('anon','public.evidence_items','SELECT') and not has_table_privilege('anon','public.evidence_items','INSERT') and not has_table_privilege('anon','public.evidence_items','UPDATE')) as anonymous_no_vault_access,\n (select not has_table_privilege('authenticated','public.evidence_items','DELETE')) as authenticated_no_delete,\n (select count(*) from storage.objects where bucket_id='compliance-evidence') as qa_objects,\n (select count(*) from public.evidence_items) as qa_items;",
+    "note": "Read-only query; reviewer must independently run and attest with exact QA project."
+  },
+  "boundary": {
+    "doesNotAttestActualAuthenticatedUpload": true,
+    "doesNotAttestCrossTenantDenial": true,
+    "doesNotAttestStorageByteIntegrity": true,
+    "doesNotAttestReportExports": true,
+    "doesNotAttestProviderSignedEvidence": true,
+    "doesNotAcceptFormalGate": true,
+    "independentReviewer": false,
+    "formalGate": "A-07",
+    "atomicControl": "FUN-04",
+    "status": "NOT_VERIFIED"
+  },
+  "localSourceTests": {
+    "passed": 27,
+    "failed": 0,
+    "node": "22.16.0",
+    "scope": "Isolated runtime helper and source-layout fixture tests, not hosted CI or full app suite",
+    "testLogSha256": "8adf18fae695aedb216398aade0004bbce2370527f1a6643d702dacb72f60d95",
+    "helperGitBlobSha": "abd8145c61fe2d22f0ac3035d6262f36db006915",
+    "testGitBlobSha": "79512f74d940b4c34c4871336b1fa4ae9d9d3b02"
+  },
+  "next": [
+    "Integrate and check exact-SHA PR #2605 in candidate through Executor 3",
+    "Run authenticated QA same-tenant successful upload and replay with matching bytes",
+    "Run authenticated QA cross-tenant denial, altered-bytes and nonexistent-object negative paths",
+    "Validate evidence audit event and report output",
+    "Independent reviewer decides A-07 from true QA+CI evidence"
+  ]
+}
