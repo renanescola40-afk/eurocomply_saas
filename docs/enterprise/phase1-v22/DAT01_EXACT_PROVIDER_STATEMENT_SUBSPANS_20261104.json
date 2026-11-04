@@ -4,9 +4,117 @@
   "evidenceBoundary": "READ_ONLY_PROD_SELECT_AND_GITLAB_HISTORICAL_FILE_FETCH",
   "control": "DAT-01",
   "gate": "A-12",
-  "methodology": "For each single-statement applied production ledger version, compare the live provider statement exact JS string against an immutable historical GitLab repository file; record full source SHA256 and exact character offset. No SQL rewriting or whitespace normalization for these two matches.",
+  "methodology": "Compare each live provider-applied SQL statement as an exact UTF-8-decoded JS string with an immutable GitLab historical file and record full-file SHA256 and precise character offsets; no whitespace normalization, rewriting or synthetic statement substitution. An exact subspan is not whole-file source proof or approval to replay.",
   "sourceArchive": "docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json",
   "records": [
+    {
+      "order": 102,
+      "version": "20260922112907",
+      "providerName": "harden_transactional_email_delivery_log_policies_v1",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 1075,
+      "providerStatementSha256": "8bb11aa94e48620561cf74c4e47464b777beb35e7d6ec479368e522ab917c7bd",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "12ab9c5e20299045734a6789e6f948cdcd078cc6",
+        "file": "supabase/migrations/20260922112907_harden_transactional_email_delivery_log_policies_v1.sql",
+        "blobSha1": "1163ec79781783de19dba4bbf5c27d2e5f0eb076",
+        "sourceSha256": "ef303b3081b234e3fcaf84e13b03b5bf3d5284a9926d6f0e8efa1ba4b353bfe7",
+        "sourceCharacterLength": 1199,
+        "sourceByteLength": 1199
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 124,
+        "charEndExclusive": 1199,
+        "matchingCharacters": 1075,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 106,
+      "version": "20260924143358",
+      "providerName": "tenant_mfa_public_rpc_acl_hardening",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 1804,
+      "providerStatementSha256": "66fcbd24e9810398b1470ca22ec60f63462830fc1402a7bc8cbbc6fe7ea7d050",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "46f15c28e6aa5f41f663bb9637c0f5db3c387ef6",
+        "file": "supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+        "blobSha1": "d82a1946504bbb9dc3c5f5d6c3312331eeb64f51",
+        "sourceSha256": "584c9047885d8d9edd39251e6791eb321693ea904cc57ce58e7eb16e28b61cf7",
+        "sourceCharacterLength": 2104,
+        "sourceByteLength": 2104
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 290,
+        "charEndExclusive": 2094,
+        "matchingCharacters": 1804,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 108,
+      "version": "20260929101638",
+      "providerName": "add_critical_fk_indexes_terminal",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 2685,
+      "providerStatementSha256": "d329f40a847a60368b6068d65c668220968869b0561f5313403880155c872bd8",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "4d4830b622b0087153f6c71d146982fe3aa9625c",
+        "file": "supabase/migrations/20260929101638_add_critical_fk_indexes_terminal.sql",
+        "blobSha1": "7ea230bf05a2a70ee39038aa83baeb7e9a550cb8",
+        "sourceSha256": "97c4098ed3a503ea9c34821eabc27c74b936d13a683b222de518c583f0461d09",
+        "sourceCharacterLength": 2783,
+        "sourceByteLength": 2783
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 97,
+        "charEndExclusive": 2782,
+        "matchingCharacters": 2685,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 112,
+      "version": "20261003171225",
+      "providerName": "reconcile_risk_schema_contract",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 1786,
+      "providerStatementSha256": "1186770ebdef087aa24312c2544d19be5f3a1b24787ec6867b8f7667439901d9",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "026748a72728eb3ffa7c993224c9f121f79b5397",
+        "file": "supabase/migrations/20261003171225_reconcile_risk_schema_contract.sql",
+        "blobSha1": "7a3e170a4dae7ee929cfe9b29a04191fef6ff9dd",
+        "sourceSha256": "abd1d601b6d638261f5fcbab76847e7d214a4aca545fea2773be801523ba6575",
+        "sourceCharacterLength": 1804,
+        "sourceByteLength": 1804
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 8,
+        "charEndExclusive": 1794,
+        "matchingCharacters": 1786,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
     {
       "order": 117,
       "version": "20261004082501",
@@ -58,6 +166,33 @@
       },
       "identityQualified": "PENDING",
       "approvedForExecutableReplay": false
+    },
+    {
+      "order": 130,
+      "version": "20261013133341",
+      "providerName": "fix_enterprise_provision_usage_update_ambiguity",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 9231,
+      "providerStatementSha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "6bb79daea8d6dc5bc443d185da0da7e57090bd37",
+        "file": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+        "blobSha1": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+        "sourceSha256": "3c7c75669da736b16f2a150f910881ad4babf59bac3e7f7ab9412970980cad07",
+        "sourceCharacterLength": 12091,
+        "sourceByteLength": 12091
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 663,
+        "charEndExclusive": 9894,
+        "matchingCharacters": 9231,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
     }
   ],
   "guardrails": {
@@ -65,7 +200,7 @@
     "wholeFileSourceProofClaimsAfter": 103,
     "unresolvedWholeFileSourcesBefore": 34,
     "unresolvedWholeFileSourcesAfter": 34,
-    "newProviderStatementSubspanLinks": 2,
+    "newProviderStatementSubspanLinks": 7,
     "independentReviewerApprovals": 0,
     "postgres17Replays": 0,
     "formalGateA12": "BLOCKED",
@@ -77,6 +212,18 @@
     "Qualified review of wrapper/extra source content around matched applied statement and original version identity",
     "Audit historical timestamps without inferring apply time",
     "Do not count a subspan as a whole-file source match or independent replay authorization",
-    "Continue recovering other 32 historically unresolved sources"
-  ]
+    "Continue recovering other 32 historically unresolved sources",
+    "Obtain independent review of five additional immutable-source exact-statement links; four are single-source candidates and version 20261013133341 belongs to CONSOLIDATION_2, whose other linked version remains unproven.",
+    "Do not treat these seven exact subspans as 137/137 replay provenance or change the immutable draft manifest without independent qualification."
+  ],
+  "addendum": {
+    "observedAt": "2026-11-04",
+    "verification": "Five new exact provider-statement subspans reverified against read-only production Supabase schema_migrations and immutable GitLab file refs; no production/QA writes.",
+    "priorExactSubspanRecords": 2,
+    "newExactSubspanRecords": 5,
+    "totalExactSubspanRecords": 7,
+    "qualifiedSourceIdentitiesNew": 0,
+    "wholeSourceProofsNew": 0,
+    "formalPassNew": 0
+  }
 }
