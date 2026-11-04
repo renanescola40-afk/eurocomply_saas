@@ -124,18 +124,7 @@ jobs:
               fi
             done
             mkdir -p artifacts/pr-validation
-            node - <<'NODE'
-            const fs = require('node:fs');
-            fs.writeFileSync('artifacts/pr-validation/identity.json', JSON.stringify({
-              kind: 'RISCK_PR_HEAD_SOURCE_ONLY_VALIDATION',
-              pipelineConfigBranch: process.env.CIRCLE_BRANCH,
-              pipelineConfigSha: process.env.CIRCLE_SHA1,
-              validatedSourceBranch: process.env.TARGET_PR_BRANCH,
-              validatedSourceSha: process.env.TARGET_PR_SHA,
-              productionWrites: 0,
-              providerCredentialsPresent: false
-            }, null, 2) + '\\n');
-            NODE
+            printf '{"kind":"RISCK_PR_HEAD_SOURCE_ONLY_VALIDATION","pipelineConfigBranch":"%s","pipelineConfigSha":"%s","validatedSourceBranch":"%s","validatedSourceSha":"%s","productionWrites":0,"providerCredentialsPresent":false}\\n' "$CIRCLE_BRANCH" "$CIRCLE_SHA1" "$TARGET_PR_BRANCH" "$TARGET_PR_SHA" > artifacts/pr-validation/identity.json
       - run:
           name: Install deterministic dependencies without lifecycle scripts
           command: npm ci --ignore-scripts --no-audit --no-fund
