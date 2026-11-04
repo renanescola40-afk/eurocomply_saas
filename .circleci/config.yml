@@ -251,6 +251,12 @@ jobs:
           name: Application unit tests
           command: npm run test
       - run:
+          name: DAT-01 fail-closed 137-row source manifest consistency (not replay)
+          command: |
+            set -euo pipefail
+            node --test --test-reporter=tap scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs
+            node scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs
+      - run:
           name: Next.js CI build using non-production placeholders
           environment:
             NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
