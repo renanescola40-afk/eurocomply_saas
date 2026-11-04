@@ -165,7 +165,6 @@ test('regression: removing either canonical membership/role delegation fails con
     { name: 'AssertionError' });
 });
 
-
 test('metadata-only MFA audit accepts safe delegated Clerk/UUID guards but detects a removed guard', () => {
   // This catches a real false NO_GO observed with the November migration:
   // the historical audit required tenant_mfa_satisfied on the wrapper,

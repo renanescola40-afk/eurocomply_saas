@@ -1,0 +1,92 @@
+{
+  "schema": "risck-comply.dat01.frozen-git-blob-integrity-evidence.v21.9",
+  "observedAt": "2026-11-04T15:15:46.231Z",
+  "sourceCandidateHeadBeforeEvidenceCommit": "9cde548f37c1d7f15ce42ddf9ada112800c54023",
+  "gate": "A-12",
+  "control": "DAT-01",
+  "rootCause": "Previously installed source-only manifest validator compared internal JSON consistency but did not cryptographically pin the three source snapshots, allowing coordinated evidence edits to remain structurally consistent.",
+  "fix": "Before JSON parsing, compute Git-compatible SHA1 hash-object over raw bytes of each input and require equality to explicit independently checked immutable snapshot blob IDs. Legitimate updates require reviewed pin changes. No external provider or SQL execution.",
+  "artifactGitBlobs": {
+    "validator": {
+      "path": "scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs",
+      "sha": "9975e7774c97742e6ac2de0f057497a3e30cda36",
+      "commit": "21f0cd68cedfdbcb48786bfa65b068db939d4489"
+    },
+    "regressions": {
+      "path": "scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs",
+      "sha": "7651dde1256d123ffa2dbd60d3904973c0bcac20",
+      "commit": "9cde548f37c1d7f15ce42ddf9ada112800c54023"
+    },
+    "manifest": {
+      "path": "docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json",
+      "sha": "a5c0b46c57c134f76da5f22a3f1858b7e1127287"
+    },
+    "crosswalk": {
+      "path": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+      "sha": "3c3d7c83549d08a2a106f70aff51efed71681769"
+    },
+    "productionReadOnlyHashes": {
+      "path": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+      "sha": "8705c36a875058d5fbe97bdd3033fe498426aa26"
+    },
+    "circleCiConfig": {
+      "path": ".circleci/config.yml",
+      "sha": "4eec80b4e8a765d3b256aad1e70a04cbc9f7a6a3",
+      "sourceOnlyJob": "github-actions-recovery-quality",
+      "manualOptInOnly": true
+    }
+  },
+  "testCommand": "node --test scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs",
+  "testRuntime": "v22.16.0",
+  "testSource": "local Git object bytes exact matching two published GitHub blobs",
+  "localTests": {
+    "passed": 18,
+    "failed": 0,
+    "added": 4
+  },
+  "newNegativeProofs": [
+    "frozen manifest altered bytes fail even when parsed values are equivalent",
+    "frozen crosswalk whitespace byte mutation fails",
+    "frozen provider record tampering fails",
+    "invalid Git SHA and unsafe role fail closed"
+  ],
+  "independentManifestReadback": {
+    "total": 137,
+    "uniqueIdentities": 137,
+    "sourceByteMatched": 103,
+    "unresolvedWholeSQLBytes": 34,
+    "nonExactMappingsPendingQualifiedReview": 25,
+    "consolidationGroupsPendingQualifiedReview": 2,
+    "sourceExecutableRows": 0,
+    "postgres17ReplayCompleted": 0
+  },
+  "circleci": {
+    "lastKnownJob": 431,
+    "lastKnownResult": "FAIL",
+    "lastTestedSha": "a272309b875b2ffac24b54032bb184171f5ec35b",
+    "firstFailingStep": "UNKNOWN_NO_AUTHENTICATED_TRANSCRIPT",
+    "currentCandidateQualityRun": "NOT_VERIFIED",
+    "newRunDispatched": false
+  },
+  "acceptance": {
+    "gateA12": "BLOCKED",
+    "newlyAcceptedFormal": 0,
+    "formal": "2/24",
+    "atomic": "2/38",
+    "productionRelease": "NO_GO"
+  },
+  "limitations": [
+    "Git SHA1 pins enforce consistency against committed source-only evidence, not historical provider truth, executable source equivalence or an independent acceptance review.",
+    "Updating frozen evidence is explicitly a code-reviewed change; never auto-update pins to make tests green.",
+    "18 tests were executed locally, not as a verified hosted exact-SHA CircleCI run.",
+    "This artifact is documentary evidence only; no SQL replay or main merge."
+  ],
+  "safety": {
+    "productionWrites": 0,
+    "qaWrites": 0,
+    "StripeLiveCharges": 0,
+    "deploys": 0,
+    "outboundEmails": 0,
+    "paidCiRuns": 0
+  }
+}

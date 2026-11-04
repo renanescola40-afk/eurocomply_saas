@@ -1,0 +1,35 @@
+{
+  "schema": "risck-comply.enterprise-evidence-sha256-manifest.v1",
+  "generated_at": "2026-11-01T19:48:02.506Z",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "source_commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+  "hash_algorithm": "SHA-256",
+  "state": "PARTIAL_PROVIDER_ARTIFACTS_HASHED_CI_REGEN_REQUIRED",
+  "files": [
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
+      "sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34"
+    },
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+      "sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8"
+    },
+    {
+      "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_RLS_FORCE_GRANTS_2026-11-01.json",
+      "sha256": "2d8157a688c9823c743bcc93dd4fea0daaa5aa55c65375017263bf1c31450fbc"
+    }
+  ],
+  "note": "Four archived provider readback records map to the three distinct JSON artifacts. Vercel archival digest corrected in acceptance-only branch using unchanged artifact blob and 2026-11-04 documented recomputation; does not mean current provider re-attestation or independent gate acceptance.",
+  "correction": {
+    "corrected_at": "2026-11-04T14:13:51.478Z",
+    "corrected_entry": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+    "previous_manifest_sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae",
+    "corrected_sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
+    "unchanged_artifact_git_blob_sha1": "886b7c8d768c7160361c8177f28c4e6b9fc4f305",
+    "evidence": "docs/enterprise/closure-v22/EVIDENCE_FACTORY_ARCHIVE_DIGEST_CORRECTION_20261104.json",
+    "reason": "Historical index digest was stale; current unchanged artifact and corrected master index agree. Factual index metadata repair only.",
+    "source_sha_invariant": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+    "does_not_prove_provider_readback_again": true,
+    "formally_accepted_gates_delta": 0
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "risck-comply.evidence-factory.archived-artifact-index-digest-repair.v1",
+  "date": "2026-11-04",
+  "indexFile": "docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json",
+  "recordId": "EV-OPS-01-VERCEL-PRODUCTION-SHA-20261101",
+  "artifactPath": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+  "artifactGitBlobSha1": "886b7c8d768c7160361c8177f28c4e6b9fc4f305",
+  "originalFocusedEvidencePr": 2588,
+  "originalFocusedPrHead": "227e845e508b9069380606c1039c430fff2c34b3",
+  "originalBlobMatchesCurrent": true,
+  "artifactBytes": 1193,
+  "indexSha256Before": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae",
+  "actualSha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
+  "verification": [
+    "Compared original PR #2588 immutable artifact Git blob SHA-1 with canonical PR #2598 and found identical bytes",
+    "Computed SHA-256 on exactly 1193 UTF8 bytes using known-vector-checked independent JavaScript implementation",
+    "Independently computed Python hashlib.sha256 and Git blob SHA-1 for identical 1193 byte content; both matched",
+    "Other two unique artifact files in frozen index matched their existing recorded SHA-256 via known-vector-checked JavaScript"
+  ],
+  "constraints": {
+    "artifactBytesEdited": false,
+    "recordStatusEdited": false,
+    "indexSourceShaEdited": false,
+    "acceptedGateCountEdited": false,
+    "providerReadbackNotReissued": true,
+    "productionWrites": false,
+    "mainMerge": false,
+    "paidCi": false
+  },
+  "result": "REPAIR_ONLY_NOT_NEW_EVIDENCE_OR_ACCEPTANCE",
+  "releaseImplications": "Only repairs incorrect index metadata. Archived NOT_VERIFIED evidence remains frozen and cannot grant new Enterprise PASS; exact candidate SHA, hosted CI and independent review still mandatory."
+}

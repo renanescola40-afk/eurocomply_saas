@@ -1,0 +1,87 @@
+{
+  "schema": "risck-comply.sec05-provider-transport-preacceptance.v1",
+  "subject": "SEC-05",
+  "observedAt": "2026-11-04T08:58:27Z",
+  "owner": "NORMAL_SECURITY_DATA",
+  "gateId": "A-04",
+  "source": {
+    "pr": 2600,
+    "sourceHeadAtReadback": "a00bed55bf285ac8135e0e7e066f96fd1fa90e84",
+    "canonicalPr": 2598,
+    "canonicalHeadAtReadback": "7dfc1cfe67f090a5bc564f91f5c1592c440b3c7d",
+    "clientEnvScannerBlob": "4dc05e480315c31ca0ff75d6e628ec3dd38aacb3",
+    "clientEnvTestsBlob": "2c3d03fc84dbaf0865d1f9154f323363cfad00f4",
+    "exactSHAFullCi": "NOT_VERIFIED",
+    "releasedArtifactMatchesCandidate": false
+  },
+  "vercel": {
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "domain": "www.risckcomply.com",
+    "domainVerified": true,
+    "certificateMetadataReadback": [
+      {
+        "cns": [
+          "www.risckcomply.com"
+        ],
+        "certId": "cert_XW3sDmfrlY4BhgPgfR05nwZz",
+        "expiresAtUnixMs": 1800798467000
+      },
+      {
+        "cns": [
+          "risckcomply.com"
+        ],
+        "certId": "cert_7aPuxbiqEnmOLPeQHtTCAKg6",
+        "expiresAtUnixMs": 1800693384000
+      }
+    ],
+    "productionDeploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "productionDeploymentSha": "70d3545f414d063379d481fd238aed563e05edda",
+    "productionReadyAtReadback": true,
+    "metadataEnvironmentVariablesWithoutDecryption": true,
+    "completeEnvInventory": false,
+    "productionBrowserBundleInspected": false,
+    "directHandshakeObserved": false,
+    "directHandshakeReason": "execution runtime DNS lookup failed; provider certificate metadata only"
+  },
+  "supabase": {
+    "qa": {
+      "projectId": "zrxrrfbllsxtleyxjpsz",
+      "observedConnectionEncrypted": true,
+      "tlsVersion": "TLSv1.3",
+      "cipher": "TLS_AES_256_GCM_SHA384"
+    },
+    "production": {
+      "projectId": "tganhbbhfxcpblmgqprg",
+      "observedConnectionEncrypted": true,
+      "tlsVersion": "TLSv1.3",
+      "cipher": "TLS_AES_256_GCM_SHA384"
+    },
+    "postgresNonTlsClientsRejected": "NOT_VERIFIED",
+    "apiHttpsPolicySource": "https://supabase.com/docs/guides/security/tls",
+    "atRestEncryptionProviderPolicySource": "https://supabase.com/legal/privacy-resources/data-residency-and-transfers-faq",
+    "perProjectAtRestConfigurationAttestation": "NOT_VERIFIED",
+    "providerPolicyIsNotPerProjectAudit": true
+  },
+  "mandatoryRemainingEvidence": [
+    "exact-SHA source scanners, Gitleaks history, logs and client boundaries PASS",
+    "exact built JavaScript browser bundle checked for server-side values",
+    "complete redacted provider environment inventory and secret access review",
+    "verify PostgreSQL SSL enforcement against non-TLS clients without production mutation",
+    "reviewed transport/storage provider attestation and TLS handshake",
+    "qualified independent review, criterion-specific formal verifier and acceptance readback"
+  ],
+  "stage": "PREACCEPTANCE_PROVIDER_PARTIAL",
+  "evidenceVerified": false,
+  "accepted": false,
+  "formalGateStatus": "NOT_VERIFIED",
+  "productionReleaseAuthorized": false,
+  "secretsReadOrPrinted": false,
+  "productionWritesOrDeployments": false,
+  "knownLimitations": [
+    "Only the current SQL sessions' TLS was observed; SSL enforcement was not tested",
+    "Vercel certificate metadata does not prove a direct TLS handshake from this runner",
+    "Provider policy statements are general, not independent tenant-specific at-rest audit",
+    "CI workflow failure state is not source test failure; no exact passed result",
+    "Production binary bundles and complete secret env inventory were not examined"
+  ]
+}

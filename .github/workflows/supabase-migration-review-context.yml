@@ -3,6 +3,7 @@ name: Supabase Migration Review Context
 on:
   workflow_run:
     workflows: ['Supabase Production Migration Dry Run']
+    branches: [main]
     types: [completed]
 
 permissions:

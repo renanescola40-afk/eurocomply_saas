@@ -19,6 +19,8 @@ export type AuditChainRecord = AuditChainInput & {
 
 export type AuditChainVerificationOptions = {
   expectedPreviousHash?: string | null;
+  /** Fail closed if strict verification has no signing material. */
+  requireSignatures?: boolean;
 };
 
 const AUDIT_CHAIN_ALGORITHM = 'sha256';
@@ -95,6 +97,8 @@ export function buildAuditChainRecord(input: AuditChainInput, previousHash: stri
 export function verifyAuditChain(records: AuditChainRecord[], options: AuditChainVerificationOptions = {}) {
   const failures: Array<{ index: number; id: string; reason: 'previous_hash_mismatch' | 'event_hash_mismatch' | 'signature_mismatch' }> = [];
   const initialPreviousHash = options.expectedPreviousHash ?? null;
+  const signatureVerificationUnavailable = options.requireSignatures === true
+    && !(process.env.AUDIT_CHAIN_SIGNING_SECRET ?? '').trim();
 
   records.forEach((record, index) => {
     const expectedPreviousHash = index === 0 ? initialPreviousHash : records[index - 1]?.eventHash ?? null;
@@ -117,7 +121,8 @@ export function verifyAuditChain(records: AuditChainRecord[], options: AuditChai
   });
 
   return {
-    ok: failures.length === 0,
+    ok: failures.length === 0 && !signatureVerificationUnavailable,
+    signatureVerificationUnavailable,
     failures,
     checked: records.length,
     lastHash: records.at(-1)?.eventHash ?? null,

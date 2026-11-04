@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { isAddOnCheckoutEnabled } from '@/server/billing/add-on-release';
 import { readBillingIdempotencyKey } from '@/server/billing/idempotency';
 import { isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import { normalizePaidCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
 import {
   getAuthoritativeSignedContractPlan,
   hasProcessedLiveStripeSubscriptionAuthority,
@@ -87,7 +88,15 @@ export async function POST(request: Request) {
     }
 
     const plan = parsed.data.plan ? normalizeBillingPlanId(parsed.data.plan) : undefined;
-    if (parsed.data.plan && !plan) return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
+    // Historical 'free'/'basic' identifiers resolve to paid Essential. They
+    // must not be accepted as explicit instructions in ANY billing mutation.
+    // Preserve contract-managed names for existing non-transition workflows.
+    if (
+      parsed.data.plan
+      && (!plan || (isSelfServePlan(plan) && normalizePaidCheckoutPlanId(parsed.data.plan) !== plan))
+    ) {
+      return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
+    }
     if (
       (parsed.data.action === 'upgrade' || parsed.data.action === 'downgrade')
       && (!plan || !isSelfServePlan(plan))

@@ -9,6 +9,7 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { toOnboardingMutationFailure, type OnboardingMutationResult } from '@/lib/onboarding/action-failure';
 import { slugifyOrganization, type OnboardingActivationInput, type OnboardingDraftInput } from '@/lib/onboarding/activation';
 import { getOnboardingPlanIntent } from '@/lib/onboarding/plan-intent';
+import { normalizePublicCheckoutPlanId } from '@/server/billing/paid-checkout-plan';
 import { completeOnboardingActivation, saveOnboardingDraft } from '@/server/actions/onboarding';
 import { createOrganization } from '@/server/actions/organizations';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -174,9 +175,18 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
   ]);
   const safeLocale = getSafeLocale(locale);
   const pricingCopy = getCommercialSurfaceCopy('en').pricing;
-  const planQuery = getPlanQuery(resolvedSearchParams.plan);
-  const requestedPlan = getOnboardingPlanIntent(resolvedSearchParams.plan);
-  const requestedBillingPlan = getBillingPlan(resolvedSearchParams.plan) ?? getBillingPlan('professional')!;
+  // An invalid explicit checkout intent must never silently become paid
+  // Professional or legacy "free"/"basic" becoming paid Essential.
+  const hasExplicitPlan = resolvedSearchParams.plan !== undefined;
+  const normalizedPublicPlan = hasExplicitPlan
+    ? normalizePublicCheckoutPlanId(resolvedSearchParams.plan)
+    : undefined;
+  if (hasExplicitPlan && !normalizedPublicPlan) {
+    redirect(`/${safeLocale}/pricing?checkout=invalid_plan`);
+  }
+  const planQuery = getPlanQuery(normalizedPublicPlan);
+  const requestedPlan = getOnboardingPlanIntent(normalizedPublicPlan);
+  const requestedBillingPlan = getBillingPlan(normalizedPublicPlan) ?? getBillingPlan('professional')!;
   const user = await getCurrentUser();
 
   if (!user) {
@@ -208,7 +218,13 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
 
       const organizationName = String(formData.get('organizationName') ?? '').trim();
       const submittedPlan = String(formData.get('plan') ?? '').trim();
-      const selectedPlan = getBillingPlan(submittedPlan) ?? requestedBillingPlan;
+      const selectedPlan = getBillingPlan(normalizePublicCheckoutPlanId(submittedPlan));
+      if (!selectedPlan) {
+        redirect(getPurchaseContextPath(safeLocale, {
+          planId: requestedBillingPlan.id,
+          error: 'invalid_plan',
+        }));
+      }
 
       if (organizationName.length < 2 || organizationName.length > 120) {
         redirect(getPurchaseContextPath(safeLocale, {
