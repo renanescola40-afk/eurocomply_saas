@@ -1,0 +1,606 @@
+{
+  "schema": "risck-comply.phase3-v22.master-integration-checkpoint.v1",
+  "observedAt": "2026-11-04T12:12:23.158Z",
+  "authoritativeScoreSource": "config/g1-enterprise-scope-v1.json",
+  "checkpointPolicy": "Operational record only; does not edit formal pass statuses, launch CI, change protected governance, or authorize release.",
+  "candidate": {
+    "pullRequest": 2598,
+    "branch": "integration/enterprise-unified-candidate-20261102",
+    "headObservedBeforeCheckpointCommit": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+    "latestCurrentHead": "RESOLVE_BRANCH_HEAD_AT_READ_TIME",
+    "sourceFreezeSha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+    "releaseFreezeCommitSha": "RESOLVE_FROM_COMMIT_CONTAINING_THIS_CHECKPOINT",
+    "freezeStatus": "DOCUMENTATION_ONLY_CHECKPOINT_PENDING_EXACT_HEAD_CI",
+    "headChangesInvalidatePriorCI": true,
+    "needOneSingleCandidate": true
+  },
+  "github": {
+    "main": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+    "canonicalPRDraft": true,
+    "mergeReady": false,
+    "qualifiedReviews": 0,
+    "duplicatePR2595": {
+      "head": "a272309b875b2ffac24b54032bb184171f5ec35b",
+      "relation": "ANCESTOR_OF_CANONICAL",
+      "doubleMergeForbidden": true
+    },
+    "PR2602": {
+      "head": "4ea3d01f1da24c9bc23aec9a0f3ae3c1c8b1ccd2",
+      "sqlBlob": "9a29b2034ec50af5b243800a484d0875717c8e74",
+      "canonicalSameSQLBlob": true
+    },
+    "PR2601": {
+      "delegatedMergeAuthorityActive": false
+    },
+    "actions": {
+      "observedExactHeadRunIds": [
+        41823564035,
+        41823563909,
+        41823564201
+      ],
+      "failedJobsNoSteps": [
+        126552468329,
+        126552468045,
+        126552470381
+      ],
+      "jobLogStorage": "404_BlobNotFound",
+      "classification": "RUNNER_OR_ADMISSION_SUSPECTED_NOT_BILLING_PROVEN_NO_APPLICATION_TEST_EXECUTED"
+    }
+  },
+  "gitlab": {
+    "main": "84a99f813bdce601c119bff27c1d82c5356295d6",
+    "MRs": [
+      2626,
+      2630,
+      2631,
+      2632,
+      2635
+    ],
+    "mergeIntoGitHub": "NONE_VERIFIED_THIS_SESSION",
+    "sourceReviewPending": true
+  },
+  "circleci": {
+    "connector": "NOT_AVAILABLE",
+    "pluginSearch": "NO_CIRCLECI_PLUGIN",
+    "lastInspectedJob": 431,
+    "lastInspectedSha": "a272309b875b2ffac24b54032bb184171f5ec35b",
+    "job431": "FAIL_FIRST_STEP_UNKNOWN_NO_AUTHENTICATED_LOG",
+    "historicalSuccessJob": 426,
+    "historicalSuccessSha": "ab74c8c1d3d98892ffec3212b0ca932d1a735657",
+    "currentReleaseHeadTest": "NOT_VERIFIED",
+    "creditsNow": "NOT_VERIFIED_DO_NOT_DISPATCH",
+    "dispatchedThisSession": 0
+  },
+  "vercel": {
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "teamId": "team_wu3LZI6ReFxO16xipv73GLwG",
+    "production": {
+      "deploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+      "target": "production",
+      "state": "READY",
+      "sha": "70d3545f414d063379d481fd238aed563e05edda"
+    },
+    "qa": {
+      "customEnvironment": "qa",
+      "deploymentId": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+      "state": "READY",
+      "url": "eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app",
+      "exactCandidateSha": "UNKNOWN_METADATA_EMPTY",
+      "safeIsolatedRuntime": "NOT_VERIFIED",
+      "notApprovedForE2E": true
+    },
+    "productionWrites": 0
+  },
+  "dat": {
+    "DAT01": "BLOCKED_REPLAY_0_OF_137",
+    "DAT02": {
+      "qaOrganizations": 2,
+      "prodOrganizations": 266,
+      "missingUsageRows": 0,
+      "counterDrift": 0,
+      "syntheticPostgres": {
+        "legacyChecked": 1,
+        "correctedChecked": 2,
+        "missingDetected": 1,
+        "status": "PASS_SOURCE_QUERY_SEMANTICS_ONLY"
+      }
+    },
+    "DAT03": "NOT_VERIFIED_CONCURRENT_DURABILITY",
+    "DAT04": "NOT_VERIFIED_NATIVE_RESTORE_RTO_RPO",
+    "DAT05": "NOT_VERIFIED_RESTORE_PARITY"
+  },
+  "billing": {
+    "testCatalog": {
+      "canonicalPriceMatches": 6,
+      "noncanonicalActiveProfessionalZeroEuroPerMonth": true,
+      "doesNotProveCheckoutUsesZeroPrice": true
+    },
+    "liveCatalog": {
+      "canonicalPriceMatches": 6,
+      "otherActivePricesExist": true,
+      "exactProductionEnvironmentBindings": "NOT_REVERIFIED"
+    },
+    "stripeMutations": 0
+  },
+  "acceptance": {
+    "formalHistoricalAccepted": 2,
+    "formalTotal": 24,
+    "formalNewAcceptedThisSession": 0,
+    "atomicHistoricalAccepted": 2,
+    "atomicTotal": 38,
+    "atomicNewAcceptedThisSession": 0,
+    "phase3HistoricalAccepted": 2,
+    "phase3NewAccepted": 0,
+    "phase3Total": 6,
+    "phase3AtomicTotal": 9,
+    "denominatorsImmutable": true
+  },
+  "integrationQueue": [
+    {
+      "priority": 1,
+      "task": "Freeze post-checkpoint commit and prevent unrelated candidate writes",
+      "state": "PENDING_CI"
+    },
+    {
+      "priority": 2,
+      "task": "Recover authenticated CircleCI #431 first failing step and current included credit balance",
+      "state": "BLOCKED_AUTH"
+    },
+    {
+      "priority": 3,
+      "task": "Run one exact-current-head CircleCI source quality and retain security/build artifacts",
+      "state": "BLOCKED_AUTH_CREDITS"
+    },
+    {
+      "priority": 4,
+      "task": "DAT-03 native QA concurrency, rollback, idempotency and audit-chain durability",
+      "state": "PENDING_RUNTIME_TEST"
+    },
+    {
+      "priority": 5,
+      "task": "DAT-01 historical source provenance handoff then isolated 137-row replay and A-14 restore",
+      "state": "BLOCKED_SOURCE_PROVENANCE"
+    },
+    {
+      "priority": 6,
+      "task": "Verify Vercel QA preview exact source and isolated secrets, then authenticated E2E",
+      "state": "BLOCKED_DEPLOYMENT_SHA"
+    },
+    {
+      "priority": 7,
+      "task": "Qualified independent review and gate-specific formal acceptance",
+      "state": "PENDING"
+    },
+    {
+      "priority": 8,
+      "task": "Human owner governed final merge only after checks and approvals",
+      "state": "PENDING"
+    }
+  ],
+  "ledger": [
+    {
+      "GATE_ID": "A-01",
+      "ATOMIC_IDS": [
+        "SEC-01"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_1",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-02",
+      "ATOMIC_IDS": [
+        "SEC-02",
+        "SEC-04"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_1",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-03",
+      "ATOMIC_IDS": [
+        "SEC-03",
+        "SEC-06"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_1",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-04",
+      "ATOMIC_IDS": [
+        "SEC-05"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_1",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-05",
+      "ATOMIC_IDS": [
+        "FUN-01"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_2",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-06",
+      "ATOMIC_IDS": [
+        "FUN-02",
+        "FUN-03"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_2",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-07",
+      "ATOMIC_IDS": [
+        "FUN-04"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_2",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-08",
+      "ATOMIC_IDS": [
+        "FUN-05",
+        "FUN-06"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_2",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-09",
+      "ATOMIC_IDS": [
+        "BIL-01"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_3",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "Historical PASS; current Stripe LIVE/TEST six canonical active price amounts read-only observed; current deployment/env bindings and qualified review still required.",
+      "EVIDENCE_REF": [
+        "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json"
+      ],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "HISTORICAL_PASS_NEW_RELEASE_UNVERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Historical PASS; current Stripe LIVE/TEST six canonical active price amounts read-only observed; current deployment/env bindings and qualified review still required."
+    },
+    {
+      "GATE_ID": "A-10",
+      "ATOMIC_IDS": [
+        "BIL-02",
+        "BIL-03"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_2",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-11",
+      "ATOMIC_IDS": [
+        "BIL-04",
+        "BIL-05"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_2",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-12",
+      "ATOMIC_IDS": [
+        "DAT-01"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_1",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "DAT-01 BLOCKED: nonexact source identities and unresolved SQL statement hashes; canonical replay 0/137.",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "BLOCKED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "DAT-01 BLOCKED: nonexact source identities and unresolved SQL statement hashes; canonical replay 0/137."
+    },
+    {
+      "GATE_ID": "A-13",
+      "ATOMIC_IDS": [
+        "DAT-02",
+        "DAT-03"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_3",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "DAT-02 counter drift QA 2/2 and PROD 266/266 zero observed; native PG read-only synthetic missing-row regression 1/1; DAT-03 concurrency/transaction/audit tests and review missing.",
+      "EVIDENCE_REF": [
+        "scripts/supabase/verify-membership-usage-counter-drift.sql",
+        "docs/enterprise/closure-v20/DAT02_QA_PROD_READONLY_AGGREGATE_20261104.json"
+      ],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "DAT-02 counter drift QA 2/2 and PROD 266/266 zero observed; native PG read-only synthetic missing-row regression 1/1; DAT-03 concurrency/transaction/audit tests and review missing."
+    },
+    {
+      "GATE_ID": "A-14",
+      "ATOMIC_IDS": [
+        "DAT-04",
+        "DAT-05"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_3",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "Restoration RTO/RPO, complete native restore, schema/RLS parity and isolation unverified.",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [
+        "A-12"
+      ],
+      "NEXT_ACTION": "Restoration RTO/RPO, complete native restore, schema/RLS parity and isolation unverified."
+    },
+    {
+      "GATE_ID": "A-15",
+      "ATOMIC_IDS": [
+        "QAT-01"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_4",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-16",
+      "ATOMIC_IDS": [
+        "QAT-02",
+        "QAT-03"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_3",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "Authenticated deployed journey including Stripe TEST webhook and negative paths unverified.",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [
+        "A-05",
+        "A-10",
+        "A-11"
+      ],
+      "NEXT_ACTION": "Authenticated deployed journey including Stripe TEST webhook and negative paths unverified."
+    },
+    {
+      "GATE_ID": "A-17",
+      "ATOMIC_IDS": [
+        "QAT-04"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_3",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "No exact-head CircleCI source/build/preview/QA verified lineage.",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [
+        "A-15",
+        "A-16"
+      ],
+      "NEXT_ACTION": "No exact-head CircleCI source/build/preview/QA verified lineage."
+    },
+    {
+      "GATE_ID": "A-18",
+      "ATOMIC_IDS": [
+        "OPS-01"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_3",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "Historical PASS; Vercel production dpl_CmyiHWky6g41su26PE1nyGwwCS1f READY SHA 70d3545; not candidate SHA.",
+      "EVIDENCE_REF": [
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+      ],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "HISTORICAL_PASS_NEW_RELEASE_UNVERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Historical PASS; Vercel production dpl_CmyiHWky6g41su26PE1nyGwwCS1f READY SHA 70d3545; not candidate SHA."
+    },
+    {
+      "GATE_ID": "A-19",
+      "ATOMIC_IDS": [
+        "OPS-02"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_4",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-20",
+      "ATOMIC_IDS": [
+        "OPS-03",
+        "OPS-04"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_4",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-21",
+      "ATOMIC_IDS": [
+        "OPS-05",
+        "OPS-06"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_4",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-22",
+      "ATOMIC_IDS": [
+        "TRU-01",
+        "TRU-06"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_4",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-23",
+      "ATOMIC_IDS": [
+        "TRU-02",
+        "TRU-03"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_4",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    },
+    {
+      "GATE_ID": "A-24",
+      "ATOMIC_IDS": [
+        "TRU-04",
+        "TRU-05"
+      ],
+      "OWNER_EXECUTOR": "EXECUTOR_4",
+      "RELEASE_SHA": null,
+      "TESTED_SHA": null,
+      "ENVIRONMENT": null,
+      "PROVIDER_RESULT": "NOT_VERIFIED",
+      "EVIDENCE_REF": [],
+      "REVIEWER": null,
+      "FORMAL_STATUS": "NOT_VERIFIED",
+      "DEPENDENCIES": [],
+      "NEXT_ACTION": "Wait for qualified exact-SHA specialist evidence and submit to authorized G1 acceptance procedure"
+    }
+  ],
+  "safety": {
+    "productionDeployments": 0,
+    "productionDataWrites": 0,
+    "QADataWrites": 0,
+    "emails": 0,
+    "stripeWrites": 0,
+    "paidCiDispatches": 0,
+    "mergesToMain": 0
+  },
+  "nextExecutableAction": "Read resulting checkpoint commit SHA and canonical PR head, then keep source frozen; exact-SHA CI requires authenticated CircleCI + verified included credits. Continue safe QA native SQL only; do not mark any new gate PASS."
+}
