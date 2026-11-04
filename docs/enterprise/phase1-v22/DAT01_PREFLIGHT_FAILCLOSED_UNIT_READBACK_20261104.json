@@ -1,0 +1,58 @@
+{
+  "schema": "risck-comply.dat01.phase1-failclosed-provider-preflight-local-evidence.v1",
+  "observedDate": "2026-11-04",
+  "owner": "Executor 1 V22",
+  "gate": "A-12",
+  "control": "DAT-01",
+  "scope": "SOURCE_GUARD_AND_SYNTHETIC_UNIT_TESTS_ONLY",
+  "canonicalBaseAtBranchCreation": "1ec52301e7609dae4f22f334bbc95d29c3463148",
+  "latestObservedCanonical": "e39e72177641d54add5f8fced0f22b2ff860e3fa",
+  "canonicalHasPrimaryReplayGuard": true,
+  "canonicalGuardAnalysis": "Current canonical source already explicitly sets migration_execution_authorized=False on normal return; this branch adds conservative metadata false on error and explicit negative tests for forged approval metadata.",
+  "paths": {
+    "script": "scripts/diagnostics/dat01-provider-provenance-preflight.py",
+    "scriptGitBlob": "99c4234e70d5ce53545c4bd7c1d0b24327f0a2e6",
+    "scriptSha256": "e62d95db276c913d14002a4ed47e45af467a75889fa7b5a01b39b65cfefd4f7f",
+    "tests": "tests/diagnostics/test_dat01_provider_provenance_preflight.py",
+    "testsGitBlob": "51adb0e579550c7a5a01449138eb000a92d3b9b9",
+    "testsSha256": "8c2b1bfd495ed025fcda6f09770494c978144d15bbd7e42ad2287bd7773c45ea"
+  },
+  "execution": {
+    "environment": "isolated local model container, Python 3.13.5",
+    "command": "python3 -m unittest discover -s tests/diagnostics -p 'test_dat01_provider_provenance_preflight.py' -v",
+    "executed": true,
+    "tests": 6,
+    "passed": 6,
+    "failed": 0,
+    "errors": 0,
+    "sourceBlobsComparedToGitHubGitHashObject": true,
+    "testNames": [
+      "test_changed_source_is_blocked",
+      "test_exact_single_statement_sources_pass_preflight_only",
+      "test_forged_provider_approval_flag_does_not_authorize_replay",
+      "test_multi_statement_source_is_not_accepted_by_raw_file_digest",
+      "test_reordered_provider_entries_are_blocked",
+      "test_wrong_provider_identity_is_blocked"
+    ],
+    "additionalCommand": "python3 -m py_compile scripts/diagnostics/dat01-provider-provenance-preflight.py tests/diagnostics/test_dat01_provider_provenance_preflight.py",
+    "syntaxResult": "PASS",
+    "regressionCheck": "Temporarily simulated unsafe migration_execution_authorized=not unverified; at least two tests failed; restored exact Git blob and 6/6 tests passed. This simulation was local only.",
+    "fixtures": "137 synthetic single-statement SQL files, 137 synthetic ledger identities, not production migration data"
+  },
+  "safety": {
+    "productionQueries": 0,
+    "qaQueries": 0,
+    "postgresReplay": 0,
+    "qualifiedIndependentReviewApproved": false,
+    "hostedExactShaCircleCI": "NOT_VERIFIED",
+    "fullRepositoryBuild": "NOT_RUN",
+    "finalPassGranted": false,
+    "sourceProofsArchived": "103/137 claimed",
+    "sourceProofsIndependentAcceptance": "PENDING",
+    "sourceProofsMissing": 34,
+    "replayApproved": 0,
+    "replayExecuted": 0,
+    "gateA12": "BLOCKED"
+  },
+  "nextAction": "Executor 3 to reconcile with canonical already-fixed replay flag, review added negative tests and error-path fail-close, execute hosted exact-SHA tests before integration. No main merge or release."
+}
