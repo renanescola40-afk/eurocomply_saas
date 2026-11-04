@@ -1,0 +1,59 @@
+{
+  "schema": "risck-comply.a18-ops01-review-packet.v1",
+  "generated_at": "2026-11-04T16:50:33.206Z",
+  "gate_id": "A-18",
+  "control_id": "OPS-01",
+  "status": "INDEPENDENT_REVIEW_PENDING",
+  "formal_gate_accepted": false,
+  "acceptance_status": "NOT_ACCEPTED",
+  "candidate_main_commit_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+  "main_merge_from_pr": 2598,
+  "main_merge_time": "2026-11-04T15:34:17Z",
+  "historical_source_control_pass": true,
+  "provider": "Vercel API, authenticated read-only",
+  "production_project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+  "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+  "deployment_state": "READY",
+  "target": "production",
+  "source_git_ref": "main",
+  "deployed_commit_sha": "70d3545f414d063379d481fd238aed563e05edda",
+  "frozen_g1_source_baseline_sha": "70d3545f414d063379d481fd238aed563e05edda",
+  "production_alias": "www.risckcomply.com",
+  "apex_domain": "risckcomply.com",
+  "apex_redirect": "www.risckcomply.com",
+  "deployed_commit_differs_from_current_main": true,
+  "archived_proof_ref": "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json",
+  "archived_proof_git_blob_sha1": "1324e54785328594dff7ab5fd3e60d2bb3866912",
+  "archived_provider_ref": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+  "archived_provider_blob_sha1": "886b7c8d768c7160361c8177f28c4e6b9fc4f305",
+  "archived_provider_sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
+  "source_pr_review": {
+    "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598#pullrequestreview-5771073475",
+    "submitted_by": "renansilva2002-tech",
+    "reviewed_source_sha": "03be0e80d4227bba8b4775f218ba52f5f1d0ed5b",
+    "scope": "GENERAL_SOURCE_PR_APPROVAL_ONLY_NOT_A18_ACCEPTANCE"
+  },
+  "qualified_gate_review": {
+    "status": "NOT_COMPLETED",
+    "reviewer_independence_confirmed": false,
+    "reviewer_expertise_confirmed": false,
+    "approval_url": null,
+    "accepted_at": null,
+    "accepted_sha": null
+  },
+  "required_for_formal_pass": [
+    "Independent qualified reviewer verifies source and live deployment identity",
+    "Reviewer records authentic gate-specific approval on exact accepted SHA",
+    "Hashed gate acceptance artifact and formal index update validated by existing Evidence Factory engine"
+  ],
+  "not_proven": [
+    "Latest merged main deployed to production",
+    "Production runtime smoke or authenticated E2E",
+    "Release GO",
+    "Independent qualified A-18 review completed"
+  ],
+  "code_changes": false,
+  "production_writes": false,
+  "source_registry_modified": false,
+  "official_gate_accepted_delta": 0
+}
