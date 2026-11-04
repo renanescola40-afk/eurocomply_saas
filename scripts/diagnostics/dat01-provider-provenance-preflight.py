@@ -25,7 +25,7 @@ def inspect(root=Path(".")):
         digest=hashlib.sha256(source.read_bytes()).hexdigest()
         if not (entry.get("statement_count")==1 and digest==entry.get("statement_sha256") and digest==entry.get("source_sha256") and source.relative_to(root).as_posix()==entry.get("source_file")):
             unverified.append(str(entry["version"]))
-    return {"status":"BLOCKED" if unverified else "PREFLIGHT_OK","verified":137-len(unverified),"unverified":len(unverified),"migration_execution_authorized":not unverified,"formal_gate_accepted":False,"production_writes":False}
+    return {"status":"BLOCKED" if unverified else "PREFLIGHT_OK","verified":137-len(unverified),"unverified":len(unverified),"migration_execution_authorized":False,"formal_gate_accepted":False,"production_writes":False}
 
 if __name__=="__main__":
     try:
