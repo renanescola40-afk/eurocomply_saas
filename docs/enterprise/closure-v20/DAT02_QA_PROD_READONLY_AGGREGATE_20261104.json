@@ -1,0 +1,73 @@
+{
+  "schema": "risck-comply.enterprise.dat02.qa-prod-aggregate-reconciliation.v1",
+  "observedDate": "2026-11-04",
+  "reason": "Revalidate new source verifier against real QA/PROD aggregate counters after DAT-02 FULL OUTER JOIN correction.",
+  "source": {
+    "candidatePriorToEvidenceCommit": "1e0e2300b16533196dcde30a3b83befd858da928",
+    "sourceFile": "scripts/supabase/verify-membership-usage-counter-drift.sql",
+    "gitBlobSha": "9a29b2034ec50af5b243800a484d0875717c8e74",
+    "specialistSourceSha": "4ea3d01f1da24c9bc23aec9a0f3ae3c1c8b1ccd2",
+    "sourceCodeIntegrated": true
+  },
+  "readback": {
+    "operation": "SELECT aggregate counters only",
+    "transaction": "BEGIN READ ONLY; SET LOCAL statement_timeout='5000ms'; ... ROLLBACK;",
+    "access": "Authenticated Supabase SQL connector",
+    "performedBy": "current conversation",
+    "ranAgainstQa": true,
+    "ranAgainstProduction": true,
+    "productionWrites": 0,
+    "qaPersistentWrites": 0,
+    "tenantIdsEmitted": 0,
+    "tests": [
+      {
+        "environment": "QA",
+        "projectId": "zrxrrfbllsxtleyxjpsz",
+        "organizations_checked": 2,
+        "missing_usage_rows": 0,
+        "members_counter_drift": 0,
+        "seat_counter_drift": 0,
+        "admin_counter_drift": 0
+      },
+      {
+        "environment": "PROD",
+        "projectId": "tganhbbhfxcpblmgqprg",
+        "organizations_checked": 266,
+        "missing_usage_rows": 0,
+        "members_counter_drift": 0,
+        "seat_counter_drift": 0,
+        "admin_counter_drift": 0
+      }
+    ]
+  },
+  "quality": {
+    "sourceUnitTests": "5/5 PASS in isolated JS evaluation",
+    "sqlReadback": "2/2 provider reads succeeded",
+    "fullNodeSuite": "NOT_EXECUTED",
+    "fullCircleCi": "NOT_EXECUTED_ON_NEW_SHA",
+    "signedJwtAndStorageE2E": "NOT_VERIFIED",
+    "nativePg17ConcurrentRequestTest": "NOT_EXECUTED",
+    "rollbackAndIdempotentQuota": "NOT_VERIFIED"
+  },
+  "decision": {
+    "DAT_02": "NOT_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE",
+    "DAT_03": "NOT_VERIFIED",
+    "A_13": "NOT_ACCEPTED",
+    "DAT_01": "BLOCKED",
+    "newFormalPass": 0,
+    "independentReviewer": "PENDING",
+    "boundaries": [
+      "Snapshot is not durable transactional integrity proof",
+      "Source migration replay and QA/PROD parity remain separate requirements",
+      "No tenant IDs, rows, secrets or signed credentials exported",
+      "Do not infer completion from all-zero drift"
+    ]
+  },
+  "safety": {
+    "dbMutations": 0,
+    "emails": 0,
+    "paidCITasks": 0,
+    "productionDeploys": 0,
+    "mainMerges": 0
+  }
+}
