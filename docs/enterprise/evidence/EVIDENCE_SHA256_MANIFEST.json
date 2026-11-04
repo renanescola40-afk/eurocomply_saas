@@ -25,7 +25,7 @@
     "corrected_entry": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
     "previous_manifest_sha256": "e5eb5e1d4b407618cd9cc4890332fe40244412b1a2819c190816cf22f5ee5bae",
     "corrected_sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
-    "unchanged_artifact_git_blob_sha1": "886b7c8d768c7160361c8177f28c4e6b9fc4cdeccc97f8",
+    "unchanged_artifact_git_blob_sha1": "886b7c8d768c7160361c8177f28c4e6b9fc4f305",
     "evidence": "docs/enterprise/closure-v22/EVIDENCE_FACTORY_ARCHIVE_DIGEST_CORRECTION_20261104.json",
     "reason": "Historical index digest was stale; current unchanged artifact and corrected master index agree. Factual index metadata repair only.",
     "source_sha_invariant": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
