@@ -97,6 +97,20 @@
       "preflight": "STRUCTURALLY_CONSISTENT_BLOCKED",
       "requireReplayAuthorizationExit": 2,
       "limitation": "Not hosted exact-SHA CircleCI nor a migration replay nor full repository npm suite."
+    },
+    "immutableHistoricalStatementSubspans": {
+      "evidence": "docs/enterprise/phase1-v22/DAT01_EXACT_PROVIDER_STATEMENT_SUBSPANS_20261104.json",
+      "matches": [
+        "20261004082501",
+        "20261004110936"
+      ],
+      "exactProviderStatementSubspansWithinHistoricalGitLabSource": 2,
+      "byteFullSourceProofsAdded": 0,
+      "sourceWholeFileClaimsStill": 103,
+      "missingWholeSourceClaimsStill": 34,
+      "reviewer": "PENDING",
+      "replay": "0/137",
+      "note": "Exactly matching contiguous historical source subspans do not imply identity-qualified whole-file migration replay."
     }
   },
   "acceptance": {
@@ -248,7 +262,7 @@
       "implementation": "New read-only metadata preflight script and six regression tests in focused branch; draft never made executable.",
       "test_command": "node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
       "test_results": "PASS LOCAL SYNTHETIC: node --test 6/6, Node v22.16.0; metadata-only 137/137 real archive checks and 6/6 independent V8 tamper detections. Hosted exact-SHA CircleCI NOT_VERIFIED; SQL replay NOT_EXECUTED.",
-      "provider_readback": "Live PROD SQL metadata matches frozen ledger 137/137 across version, name, statement_count, joined_bytes and SHA256, zero mismatches. QA ledger 7 separate records. 34 source bytes unresolved and replay 0/137. Historical SHA pointer correction: archive SHA ...8c94c53d 404; real source Git blob ...1ae57ae3 verified by direct Git blob fetch and live SQL exact-text with one LF. Two historical entries independently revalidated; unchanged 103/137.; GitLab path-scoped commit history located for all 34 unresolved identities (33 distinct source paths), none newly upgraded to source-byte proof; historical evidence artifact linked.",
+      "provider_readback": "Live PROD SQL metadata matches frozen ledger 137/137 across version, name, statement_count, joined_bytes and SHA256, zero mismatches. QA ledger 7 separate records. 34 source bytes unresolved and replay 0/137. Historical SHA pointer correction: archive SHA ...8c94c53d 404; real source Git blob ...1ae57ae3 verified by direct Git blob fetch and live SQL exact-text with one LF. Two historical entries independently revalidated; unchanged 103/137.; GitLab path-scoped commit history located for all 34 unresolved identities (33 distinct source paths), none newly upgraded to source-byte proof; historical evidence artifact linked.; two exact immutable GitLab source subspan == live PROD SQL statement matches for ledger versions 20261004082501 and 20261004110936, not whole-file source byte proof.",
       "negative_test_evidence": "Source proof claims 103/137 archived, 34 unresolved; 0 approved reviewer signatures; no SQL replay; wrong-order/hash/premature-replay tests added.",
       "remaining_blocker": "Revalidate all 103 source bytes against provider, recover 34, independent identity review 25, two consolidation groups, approved manifest, PG17 137/137 isolated replay, validator PASS; qualified reviewer to reconcile incorrect historical source blob identity pointer.",
       "status": "BLOCKED"
