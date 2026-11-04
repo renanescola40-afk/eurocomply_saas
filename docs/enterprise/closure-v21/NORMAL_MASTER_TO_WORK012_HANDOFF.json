@@ -1,13 +1,13 @@
 {
-  "schema": "risck-comply.work012-recovery-handoff.v21.5",
+  "schema": "risck-comply.work012-recovery-handoff.v21.6",
   "createdAt": "2026-11-04T09:14:42.065Z",
   "owner": "NORMAL_CHAT_MASTER_V21.0",
   "canonicalPR": {
     "number": 2598,
     "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
     "branch": "integration/enterprise-unified-candidate-20261102",
-    "headBeforeCheckpointCommit": "b88c55c9052e758d9b132cc8c6c61a5427808189",
-    "headNote": "Read current GitHub PR #2598 or exact Git ref for authoritative SHA; this is source HEAD before publication of V21.5.",
+    "headBeforeCheckpointCommit": "4a55b8181132a223c3fd180396340af9544a8b9d",
+    "headNote": "Pre-checkpoint source HEAD. Fetch current PR #2598 for authoritative HEAD. Never use this for test-status matching.",
     "draft": true,
     "merged": false,
     "approvedReviewsAtObservation": 0,
@@ -113,7 +113,12 @@
     "nonexactSourceAuditCommit": "a69adb51023f4344f6a70f16dcfd444a1d997dd6",
     "nonexactSourceAuditFile": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
     "sourceByteCoverageLowerBound": "102/137 source byte equivalent by current or historically recovered Git evidence; 35 unresolved; NOT replay, NOT approved manifest",
-    "newGatesAcceptedThisTurn": 0
+    "newGatesAcceptedThisTurn": 0,
+    "ledgerBoundDraftManifestCommit": "d055864120a36afaa7c35b9f4f5b396664dd75c9",
+    "ledgerBoundDraftValidatedReadback": "137 records, 137 unique versions, 103 source-byte-proven, 34 unresolved, 0 approved executable, 2 consolidations",
+    "nonexactConsolidationProofPath": "docs/enterprise/closure-v21/DAT01_NONEXACT_CONSOLIDATION_SOURCE_RECOVERY_20261104.json",
+    "localStandaloneManifestValidator": "14/14 synthetic Node22.16.0 tests PASS, prepared locally; NOT integrated into repo as of this checkpoint",
+    "newlyAcceptedFormalGates": 0
   },
   "dat01": {
     "status": "BLOCKED",
@@ -208,7 +213,21 @@
     "nonexactEvidenceGitBlob": "9bd2c328248dc0121fca42af495505438d50179e",
     "baselineSummaryGitBlob": "0ce89409f9e0a64a8e1dc2c2aaf8a35b1b3d9ee6",
     "historicalRecoveryEvidenceGitBlob": "4e015314356b6a9234d87c64323e296b3d346ab4",
-    "byteEvidenceNotReplay": true
+    "byteEvidenceNotReplay": true,
+    "ledgerBoundDraftManifest": "docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json",
+    "ledgerBoundDraftManifestGitBlob": "a5c0b46c57c134f76da5f22a3f1858b7e1127287",
+    "manifestRows": 137,
+    "manifestUniqueVersions": 137,
+    "manifestByteSourceProofEntries": 103,
+    "manifestBytesUnresolved": 34,
+    "manifestAllowedExecutableRows": 0,
+    "manifestIndependentReviewer": "PENDING",
+    "nonexactHistoricalAlternativeRecovery": "supabase/migrations/20260831100000_deterministic_commercial_contract_source_precedence.sql",
+    "nonexactHistoricalByteSourcesRecoverable": 14,
+    "nonexactUnrecoveredSourceBytes": 11,
+    "identityReviewPending": 25,
+    "consolidationSourceReview": "docs/enterprise/closure-v21/DAT01_NONEXACT_CONSOLIDATION_SOURCE_RECOVERY_20261104.json",
+    "secondConsolidationHistory": "20261013133323 vs 20261013133341 differ in UPDATE alias qualification; 20261013133341 provider SQL exact substring of canonical forward source"
   },
   "auditChainIndependentReadback": {
     "scope": "production metadata READ ONLY",
@@ -286,7 +305,7 @@
     "paidCITasks": false,
     "StripeLiveTransactions": false
   },
-  "nextExecutableAction": "Identify historic immutable Git blobs or vendor migration archive for 23 exact and 12 nonexact SQL byte divergences; independently verify all 25 nonexact version identities and 2 consolidation apply-once semantics; only then qualify executable 137-row manifest for isolated PostgreSQL17 replay. In parallel retrieve authenticated CircleCI #431 first failing command from Work/owner; no exact SHA CircleCI PASS or release GO.",
-  "updatedAt": "2026-11-04T11:24:31.663Z",
+  "nextExecutableAction": "Integrate and run locally tested manifest draft validator against full repo (14 synthetic tests PASS; GitHub integration PENDING), then resolve 34 missing source byte equivalences and obtain 25 nonexact identity and 2 consolidation independent reviews. After approved 137-row executable manifest, perform disposable PostgreSQL 17 replay. CircleCI #431 first failure still unknown without authenticated logs. No main merge/production changes.",
+  "updatedAt": "2026-11-04T11:38:15.629Z",
   "previousV21CheckpointCommit": "45258179902bc11669d953a25478c9a2e6d54b79"
 }
