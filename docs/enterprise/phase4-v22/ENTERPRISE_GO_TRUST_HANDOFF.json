@@ -1,0 +1,432 @@
+{
+  "schema": "risck-comply.enterprise.phase4-v22.handoff.v1",
+  "generated_at_utc": "2026-11-04",
+  "role": "Executor 4: independent preparatory review; NOT a qualified legal or security sign-off",
+  "evidence_policy": "Read-only observations must not be treated as formal PASS, and draft text cannot replace provider enforcement, runtime tests or human legal review.",
+  "source": {
+    "github_repo": "renanescola40-afk/eurocomply_saas",
+    "main_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+    "candidate_pr": 2598,
+    "candidate_head_observed": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+    "governance_amendment_pr": 2601,
+    "governance_amendment_head": "a7e92048ddf77aaa832a0cf4dbd037c5c8132d7a",
+    "rollback_pr": 2594,
+    "rollback_head": "58a60e1860a9c90fd03d6641d318148c976027ba",
+    "acceptance_registry": "config/g1-enterprise-scope-v1.json",
+    "grouping": "config/g1-product-ready-24-gates.json",
+    "source_test_sha": null,
+    "source_test_execution": "No Phase-4 acceptance tests executed in this verification; provider API metadata readbacks only"
+  },
+  "formal_snapshot": {
+    "snapshot_source": "main and canonical candidate registry readbacks; no writes to either",
+    "accepted_atomic": 2,
+    "total_atomic": 38,
+    "accepted_gates": 2,
+    "total_gates": 24,
+    "accepted_control_ids": [
+      "BIL-01",
+      "OPS-01"
+    ],
+    "blocked_atomic_ids": [
+      "DAT-01"
+    ],
+    "phase4_accepted_gates": 0,
+    "phase4_total_gates": 6,
+    "phase4_accepted_controls": 0,
+    "phase4_total_controls": 11
+  },
+  "provider_readbacks": {
+    "github": {
+      "main_protected": false,
+      "main_protection_api": "403 Resource not accessible by integration",
+      "rulesets_api": "403 Upgrade to GitHub Pro or make this repository public to enable this feature; private repository",
+      "pr2601": {
+        "state": "open",
+        "draft": true,
+        "head_sha": "a7e92048ddf77aaa832a0cf4dbd037c5c8132d7a",
+        "review_approvals": 0,
+        "mergeable_state": "unstable",
+        "checks_first_page": "Many failures on current head; not acceptance proof"
+      },
+      "pr2598": {
+        "state": "open",
+        "draft": true,
+        "head_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+        "review_approvals": 0,
+        "check_state": "Many failed exact-head GitHub Actions checks; no PASS"
+      },
+      "codeowners": "Only @renanescola40-afk appears for the inspected CODEOWNERS paths; eligible independent non-author review not established",
+      "actions": {
+        "sample_run": 41826352801,
+        "head_sha": "83b512370cf6f29dd956c87d581cb4b79d72af90",
+        "status": "failure",
+        "job_id": 126561955993,
+        "job_name": "build-closeout-plan",
+        "job_steps": null,
+        "job_logs_url": null,
+        "log_download": "BlobNotFound",
+        "classification": "RUNNER_ADMISSION_OR_PROVIDER_BLOCKER_SUSPECTED; GitHub billing causality NOT VERIFIED",
+        "safe_action": "Inspect GitHub Actions billing/usage and run admission in account UI; do not re-run failing jobs without provider diagnosis"
+      },
+      "note": "Branch protected=false does not prove absence of every effective policy; requested direct ruleset/protection detail is unavailable."
+    },
+    "vercel": {
+      "team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+      "project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+      "domain": "www.risckcomply.com",
+      "alias_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+      "alias_deployment_source_sha": "70d3545f414d063379d481fd238aed563e05edda",
+      "alias_deployment_state": "READY",
+      "main_and_candidate_sha_do_not_match_public_alias": true,
+      "runtime_24h": "No runtime errors found in selected 24h window; not proof of monitoring or incident readiness",
+      "runtime_7d": "One Server Action error group, 3 events, /[locale]/book-demo, last seen 2026-10-28T18:08:39Z",
+      "environment_readback": "Project environment variable metadata available; first page and custom QA environment present. No secret values decrypted or negative credential-isolation tests executed.",
+      "runtime_alert_test": "NOT_TESTED",
+      "rollback_rehearsal": "NOT_TESTED",
+      "health_auth_smoke": "NOT_TESTED"
+    },
+    "legal": {
+      "contracting_identity": "Owner-designated draft exists, authoritative registration details not verified in checked evidence",
+      "dpa": "CANONICAL_REVIEW_DRAFT_EXISTS / NOT_YET_EFFECTIVE",
+      "privacy_and_transfer": "Provider role/transfer facts remain partial",
+      "qualified_counsel_approval": "NOT_OBTAINED",
+      "registered_identifiers": "Not copied into this handoff"
+    }
+  },
+  "controls": [
+    {
+      "id": "OPS-02",
+      "gate": "A-19",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "https://api.github.com/repos/renanescola40-afk/eurocomply_saas/branches/main",
+        "https://github.com/renanescola40-afk/eurocomply_saas/pull/2601",
+        "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/41826352801"
+      ],
+      "unmet_requirements": [
+        "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
+        "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails"
+      ],
+      "remediation_owner": "platform/repository owner",
+      "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
+    },
+    {
+      "id": "OPS-03",
+      "gate": "A-20",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "https://vercel.com/renanescola40-afks-projects/eurocomply-saas/CmyiHWky6g41su26PE1nyGwwCS1f",
+        "docs/operations/OBSERVABILITY_SMOKE_TEST.md"
+      ],
+      "unmet_requirements": [
+        "No deployment-bound authenticated customer smoke proof for current production SHA",
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage"
+      ],
+      "remediation_owner": "SRE/operations",
+      "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
+    },
+    {
+      "id": "OPS-04",
+      "gate": "A-20",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/operations/OBSERVABILITY_ALERTS.md",
+        "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
+        "https://vercel.com/renanescola40-afks-projects/eurocomply-saas"
+      ],
+      "unmet_requirements": [
+        "No deployment-bound authenticated customer smoke proof for current production SHA",
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage"
+      ],
+      "remediation_owner": "SRE/operations",
+      "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
+    },
+    {
+      "id": "OPS-05",
+      "gate": "A-21",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
+        "docs/operations/ROLLBACK_RUNBOOK.md"
+      ],
+      "unmet_requirements": [
+        "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted"
+      ],
+      "remediation_owner": "SRE/security",
+      "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
+    },
+    {
+      "id": "OPS-06",
+      "gate": "A-21",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "https://github.com/renanescola40-afk/eurocomply_saas/pull/2594",
+        "docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md"
+      ],
+      "unmet_requirements": [
+        "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted"
+      ],
+      "remediation_owner": "SRE/security",
+      "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
+    },
+    {
+      "id": "TRU-01",
+      "gate": "A-22",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/legal-assurance/LEGAL_ENTITY_FACTS.md",
+        "docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md"
+      ],
+      "unmet_requirements": [
+        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending"
+      ],
+      "remediation_owner": "founder/qualified legal reviewer",
+      "next_executable_action": "Privately verify current authoritative legal-entity facts, chain of title and qualified applicability/signatory acceptance without putting private identifiers in git"
+    },
+    {
+      "id": "TRU-06",
+      "gate": "A-22",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md",
+        "docs/legal-review-preparation/OWNER_FINAL_LEGAL_FACTS_AND_ACCEPTANCE_V7_2026-10-21.md"
+      ],
+      "unmet_requirements": [
+        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending"
+      ],
+      "remediation_owner": "founder/qualified legal reviewer",
+      "next_executable_action": "Privately verify current authoritative legal-entity facts, chain of title and qualified applicability/signatory acceptance without putting private identifiers in git"
+    },
+    {
+      "id": "TRU-02",
+      "gate": "A-23",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/trust/DPA_DRAFT.md",
+        "docs/legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md"
+      ],
+      "unmet_requirements": [
+        "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
+        "Final customer data flow, provider roles, transfer mechanisms, retention/DSR and technical behavior not reconciled and signed off"
+      ],
+      "remediation_owner": "privacy/legal/product",
+      "next_executable_action": "Cross-check versioned Terms, Privacy and DPA with FUN-05, provider evidence and current runtime, obtain qualified legal review and executable DPA/notice decisions"
+    },
+    {
+      "id": "TRU-03",
+      "gate": "A-23",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/trust/SUBPROCESSORS.md",
+        "docs/trust/RETENTION_POLICY_DRAFT.md",
+        "docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md"
+      ],
+      "unmet_requirements": [
+        "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
+        "Final customer data flow, provider roles, transfer mechanisms, retention/DSR and technical behavior not reconciled and signed off"
+      ],
+      "remediation_owner": "privacy/legal/product",
+      "next_executable_action": "Cross-check versioned Terms, Privacy and DPA with FUN-05, provider evidence and current runtime, obtain qualified legal review and executable DPA/notice decisions"
+    },
+    {
+      "id": "TRU-04",
+      "gate": "A-24",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/trust/CLAIMS_AND_COPY_AUDIT.md",
+        "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md"
+      ],
+      "unmet_requirements": [
+        "No qualified signed claim inventory approved for exact released capabilities",
+        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted"
+      ],
+      "remediation_owner": "legal/assurance/procurement",
+      "next_executable_action": "Validate actual EU AI Act assistance claims, current product feature proof, pentest scope, support intake and buyer evidence; obtain qualified release-bound approval"
+    },
+    {
+      "id": "TRU-05",
+      "gate": "A-24",
+      "formal_status": "NOT_VERIFIED",
+      "phase4_verification": "BLOCKED",
+      "reviewer_status": "REVIEW_PENDING",
+      "accepted_by": null,
+      "accepted_at": null,
+      "source_refs": [
+        "docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md",
+        "docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md",
+        "docs/trust/PENTEST_READINESS.md"
+      ],
+      "unmet_requirements": [
+        "No qualified signed claim inventory approved for exact released capabilities",
+        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted"
+      ],
+      "remediation_owner": "legal/assurance/procurement",
+      "next_executable_action": "Validate actual EU AI Act assistance claims, current product feature proof, pentest scope, support intake and buyer evidence; obtain qualified release-bound approval"
+    }
+  ],
+  "gates": [
+    {
+      "id": "A-19",
+      "atomic_controls": [
+        "OPS-02"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "main protected=false; native protection readback forbidden; rulesets API 403 plan restriction",
+        "PR #2601 is draft and not activated; 0 review approvals; required CI on exact head fails"
+      ],
+      "remediation_owner": "platform/repository owner",
+      "next_executable_action": "Establish enforced equivalent no-bypass release policy, restore runnable mandatory checks, obtain eligible independent review and document exact-head merge proof"
+    },
+    {
+      "id": "A-20",
+      "atomic_controls": [
+        "OPS-03",
+        "OPS-04"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "No deployment-bound authenticated customer smoke proof for current production SHA",
+        "No demonstrated end-to-end alert delivery, incident drill or customer-support route; seven-day /book-demo Server Action error cluster needs triage"
+      ],
+      "remediation_owner": "SRE/operations",
+      "next_executable_action": "Run isolated QA synthetic smoke and alert delivery drill; validate named on-call, support intake, remediation and exact-SHA production smoke readback"
+    },
+    {
+      "id": "A-21",
+      "atomic_controls": [
+        "OPS-05",
+        "OPS-06"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "Rollback runbook exists but no isolated executed rollback plus restoration proof bound to accepted release SHA",
+        "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted"
+      ],
+      "remediation_owner": "SRE/security",
+      "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
+    },
+    {
+      "id": "A-22",
+      "atomic_controls": [
+        "TRU-01",
+        "TRU-06"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "Corporate registry/legal identity and authorized signatory proof not attached; software rights chain and qualified applicability conclusion pending"
+      ],
+      "remediation_owner": "founder/qualified legal reviewer",
+      "next_executable_action": "Privately verify current authoritative legal-entity facts, chain of title and qualified applicability/signatory acceptance without putting private identifiers in git"
+    },
+    {
+      "id": "A-23",
+      "atomic_controls": [
+        "TRU-02",
+        "TRU-03"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
+        "Final customer data flow, provider roles, transfer mechanisms, retention/DSR and technical behavior not reconciled and signed off"
+      ],
+      "remediation_owner": "privacy/legal/product",
+      "next_executable_action": "Cross-check versioned Terms, Privacy and DPA with FUN-05, provider evidence and current runtime, obtain qualified legal review and executable DPA/notice decisions"
+    },
+    {
+      "id": "A-24",
+      "atomic_controls": [
+        "TRU-04",
+        "TRU-05"
+      ],
+      "formal_status": "NOT_VERIFIED",
+      "reviewer_status": "REVIEW_PENDING",
+      "blockers": [
+        "No qualified signed claim inventory approved for exact released capabilities",
+        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted"
+      ],
+      "remediation_owner": "legal/assurance/procurement",
+      "next_executable_action": "Validate actual EU AI Act assistance claims, current product feature proof, pentest scope, support intake and buyer evidence; obtain qualified release-bound approval"
+    }
+  ],
+  "go_board": {
+    "internal_enterprise_go": {
+      "status": "NO_GO",
+      "reason": "Only 2/24 formal gates accepted"
+    },
+    "paid_customer_go": {
+      "status": "NO_GO",
+      "reason": "Commercial/legal privacy and operational prerequisites unaccepted; no verified paid release readiness"
+    },
+    "production_release_go": {
+      "status": "NO_GO",
+      "reason": "Exact candidate SHA not deployed or approved; rollback, merge protection, reviews and operational controls not accepted"
+    },
+    "external_procurement_go": {
+      "status": "NO_GO",
+      "reason": "Qualified legal/privacy/assurance approvals and buyer-specific requirements remain outstanding"
+    }
+  },
+  "handoff_to_executor_3": {
+    "integration_branch": "integration/enterprise-unified-candidate-20261102",
+    "write_authority": "Executor 3 only",
+    "request": "Review this standalone evidence PR and merge only under the existing authenticated human-merge and CI policy. Refresh all exact SHAs and provider facts; do not transfer acceptance statuses. When qualified reviewers and negative tests exist, submit each control to the formal validator.",
+    "priority": [
+      "A-19 actual protective enforcement and CI admission (platform owner)",
+      "A-20 QA smoke/alert drill and incident operation proof",
+      "A-21 QA rollback and credential isolation proof",
+      "A-22/A-23/A-24 private legal facts, counsel and procurement review"
+    ],
+    "no_production_writes": true,
+    "no_paid_changes": true,
+    "credentials_in_file": false,
+    "legal_private_documents": "Keep registry extracts, contracts and legal advice outside Git history in access-controlled records."
+  }
+}
