@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Source-only DAT-01 manifest consistency gate. Never executes SQL or grants acceptance.
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
@@ -19,6 +20,27 @@ const EXPECTED = Object.freeze({
   NO_PROVEN_WHOLE_SOURCE_BYTES: 34,
 });
 function requireInvariant(ok, code) { if (!ok) throw Error(`DAT01_MANIFEST_${code}`); }
+
+// These are Git object IDs of the separately reviewed V21.6 evidence snapshots.
+// Any legitimate regeneration requires a deliberate reviewed pin update.
+const FROZEN_INPUTS = Object.freeze({
+  MANIFEST: Object.freeze({ path: 'docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json', blob: 'a5c0b46c57c134f76da5f22a3f1858b7e1127287' }),
+  CROSSWALK: Object.freeze({ path: 'supabase/reconciliation/20261022_production_migration_source_crosswalk.json', blob: '3c3d7c83549d08a2a106f70aff51efed71681769' }),
+  PROVIDER_LEDGER: Object.freeze({ path: 'docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json', blob: '8705c36a875058d5fbe97bdd3033fe498426aa26' }),
+});
+
+// No git executable, network, provider credentials or SQL: hash the bytes actually read.
+export function verifyFrozenGitBlob(input, expectedBlob, role = 'EVIDENCE') {
+  requireInvariant(typeof expectedBlob === 'string' && /^[a-f0-9]{40}$/.test(expectedBlob), 'PIN_FORMAT');
+  requireInvariant(/^[A-Z_]+$/.test(role), 'PIN_ROLE');
+  requireInvariant(Buffer.isBuffer(input) || input instanceof Uint8Array, 'PIN_INPUT');
+  const bytes = Buffer.from(input);
+  const actual = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+  requireInvariant(actual === expectedBlob, `PIN_MISMATCH_${role}`);
+  return actual;
+}
+
+
 
 export function validateDraftManifest(manifest, crosswalk, ledger) {
   requireInvariant(manifest?.schema === 'risck-comply.dat01.ledger-bound-source-provenance-draft.v1', 'SCHEMA');
@@ -82,12 +104,17 @@ export function validateDraftManifest(manifest, crosswalk, ledger) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const root = resolve(process.cwd());
-  const read = path => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
+  const read = (role) => {
+    const snapshot = FROZEN_INPUTS[role];
+    const bytes = readFileSync(resolve(root, snapshot.path));
+    verifyFrozenGitBlob(bytes, snapshot.blob, role);
+    return JSON.parse(bytes.toString('utf8'));
+  };
   try {
     const result = validateDraftManifest(
-      read('docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json'),
-      read('supabase/reconciliation/20261022_production_migration_source_crosswalk.json'),
-      read('docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json')
+      read('MANIFEST'),
+      read('CROSSWALK'),
+      read('PROVIDER_LEDGER')
     );
     process.stdout.write(JSON.stringify(result) + '\n');
   } catch (e) {
