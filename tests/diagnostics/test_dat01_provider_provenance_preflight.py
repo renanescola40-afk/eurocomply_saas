@@ -38,6 +38,7 @@ class ProvenancePreflightTest(unittest.TestCase):
         self.assertEqual(code,0)
         self.assertEqual(report["status"],"PREFLIGHT_OK")
         self.assertEqual(report["verified"],137)
+        self.assertFalse(report["migration_execution_authorized"])
         self.assertFalse(report["formal_gate_accepted"])
         self.assertFalse(report["production_writes"])
 
