@@ -6,7 +6,7 @@
   "publication_scope": "draft_pull_request_only",
   "source_repository": "renanescola40-afk/eurocomply_saas",
   "source_branch": "normal2/product-enterprise-v18-checkout-price-authority-20261102",
-  "source_commit_before_evidence": "ef03bc037788748332291cc2950daa6c1583eb6a",
+  "source_commit_before_evidence": "5c3078cf54906e1cf4b5b86977c83c54ada22b85",
   "formal_acceptance": {
     "owned_gates_accepted": 0,
     "owned_gates_total": 10,
@@ -101,5 +101,38 @@
     "No new spend",
     "No QA credential retrieval",
     "No merge or deployment"
-  ]
+  ],
+  "product_onboarding_source_hardening": {
+    "commit": "5c3078cf54906e1cf4b5b86977c83c54ada22b85",
+    "scope": "middleware, public signup and login, onboarding URL and form-submitted plan authority",
+    "change": "Explicit free/basic customer-supplied plan names no longer resolve to paid Essential; unknown explicit onboarding plans redirect to pricing before auth/tenant access; invalid submitted plan fails closed before organization creation. Legacy persisted aliases remain unchanged.",
+    "source_contract": {
+      "checks": 10,
+      "passed": 10,
+      "failed": 0,
+      "method": "Authenticated GitHub exact-SHA file readbacks and guarded string/ordering contracts"
+    },
+    "functional_parser_test": {
+      "node": "v22.16.0",
+      "tests_passed": 4,
+      "tests_failed": 0,
+      "strict_typescript_passed": true
+    },
+    "exact_parser_blob_sha": "87308fc950d9c9a4c9dc52f98311ba55b8297394",
+    "modified_blob_shas": {
+      "src/middleware.ts": "2aa5ddef2733e6d6bf38eb9d7637e85d6e637357",
+      "src/app/[locale]/login/page.tsx": "9a677e219e6bb18c16eade8e2bd2af00ce5369a4",
+      "src/app/[locale]/signup/page.tsx": "5a14f4147cc040fc0aaaa207f93aaa801753ce27",
+      "src/app/[locale]/onboarding/page.tsx": "0a93f259040d7a9ead0c37ebfcc991dd0979df5b",
+      "tests/billing/paid-checkout-plan.test.mjs": "6eb78eaf00a13c072f57234ac897c9bd60fa213b",
+      "tests/billing/paid-checkout-plan.test.ts": "469911c537e8a4ff998a8419e84085715bf20d66"
+    },
+    "not_verified": [
+      "full repository Vitest",
+      "Next build and lint",
+      "authenticated onboarding/browser E2E",
+      "current exact-SHA CircleCI",
+      "independent gate acceptance"
+    ]
+  }
 }
