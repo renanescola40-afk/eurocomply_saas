@@ -15,7 +15,7 @@
     "phase2BranchCreationBase": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
     "note": "Source changes are scoped to a separate PR; canonical candidate HEAD advanced independently. At latest compare, phase2 branch diverged (6 commits ahead, 2 behind). Executor 3 alone handles integration; no merge here.",
     "candidateHeadAtLatestReadback": "57457c56e4e8a8019987a39d62dfea6c3caa5425",
-    "phase2SourceAfterEvidenceVaultFix": "bc4599c51b43cee1f44e9343b1476a6c1f30f62c",
+    "phase2SourceAfterEvidenceVaultFix": "66166fc7f5133e07e3eef76766e713221de5f676",
     "phase2PullRequest": 2605
   },
   "changedPaths": [
@@ -24,7 +24,8 @@
     "src/lib/evidence/upload-recovery.ts",
     "src/lib/evidence/storage.ts",
     "tests/product/evidence-upload-recovery.test.mjs",
-    "docs/enterprise/phase2-v22/PRODUCT_BILLING_HANDOFF.json"
+    "docs/enterprise/phase2-v22/PRODUCT_BILLING_HANDOFF.json",
+    "docs/enterprise/phase2-v22/EVIDENCE_VAULT_QA_READONLY_PROOF.json"
   ],
   "implementation": {
     "deliverable": "Read-only, fail-closed exact-SHA QA / Supabase / Stripe TEST binding preflight for safe webhook endpoint configuration",
@@ -113,7 +114,7 @@
           "FUN-04"
         ],
         "status": "NOT_VERIFIED",
-        "reason": "Evidence upload retry source fix shipped to PR #2605; QA has no evidence items/objects yet; authenticated positive, negative and report export tests plus review/formal acceptance missing."
+        "reason": "READ-ONLY QA catalog proves FORCE RLS, private Storage, four triggers, three attachment constraints and no anonymous table access; recovery code with 27 local Node tests, but no QA bytes / authenticated E2E upload/retry/tenant-negative/report evidence or hosted CI/independent formal acceptance."
       },
       {
         "gate": "A-08",
@@ -178,31 +179,41 @@
   "evidenceVaultRecovery": {
     "status": "IMPLEMENTED_SOURCE_ONLY_NOT_QA_ACCEPTED",
     "rootCause": "Immutable Evidence Vault attachment metadata is reserved prior to Storage upload. Provider duplicate/lost success responses may strand an attachment and cause non-idempotent retries.",
-    "fix": "On upload error, private download of same tenant/object path with no-store; compare SHA-256 and exact size of stored bytes to original. Only matching bytes are accepted. Otherwise preserve original upload error. No upsert, no relaxation of RLS, no schema migration.",
-    "sourceSha": "bc4599c51b43cee1f44e9343b1476a6c1f30f62c",
+    "fix": "Immutable metadata reserved before Storage upload. For errors and thrown transport failures, private SELECT download of same tenant/object path with no-store; exact SHA-256 and size must match before success. Otherwise rethrow original error. Upsert false and RLS/trigger unchanged.",
+    "sourceSha": "66166fc7f5133e07e3eef76766e713221de5f676",
     "paths": [
       "src/lib/evidence/storage.ts",
       "src/lib/evidence/upload-recovery.ts",
-      "tests/product/evidence-upload-recovery.test.mjs"
+      "tests/product/evidence-upload-recovery.test.mjs",
+      "docs/enterprise/phase2-v22/EVIDENCE_VAULT_QA_READONLY_PROOF.json"
     ],
     "localTest": {
       "node": "22.16.0",
       "command": "node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs tests/billing/phase2-qa-webhook-preflight.test.mjs",
-      "passed": 21,
+      "passed": 27,
       "failed": 0,
-      "scope": "isolated exact Git blob source/test files with local Storage wiring fixture, not a full application checkout",
-      "tapSha256": "cb7b615cd1bdaab7fb9dba78c6fd82144b3d86d0d1864bd73c0db29a7976514f",
-      "helperGitBlobSha": "c0ef96235efacda3503fbf5f1b228347a9ccffe0",
-      "testGitBlobSha": "8009ee1dab9d800411ef95765d271fdb10a86dbe"
+      "scope": "Isolated exact Git blob helper + exact Git blob test and source-layout wiring fixture; not full application checkout or hosted CI",
+      "tapSha256": "8adf18fae695aedb216398aade0004bbce2370527f1a6643d702dacb72f60d95",
+      "helperGitBlobSha": "abd8145c61fe2d22f0ac3035d6262f36db006915",
+      "testGitBlobSha": "79512f74d940b4c34c4871336b1fa4ae9d9d3b02",
+      "sourceGitBlobSha": "a8d6c49813f167190632330c6bed2e52af52afd3",
+      "existingEnterpriseVaultSourceHashStaticContractPreserved": true
     },
     "qaReadOnly": {
       "projectRef": "zrxrrfbllsxtleyxjpsz",
       "evidenceItems": 0,
       "storageObjects": 0,
-      "evidenceVaultUserDefinedTriggers": 4,
+      "evidenceVaultEnabledTriggers": 4,
       "storagePolicies": 2,
+      "privateBucket": true,
+      "evidenceRlsForce": true,
+      "auditRlsForce": true,
+      "attachmentConstraints": 3,
+      "anonymousNoVaultAccess": true,
+      "authenticatedNoDelete": true,
       "authenticatedCrossTenantUploadVerified": false,
       "authenticatedRetryVerified": false,
+      "providerReadbackFile": "docs/enterprise/phase2-v22/EVIDENCE_VAULT_QA_READONLY_PROOF.json",
       "readOnly": true
     },
     "remaining": [
