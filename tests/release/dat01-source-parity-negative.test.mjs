@@ -55,3 +55,54 @@ test('missing and unterminated source SQL remain unverified', () => {
   n.readSource = p => p === broken ? 'select 1' : 'select 1;';
   assert.equal(compareLedger(n).counts.unverified, 1);
 });
+test('whole SQL file stored as one provider ledger element is hash-verifiable', () => {
+  const f=fixture(), source='select 1;\nselect 2;', index=23;
+  f.readSource=p=>p===f.crosswalk.entries[index].source?source:'select 1;';
+  f.provider.rows[index].statement_count=1;
+  f.provider.rows[index].joined_bytes=Buffer.byteLength(source);
+  f.provider.rows[index].joined_statement_sha256=hash(source);
+  const r=compareLedger(f);
+  assert.equal(r.counts.exactMatch,137);
+  assert.equal(r.results[index].matchedBy,'RAW_FILE_SINGLE_LEDGER_ENTRY');
+  assert.equal(r.formalAcceptance,'NOT_GRANTED');
+});
+test('provider single statement trimmed only at end is identified without altering SQL',()=>{
+  const f=fixture(), source='select 1;\nselect 2;\n', index=31;
+  f.readSource=p=>p===f.crosswalk.entries[index].source?source:'select 1;';
+  f.provider.rows[index].statement_count=1;
+  f.provider.rows[index].joined_bytes=Buffer.byteLength(source.trimEnd());
+  f.provider.rows[index].joined_statement_sha256=hash(source.trimEnd());
+  const r=compareLedger(f);
+  assert.equal(r.counts.exactMatch,137);
+  assert.equal(r.results[index].matchedBy,'TRIM_TRAILING_WHITESPACE_SINGLE_LEDGER_ENTRY');
+});
+test('raw-source hash is never accepted for multiple provider array elements',()=>{
+  const f=fixture(),source='select 1;\nselect 2;', index=41;
+  f.readSource=p=>p===f.crosswalk.entries[index].source?source:'select 1;';
+  f.provider.rows[index].statement_count=2;
+  f.provider.rows[index].joined_bytes=Buffer.byteLength(source);
+  f.provider.rows[index].joined_statement_sha256=hash(source);
+  const r=compareLedger(f);
+  assert.equal(r.counts.exactMismatch,1);
+  assert.equal(r.results[index].matchedBy,undefined);
+});
+test('raw-source hash equality does not override SQL lexer integrity errors',()=>{
+  const f=fixture(),source="select 'unterminated;", index=42;
+  f.readSource=p=>p===f.crosswalk.entries[index].source?source:'select 1;';
+  f.provider.rows[index].joined_bytes=Buffer.byteLength(source);
+  f.provider.rows[index].joined_statement_sha256=hash(source);
+  const r=compareLedger(f);
+  assert.equal(r.counts.unverified,1);
+  assert.equal(r.results[index].matchedBy,undefined);
+});
+test('raw-source matching cannot approve nonexact history identity mappings',()=>{
+  const f=fixture(),source='select 1;\nselect 2;', index=36;
+  f.readSource=p=>p===f.crosswalk.entries[index].source?source:'select 1;';
+  f.crosswalk.entries[index].mapping='provider_record_to_canonical_source';
+  f.provider.rows[index].joined_bytes=Buffer.byteLength(source);
+  f.provider.rows[index].joined_statement_sha256=hash(source);
+  const r=compareLedger(f);
+  assert.equal(r.counts.nonExactMatchNeedsReview,1);
+  assert.equal(r.results[index].matchedBy,'RAW_FILE_SINGLE_LEDGER_ENTRY');
+  assert.equal(r.formalAcceptance,'NOT_GRANTED');
+});
