@@ -128,6 +128,38 @@
         "production_basic_health": "2026-11-04T13:44:08Z GET www.risckcomply.com/api/health returned HTTP 200 status ok; no-store",
         "production_deployment_sha": "70d3545f414d063379d481fd238aed563e05edda",
         "effect": "Basic health observable, but QA readiness blocked by missing effective Redis; no new accepted atomic or gate."
+      },
+      "qa_redis_restoration_20261104": {
+        "provider_env": "qa",
+        "qa_custom_env_id": "env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj",
+        "configured_var_count": 20,
+        "upstash_url": "NOT_PRESENT_IN_QA_ENV",
+        "upstash_token": "NOT_PRESENT_IN_QA_ENV",
+        "healthcheck_token": "NOT_PRESENT_IN_QA_ENV",
+        "existing_redis_instance": "NOT_DISCOVERED",
+        "integration_configuration_visibility": "FORBIDDEN_403",
+        "action": "NO_VAR_WRITTEN_BECAUSE_NO_APPROVED_QA_REDIS_CONNECTION_OR_TOKEN",
+        "next_decision": "Use pre-existing separately isolated QA Redis or arrange authorization for new infra before adding encrypted QA-only variables. Do not create a paid resource or reuse Production credentials.",
+        "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
+      },
+      "live_public_trust_20261104": {
+        "routes_verified_200": [
+          "/pt/trust",
+          "/pt/security",
+          "/pt/subprocessors",
+          "/pt/terms",
+          "/pt/privacy",
+          "/pt/data-processing"
+        ],
+        "qualifiers_visible": [
+          "No issued SOC 2 report",
+          "No completed ISO 27001 certification",
+          "Legal Terms and Privacy are review drafts",
+          "Subprocessor/provider legal and transfer facts still require qualified reconciliation"
+        ],
+        "release_sha": "70d3545f414d063379d481fd238aed563e05edda",
+        "evidence_ref": "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json",
+        "formal_effect": "NO_PASS_PUBLIC_DISCLOSURE_ONLY"
       }
     },
     "legal": {
@@ -300,7 +332,8 @@
         "Production/QA/preview environment and credential negative-isolation test not completed; DAT-01 and SEC-05 dependencies unaccepted",
         "Vercel Preview-targeted privileged variable names flagged securityIssues=readable-secret require scoped access/client bundle review; no disclosure or leak established.",
         "Retained production environment preflight status=Open (generated 2026-07-09); no accepted exact-release credential-isolation or provider configuration result.",
-        "QA cannot prove separated runtime dependencies while Upstash Redis is not configured; QA release SHA also not independently attested."
+        "QA cannot prove separated runtime dependencies while Upstash Redis is not configured; QA release SHA also not independently attested.",
+        "QA custom environment lacks UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN and HEALTHCHECK_TOKEN; no approved independently isolated QA Redis instance was discovered and Vercel integration inventory is inaccessible (403)."
       ],
       "remediation_owner": "SRE/security",
       "next_executable_action": "Review PR #2594 and its exact-SHA tests; execute non-production rollback/recover rehearsal and sanitized per-environment negative tests"
@@ -351,7 +384,8 @@
       "accepted_at": null,
       "source_refs": [
         "docs/trust/DPA_DRAFT.md",
-        "docs/legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md"
+        "docs/legal-assurance/LEGAL_PUBLICATION_PROCUREMENT_HANDOFF_V7_2026-10-21.md",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
@@ -371,7 +405,8 @@
       "source_refs": [
         "docs/trust/SUBPROCESSORS.md",
         "docs/trust/RETENTION_POLICY_DRAFT.md",
-        "docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md"
+        "docs/legal-assurance/INTERNATIONAL_TRANSFER_REGISTER.md",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "Canonical DPA is NOT_YET_EFFECTIVE; no qualified accepted version or effective incorporation",
@@ -391,11 +426,13 @@
       "source_refs": [
         "docs/trust/CLAIMS_AND_COPY_AUDIT.md",
         "docs/legal-assurance/CURRENT_LEGAL_AUTHORITY.md",
-        "scripts/security/check-public-claims.mjs"
+        "scripts/security/check-public-claims.mjs",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "No qualified signed claim inventory approved for exact released capabilities",
-        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted"
+        "Buyer packet, security claims, support contact and evidence-indexed procurement commitments lack verified closure; no independent certification claim is permitted",
+        "Published production trust pages visibly avoid unqualified certification and mark Terms/Privacy as review drafts; no complete page-claim inventory or qualified approval on the exact canonical release SHA."
       ],
       "remediation_owner": "legal/assurance/procurement",
       "next_executable_action": "Validate actual EU AI Act assistance claims, current product feature proof, pentest scope, support intake and buyer evidence; obtain qualified release-bound approval"
@@ -411,7 +448,8 @@
       "source_refs": [
         "docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md",
         "docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md",
-        "docs/trust/PENTEST_READINESS.md"
+        "docs/trust/PENTEST_READINESS.md",
+        "docs/enterprise/phase4-v22/PROVIDER_RUNTIME_READBACK_2026-11-04.json"
       ],
       "unmet_requirements": [
         "No qualified signed claim inventory approved for exact released capabilities",
