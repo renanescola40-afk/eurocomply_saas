@@ -89,7 +89,7 @@
     "security:protected-routes": "node scripts/security/check-protected-routes.mjs",
     "security:public-secrets": "STRICT_PUBLIC_SECRET_SCAN=1 node scripts/security/check-public-secrets.mjs",
     "security:production-secrets": "node scripts/security/check-production-secret-readiness.mjs",
-    "security:client-boundaries": "node scripts/security/check-client-boundaries.mjs",
+    "security:client-boundaries": "node --test tests/security/client-env-access.test.mjs && node scripts/security/check-client-boundaries.mjs",
     "security:auth-tokens": "node scripts/security/check-auth-token-validation.mjs",
     "security:authorization-bola": "node scripts/security/check-authorization-bola.mjs",
     "security:server-action-identity": "node scripts/security/check-server-action-identity.mjs",

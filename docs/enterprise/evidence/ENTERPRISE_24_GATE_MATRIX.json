@@ -1,0 +1,312 @@
+{
+  "schema": "risck-comply.enterprise-24-gate-matrix.v1",
+  "source_commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+  "gate_file": "config/g1-product-ready-24-gates.json",
+  "denominator": 24,
+  "gates": [
+    {
+      "gate_id": "A-01",
+      "label": "Authentication lifecycle",
+      "category": "A",
+      "atomic_control_ids": [
+        "SEC-01"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-02",
+      "label": "Server-side role and privileged principal authorization",
+      "category": "A",
+      "atomic_control_ids": [
+        "SEC-02",
+        "SEC-04"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-03",
+      "label": "Tenant isolation, critical risk and audit integrity",
+      "category": "A",
+      "atomic_control_ids": [
+        "SEC-03",
+        "SEC-06"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-04",
+      "label": "Secrets, encryption and client disclosure protection",
+      "category": "A",
+      "atomic_control_ids": [
+        "SEC-05"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-05",
+      "label": "Workspace signup and onboarding",
+      "category": "A",
+      "atomic_control_ids": [
+        "FUN-01"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-06",
+      "label": "AI inventory, risk and accountable governance persistence",
+      "category": "A",
+      "atomic_control_ids": [
+        "FUN-02",
+        "FUN-03"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-07",
+      "label": "Evidence, reporting, export and access control",
+      "category": "A",
+      "atomic_control_ids": [
+        "FUN-04"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-08",
+      "label": "Privacy administration and truthful customer product experience",
+      "category": "A",
+      "atomic_control_ids": [
+        "FUN-05",
+        "FUN-06"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-09",
+      "label": "Canonical Stripe prices and product plan catalog",
+      "category": "A",
+      "atomic_control_ids": [
+        "BIL-01"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-10",
+      "label": "Signed Stripe TEST webhook and persisted Checkout",
+      "category": "A",
+      "atomic_control_ids": [
+        "BIL-02",
+        "BIL-03"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-11",
+      "label": "Subscription lifecycle and authorized entitlements",
+      "category": "A",
+      "atomic_control_ids": [
+        "BIL-04",
+        "BIL-05"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-12",
+      "label": "Reviewed canonical migration replay to isolated QA",
+      "category": "A",
+      "atomic_control_ids": [
+        "DAT-01"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "BLOCKED",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-13",
+      "label": "Atomic membership counters and durable transaction state",
+      "category": "A",
+      "atomic_control_ids": [
+        "DAT-02",
+        "DAT-03"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-14",
+      "label": "Recovery and live database/RLS parity",
+      "category": "A",
+      "atomic_control_ids": [
+        "DAT-04",
+        "DAT-05"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-15",
+      "label": "Complete required source, regression and security CI",
+      "category": "A",
+      "atomic_control_ids": [
+        "QAT-01"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-16",
+      "label": "Authenticated browser, tenant and billing E2E",
+      "category": "A",
+      "atomic_control_ids": [
+        "QAT-02",
+        "QAT-03"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-17",
+      "label": "Exact-SHA test and deployed artifact provenance",
+      "category": "A",
+      "atomic_control_ids": [
+        "QAT-04"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-18",
+      "label": "Current production exact-SHA deployment identity",
+      "category": "A",
+      "atomic_control_ids": [
+        "OPS-01"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "accepted": false,
+      "acceptance_evidence_ref": null,
+      "notes": "OPS-01 source PASS preserved. Vercel production deployment SHA matches the frozen G1 source baseline and the accepted OPS-01 evidence; newer main does not invalidate deployed release identity."
+    },
+    {
+      "gate_id": "A-19",
+      "label": "Enforced governance and required release checks",
+      "category": "A",
+      "atomic_control_ids": [
+        "OPS-02"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-20",
+      "label": "Live smoke, monitoring, support and incident response",
+      "category": "A",
+      "atomic_control_ids": [
+        "OPS-03",
+        "OPS-04"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-21",
+      "label": "Rollback and environment credential isolation",
+      "category": "A",
+      "atomic_control_ids": [
+        "OPS-05",
+        "OPS-06"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-22",
+      "label": "Contracting entity, rights and applicable legal acceptance",
+      "category": "A",
+      "atomic_control_ids": [
+        "TRU-01",
+        "TRU-06"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-23",
+      "label": "Legal, privacy, DPA, transfer and retention truth",
+      "category": "A",
+      "atomic_control_ids": [
+        "TRU-02",
+        "TRU-03"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    },
+    {
+      "gate_id": "A-24",
+      "label": "AI assurance claims and customer procurement commitments",
+      "category": "A",
+      "atomic_control_ids": [
+        "TRU-04",
+        "TRU-05"
+      ],
+      "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
+      "status": "NOT_ELIGIBLE",
+      "accepted": false,
+      "acceptance_evidence_ref": null
+    }
+  ],
+  "generated_at": "2026-11-01T19:30:00.000Z"
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "risck-comply.enterprise.ops01.readonly-revalidation.v1",
+  "asOfDate": "2026-11-03",
+  "subject": "A-18 / OPS-01",
+  "scope": "Current already-deployed production identity ONLY; not the new GitHub candidate release",
+  "checkedAgainstCandidateBeforeEvidenceCommit": "7395b8beece2aba017c59c55907c653097754e2f",
+  "sourceBaselineSha": "70d3545f414d063379d481fd238aed563e05edda",
+  "sourceAcceptedAt": "2026-10-22T20:52:14.027Z",
+  "sourceAcceptedBy": "G1 Engineering, owner-authorized acceptance (provider evidence review, pending governed PR integration)",
+  "originalSourceStatus": "PASS",
+  "sourceEvidenceRefs": [
+    "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+  ],
+  "provider": "Vercel authenticated read-only get_deployment + get_alias",
+  "deployment": {
+    "deploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "state": "READY",
+    "readyState": "READY",
+    "target": "production",
+    "sourceSha": "70d3545f414d063379d481fd238aed563e05edda",
+    "gitRef": "main"
+  },
+  "canonicalDomain": {
+    "hostname": "www.risckcomply.com",
+    "deploymentId": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "redirect": null
+  },
+  "objectiveChecks": {
+    "originalGateMapsOps01": true,
+    "sourceStatusPass": true,
+    "sourceEvidenceRefPresent": true,
+    "sourceAcceptanceIdentityRecorded": true,
+    "deployedReady": true,
+    "deployedToProduction": true,
+    "projectIdentityMatches": true,
+    "deployedCommitRecorded": true,
+    "aliasPointsToDeployment": true
+  },
+  "checksPassed": 9,
+  "checksTotal": 9,
+  "technicalReadback": "PASS_FOR_DEPLOYED_IDENTITY_ONLY",
+  "newFormalAcceptance": "NOT_GRANTED",
+  "independentReviewer": "PENDING_QUALIFIED_REVIEW",
+  "independentReviewerDecision": "NOT_RECEIVED",
+  "evidenceFactoryEligibility": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+  "factoryAcceptedCountBeforeEvidence": 0,
+  "formalSourceGateAcceptedCountBeforeEvidence": 2,
+  "limitations": [
+    "No real customer workflow smoke or release promotion validated",
+    "Candidate SHA differs from currently deployed production SHA",
+    "No new formal gate acceptance is justified by read-only provider checks alone",
+    "GitHub and GitLab source divergence and hosted CI blocked",
+    "No new hosted CircleCI or GitHub Actions run started"
+  ],
+  "productionWrites": 0,
+  "priceChanges": 0,
+  "emailsSent": 0
+}

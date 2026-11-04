@@ -1,0 +1,140 @@
+{
+  "schema": "risck-comply.dat01.cross-source-exact-hash-batch.v1",
+  "observedAt": "2026-11-04",
+  "createdAt": "2026-11-04T10:13:08.819Z",
+  "sourceSnapshot": "76e32b5ed53dd4045abf457dffd642b955634439",
+  "candidateHeadBeforeCommit": "1ca03a191a2da1427792b21ac7bff3b5341e2492",
+  "crosswalk": {
+    "path": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+    "blob": "3c3d7c83549d08a2a106f70aff51efed71681769"
+  },
+  "providerEvidence": {
+    "path": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+    "blob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+    "readbackKind": "previously captured production read-only metadata (no new production query in this package)"
+  },
+  "lexer": {
+    "path": "scripts/diagnostics/g5-02-sql-hash-proof.mjs",
+    "blob": "4dec0f8dea9ba01bf4c164b6dd6b8cc3a20d3d41",
+    "sourceOnly": true
+  },
+  "method": "Exact UTF8 SHA256 of LF-joined lexer-separated SQL statements; provider array count, UTF8 byte count and persisted SHA256 must all match. Source files resolved by immutable Git commit and source blob hashes. No SQL statements executed.",
+  "batch": "exact-version mappings #46–52 (1-based); excludes concurrent batch #35–45",
+  "total": 7,
+  "exactHashMatches": 7,
+  "matches": [
+    {
+      "exactMappingOrdinal": 46,
+      "productionOrder": 46,
+      "version": "20260822123600",
+      "sourcePath": "supabase/migrations/20260822123600_v19_finalize_enterprise_contract_mode_compatibility.sql",
+      "sourceGitBlobSha": "57c1c1a8a11f5441495edf24e6ae3802df53402b",
+      "providerStatementCount": 19,
+      "providerJoinedBytes": 13858,
+      "providerJoinedSha256": "c71fd929a5dbf8c8d078e6bf3e592f568f403f2225e27768255d4d89ea7e1970",
+      "verifiedRepresentation": "SPLIT_STATEMENTS_LF",
+      "validation": "EXACT_SHA256_MATCH"
+    },
+    {
+      "exactMappingOrdinal": 47,
+      "productionOrder": 47,
+      "version": "20260822123602",
+      "sourcePath": "supabase/migrations/20260822123602_v19_reconcile_enterprise_contract_control_rpcs.sql",
+      "sourceGitBlobSha": "c07fd48c9db0bf0943045c7a9bf068d6fc98d587",
+      "providerStatementCount": 13,
+      "providerJoinedBytes": 25571,
+      "providerJoinedSha256": "bac33c5b2a95ec3bd26e8688c196ca4139eb6777bb360beef812492a3caa5c66",
+      "verifiedRepresentation": "SPLIT_STATEMENTS_LF",
+      "validation": "EXACT_SHA256_MATCH"
+    },
+    {
+      "exactMappingOrdinal": 48,
+      "productionOrder": 48,
+      "version": "20260822123604",
+      "sourcePath": "supabase/migrations/20260822123604_v19_reconcile_enterprise_core_active_runtime.sql",
+      "sourceGitBlobSha": "52770208f1b72b8b16d43f28e519fdf01705a2dc",
+      "providerStatementCount": 115,
+      "providerJoinedBytes": 26945,
+      "providerJoinedSha256": "459d16186895a8e0a8bccd48ce42a7c3365d2ed1d4649617aacd088506605dba",
+      "verifiedRepresentation": "SPLIT_STATEMENTS_LF",
+      "validation": "EXACT_SHA256_MATCH"
+    },
+    {
+      "exactMappingOrdinal": 49,
+      "productionOrder": 49,
+      "version": "20260822123606",
+      "sourcePath": "supabase/migrations/20260822123606_v19_reconcile_live_rls_validation_inventory_privileges.sql",
+      "sourceGitBlobSha": "41c2f1fbc60654861c27538f8a19f3b1951688d5",
+      "providerStatementCount": 10,
+      "providerJoinedBytes": 3439,
+      "providerJoinedSha256": "c571d9c92bc5ca1cfdb0a161bc670fa98889a74fc614d05130aee90f4d3d544f",
+      "verifiedRepresentation": "SPLIT_STATEMENTS_LF",
+      "validation": "EXACT_SHA256_MATCH"
+    },
+    {
+      "exactMappingOrdinal": 50,
+      "productionOrder": 50,
+      "version": "20260822123608",
+      "sourcePath": "supabase/migrations/20260822123608_v19_reconcile_new_organization_compatibility_envelope.sql",
+      "sourceGitBlobSha": "dd1c7b8036c0d52eeb1fe6c8f62d35d5498ba5ca",
+      "providerStatementCount": 9,
+      "providerJoinedBytes": 6928,
+      "providerJoinedSha256": "594644105c8db0041c1d56d13cfd31f20644502ce84bcf2e583b9a773f88176e",
+      "verifiedRepresentation": "SPLIT_STATEMENTS_LF",
+      "validation": "EXACT_SHA256_MATCH"
+    },
+    {
+      "exactMappingOrdinal": 51,
+      "productionOrder": 51,
+      "version": "20260822123610",
+      "sourcePath": "supabase/migrations/20260822123610_v19_reconcile_enterprise_invitation_seat_authority.sql",
+      "sourceGitBlobSha": "d2676db91f8aa7a78816fac18593f4192b323956",
+      "providerStatementCount": 16,
+      "providerJoinedBytes": 22929,
+      "providerJoinedSha256": "474bec02ea7aad26668f4fdfbe92bd01fefda9c29a7ea7625e2f2e0015d75bea",
+      "verifiedRepresentation": "SPLIT_STATEMENTS_LF",
+      "validation": "EXACT_SHA256_MATCH"
+    },
+    {
+      "exactMappingOrdinal": 52,
+      "productionOrder": 52,
+      "version": "20260822123612",
+      "sourcePath": "supabase/migrations/20260822123612_v19_harden_enterprise_invitation_actor_boundary.sql",
+      "sourceGitBlobSha": "8df78cab6c0bd03d961690574caa12aa7aadeedd",
+      "providerStatementCount": 11,
+      "providerJoinedBytes": 4583,
+      "providerJoinedSha256": "47e16ca0479e5552afa55c69197c5b945c51cacfd818674ff5d5eb037c2992d9",
+      "verifiedRepresentation": "SPLIT_STATEMENTS_LF",
+      "validation": "EXACT_SHA256_MATCH"
+    }
+  ],
+  "cumulative": {
+    "priorV21_3MatchedFirst34": 24,
+    "otherExecutorBatch35To45": 11,
+    "newBatch46To52": 7,
+    "verifiedFirst52": 42,
+    "examined": 52,
+    "unmatchedInFirst52": 10,
+    "exactVersionMappingsTotal": 112,
+    "otherExactVersionMappingsUnexamined": 60,
+    "nonExactMappingsNotAccepted": 25,
+    "totalProductionLedger": 137
+  },
+  "limits": [
+    "No live production SQL or provider mutation performed",
+    "This is byte-oriented historical source provenance, not execution/replay",
+    "The remaining 10 examined mismatches may be historical SQL changes or unsupported provider representation; investigate rather than force match",
+    "The 25 nonexact mappings and two consolidation groups need reviewer-approved semantics",
+    "CircleCI #431 last verified FAIL on old SHA, no fresh accepted exact-head CI result",
+    "Formal A-12 DAT-01 still BLOCKED; 0/137 authorized PostgreSQL17 replay; no GO"
+  ],
+  "safety": {
+    "productionWrites": 0,
+    "qaWrites": 0,
+    "paidCIJobs": 0,
+    "newCosts": 0,
+    "deploys": 0,
+    "emails": 0,
+    "formalApprovals": 0
+  }
+}

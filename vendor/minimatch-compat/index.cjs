@@ -1,5 +1,7 @@
 'use strict';
 
+// This CommonJS export-condition entry point intentionally loads the ESM core through require().
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- Required for Node's package "require" condition.
 const core = require('minimatch-core');
 const minimatch = core.minimatch;
 

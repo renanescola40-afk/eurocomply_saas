@@ -1,0 +1,134 @@
+{
+  "schema": "risck-comply.dat01.exact-source-sha256-consolidated-reconciliation.v1",
+  "observedDate": "2026-11-04",
+  "owner": "Enterprise canonical integration",
+  "candidateHeadBeforeThisReport": "1476fa03f3c6e82b1a159f756572278c8e80bba7",
+  "frozenLedger": {
+    "versions": 137,
+    "source": "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+    "gitBlob": "8705c36a875058d5fbe97bdd3033fe498426aa26"
+  },
+  "crosswalk": {
+    "versionMappings": 137,
+    "exactVersionMappings": 112,
+    "nonExactMappings": 25,
+    "distinctSourcePaths": 135,
+    "consolidationGroups": 2,
+    "source": "supabase/reconciliation/20261022_production_migration_source_crosswalk.json",
+    "blob": "3c3d7c83549d08a2a106f70aff51efed71681769"
+  },
+  "exactVersionProvenance": {
+    "checked": 112,
+    "exactHashMatches": 87,
+    "unresolvedHashMismatches": 25,
+    "coveragePercent": 100,
+    "sourceHashAgreementPercent": 77.68,
+    "method": "For historical source SQL at canonical Git branch SHA, execute source-exact conservative splitStatements; hash LF-joined SQL statement representations. For single ledger SQL-array item additionally test RAW, PREFIX_SINGLE_LF and TRIM_TRAILING_WHITESPACE. Match both UTF8 byte length and SHA256 to archived provider metadata. Independent JS SHA256 implementation self-tested against ABC and empty standardized vectors.",
+    "sampleFromEarlierExecutor": {
+      "checked": 34,
+      "matched": 24,
+      "mismatched": 10,
+      "originalEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json"
+    },
+    "newIndependentBatches": [
+      {
+        "start": 35,
+        "end": 45,
+        "checked": 11,
+        "matched": 11,
+        "mismatched": 0,
+        "path": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_35_45_20261104.json"
+      },
+      {
+        "start": 46,
+        "end": 56,
+        "checked": 11,
+        "matched": 11,
+        "mismatched": 0,
+        "path": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_46_56_20261104.json"
+      },
+      {
+        "start": 57,
+        "end": 70,
+        "checked": 14,
+        "matched": 14,
+        "mismatched": 0,
+        "path": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_57_70_20261104.json"
+      },
+      {
+        "start": 71,
+        "end": 84,
+        "checked": 14,
+        "matched": 12,
+        "mismatched": 2,
+        "path": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_71_84_20261104.json"
+      },
+      {
+        "start": 85,
+        "end": 98,
+        "checked": 14,
+        "matched": 8,
+        "mismatched": 6,
+        "path": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json"
+      },
+      {
+        "start": 99,
+        "end": 112,
+        "checked": 14,
+        "matched": 7,
+        "mismatched": 7,
+        "path": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json"
+      }
+    ],
+    "newIndependentTotals": {
+      "newlyChecked": 78,
+      "matched": 63,
+      "unresolved": 15
+    },
+    "historicalCase": {
+      "version": "20261003134528",
+      "name": "fix_ai_system_text_array_rpc_contract",
+      "gitPath": "supabase/migrations/20261003134528_fix_ai_system_text_array_rpc_contract.sql",
+      "archivedProviderSingleStatementBytes": 9241,
+      "observedFileRevisions": [
+        {
+          "commit": "7b4c8d50613508dce5c897a19be9cb87825e264b",
+          "gitBlob": "5b9753f2677423dc0c96a93170e2824175e3852c",
+          "textBytes": 9709
+        },
+        {
+          "commit": "cc53b5df3b1d2be9686e1bddda0d62dd41633238",
+          "gitBlob": "5a59d89727dc96806b06aa3531cc0573440218ea",
+          "textBytes": 11147
+        }
+      ],
+      "interpretation": "Neither observed file revision has the same raw UTF8 byte count as the frozen provider statement. This alone does not establish why the ledger differs; do not claim restored original historical source."
+    }
+  },
+  "nonExactMappingReview": {
+    "count": 25,
+    "hashesNotCreditedToExactVersionPass": true,
+    "consolidationSemanticReviewPending": 2
+  },
+  "remainingAcceptanceRequirements": [
+    "Retrieve authoritative historical SQL source or immutable migration archive for 25 exact mismatches; do not alter source to chase matching hash.",
+    "Qualify 25 nonexact crosswalk entries and two consolidated source groups by approved source provenance and semantics.",
+    "Complete frozen 137-entry replay manifest with vetted order, SQL equivalence, safety and rollback.",
+    "Execute 137/137 migrations only in approved disposable PostgreSQL 17 environment, with transcript, verified schema/catalog, failure tests and exact-SHA CI.",
+    "Independent qualified reviewer must approve evidence; protected main merge and production decisions remain separate."
+  ],
+  "status": {
+    "DAT01": "BLOCKED",
+    "A12": "NOT_ACCEPTED",
+    "sqlReplay": "0/137",
+    "formalNewGates": 0,
+    "all24FormalGatesPass": 2,
+    "remainingFormalGates": 22,
+    "remainingFormalPct": 91.67
+  },
+  "scopeNotes": [
+    "Source hash comparison is offline/read-only and does not execute SQL.",
+    "Provider snapshot is frozen read-only evidence, not a fresh provider statement retrieval.",
+    "No QA/PROD DB writes, migration replay, Stripe LIVE, emails, paid CI jobs or main merge."
+  ]
+}

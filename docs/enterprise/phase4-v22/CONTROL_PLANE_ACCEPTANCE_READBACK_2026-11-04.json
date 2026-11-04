@@ -1,0 +1,171 @@
+{
+  "schema": "risck-comply.phase4.control-plane-acceptance-readback.v1",
+  "captured_utc": "2026-11-04",
+  "classification": "READ_ONLY_INDEPENDENT_PROVIDER_EVIDENCE",
+  "source_providers": [
+    "GitHub",
+    "Supabase"
+  ],
+  "scope": "Fase 4 A-19 release governance and A-22/A-23/A-24 qualified review infrastructure",
+  "release_candidate_snapshot": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "canonical_pr": 2598,
+    "observed_candidate_sha": "2489cde5411bc245726052960be696a3cc74e3db",
+    "sha_observed_at_utc": "2026-11-04T14:18:00Z",
+    "run_41846169700": {
+      "workflow": "Full Security Suite",
+      "trigger": "pull_request",
+      "conclusion": "failure",
+      "workflow_jobs": 8,
+      "jobs_failed": 8,
+      "runner_labels": [
+        "ubuntu-24.04"
+      ],
+      "runner_id_for_all_jobs": 0,
+      "runner_name_for_all_jobs": "",
+      "steps_for_all_jobs": 0,
+      "per_job_sample": [
+        {
+          "job": "Core CI, build and npm audit",
+          "job_id": 126630132833,
+          "steps": 0,
+          "runner_id": 0,
+          "conclusion": "failure"
+        },
+        {
+          "job": "Actionlint",
+          "job_id": 126630132697,
+          "steps": 0,
+          "runner_id": 0,
+          "conclusion": "failure"
+        },
+        {
+          "job": "CodeQL",
+          "job_id": 126630132742,
+          "steps": 0,
+          "runner_id": 0,
+          "conclusion": "failure"
+        }
+      ],
+      "billing_usage_readback": {
+        "provider_api": "GET /repos/renanescola40-afk/eurocomply_saas/actions/runs/41846169700/timing",
+        "linux_job_count": 8,
+        "total_billed_ms": 0,
+        "billed_ms_per_job": 0,
+        "total_workflow_duration_ms": 11000,
+        "supports": "No GitHub-hosted runner execution time was billed in the sampled run; consistent with runner not assigned and zero job steps.",
+        "does_not_prove": "Specific billing block, disabled Actions policy, or GitHub service outage.",
+        "official_docs": "https://docs.github.com/en/actions/how-tos/troubleshoot-workflows"
+      }
+    },
+    "check_runs_at_snapshot": {
+      "total_count": 75,
+      "conclusions": {
+        "failure": 62,
+        "skipped": 13,
+        "success": 0
+      }
+    },
+    "selected_job_log_fetch": "BLOB_NOT_FOUND_404",
+    "diagnosis": "NO_STEPS_EXECUTED_NO_RUNNER_ASSIGNED_ON_SAMPLED_WORKFLOW",
+    "root_cause": "NOT_YET_CONFIRMED_NO_ADMIN_BILLING_OR_RUNNER_ADMISSION_DETAILS",
+    "warning": "Do not classify these check results as failing application tests or grant acceptance from a named failed check; inspect GitHub Actions runner/admission/billing/provider configuration with authorized admin access, without retry loop or new expense.",
+    "current_candidate_may_change": true,
+    "additional_run_41846170053": {
+      "workflow": "P0 Lockfile Plan",
+      "job_id": 126630353292,
+      "steps": 0,
+      "total_billed_ms": 0,
+      "total_workflow_duration_ms": 44000,
+      "execution": "NO_RUNNER_EXECUTION",
+      "root_cause": "NOT_CONFIRMED"
+    }
+  },
+  "review_readback": {
+    "pull_requests": [
+      {
+        "pr": 2598,
+        "reviews_submitted": 0,
+        "approvals": 0,
+        "draft": true
+      },
+      {
+        "pr": 2604,
+        "reviews_submitted": 0,
+        "approvals": 0,
+        "draft": true
+      },
+      {
+        "pr": 2601,
+        "reviews_submitted": 0,
+        "approvals": 0,
+        "draft": true
+      },
+      {
+        "pr": 2594,
+        "reviews_submitted": 0,
+        "approvals": 0,
+        "draft": true
+      }
+    ],
+    "qualification_warning": "GitHub review approval and qualified external legal/procurement opinion are distinct. Neither a lack of GitHub reviews nor a review draft proves no external reviewer exists; the required valid independently attributable acceptance remains not evidenced."
+  },
+  "database_review_portal_schema": {
+    "query_type": "SQL read-only pg_catalog to_regclass and information_schema.tables; no tenant rows or user records accessed",
+    "examined_relations": [
+      "public.qualified_review_assignments",
+      "public.qualified_reviewers",
+      "public.qualified_review_submissions",
+      "public.qualified_reviewer_invites",
+      "public.qualified_reviewer_sessions",
+      "public.qualified_reviewer_attestations"
+    ],
+    "production": {
+      "project_ref": "tganhbbhfxcpblmgqprg",
+      "relation_presence": {
+        "qualified_review_assignments": false,
+        "qualified_reviewers": false,
+        "qualified_review_submissions": false,
+        "qualified_reviewer_invites": false,
+        "qualified_reviewer_sessions": false,
+        "qualified_reviewer_attestations": false
+      }
+    },
+    "isolated_qa": {
+      "project_ref": "zrxrrfbllsxtleyxjpsz",
+      "relation_presence": {
+        "qualified_review_assignments": false,
+        "qualified_reviewers": false,
+        "qualified_review_submissions": false,
+        "qualified_reviewer_invites": false,
+        "qualified_reviewer_sessions": false,
+        "qualified_reviewer_attestations": false
+      }
+    },
+    "source_design_exists": true,
+    "linked_source_migration": "supabase/migrations/20260726140000_qualified_reviewer_portal.sql",
+    "source_handoff": "docs/compliance/QUALIFIED_REVIEW_OPERATIONS_HANDOFF.md",
+    "caution": "This demonstrates the six checked public relations are absent on both examined projects; it does not prove the absence of all external signed legal opinions or review systems outside these schemas. Existing portal-based workflow cannot rely on these relations until schema provenance and migration history are reconciled.",
+    "migration_applied": {
+      "source_version": "20260726140000",
+      "production_migration_ledger_recorded": false,
+      "isolated_qa_migration_ledger_recorded": false,
+      "check": "SELECT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '20260726140000')",
+      "verdict": "NOT_APPLIED_IN_BOTH_EXAMINED_ENVIRONMENTS",
+      "caution": "An unrecorded migration alone does not prove every migration dependency is missing; migration order and intended deployment boundary require independent database reviewer."
+    },
+    "production_ddl_or_dml": "NONE",
+    "qa_ddl_or_dml": "NONE",
+    "cross_lane_handoff": "Executor 3 owns canonical release and database migration orchestration; do not write production schema or apply migrations to force PASS."
+  },
+  "formal_assessment": {
+    "gate_A_19": "NOT_VERIFIED",
+    "gate_A_22": "NOT_VERIFIED",
+    "gate_A_23": "NOT_VERIFIED",
+    "gate_A_24": "NOT_VERIFIED",
+    "accepted_gate_increments": 0,
+    "accepted_control_increments": 0,
+    "release_decision": "NO_GO",
+    "rules": "No self-review, no counterfeit qualified approvals, no counts adjusted."
+  }
+}

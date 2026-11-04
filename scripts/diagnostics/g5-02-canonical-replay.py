@@ -33,6 +33,27 @@ if missing or multiple:
 report["manifest_sha256"]=hashlib.sha256(pathlib.Path("scripts/diagnostics/g5-02-prod-ledger-versions.json").read_bytes()).hexdigest()
 report["files"]=[]
 save()
+# DAT-01: fail closed before executing even the first synthetic migration.
+# Source-version equality alone cannot establish provider-statement equivalence.
+preflight=subprocess.run([sys.executable,"scripts/diagnostics/dat01-provider-provenance-preflight.py"],capture_output=True,text=True)
+if preflight.returncode!=0:
+    report["provider_provenance"]="NOT_RECONCILED"
+    fail("DAT01_PROVIDER_PROVENANCE_BLOCKED","source-only replay refused until provider SQL equivalence is verified")
+try:
+    preflight_result=json.loads(preflight.stdout)
+except (ValueError,TypeError):
+    fail("DAT01_PROVIDER_PROVENANCE_INVALID","preflight did not return valid JSON")
+if (not isinstance(preflight_result,dict) or preflight_result.get("status")!="PREFLIGHT_OK"
+        or preflight_result.get("verified")!=137 or preflight_result.get("unverified")!=0):
+    fail("DAT01_PROVIDER_PROVENANCE_BLOCKED","preflight source identity incomplete")
+# A successful provenance test exit is never permission to run migrations.
+# Both guards must be explicitly approved by a separate qualified process.
+# Current read-only preflight cannot issue either approval; DAT-01 remains BLOCKED.
+if (preflight_result.get("migration_execution_authorized") is not True
+        or preflight_result.get("qualified_independent_review_approved") is not True):
+    report["provider_provenance"]="SOURCE_ONLY_NOT_REPLAY_AUTHORIZED"
+    fail("DAT01_REPLAY_REVIEW_MISSING","successful source preflight is not an approved replay manifest")
+report["provider_provenance"]="REVIEWED_SOURCE_REPLAY_AUTHORIZATION_REQUIRED"
 subprocess.run(["pg_isready","-h","127.0.0.1","-U","risck_synthetic","-d","risck_synthetic"],check=True,stdout=subprocess.DEVNULL)
 for i,v in enumerate(versions,1):
     f=by_version[v][0]

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { uploadImmutableEvidenceObject } from './upload-recovery';
 
 export type EvidenceStatus = 'draft' | 'valid' | 'needs_review' | 'expired' | 'archived';
 export type EvidenceType =
@@ -252,6 +253,8 @@ async function sha256Hex(file: File) {
   return Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, '0')).join('');
 }
 
+
+
 /**
  * Validate bytes before reserving immutable attachment metadata, then insert
  * under the exact <organization_id>/<evidence_id>/<filename> key. Storage and
@@ -292,15 +295,18 @@ export async function uploadEvidenceFile(params: { organizationId: string; evide
     throw new Error('Evidence attachment metadata reservation could not be verified.');
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from(EVIDENCE_BUCKET)
-    .upload(objectPath, params.file, {
+  await uploadImmutableEvidenceObject({
+    expectedSha256: fileSha256,
+    expectedSize: fileSizeBytes,
+    upload: () => supabase.storage.from(EVIDENCE_BUCKET).upload(objectPath, params.file, {
       upsert: false,
       contentType: fileMimeType,
       cacheControl: '3600',
-    });
-
-  if (uploadError) throw uploadError;
+    }),
+    download: () => supabase.storage.from(EVIDENCE_BUCKET).download(
+      objectPath, {}, { cache: 'no-store' },
+    ),
+  });
   return {
     bucket: EVIDENCE_BUCKET,
     objectPath,

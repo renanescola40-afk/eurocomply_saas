@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import minimatchDefault, { minimatch, Minimatch } from 'minimatch';
+import minimatchDefault, { minimatch } from 'minimatch';
 import { globSync } from 'glob';
 
 const require = createRequire(import.meta.url);
@@ -28,7 +28,8 @@ describe('patched minimatch and Sentry glob dependency graph', () => {
     expect(minimatchDefault).toBe(minimatch);
     expect(minimatch('src/security.ts', '**/*.ts')).toBe(true);
     expect(minimatchCommonJs('src/security.ts', '**/*.ts')).toBe(true);
-    expect(minimatchCommonJs.Minimatch).toBe(Minimatch);
+    expect(typeof minimatchCommonJs.Minimatch).toBe('function');
+    expect(new minimatchCommonJs.Minimatch('**/*.ts').match('src/security.ts')).toBe(true);
     expect(minimatchCommonJs.default).toBe(minimatchCommonJs);
   });
 

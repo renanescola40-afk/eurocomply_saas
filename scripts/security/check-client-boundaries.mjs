@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { findUnsafeClientEnvReferences } from './client-env-access.mjs';
 
 const root = process.cwd();
 const srcRoot = join(root, 'src');
@@ -59,11 +60,18 @@ function normalizePath(path) {
 }
 
 function hasUseClientDirective(source) {
-  const firstStatements = source
-    .split('\n')
-    .slice(0, 8)
-    .map((line) => line.trim().replace(/;$/, ''));
-  return firstStatements.includes("'use client'") || firstStatements.includes('"use client"');
+  let remaining = source.replace(/^\uFEFF/, '');
+  // Valid JavaScript directives may follow comments and other directives;
+  // limiting detection to the first eight lines silently misses client modules.
+  while (remaining.length > 0) {
+    const leadingTrivia = /^(?:\s+|\/\/[^\r\n]*(?:\r?\n|$)|\/\*[\s\S]*?\*\/)+/.exec(remaining);
+    if (leadingTrivia) remaining = remaining.slice(leadingTrivia[0].length);
+    const directive = /^(['"])([^'"\r\n]*)\1[ \t]*;?/.exec(remaining);
+    if (!directive) return false;
+    if (directive[2] === 'use client') return true;
+    remaining = remaining.slice(directive[0].length);
+  }
+  return false;
 }
 
 function isClientNamedFile(path) {
@@ -123,8 +131,8 @@ for (const file of files) {
     }
   }
 
-  if (/process\.env\.(?!NEXT_PUBLIC_)[A-Z0-9_]+/.test(source)) {
-    failures.push(`${normalized}: client boundary references non-public process.env value`);
+  for (const index of findUnsafeClientEnvReferences(source)) {
+    failures.push(`${normalized}:${lineNumberFor(source, index)} client boundary references process.env or an indirect process alias without approved direct NEXT_PUBLIC_* access`);
   }
 
   const lines = source.split('\n');
@@ -145,11 +153,8 @@ console.log(`Scanned ${files.length} source files.`);
 if (failures.length > 0) {
   console.error('Client boundary findings:');
   for (const failure of failures) console.error(`- ${failure}`);
-  if (process.env.STRICT_CLIENT_BOUNDARY_SCAN === '1') {
-    process.exitCode = 1;
-  } else {
-    console.warn('Client boundary check is running in report-only mode. Set STRICT_CLIENT_BOUNDARY_SCAN=1 to fail on findings.');
-  }
+  // This is part of the security CI contract: findings must never exit successfully.
+  process.exitCode = 1;
 } else {
   console.log('Client boundary security: ok');
 }
