@@ -1,13 +1,13 @@
 {
-  "schema": "risck-comply.work012-recovery-handoff.v21.6",
+  "schema": "risck-comply.work012-recovery-handoff.v21.7",
   "createdAt": "2026-11-04T09:14:42.065Z",
   "owner": "NORMAL_CHAT_MASTER_V21.0",
   "canonicalPR": {
     "number": 2598,
     "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2598",
     "branch": "integration/enterprise-unified-candidate-20261102",
-    "headBeforeCheckpointCommit": "4a55b8181132a223c3fd180396340af9544a8b9d",
-    "headNote": "Pre-checkpoint source HEAD. Fetch current PR #2598 for authoritative HEAD. Never use this for test-status matching.",
+    "headBeforeCheckpointCommit": "86dbae18d84de587a531981c74921846d8631e24",
+    "headNote": "This is SHA immediately before V21.7 checkpoint commit. For authoritative exact SHA fetch PR #2598 and direct Git reference.",
     "draft": true,
     "merged": false,
     "approvedReviewsAtObservation": 0,
@@ -43,7 +43,7 @@
     "testedSha": "a272309b875b2ffac24b54032bb184171f5ec35b",
     "githubContext": "ci/circleci: github-actions-recovery-quality",
     "result": "FAIL",
-    "firstFailingStep": "UNKNOWN_NO_AUTHENTICATED_CIRCLECI_JOB_LOG",
+    "firstFailingStep": "UNKNOWN_NO_AUTHENTICATED_JOB_TRANSCRIPT",
     "rootCause": "UNDETERMINED",
     "errorText": "NOT_AVAILABLE",
     "classification": "UNRESOLVED; do not assign code, build, dependency, runner, or billing cause",
@@ -58,7 +58,9 @@
     "latestHeadCombinedStatus": "NO_CIRCLECI_CONTEXT_ON_NEW_SHA",
     "providerAuthenticatedJobTranscript": "UNAVAILABLE_IN_NORMAL_CHAT",
     "candidateCurrentSourceQuality": "NOT_VERIFIED",
-    "job431NoReexecutionInThisChat": true
+    "job431NoReexecutionInThisChat": true,
+    "currentCandidateExactShaQuality": "NOT_VERIFIED",
+    "newPaidOrIncludedJobTriggeredByThisChat": false
   },
   "githubActions": {
     "problem": "workflow runs fail with zero job steps, likely provider runner-admission issue but root cause unconfirmed",
@@ -118,7 +120,15 @@
     "ledgerBoundDraftValidatedReadback": "137 records, 137 unique versions, 103 source-byte-proven, 34 unresolved, 0 approved executable, 2 consolidations",
     "nonexactConsolidationProofPath": "docs/enterprise/closure-v21/DAT01_NONEXACT_CONSOLIDATION_SOURCE_RECOVERY_20261104.json",
     "localStandaloneManifestValidator": "14/14 synthetic Node22.16.0 tests PASS, prepared locally; NOT integrated into repo as of this checkpoint",
-    "newlyAcceptedFormalGates": 0
+    "newlyAcceptedFormalGates": 0,
+    "validatorIntegratedSourceCommit": "693a6f480b065f1e5208b5927efbce6342680973",
+    "validatorIntegratedTestsCommit": "92b2add6369be946805d3731aa3a43d4121801a2",
+    "validatorEvidenceCommit": "86dbae18d84de587a531981c74921846d8631e24",
+    "validatorExactBlobReadback": "source ebe83bd44531bdf7398cc38bedfc6cc048b77941, test b25ed359320aee6b38f7135c2ff9f728b2a59df2",
+    "validatorNode22Result": "14/14 PASS (local)",
+    "actual137RowManifestDataCheck": "Independent read-only JS structural validation PASS, NOT full Node CLI or CircleCI",
+    "hostedCircleCiOnCurrentCandidate": "NOT_VERIFIED",
+    "noNewAcceptedGates": 0
   },
   "dat01": {
     "status": "BLOCKED",
@@ -227,7 +237,32 @@
     "nonexactUnrecoveredSourceBytes": 11,
     "identityReviewPending": 25,
     "consolidationSourceReview": "docs/enterprise/closure-v21/DAT01_NONEXACT_CONSOLIDATION_SOURCE_RECOVERY_20261104.json",
-    "secondConsolidationHistory": "20261013133323 vs 20261013133341 differ in UPDATE alias qualification; 20261013133341 provider SQL exact substring of canonical forward source"
+    "secondConsolidationHistory": "20261013133323 vs 20261013133341 differ in UPDATE alias qualification; 20261013133341 provider SQL exact substring of canonical forward source",
+    "manifestValidatorRepoPath": "scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs",
+    "manifestValidatorGitBlob": "ebe83bd44531bdf7398cc38bedfc6cc048b77941",
+    "manifestValidatorTestRepoPath": "scripts/diagnostics/g5-02-ledger-manifest-draft-validator.test.mjs",
+    "manifestValidatorTestGitBlob": "b25ed359320aee6b38f7135c2ff9f728b2a59df2",
+    "manifestValidatorNode22Tests": {
+      "passed": 14,
+      "failed": 0,
+      "runtime": "v22.16.0",
+      "source": "local exact-Git-blob verified copies",
+      "hostedCircleCi": "NOT_EXECUTED"
+    },
+    "manifestValidatorEvidenceRepoPath": "docs/enterprise/closure-v21/DAT01_MANIFEST_VALIDATOR_V21_7_EVIDENCE_20261104.json",
+    "manifestValidatorEvidenceGitBlob": "f417d991f76899145df49a6286bb85e2df8cda79",
+    "canonicalManifestIndependentStructuralReadback": {
+      "count": 137,
+      "unique": 137,
+      "sha": "a5c0b46c57c134f76da5f22a3f1858b7e1127287",
+      "validated": true,
+      "byteSourceProven": 103,
+      "byteUnresolved": 34,
+      "nonexactIdentityPending": 25,
+      "executable": 0,
+      "postgres17Replay": 0
+    },
+    "sourceByteEquivalentCoverage": "103/137: 87 current exact, 2 immutable historic exact, 13 nonexact mapped, 1 nonexact alternative; no identity acceptance or replay"
   },
   "auditChainIndependentReadback": {
     "scope": "production metadata READ ONLY",
@@ -305,7 +340,7 @@
     "paidCITasks": false,
     "StripeLiveTransactions": false
   },
-  "nextExecutableAction": "Integrate and run locally tested manifest draft validator against full repo (14 synthetic tests PASS; GitHub integration PENDING), then resolve 34 missing source byte equivalences and obtain 25 nonexact identity and 2 consolidation independent reviews. After approved 137-row executable manifest, perform disposable PostgreSQL 17 replay. CircleCI #431 first failure still unknown without authenticated logs. No main merge/production changes.",
-  "updatedAt": "2026-11-04T11:38:15.629Z",
+  "nextExecutableAction": "Run scripts/diagnostics/g5-02-ledger-manifest-draft-validator.mjs in independent full checked-out candidate at exact SHA (14 source-only tests already local PASS; 137 real JSON structural readback independently PASS), and retrieve CircleCI #431 authenticated first-error log. Independently resolve 34 source-byte gaps, review 25 nonexact identities and 2 consolidations, then approved disposable PostgreSQL17 137/137 replay before DAT-01 acceptance. Human final main merge only.",
+  "updatedAt": "2026-11-04T14:30:18.415Z",
   "previousV21CheckpointCommit": "45258179902bc11669d953a25478c9a2e6d54b79"
 }
