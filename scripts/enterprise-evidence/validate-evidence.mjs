@@ -63,7 +63,11 @@ export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,toke
   return Array.isArray(current)&&current.some(r=>
    r?.state==='APPROVED'&&r.user?.login===gate.reviewer_id&&
    r.user?.login!==pull.user?.login&&r.commit_id===expectedSha&&
-   /A-18|OPS-01/i.test(r.body||''));
+   // Require an affirmative standalone gate decision rather than a mere mention.
+   // A native APPROVED code review may explicitly withhold formal gate acceptance.
+   typeof r.body==='string'&&
+   r.body.split(/\r?\n/).some(line=>line.trim()==='A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED')&&
+   !/(?:FORMAL GATE ACCEPTANCE|A-18\s*\/\s*OPS-01).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i.test(r.body));
  }catch{return false;}
 }
 
