@@ -4,7 +4,7 @@ import { test } from 'node:test';
 const migration=readFileSync('supabase/migrations/20261105225000_scope_commercial_authority_to_active_membership.sql','utf8');
 const qa=readFileSync('tests/security/commercial-authority-caller-scope-qa-rollback.sql','utf8');
 test('keeps security definer and trusted server-side commercial authority',()=>{
-  assert.equal((migration.match(/security definer/gi)||[]).length,2);
+  assert.equal((migration.match(/language sql stable security definer/gi)||[]).length,2);
   assert.match(migration,/current_setting\('role',true\)='authenticated'/);
   assert.match(migration,/session_user='authenticated'/);
   assert.match(migration,/current_setting\('role',true\)='service_role'/);
@@ -18,8 +18,8 @@ test('requires membership in both caller-scoped commercial helpers',()=>{
 });
 test('preserves strict helper grants without exposing anonymous RPC execution',()=>{
   for(const signature of ['has_commercial_authority\(uuid\)','has_minimum_commercial_plan\(uuid,text\)']){
-    assert.match(migration,new RegExp('revoke all on function app_private\\.'+signature+' from public, anon;'));
-    assert.match(migration,new RegExp('grant execute on function app_private\\.'+signature+' to authenticated,service_role;'));
+    assert.ok(migration.includes('revoke all on function app_private.'+signature+' from public, anon;'));
+    assert.ok(migration.includes('grant execute on function app_private.'+signature+' to authenticated,service_role;'));
   }
   assert.doesNotMatch(migration,/disable row level security|drop policy|grant .* to anon;|auth\.role\(\)/i);
 });
