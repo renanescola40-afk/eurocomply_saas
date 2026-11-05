@@ -578,6 +578,39 @@
       "Execute full A/B cross-tenant API, Document/Storage and export E2E with QA-only fixtures.",
       "Verify exact-SHA CI and independent acceptance using the existing formal validator; do not edit ledger until accepted.",
       "Production migration remains forbidden without separately reviewed production deployment authorization."
-    ]
+    ],
+    "qaEphemeralCommercialResourceRls": {
+      "observedDate": "2026-11-05",
+      "qaProject": "zrxrrfbllsxtleyxjpsz",
+      "sourceBlobSha1": "3b98a539b8a94a59502efa503ae3d3129ffb77b4",
+      "sourceFile": "tests/security/ve1-qa-ephemeral-commercial-two-tenant-rls.sql",
+      "runStatus": "PASS",
+      "sqlAssertions": 20,
+      "assertionsFailed": 0,
+      "sqlBoundary": "PostgreSQL transient QA fixtures; BEGIN...ROLLBACK; SQL SET LOCAL ROLE authenticated; simulated Clerk subject + aal1/aal2",
+      "fixtures": "Two already-existing QA Clerk owner identities and two organizations, both requiring MFA; temporary inventory/document rows and temporary synthetic commercial source/snapshot.",
+      "commercialProofLimitation": "The test-only synthetic source_kind signed_contract is not a real contract, webhook or paid subscription, exists only inside the rolled-back transaction, and does not qualify real commercial lifecycle.",
+      "verifiedResults": [
+        "Two-way own tenant SELECT permitted when simulated aal2",
+        "Two-way cross tenant SELECT denied when simulated aal2",
+        "Own resources denied when simulated aal1",
+        "Nonmember subject cannot SELECT either table",
+        "Authenticated role lacks direct INSERT/UPDATE/DELETE SQL privileges on both ai_systems and documents; do not weaken GRANT/RLS to make a direct write test pass"
+      ],
+      "postRollback": {
+        "ai_systems": 0,
+        "documents": 0,
+        "commercialSources": 0,
+        "commercialSnapshots": 0
+      },
+      "nonClaims": [
+        "Not signed JWT",
+        "Not authenticated application BFF API",
+        "Not Storage binary upload/download",
+        "Not production code or payment lifecycle",
+        "Not a formal gate PASS"
+      ],
+      "next": "Validate supported server-side writes and API/export/Storage through verified signed Clerk JWT and QA-only billing, then independent formal review."
+    }
   }
 }
