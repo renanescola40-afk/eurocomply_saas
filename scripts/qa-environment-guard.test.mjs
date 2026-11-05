@@ -39,3 +39,5 @@ test('regular QA rejects missing webhook secret',()=>assert.ok(validateQaEnviron
 test('Supabase-only auth does not require obsolete Clerk keys',()=>assert.deepEqual(validateQaEnvironment(base),{checked:true,errors:[]}));
 test('partial legacy Clerk TEST pair fails closed',()=>assert.ok(validateQaEnvironment({...base,CLERK_SECRET_KEY:'sk_test_synthetic'}).errors.length));
 test('complete optional Clerk TEST pair passes',()=>assert.deepEqual(validateQaEnvironment({...base,CLERK_SECRET_KEY:'sk_test_synthetic',NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:'pk_test_synthetic'}),{checked:true,errors:[]}));
+test('disabled QA Stripe TEST webhook signing secret is safe without Stripe API keys',()=>assert.deepEqual(validateQaEnvironment({...bootstrap,STRIPE_WEBHOOK_SECRET:'whsec_disabled_test_endpoint'}),{checked:true,errors:[]}));
+test('malformed signing secret is rejected in no-billing bootstrap',()=>assert.ok(validateQaEnvironment({...bootstrap,STRIPE_WEBHOOK_SECRET:'sk_live_invalid'}).errors.length));
