@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
-      "notes": "STAGED ONLY in PR #2620, not accepted on main: independently reviewer-attested OPS-01 deployment identity; frozen source c502 is superseded by 0a213 after generic exact-HEAD verifier, ancestry-CI and test improvements. Only the ledger changed since reviewed candidate 0a213; Git ancestry and whitelist require validation at exact #2620 HEAD. Independent PR-specific approval and governed human-owner merge still REQUIRED; no release GO claim.",
+      "notes": "PR-only proposal, not accepted on main. Reviewed-source b319 is cryptographically bound to SHA-256-hashed acceptance proof. Only that proof and the ledger change after reviewed source; external qualified review of this final PR HEAD and genuine CI success remain required.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "0a2132cae8c542c09e7e344907dd4f22a44cccdb",
-      "acceptance_evidence_sha256": "562ce529bd53efbc458eba8f4d5914ec920d899f2801c3e35075af0c77fe4c84"
+      "acceptance_sha": "b319594a410efc73dedcdd3f5c0f60c7619203c9",
+      "acceptance_evidence_sha256": "270ffb6e0f67d66f19b97a0ab95ef065b9282dcbdb2501c79d1ac1adbefe801d"
     },
     {
       "gate_id": "A-19",
