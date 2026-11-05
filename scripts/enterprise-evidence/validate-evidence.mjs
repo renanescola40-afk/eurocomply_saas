@@ -79,8 +79,26 @@ export function validateGateAcceptance(gate,{eligible,expectedSha,now=new Date()
   if(!absolute.startsWith(path.resolve(root)+path.sep))errors.push('acceptance_artifact_path_outside_repository');
   else if(!fs.existsSync(absolute)||!fs.statSync(absolute).isFile())errors.push('acceptance_artifact_missing');
   else {
-   const digest=crypto.createHash('sha256').update(fs.readFileSync(absolute)).digest('hex');
-   if(!SHA256.test(gate.acceptance_evidence_sha256||'')||digest!==gate.acceptance_evidence_sha256)errors.push('acceptance_artifact_sha256_mismatch');
+   const proofBytes=fs.readFileSync(absolute);
+   const digest=crypto.createHash('sha256').update(proofBytes).digest('hex');
+   if(!SHA256.test(gate.acceptance_evidence_sha256||'')||digest!==gate.acceptance_evidence_sha256){
+    errors.push('acceptance_artifact_sha256_mismatch');
+   }else{
+    // The baseline must be frozen inside the digest-matched proof, not chosen
+    // later through editable ledger metadata. Prevents moving the baseline past
+    // an unreviewed code change while reusing an older review and proof.
+    try{
+     const proof=JSON.parse(proofBytes.toString('utf8'));
+     if(!proof||typeof proof!=='object'||Array.isArray(proof)||
+      !SHA40.test(proof.acceptance_source_sha||'')||
+      proof.acceptance_source_sha!==gate.acceptance_sha||
+      proof.gate_id!==gate.gate_id||
+      proof.qualified_review?.reviewer_login!==gate.reviewer_id||
+      proof.qualified_review?.review_url!==gate.approval_url){
+      errors.push('acceptance_source_not_bound_to_proof');
+     }
+    }catch{errors.push('acceptance_proof_invalid_json');}
+   }
   }
  }
  return errors;
