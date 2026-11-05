@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { evaluateG1Scope } from '../release/verify-g1-enterprise-scope.mjs';
 const ROOT=process.cwd(), ALLOWED=new Set(['PASS','FAIL','BLOCKED','NOT_VERIFIED','NOT_APPLICABLE']), SHA40=/^[a-f0-9]{40}$/, SHA256=/^[a-f0-9]{64}$/;
@@ -31,11 +32,35 @@ export function validateEvidenceRecord(r,{expectedSha,now=new Date()}={}){
  return e;
 }
 
+
+// Separate the immutable reviewed-source SHA from the CI checkout HEAD.
+// Requiring the SHA of the commit containing its own acceptance JSON creates
+// a cryptographic self-reference and can never produce a normal Git commit.
+// Fail closed unless Git proves the reviewed source is an ancestor and every
+// intervening change is strictly to this gate's acceptance JSON or the ledger.
+// The workflow MUST still check out and test its exact current HEAD; no
+// EVIDENCE_EXACT_SHA override, global bypass, or third-party state is trusted.
+export function sourceCommitIsReviewedAncestor(gate,{expectedSha,root=ROOT}={}){
+ const source=gate?.acceptance_sha;
+ if(!SHA40.test(source||'')||!SHA40.test(expectedSha||''))return false;
+ if(source===expectedSha)return true;
+ const proof=gate.acceptance_evidence_ref;
+ if(typeof proof!=='string'||!/^docs\/enterprise\/gate-closure-v[0-9]+\/[A-Za-z0-9_.-]+\.json$/.test(proof))return false;
+ const exec=args=>spawnSync('git',args,{cwd:root,encoding:'utf8',timeout:10000,maxBuffer:1024*1024,windowsHide:true});
+ const ancestor=exec(['merge-base','--is-ancestor',source,expectedSha]);
+ if(ancestor.error||ancestor.status!==0)return false;
+ const changed=exec(['diff','--no-ext-diff','--name-only','--no-renames','-z',source,expectedSha,'--']);
+ if(changed.error||changed.status!==0||typeof changed.stdout!=='string')return false;
+ const names=changed.stdout.split('\0').filter(Boolean);
+ const allowed=new Set(['docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json',proof]);
+ return names.length>0&&names.every(name=>allowed.has(name));
+}
+
 // A gate may claim acceptance only after ALL children pass and a separate
 // qualified review is recorded against the exact SHA and digest-matched proof.
 // This validates the ledger shape; the release reviewer must also independently
 // verify the external approval URL against the provider.
-export function validateGateAcceptance(gate,{eligible,expectedSha,now=new Date()}={}){
+export function validateGateAcceptance(gate,{eligible,expectedSha,now=new Date(),root=ROOT}={}){
  if(gate?.accepted!==true)return [];
  const errors=[];
  if(!eligible)errors.push('child_controls_not_all_pass');
@@ -46,12 +71,12 @@ export function validateGateAcceptance(gate,{eligible,expectedSha,now=new Date()
  const when=Date.parse(gate.accepted_at||'');
  if(!Number.isFinite(when)||when>now.getTime())errors.push('accepted_at_missing_invalid_or_future');
  if(!SHA40.test(gate.acceptance_sha||''))errors.push('acceptance_sha_invalid');
- else if(expectedSha&&gate.acceptance_sha!==expectedSha)errors.push('acceptance_sha_mismatch');
+ else if(expectedSha&&!sourceCommitIsReviewedAncestor(gate,{expectedSha,root}))errors.push('acceptance_sha_mismatch');
  if(typeof gate.approval_url==='string'&&!/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/pull\/\d+#pullrequestreview-\d+$/.test(gate.approval_url))errors.push('qualified_review_url_invalid');
  const ref=gate.acceptance_evidence_ref;
  if(typeof ref==='string'&&ref.trim()){
-  const absolute=path.resolve(ROOT,ref);
-  if(!absolute.startsWith(ROOT+path.sep))errors.push('acceptance_artifact_path_outside_repository');
+  const absolute=path.resolve(root,ref);
+  if(!absolute.startsWith(path.resolve(root)+path.sep))errors.push('acceptance_artifact_path_outside_repository');
   else if(!fs.existsSync(absolute)||!fs.statSync(absolute).isFile())errors.push('acceptance_artifact_missing');
   else {
    const digest=crypto.createHash('sha256').update(fs.readFileSync(absolute)).digest('hex');
