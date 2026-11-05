@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const EXECUTIVE = new URL('../../src/app/[locale]/dashboard/executive/page.tsx', import.meta.url);
-const AUDIT_PACK = new URL('../../src/app/[locale]/dashboard/audit-pack/page.tsx', import.meta.url);
-const BOARD_REPORT = new URL('../../src/app/[locale]/dashboard/board-report/page.tsx', import.meta.url);
+const AUDIT_PACK = new URL('../../src/app/[locale]/dashboard/audit-pack/audit-pack-client.tsx', import.meta.url);
+const BOARD_REPORT = new URL('../../src/app/[locale]/dashboard/board-report/board-report-client.tsx', import.meta.url);
 const OBSERVABILITY = new URL('../../src/app/[locale]/dashboard/observability/page.tsx', import.meta.url);
 const GAP_ANALYSIS = new URL('../../src/app/[locale]/dashboard/gap-analysis/page.tsx', import.meta.url);
 const TEMPLATES = new URL('../../src/app/[locale]/dashboard/organizations/templates/page.tsx', import.meta.url);

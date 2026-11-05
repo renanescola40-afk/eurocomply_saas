@@ -6,8 +6,11 @@ import test from 'node:test';
 // authorization and same/cross-tenant downloads still require isolated QA.
 const generator = readFileSync('src/lib/audit-pack/generator.ts', 'utf8');
 const vaultPage = readFileSync('src/app/[locale]/dashboard/evidence/evidence-vault-client.tsx', 'utf8');
-const auditPage = readFileSync('src/app/[locale]/dashboard/audit-pack/page.tsx', 'utf8');
-const boardPage = readFileSync('src/app/[locale]/dashboard/board-report/page.tsx', 'utf8');
+const auditPage = readFileSync('src/app/[locale]/dashboard/audit-pack/audit-pack-client.tsx', 'utf8');
+const boardPage = readFileSync('src/app/[locale]/dashboard/board-report/board-report-client.tsx', 'utf8');
+const auditRoute = readFileSync('src/app/[locale]/dashboard/audit-pack/page.tsx', 'utf8');
+const boardRoute = readFileSync('src/app/[locale]/dashboard/board-report/page.tsx', 'utf8');
+const boardGenerator = readFileSync('src/lib/board-report/generator.ts', 'utf8');
 const storage = readFileSync('src/lib/evidence/storage.ts', 'utf8');
 
 test('audit generator resolves tenant before fetching evidence', () => {
@@ -43,4 +46,16 @@ test('evidence reads are not converted to an empty fake audit register', () => {
   assert.doesNotMatch(generator, /Promise\.resolve\(\[\]\)/);
   assert.doesNotMatch(generator, /tryListEvidenceItems/);
   assert.match(generator, /evidenceCoverage:\s*evidenceSummary\.coverage/);
+});
+
+
+test('both report routes bind a server-authorized current organization', () => {
+  for (const route of [auditRoute, boardRoute]) {
+    assert.match(route, /requireCurrentUser\(\)/);
+    assert.match(route, /getCurrentOrganizationForUser\(user\.id\)/);
+    assert.match(route, /canonicalOrganizationId: context\.organization\.id/);
+  }
+  assert.match(auditPage, /organizationId: canonicalOrganizationId/);
+  assert.match(boardPage, /organizationId: canonicalOrganizationId/);
+  assert.match(boardGenerator, /organizationId\?: string \| null/);
 });
