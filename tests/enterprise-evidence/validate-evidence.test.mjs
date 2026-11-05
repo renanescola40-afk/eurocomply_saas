@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile,evidenceExpectedSha} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import { execFileSync } from 'node:child_process';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile,evidenceExpectedSha} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 const sha='a'.repeat(40),hash='b'.repeat(64),base={evidence_id:'EV-SEC-01-001',control_id:'SEC-01',gate_id:'A-01',evidence_type:'runtime-test',status:'NOT_VERIFIED',repository:'renanescola40-afk/eurocomply_saas',branch:'enterprise/evidence-factory-v1-20261101',commit_sha:sha,workflow_run_id:null,environment:'isolated-qa',generated_at:'2026-11-01T10:00:00Z',source_system:'GitHub Actions',test_command_or_provider_query:'npm run test:auth',result_summary:'Recorded, not accepted.',artifact_path:'artifacts/evidence/sec-01.json',artifact_sha256:hash,reproducibility_instructions:'Run against exact commit SHA.',limitations:[],reviewer_status:'NOT_REVIEWED',acceptance_status:'NOT_ACCEPTED'};
 test('rejects evidence bound to another SHA',()=>assert.ok(validateEvidenceRecord(base,{expectedSha:'c'.repeat(40)}).includes('commit_sha_mismatch')));
 test('PASS requires independent acceptance and an existing digest-matched artifact',()=>{const e=validateEvidenceRecord({...base,status:'PASS'},{expectedSha:sha});assert.ok(e.includes('pass_requires_independent_acceptance'));assert.ok(e.includes('artifact_missing'));});
@@ -231,4 +231,68 @@ test('G1 content verification preserves the two legitimate frozen source PASS co
  assert.equal(r.controls.find(x=>x.control_id==='OPS-01').status,'PASS');
  assert.ok(!r.errors.includes('g1_source_acceptance_evidence_invalid'));
  assert.equal(r.summary.gates_accepted,0);
+});
+
+
+test('accepted gate binds reviewed parent to tested HEAD without an impossible self-SHA reference',()=>{
+ const temp=fs.mkdtempSync(path.join(fs.realpathSync('/tmp'),'risck-a18-git-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:temp,encoding:'utf8'}).trim();
+ try{
+  git('init','-q');git('config','user.email','ci-fixture@example.invalid');git('config','user.name','CI fixture');
+  fs.writeFileSync(path.join(temp,'README.md'),'fixed source fixture\n');
+  git('add','.');git('commit','-q','-m','source baseline');
+  const source=git('rev-parse','HEAD');
+  const proof='docs/enterprise/gate-closure-v27/A18_FORMAL_ACCEPTANCE_TEST.json';
+  const index='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
+  fs.mkdirSync(path.dirname(path.join(temp,proof)),{recursive:true});
+  fs.mkdirSync(path.dirname(path.join(temp,index)),{recursive:true});
+  const artifact='{"gate":"A-18","reviewed_source":"'+source+'"}\n';
+  fs.writeFileSync(path.join(temp,proof),artifact);
+  fs.writeFileSync(path.join(temp,index),'{"gate_id":"A-18","accepted":true}\n');
+  git('add','.');git('commit','-q','-m','record reviewed gate and proof');
+  const head=git('rev-parse','HEAD');
+  assert.notEqual(source,head,'commits containing an acceptance claim cannot equal their source');
+  const gate={accepted:true,accepted_by:'Independent reviewer',reviewer_id:'reviewer',
+   reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
+   accepted_at:'2026-11-05T13:31:10Z',acceptance_sha:source,
+   approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+   acceptance_evidence_ref:proof,
+   acceptance_evidence_sha256:crypto.createHash('sha256').update(artifact).digest('hex')};
+  const options={eligible:true,expectedSha:head,root:temp,now:new Date('2026-11-05T15:00:00Z')};
+  assert.deepEqual(validateGateAcceptance(gate,options),[],
+   'immutable reviewed source plus evidence-only descendant must be accepted under exact HEAD');
+  assert.ok(validateGateAcceptance({...gate,acceptance_sha:'f'.repeat(40)},options)
+   .includes('acceptance_sha_mismatch'),'arbitrary SHA must not be accepted');
+  assert.ok(validateGateAcceptance({...gate,acceptance_evidence_sha256:'0'.repeat(64)},options)
+   .includes('acceptance_artifact_sha256_mismatch'),'tampered proof digest must fail');
+  fs.mkdirSync(path.join(temp,'src'),{recursive:true});
+  fs.writeFileSync(path.join(temp,'src','index.ts'),'export const change = true;\n');
+  git('add','.');git('commit','-q','-m','unreviewed application change');
+  assert.ok(validateGateAcceptance(gate,{...options,expectedSha:git('rev-parse','HEAD')})
+   .includes('acceptance_sha_mismatch'),'unreviewed code changes cannot inherit acceptance');
+ }finally{fs.rmSync(temp,{recursive:true,force:true});}
+});
+
+test('accepted gate rejects unrelated evidence changes between reviewed SHA and tested HEAD',()=>{
+ const temp=fs.mkdtempSync(path.join(fs.realpathSync('/tmp'),'risck-a18-evidence-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:temp,encoding:'utf8'}).trim();
+ try{
+  git('init','-q');git('config','user.email','ci-fixture@example.invalid');git('config','user.name','CI fixture');
+  fs.writeFileSync(path.join(temp,'README.md'),'source\n');git('add','.');git('commit','-q','-m','source');
+  const source=git('rev-parse','HEAD');
+  const proof='docs/enterprise/gate-closure-v27/A18_ACCEPTANCE_TEST.json';
+  const file=path.join(temp,proof);fs.mkdirSync(path.dirname(file),{recursive:true});
+  fs.writeFileSync(file,'{"original":true}\n');
+  fs.writeFileSync(path.join(temp,'docs/enterprise/gate-closure-v27/UNREVIEWED_SOURCE.json'),'{"unrelated":true}\n');
+  git('add','.');git('commit','-q','-m','unrelated evidence change');
+  const gate={accepted:true,accepted_by:'Independent reviewer',reviewer_id:'reviewer',
+   reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
+   accepted_at:'2026-11-05T13:31:10Z',acceptance_sha:source,
+   approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+   acceptance_evidence_ref:proof,
+   acceptance_evidence_sha256:crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')};
+  const result=validateGateAcceptance(gate,{eligible:true,expectedSha:git('rev-parse','HEAD'),
+   root:temp,now:new Date('2026-11-05T15:00:00Z')});
+  assert.ok(result.includes('acceptance_sha_mismatch'),JSON.stringify(result));
+ }finally{fs.rmSync(temp,{recursive:true,force:true});}
 });
