@@ -26,18 +26,28 @@ export function validateQaEnvironment(e) {
   for (const name of ['DATABASE_URL','DIRECT_URL','POSTGRES_URL','POSTGRES_PRISMA_URL','POSTGRES_URL_NON_POOLING']) {
     if (e[name]) errors.push(name + ' not allowed without separate verified QA DB guard');
   }
-  for (const name of ['STRIPE_SECRET_KEY','NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY']) {
-    const val=e[name] || '';
-    if (!val || !new RegExp('^(sk|pk)_test_').test(val)) errors.push(name+' must be Stripe TEST');
-  }
-  for (const name of ['STRIPE_WEBHOOK_SECRET']) {
-    if (!e[name]) errors.push(name + ' missing dedicated QA secret');
+  // Restricted mode for isolated QA app bootstrap only: billing is entirely
+  // disabled, with no Stripe credentials. This cannot certify billing E2E.
+  const noBillingBootstrap = e.RISCK_QA_BOOTSTRAP_NO_BILLING === 'true';
+  if (noBillingBootstrap) {
+    for (const name of ['STRIPE_SECRET_KEY','NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY','STRIPE_WEBHOOK_SECRET']) {
+      if (e[name]) errors.push(name + ' must be absent in no-billing QA bootstrap');
+    }
+  } else {
+    if (!String(e.STRIPE_SECRET_KEY || '').startsWith('sk_test_')) errors.push('STRIPE_SECRET_KEY must be Stripe TEST');
+    if (!String(e.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').startsWith('pk_test_')) errors.push('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY must be Stripe TEST');
+    if (!String(e.STRIPE_WEBHOOK_SECRET || '').startsWith('whsec_')) errors.push('STRIPE_WEBHOOK_SECRET missing dedicated QA secret');
   }
   for (const [name,value] of Object.entries(e)) {
     if (/^STRIPE_PRICE_/.test(name) && value && !String(value).startsWith('price_')) errors.push(name+' invalid price identifier');
   }
-  if (!String(e.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY||'').startsWith('pk_test_')) errors.push('Clerk publishable key must be test');
-  if (!String(e.CLERK_SECRET_KEY||'').startsWith('sk_test_')) errors.push('Clerk secret key must be test');
+  // Current application authentication uses Supabase. Legacy Clerk keys are
+  // optional, but a partial pair or any LIVE credential is forbidden in QA.
+  const clerkPublic = e.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
+  const clerkSecret = e.CLERK_SECRET_KEY || '';
+  if (clerkPublic && !String(clerkPublic).startsWith('pk_test_')) errors.push('Clerk publishable key must be test');
+  if (clerkSecret && !String(clerkSecret).startsWith('sk_test_')) errors.push('Clerk secret key must be test');
+  if (Boolean(clerkPublic) !== Boolean(clerkSecret)) errors.push('Clerk TEST keys must be paired');
   // Until an independent credential-to-project attestation exists, do not allow any
   // inherited privileged Supabase credential into Preview, even if it is opaque.
   for (const name of ['SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','SUPABASE_ADMIN_KEY','SUPABASE_SECRET_KEY']) {
