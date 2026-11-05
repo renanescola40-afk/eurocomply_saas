@@ -59,10 +59,12 @@ test('approved gate claim without all child PASS is rejected even with valid met
  const rel='artifacts/enterprise-evidence-factory/acceptance-gate-negative.json';
  const abs=path.resolve(process.cwd(),rel);
  fs.mkdirSync(path.dirname(abs),{recursive:true});
- const data='{"kind":"test-only"}';
+ const data=JSON.stringify({gate_id:'A-01',acceptance_source_sha:sha,
+   qualified_review:{reviewer_login:'reviewer-2',
+    review_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2598#pullrequestreview-123'}});
  fs.writeFileSync(abs,data);
  const digest=crypto.createHash('sha256').update(data).digest('hex');
- const claim={accepted:true,accepted_by:'Reviewer 2',reviewer_id:'reviewer-2',
+ const claim={gate_id:'A-01',accepted:true,accepted_by:'Reviewer 2',reviewer_id:'reviewer-2',
   reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
   accepted_at:'2026-11-02T12:00:00Z',acceptance_sha:sha,
   approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2598#pullrequestreview-123',
@@ -247,13 +249,15 @@ test('accepted gate binds reviewed parent to tested HEAD without an impossible s
   const index='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
   fs.mkdirSync(path.dirname(path.join(temp,proof)),{recursive:true});
   fs.mkdirSync(path.dirname(path.join(temp,index)),{recursive:true});
-  const artifact='{"gate":"A-18","reviewed_source":"'+source+'"}\n';
+  const artifact=JSON.stringify({gate_id:'A-18',acceptance_source_sha:source,
+    qualified_review:{reviewer_login:'reviewer',
+     review_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887'}})+'\n';
   fs.writeFileSync(path.join(temp,proof),artifact);
   fs.writeFileSync(path.join(temp,index),'{"gate_id":"A-18","accepted":true}\n');
   git('add','.');git('commit','-q','-m','record reviewed gate and proof');
   const head=git('rev-parse','HEAD');
   assert.notEqual(source,head,'commits containing an acceptance claim cannot equal their source');
-  const gate={accepted:true,accepted_by:'Independent reviewer',reviewer_id:'reviewer',
+  const gate={gate_id:'A-18',accepted:true,accepted_by:'Independent reviewer',reviewer_id:'reviewer',
    reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
    accepted_at:'2026-11-05T13:31:10Z',acceptance_sha:source,
    approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
@@ -271,6 +275,16 @@ test('accepted gate binds reviewed parent to tested HEAD without an impossible s
   git('add','.');git('commit','-q','-m','unreviewed application change');
   assert.ok(validateGateAcceptance(gate,{...options,expectedSha:git('rev-parse','HEAD')})
    .includes('acceptance_sha_mismatch'),'unreviewed code changes cannot inherit acceptance');
+   const unreviewed=git('rev-parse','HEAD');
+   // P1 reproduction: a new acceptance-only commit repins the editable SHA
+   // to a parent with unreviewed application code, retaining the OLD proof.
+   fs.writeFileSync(path.join(temp,index),JSON.stringify({gate_id:'A-18',accepted:true,acceptance_sha:unreviewed})+'\n');
+   git('add','.');git('commit','-q','-m','repin ledger without new independent source review');
+   const replay=validateGateAcceptance({...gate,acceptance_sha:unreviewed},
+    {...options,expectedSha:git('rev-parse','HEAD')});
+   assert.ok(replay.includes('acceptance_source_not_bound_to_proof'),
+    'stale approval may not be repinned after unreviewed code: '+JSON.stringify(replay));
+
  }finally{fs.rmSync(temp,{recursive:true,force:true});}
 });
 
@@ -283,7 +297,9 @@ test('accepted gate rejects unrelated evidence changes between reviewed SHA and 
   const source=git('rev-parse','HEAD');
   const proof='docs/enterprise/gate-closure-v27/A18_ACCEPTANCE_TEST.json';
   const file=path.join(temp,proof);fs.mkdirSync(path.dirname(file),{recursive:true});
-  fs.writeFileSync(file,'{"original":true}\n');
+  fs.writeFileSync(file,JSON.stringify({gate_id:'A-18',acceptance_source_sha:source,
+   qualified_review:{reviewer_login:'reviewer',
+    review_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887'}})+'\n');
   fs.writeFileSync(path.join(temp,'docs/enterprise/gate-closure-v27/UNREVIEWED_SOURCE.json'),'{"unrelated":true}\n');
   git('add','.');git('commit','-q','-m','unrelated evidence change');
   const gate={accepted:true,accepted_by:'Independent reviewer',reviewer_id:'reviewer',
