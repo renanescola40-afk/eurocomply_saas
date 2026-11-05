@@ -516,5 +516,68 @@
       "formalGateAccepted": false,
       "e5Handoff": "Review the three provider-to-GitLab SQL statement-byte identity proofs without interpreting them as whole-file or version-qualified migration acceptance. E3 to resolve QA Preview config and run exact-SHA CI and authenticated QA. No new accepted control or gate."
     }
+  },
+  "revalidation_20261105": {
+    "observedDate": "2026-11-05",
+    "qaPersistedClerkHelperFix": {
+      "provider": "Supabase PostgreSQL 17.11",
+      "projectId": "zrxrrfbllsxtleyxjpsz",
+      "migrationLedgerVersion": "20261105185729",
+      "migrationName": "enterprise_clerk_text_subject_mfa_reconciliation_20261103_ve1qa",
+      "canonicalGitHubMain": "313eb1e258b3a790ea2f8bd4b103079cb38dc5ce",
+      "canonicalMigrationPath": "supabase/migrations/20261103080000_enterprise_clerk_text_subject_mfa_reconciliation.sql",
+      "immutableSourceBlobSha1": "31073c868fa14e66ebf5b1df2c917fafefac9177",
+      "executedBody": "Same canonical migration body, stripped only explicit BEGIN and COMMIT because Supabase apply_migration owns the transaction.",
+      "providerApplyResult": "success:true; provider migration history verified",
+      "sourcePreChangeMd5": {
+        "enterprise_member_can_manage": "4dcb3d1b3cd395ae9241bb6441336d9a",
+        "enterprise_member_can_read": "d22463f096060aa22683ee61a74e5875"
+      },
+      "qaPostChangeMd5": {
+        "enterprise_member_can_manage": "a77dfb7c0c069e21e8354d277296daaa",
+        "enterprise_member_can_read": "7babe389c81b47dd260770d8f6541b79"
+      },
+      "verifiedProviderInvariants": {
+        "directAuthUidUUIDCastRemovedBoth": true,
+        "securityDefinerBoth": true,
+        "searchPathPgCatalogBoth": true,
+        "authenticatedExecuteBoth": true,
+        "serviceRoleExecuteBoth": true,
+        "anonExecuteDeniedBoth": true,
+        "readDelegatesToClerkUUIDSafeMembership": true,
+        "manageDelegatesToRoleAwareMembership": true
+      },
+      "prodLeftUnchanged": true,
+      "prodStillVulnerable": true,
+      "qaPersistentMigrationApplied": true,
+      "originalBug22P02ReproducedBeforeFix": true,
+      "exactShaVercelE2E": "NOT_VERIFIED",
+      "clerkSignedJwtMfa": "NOT_VERIFIED",
+      "qualifiedIndependentReview": "PENDING",
+      "formalGateAcceptance": "NOT_ACCEPTED"
+    },
+    "qaRegression": {
+      "postMigrationEnterpriseHelperScript": "tests/security/ve1-qa-persisted-clerk-safe-enterprise-helpers.sql",
+      "postMigrationEnterpriseHelperScriptGitBlob": "7d2f9853edeca288c0bd7598bdb235e7cece355c",
+      "qaEnterpriseHelperAssertionsPassed": 24,
+      "priorQaRlsAalScript": "tests/security/ve1-qa-two-tenant-rls-mfa-readonly.sql",
+      "priorQaRlsAalAssertionsReexecutedPassed": 36,
+      "totalQaSqlAssertionsReexecutedPassed": 60,
+      "testsFailed": 0,
+      "testConditions": "SQL SET LOCAL ROLE authenticated, transaction-local simulated Clerk sub/AAL1/AAL2 claims, both QA tenant fixtures and nonmember identity, BEGIN READ ONLY; ROLLBACK.",
+      "excludes": [
+        "Real signed Clerk JWT validation",
+        "HTTP API/export/browser",
+        "Storage object fixtures",
+        "CI exact SHA and independent acceptance"
+      ]
+    },
+    "requiredNextActions": [
+      "Source-review the tested existing migration and permanently QA-applied source with an independent qualified reviewer.",
+      "Execute real signed Clerk JWT AAL1/AAL2 and expired/revoked identity E2E against a verified protected QA deployment; never substitute simulated SQL claim settings.",
+      "Execute full A/B cross-tenant API, Document/Storage and export E2E with QA-only fixtures.",
+      "Verify exact-SHA CI and independent acceptance using the existing formal validator; do not edit ledger until accepted.",
+      "Production migration remains forbidden without separately reviewed production deployment authorization."
+    ]
   }
 }
