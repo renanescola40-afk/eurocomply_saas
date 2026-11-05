@@ -43,5 +43,7 @@
     "Provider READY/domain ID is not runtime health or customer E2E",
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
-  "governance_status": "PROPOSED_FOR_OFFICIAL_VALIDATOR_AND_EXACT_HEAD_PR_REVIEW_NOT_YET_INTEGRATED"
+  "governance_status": "PROPOSED_FOR_OFFICIAL_VALIDATOR_AND_EXACT_HEAD_PR_REVIEW_NOT_YET_INTEGRATED",
+  "acceptance_source_sha": "b319594a410efc73dedcdd3f5c0f60c7619203c9",
+  "acceptance_source_selection": "Last source/test/validator commit, before proof and ledger-only acceptance commits. Requires new independent PR-head review before merge."
 }
