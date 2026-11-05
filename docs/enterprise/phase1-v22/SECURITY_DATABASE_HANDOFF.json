@@ -611,6 +611,29 @@
         "Not a formal gate PASS"
       ],
       "next": "Validate supported server-side writes and API/export/Storage through verified signed Clerk JWT and QA-only billing, then independent formal review."
+    },
+    "qaStorageMetadataRls": {
+      "observedDate": "2026-11-05",
+      "qaProject": "zrxrrfbllsxtleyxjpsz",
+      "testPath": "tests/security/ve1-qa-ephemeral-storage-object-rls.sql",
+      "testBlobSha1": "5eaf2eea679797ab76da4d030f7aeacb7029414c",
+      "transaction": "BEGIN; QA-only synthetic entitlement sources/snapshots and temporary Storage objects metadata rows; SET LOCAL ROLE authenticated/anon; ROLLBACK",
+      "assertionsPassed": 12,
+      "failed": 0,
+      "providerVerifiedResults": [
+        "Both QA tenants have private compliance-documents and controlled-documents buckets",
+        "Simulated AAL2 sees own tenant compliance-documents metadata only",
+        "Simulated AAL2 cannot read other tenant metadata",
+        "Controlled-documents bucket blocks direct reads even with simulated AAL2",
+        "Simulated AAL1 denies own organization document metadata",
+        "Nonmember and anon roles see zero document metadata",
+        "Post-ROLLBACK storage.objects row count, transient entitlement sources and snapshots all returned to zero"
+      ],
+      "limitation": "Metadata-only SQL test; no file bytes, actual upload/download, application-layer exported documents, signed Clerk JWT, accepted independent review or commercial subscription was verified.",
+      "formalAcceptance": "NOT_ACCEPTED",
+      "realSignedContractUsed": false,
+      "realStorageBinaryTested": false,
+      "nextRequired": "QA TEST credentials and signed-JWT authenticated storage API file-upload/download tenant A/B matrix; qualified independent review and exact-SHA CI."
     }
   }
 }
