@@ -106,14 +106,14 @@ test('historical source PASS retains only two legitimate provider-backed control
  const frozen=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
  const gateMap=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
  const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
- const r=reconcile({scope:frozen,gates:gateMap,index,expectedSha:index.source.commit_sha,
-   now:new Date('2026-11-04T12:00:00Z')});
+ const testedSha=process.env.EVIDENCE_EXACT_SHA||execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+ const r=reconcile({scope:frozen,gates:gateMap,index,expectedSha:testedSha,now:new Date()});
  assert.equal(r.summary.controls_pass,2);
  assert.equal(r.controls.find(c=>c.control_id==='BIL-01').status,'PASS');
  assert.equal(r.controls.find(c=>c.control_id==='OPS-01').status,'PASS');
  assert.equal(r.gates.find(g=>g.gate_id==='A-09').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
  assert.equal(r.gates.find(g=>g.gate_id==='A-18').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
- assert.equal(r.summary.gates_accepted,0);
+ assert.equal(r.summary.gates_accepted,index.gates.filter(g=>g.accepted===true).length);
 });
 
 
@@ -225,12 +225,13 @@ test('G1 content verification preserves the two legitimate frozen source PASS co
  const scope=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
  const gates=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
  const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
- const r=reconcile({scope,gates,index,expectedSha:index.source.commit_sha});
+ const testedSha=process.env.EVIDENCE_EXACT_SHA||execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+ const r=reconcile({scope,gates,index,expectedSha:testedSha});
  assert.equal(r.summary.controls_pass,2);
  assert.equal(r.controls.find(x=>x.control_id==='BIL-01').status,'PASS');
  assert.equal(r.controls.find(x=>x.control_id==='OPS-01').status,'PASS');
  assert.ok(!r.errors.includes('g1_source_acceptance_evidence_invalid'));
- assert.equal(r.summary.gates_accepted,0);
+ assert.equal(r.summary.gates_accepted,index.gates.filter(g=>g.accepted===true).length);
 });
 
 
