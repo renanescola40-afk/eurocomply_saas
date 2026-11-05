@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-const migration=readFileSync('supabase/migrations/20261105225000_scope_commercial_authority_to_active_membership.sql','utf8');
+const migration=readFileSync('supabase/migrations/20261105225605_sec04_commercial_caller_scope_20261105_pr2624_08f92be0.sql','utf8');
 const qa=readFileSync('tests/security/commercial-authority-caller-scope-qa-rollback.sql','utf8');
 test('keeps security definer and trusted server-side commercial authority',()=>{
   assert.equal((migration.match(/language sql stable security definer/gi)||[]).length,2);
