@@ -58,7 +58,13 @@ describe('onboarding runtime boundary', () => {
   it('catches both server mutations and exposes one assisted Enterprise path', () => {
     expect(pageSource).toContain("toOnboardingMutationFailure(error, safeLocale, 'save')");
     expect(pageSource).toContain("toOnboardingMutationFailure(error, safeLocale, 'complete')");
-    expect(pageSource).toContain('getOnboardingPlanIntent(resolvedSearchParams.plan)');
+    // The route must reject an invalid explicit plan before deriving onboarding intent.
+    // Comparing the raw query string would allow invalid/legacy inputs to silently
+    // fall back to a paid tier; require canonical fail-closed normalization instead.
+    expect(pageSource).toContain('normalizePublicCheckoutPlanId(resolvedSearchParams.plan)');
+    expect(pageSource).toContain('if (hasExplicitPlan && !normalizedPublicPlan)');
+    expect(pageSource).toContain('getOnboardingPlanIntent(normalizedPublicPlan)');
+    expect(pageSource).not.toContain('getOnboardingPlanIntent(resolvedSearchParams.plan)');
 
     expect(boundarySource).toContain('if (!result.ok)');
     expect(boundarySource).toContain('throw new Error(result.message)');
