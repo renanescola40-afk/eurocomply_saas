@@ -27,3 +27,12 @@ test('source-only contract test cannot waive existing evidence validation and di
  assert.match(workflow, /EVIDENCE_SHA256_OUTPUT: artifacts\/enterprise-readiness\/EVIDENCE_SHA256_MANIFEST\.json/);
  assert.match(workflow, /- name: Enforce enterprise evidence tests passed/);
 });
+
+
+test('A-18 exact-head provider attestation requires read-only GitHub API scope',()=>{
+ assert.match(workflow,/pull-requests: read/);
+ assert.match(run,/EVIDENCE_PR_NUMBER: \$\{\{ github\.event\.pull_request\.number \|\| '' \}\}/);
+ assert.match(run,/GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+ assert.match(validator,/verifyGitHubA18CurrentHead/);
+ assert.match(validator,/authenticated_current_head_review_required/);
+});

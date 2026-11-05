@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: enterprise-evidence-tests-${{ github.ref }}
@@ -41,6 +42,8 @@ jobs:
       - name: Validate G1 evidence factory contracts
         env:
           EVIDENCE_EXACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVIDENCE_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EVIDENCE_EXACT_SHA" || {
