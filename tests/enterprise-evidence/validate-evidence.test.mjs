@@ -115,7 +115,7 @@ test('historical source PASS retains only two legitimate provider-backed control
  assert.equal(r.controls.find(c=>c.control_id==='OPS-01').status,'PASS');
  assert.equal(r.gates.find(g=>g.gate_id==='A-09').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
  assert.equal(r.gates.find(g=>g.gate_id==='A-18').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
- assert.equal(r.summary.gates_accepted,index.gates.filter(g=>g.accepted===true).length);
+ assert.equal(r.summary.gates_accepted,0,'without authenticated current-head provider review the A-18 gate fails closed');
 });
 
 
@@ -233,7 +233,7 @@ test('G1 content verification preserves the two legitimate frozen source PASS co
  assert.equal(r.controls.find(x=>x.control_id==='BIL-01').status,'PASS');
  assert.equal(r.controls.find(x=>x.control_id==='OPS-01').status,'PASS');
  assert.ok(!r.errors.includes('g1_source_acceptance_evidence_invalid'));
- assert.equal(r.summary.gates_accepted,index.gates.filter(g=>g.accepted===true).length);
+ assert.equal(r.summary.gates_accepted,0,'without authenticated current-head provider review the A-18 gate fails closed');
 });
 
 
