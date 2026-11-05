@@ -30,9 +30,13 @@ export function validateQaEnvironment(e) {
   // disabled, with no Stripe credentials. This cannot certify billing E2E.
   const noBillingBootstrap = e.RISCK_QA_BOOTSTRAP_NO_BILLING === 'true';
   if (noBillingBootstrap) {
-    for (const name of ['STRIPE_SECRET_KEY','NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY','STRIPE_WEBHOOK_SECRET']) {
+    for (const name of ['STRIPE_SECRET_KEY','NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY']) {
       if (e[name]) errors.push(name + ' must be absent in no-billing QA bootstrap');
     }
+    // A dedicated disabled TEST QA webhook may already have a signing secret.
+    // Without a Stripe API key neither webhook handler can process an event.
+    if (e.STRIPE_WEBHOOK_SECRET && !String(e.STRIPE_WEBHOOK_SECRET).startsWith('whsec_'))
+      errors.push('STRIPE_WEBHOOK_SECRET must be a webhook signing secret');
   } else {
     if (!String(e.STRIPE_SECRET_KEY || '').startsWith('sk_test_')) errors.push('STRIPE_SECRET_KEY must be Stripe TEST');
     if (!String(e.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').startsWith('pk_test_')) errors.push('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY must be Stripe TEST');
