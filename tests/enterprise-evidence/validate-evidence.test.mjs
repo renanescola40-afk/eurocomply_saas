@@ -330,7 +330,7 @@ test('provider authentication rejects stale, self, unauthenticated and missing-c
   base:{ref:'main',repo:{full_name:'renanescola40-afk/eurocomply_saas'}},user:{login:'renanescola40-afk'}};
  const old={id:5784789887,state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:reviewed};
  const follow={user:{login:'renansilva2002-tech'},body:'Reviewed A-18/OPS-01 independently'};
- const current=[{state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:expected,body:'Approve A-18 / OPS-01 current reviewed head'}];
+ const current=[{state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:expected,body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED\nI independently reviewed deployment identity and this exact PR head.'}];
  const verify=async({pull=pr,prior=old,followup=follow,reviews=current,token='synthetic-token'}={})=>{
   const request=async(url)=>({ok:true,json:async()=>{
    if(url.includes('/issues/comments/'))return followup;
@@ -345,6 +345,10 @@ test('provider authentication rejects stale, self, unauthenticated and missing-c
  assert.equal(await verify({reviews:[{...current[0],commit_id:'e'.repeat(40)}]}),false);
  assert.equal(await verify({reviews:[]}),false);
  assert.equal(await verify({reviews:[{...current[0],body:''}]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:'A-18 / OPS-01 formal gate acceptance is explicitly NOT approved; keep this gate pending'}]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:'I reviewed the A-18 implementation, but did not approve the formal gate'}]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED\nA-18/OPS-01 NOT APPROVED'}]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:'I approve the code, no gate decision'}]}),false);
  assert.equal(await verify({pull:{...pr,user:{login:'renansilva2002-tech'}}}),false);
  assert.equal(await verify({pull:{...pr,state:'closed'}}),false);
  assert.equal(await verify({prior:{...old,state:'COMMENTED'}}),false);
