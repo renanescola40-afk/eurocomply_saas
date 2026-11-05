@@ -24,6 +24,9 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Gate acceptance binds a reviewed source ancestor to this exact CI HEAD.
+          # A shallow checkout cannot verify that ancestry; do not weaken the gate.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node.js
