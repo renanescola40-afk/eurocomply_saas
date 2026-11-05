@@ -43,7 +43,7 @@
     "Provider READY/domain ID is not runtime health or customer E2E",
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
-  "governance_status": "PROPOSED_FOR_OFFICIAL_VALIDATOR_AND_EXACT_HEAD_PR_REVIEW_NOT_YET_INTEGRATED",
-  "acceptance_source_sha": "b319594a410efc73dedcdd3f5c0f60c7619203c9",
-  "acceptance_source_selection": "Last source/test/validator commit, before proof and ledger-only acceptance commits. Requires new independent PR-head review before merge."
+  "governance_status": "PROPOSED_ON_PR_ONLY_NOT_ACCEPTED_ON_MAIN; CURRENT_HEAD_HUMAN_REVIEW_AND_REQUIRED_CHECKS_PENDING; POST_MERGE_PROVIDER_ATTESTATION_NOT_IMPLEMENTED",
+  "acceptance_source_sha": "1a79c27a456074385d440ef908fd186f7a3926e0",
+  "acceptance_source_selection": "Immutable final validator/test/workflow source commit. Only this gate's proof and canonical ledger may change afterward. A new native gate-specific GitHub approval on the exact final PR HEAD is independently provider-verified at runtime; absent approval fails closed."
 }
