@@ -138,3 +138,11 @@ test('emits stable non-sensitive metadata only and never returns SQL source or p
   assert.equal(serialized.includes('"sql"'), false);
   assert.equal(serialized.includes('CREATE POLICY'), false);
 });
+
+test('committed review queue is reproducible byte-for-byte as JSON data', () => {
+  const generated = build(fixtures());
+  const committed = read('docs/enterprise/phase1-v22/DAT01_PROVENANCE_REVIEW_DECISIONS_20261106.json');
+  assert.deepEqual(committed, generated);
+  assert.equal(committed.safety.independentHumanApproval, false);
+  assert.equal(committed.counts.independentlyApprovedReplayRows, 0);
+});
