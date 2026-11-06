@@ -34,7 +34,10 @@
     "nonexactUnrecovered": 11,
     "fullReplay": "0/137",
     "allReviewerDecisionsPending": true,
-    "sourceSnapshotSha": "75fcb01585108a7af576580593605fcf8bec3e60"
+    "sourceSnapshotSha": "75fcb01585108a7af576580593605fcf8bec3e60",
+    "originalAppliedWholeFileBytesProvenForNonexactCases": 0,
+    "candidateMappedSourceWholeFileBytesReproduced": 13,
+    "alternativeTrimmedCandidateNotRawByteProof": 1
   },
   "consolidations": [
     {
@@ -1884,7 +1887,7 @@
             "evidenceInterpretation": "Existing report records provider statement equals this alternative source after TRIM_END; identity still pending independent review."
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "ORIGINAL_SOURCE_WHOLE_BYTES_PROVEN_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
@@ -1901,7 +1904,10 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "ALTERNATIVE_SOURCE_FILE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false,
+          "trimEndNormalizationObserved": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -1915,6 +1921,13 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false,
+          "observedMatch": "provider stream matches alternative historical candidate only after TRIM_END; this is not byte-exact whole-file proof"
         }
       },
       {
@@ -1942,7 +1955,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -1963,7 +1976,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -1977,6 +1992,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2004,7 +2025,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2025,7 +2046,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2039,6 +2062,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2083,7 +2112,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2097,6 +2128,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2141,7 +2178,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2155,6 +2194,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2199,7 +2244,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2213,6 +2260,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2257,7 +2310,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2271,6 +2326,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2298,7 +2359,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2319,7 +2380,9 @@
             "representation": "PREFIX_LF"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2333,6 +2396,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2360,7 +2429,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2381,7 +2450,9 @@
             "representation": "PREFIX_LF"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2395,6 +2466,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2439,7 +2516,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2453,6 +2532,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2480,7 +2565,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2501,7 +2586,9 @@
             "representation": "TRIM_END"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2515,6 +2602,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2559,7 +2652,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2573,6 +2668,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2617,7 +2718,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2631,6 +2734,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2675,7 +2784,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2689,6 +2800,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2716,7 +2833,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2737,7 +2854,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2751,6 +2870,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2778,7 +2903,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2799,7 +2924,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2813,6 +2940,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2840,7 +2973,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2861,7 +2994,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2875,6 +3010,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2902,7 +3043,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2923,7 +3064,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2937,6 +3080,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -2964,7 +3113,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -2985,7 +3134,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -2999,6 +3150,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -3026,7 +3183,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -3047,7 +3204,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -3061,6 +3220,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -3088,7 +3253,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -3109,7 +3274,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -3123,6 +3290,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -3167,7 +3340,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -3181,6 +3356,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -3225,7 +3406,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -3239,6 +3422,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -3283,7 +3472,9 @@
             "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
           },
           "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": false
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -3297,6 +3488,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": false,
+          "rawWholeFileByteEquality": false,
+          "sourceIdentityAccepted": false
         }
       },
       {
@@ -3324,7 +3521,7 @@
             "availableAtSnapshot": true
           }
         ],
-        "originalWholeFileBytesProven": true,
+        "originalWholeFileBytesProven": false,
         "evidenceClass": "MAPPED_SOURCE_WHOLE_BYTES_REPRODUCED_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "BYTE_EQUAL_SOURCE_TEXT",
@@ -3345,7 +3542,9 @@
             "representation": "RAW"
           },
           "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
-          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
+          "sourceEvidenceRef": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+          "originalAppliedSourceBytesProven": false,
+          "candidateSourceBytesReproduced": true
         },
         "evidenceStillRequired": [
           "Reviewer verifies provider SQL hash, historical source bytes and mapping rationale against the frozen provider ledger",
@@ -3359,6 +3558,12 @@
           "approvalUrl": null,
           "acceptedAt": null,
           "acceptedSha": null
+        },
+        "originalAppliedWholeFileBytesProven": false,
+        "candidateSourceBytes": {
+          "wholeFileBytesReproduced": true,
+          "rawWholeFileByteEquality": true,
+          "sourceIdentityAccepted": false
         }
       }
     ]
@@ -3371,6 +3576,6 @@
       "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json"
     ],
     "existingEvidenceUnmodified": true,
-    "notes": "This package adds decisions/status fields and links existing facts; it does not alter the frozen provider ledger, existing source evidence, or the 137-row draft."
+    "notes": "This package adds decisions/status fields and links existing facts; it does not alter the frozen provider ledger, existing source evidence, or the 137-row draft. Source bytes reproduced at mapped candidate paths are not themselves proof that these were the original bytes applied by the provider; all 25 production identity decisions remain pending."
   }
 }
