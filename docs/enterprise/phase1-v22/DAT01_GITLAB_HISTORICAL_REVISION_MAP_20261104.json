@@ -503,5 +503,101 @@
       "approvalRecorded": false,
       "dat01StatusChanged": false
     }
+  },
+  "historicalReconciliationPathTriage20261106": {
+    "observedDate": "2026-11-06",
+    "targetVersion": "20260726070000",
+    "providerLedgerProject": "tganhbbhfxcpblmgqprg",
+    "classification": "ORIGINAL_RECONCILIATION_PATH_RECOVERED; HISTORICAL_POLICY_SEMANTICS_EXPLAIN_SOURCE_DRIFT; ORIGINAL_APPLIED_WHOLE_FILE_BYTES_UNPROVEN",
+    "historicalSourceRevisions": [
+      {
+        "date": "2026-07-26T07:53:31+01:00",
+        "commit": "438e8b76e3c9d06bacafeb6296abb3d9f7b45b6b",
+        "file": "supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql",
+        "url": "https://gitlab.com/risck-comply-group/eurocomply_saas/-/blob/438e8b76e3c9d06bacafeb6296abb3d9f7b45b6b/supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql",
+        "gitBlobSha1": "1e350283a265d332db6e7ce1065c8bacaa63737a",
+        "gitContentSha256": "24ecf6c45e96e8d8c0c102b62f0eeab6d692fce60304286a16aeea5e8c927108",
+        "sourceBytes": 1700,
+        "providerStatementsVerbatimFound": 8,
+        "providerStatementTotal": 15,
+        "policyPredicates": [
+          "permissions_authenticated_read USING (true)",
+          "role_permissions_authenticated_read USING (true)"
+        ]
+      },
+      {
+        "date": "2026-08-12T23:50:36+01:00",
+        "commit": "a2e315683cb52351493d56076ebc4346bf03c64b",
+        "file": "supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql",
+        "url": "https://gitlab.com/risck-comply-group/eurocomply_saas/-/blob/a2e315683cb52351493d56076ebc4346bf03c64b/supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql",
+        "gitBlobSha1": "529f6867577cc18459dbb9d237870e5bc8ec3e46",
+        "gitContentSha256": "33ea356c10987dbecbc6a8a2a1fd6937f9ed936966de08b44d3ae5a4b1da3bbf",
+        "sourceBytes": 4120,
+        "providerStatementsVerbatimFound": 11,
+        "providerStatementTotal": 15,
+        "policyPredicates": [
+          "permissions_authenticated_read USING (true)",
+          "role_permissions_authenticated_read USING (true)"
+        ]
+      },
+      {
+        "date": "2026-09-09T15:26:08+01:00",
+        "commit": "a287eb03c2af908e796a3a788c4f45d973d77b1f",
+        "file": "supabase/migrations/20260726070000_permissions_catalog_rls_hotfix.sql",
+        "url": "https://gitlab.com/risck-comply-group/eurocomply_saas/-/blob/a287eb03c2af908e796a3a788c4f45d973d77b1f/supabase/migrations/20260726070000_permissions_catalog_rls_hotfix.sql",
+        "gitBlobSha1": "1a1f8753d759b27003395ad5b76ebcc8e0788b62",
+        "gitContentSha256": "0e5e7acd93e0018faeb4acec91a71c2ab65c16703f11dfb6a93ba64e991b901a",
+        "sourceBytes": 4204,
+        "providerStatementsVerbatimFound": 11,
+        "providerStatementTotal": 15,
+        "policyPredicates": [
+          "permissions_authenticated_read USING (auth.uid() IS NOT NULL)",
+          "role_permissions_authenticated_read USING (auth.uid() IS NOT NULL)"
+        ]
+      }
+    ],
+    "providerStatementsNotVerbatimRepresentedInCurrentSource": [
+      {
+        "index": 12,
+        "operation": "DROP POLICY",
+        "name": "permissions_authenticated_read"
+      },
+      {
+        "index": 13,
+        "operation": "CREATE POLICY",
+        "name": "permissions_authenticated_read",
+        "predicate": "USING (true)"
+      },
+      {
+        "index": 14,
+        "operation": "DROP POLICY",
+        "name": "role_permissions_authenticated_read"
+      },
+      {
+        "index": 15,
+        "operation": "CREATE POLICY",
+        "name": "role_permissions_authenticated_read",
+        "predicate": "USING (true)"
+      }
+    ],
+    "interpretation": "The applied ledger preserves the earlier permissive policy predicate; a later migration source rewrite tightens the two policy USING clauses. The historical file retains same-named policy constructs but has different source bytes/format. It is not safe to substitute current SQL for the original version, and this does not justify reintroducing broad RLS policies. Any replay must remain ordered with subsequent corrective migrations and independently reviewed.",
+    "provenanceStatus": "HISTORIC_SOURCE_EXISTS_BUT_APPLIED_WHOLE_BYTE_EQUALITY_UNPROVEN",
+    "authorizedForReplay": false,
+    "independentReviewerApproval": false,
+    "sqlExecuted": false,
+    "countsChanged": false,
+    "archivalCiArtifactAttempt": {
+      "referencedRunId": "34479350114",
+      "referencedArtifactId": "10153540158",
+      "observedRunArtifacts": 0,
+      "artifactDownload": "NOT_FOUND_404",
+      "retentionCause": "NOT_DETERMINED",
+      "recoveryCredit": false
+    },
+    "safety": {
+      "productionWrites": false,
+      "sharedQaWrites": false,
+      "manifestChanged": false
+    }
   }
 }
