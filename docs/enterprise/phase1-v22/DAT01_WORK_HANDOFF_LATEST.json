@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.dat01.work-handoff.v1",
-  "observedAt": "2026-11-06T15:00:00+00:00",
+  "observedAt": "2026-11-06T15:20:00+00:00",
   "control": "DAT-01",
   "gate": "A-12",
   "status": "BLOCKED",
@@ -8,30 +8,37 @@
   "pullRequest": 2603,
   "pullRequestUrl": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2603",
   "branch": "phase1/security-dat01-v22",
-  "testedSourceSha": "8f648aceb50bfa7e3b6967f127c1f1c8a7a63a2d",
+  "testedSourceSha": "266b5e5c6ac58e1b473d4b04d7214aa28a03c25b",
   "prStateAtVerification": {
     "state": "open",
     "draft": false,
     "headMatchesTestedSha": true,
+    "headSha": "266b5e5c6ac58e1b473d4b04d7214aa28a03c25b",
     "baseSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b"
   },
   "ci": {
-    "circleciDecision": "CONFIG_BLOCKED",
-    "organization": "risck comply",
-    "organizationUrl": "https://app.circleci.com/organization/circleci/DkHrxCQUawru743TaJgTeN",
-    "projectName": "risck comply",
-    "projectId": "faff8a46-c09c-49f4-a79d-ae80095e795e",
-    "projectUrl": "https://app.circleci.com/projects/circleci/DkHrxCQUawru743TaJgTeN/XzfvNhbiPLWptna2ujNi2y",
-    "freeCreditsRemainingObserved": 29209,
-    "latestPipelineId": "492f1791-97db-455d-97eb-a4cf5d5b7c81",
-    "latestPipelineNumber": 56,
-    "latestPipelineUrl": "https://app.circleci.com/pipelines/circleci/DkHrxCQUawru743TaJgTeN/XzfvNhbiPLWptna2ujNi2y/56/details",
-    "latestPipelineRevision": "909d80b2c827f953c252565563bce694eafd909f",
-    "latestPipelineSource": "GitLab",
-    "latestPipelineBranch": "work-master/integration-20261026",
-    "latestPipelineWorkflowObservation": "No workflows found",
-    "exactGitHubShaRun": "NOT_VERIFIED",
-    "decisionReason": "Authenticated CircleCI project is connected to the GitLab mirror, its latest visible pipeline is for another branch and SHA, and that pipeline exposes no workflow. The account has free credits, but there is no verified exact-SHA CircleCI execution path for this GitHub PR head."
+    "circleciDecision": "RUNNABLE_FREE_EXACT_SHA",
+    "organization": "renanescola40-afk",
+    "projectName": "eurocomply_saas",
+    "projectUrl": "https://app.circleci.com/projects/github/renanescola40-afk/eurocomply_saas",
+    "freeCreditsRemainingObservedBeforeRun": 18552,
+    "exactShaRun": "SUCCESS",
+    "branch": "phase1/security-dat01-v22",
+    "sourceSha": "266b5e5c6ac58e1b473d4b04d7214aa28a03c25b",
+    "pipelineNumber": 1189,
+    "pipelineUrl": "https://app.circleci.com/pipelines/gh/renanescola40-afk/eurocomply_saas/1189/details?useNewPipelines=true&workflowId=57932de5-d41f-4f21-8956-5af4a7ef4a67",
+    "workflow": "dat01-ledger-preflight-manual",
+    "workflowId": "57932de5-d41f-4f21-8956-5af4a7ef4a67",
+    "workflowConclusion": "success",
+    "job": "dat01-ledger-preflight",
+    "buildNumber": 461,
+    "jobId": "571d96ea-ce45-47b1-8316-d9eb99b74cce",
+    "jobConclusion": "success",
+    "jobDurationSeconds": 7,
+    "artifactPreflight": "https://output.circle-artifacts.com/output/job/571d96ea-ce45-47b1-8316-d9eb99b74cce/artifacts/0/dat01-structural-preflight-exact-sha/preflight.json",
+    "artifactTests": "https://output.circle-artifacts.com/output/job/571d96ea-ce45-47b1-8316-d9eb99b74cce/artifacts/0/dat01-structural-preflight-exact-sha/tests.tap",
+    "workflowScope": "Only run_dat01_preflight=true; all other pipeline parameters false; branch-limited source-only validation. No SQL, DB, or external provider credentials were used.",
+    "note": "Earlier malformed config attempts on commits 38cb047625ce310c669d85b433a53a3a1c095afb and da16d27eae6507e5ad363630fa619a48a547c59b failed configuration; corrected config at tested SHA parsed and executed successfully. Pipeline 1188 on that same SHA had no workflows because opt-in parameters default false."
   },
   "github": {
     "combinedStatus": "No status checks returned for testedSourceSha",
@@ -41,7 +48,7 @@
   },
   "localVerification": {
     "runtime": "Node.js v24.22.1",
-    "fileSource": "GitHub PR branch blobs at testedSourceSha",
+    "fileSource": "GitHub PR branch source at localTestedSourceSha; relevant DAT-01 test and script inputs are unchanged in hosted testedSourceSha.",
     "commands": [
       "node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
       "node scripts/diagnostics/dat01-ledger-bound-manifest-preflight.mjs"
@@ -86,10 +93,10 @@
     "mergePerformed": false
   },
   "nextMandatoryActions": [
-    "Obtain qualified independent reviewer decisions for all unresolved provenance and substitution/consolidation dispositions; do not self-sign.",
-    "Establish a CircleCI configuration connected to the GitHub PR source and verify a free exact-SHA run, or use another authorized no-cost exact-SHA runner.",
-    "Resolve the 34 whole-file provenance entries and 25 nonexact identity decisions before making an executable manifest.",
-    "Only after approval, run the ordered disposable PostgreSQL 17 replay and existing formal acceptance engine."
+    "Recover or independently prove the 34 unresolved whole-file source byte identities; do not count statement subspans as full-file proof.",
+    "Obtain qualified independent reviewer decisions for the 25 nonexact version identities, two consolidation groups, and all unresolved provenance/substitution dispositions.",
+    "Only after review and explicit authorization, execute the ordered disposable PostgreSQL 17 replay and run the existing formal acceptance engine."
   ],
-  "objectiveCompletion": "A-12 is binary; formal acceptance remains BLOCKED. No percentage assigned."
+  "objectiveCompletion": "A-12 is binary; formal acceptance remains BLOCKED. No percentage assigned.",
+  "localTestedSourceSha": "8f648aceb50bfa7e3b6967f127c1f1c8a7a63a2d"
 }
