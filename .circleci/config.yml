@@ -937,7 +937,7 @@ workflows:
           filters:
             branches:
               only:
-                - ${targetBranch}
+                - fix/onboarding-explicit-plan-boundary-test-20261105
   # ONE-SHOT: source-only small runner on this isolated branch only.
   # No production credentials, no deployment, no retries.
   a15-gitleaks-one-shot-20261106:
@@ -961,7 +961,7 @@ workflows:
           filters:
             branches:
               only:
-                - ${targetBranch}
+                - ci/a15-gitleaks-one-shot-20261106
   onboarding-source-review-manual:
     # One reviewed repair branch, explicit opt-in, Node 22 source quality only.
     when: << pipeline.parameters.run_onboarding_review >>

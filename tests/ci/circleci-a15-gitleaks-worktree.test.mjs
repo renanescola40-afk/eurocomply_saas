@@ -44,3 +44,12 @@ test('every stage is exact-SHA and source-only without provider secrets',()=>{
     assert.doesNotMatch(job,/stripe checkout|npm run deploy/);
   }
 });
+
+test('finding gate branch filters are literal approved names, never template placeholders',()=>{
+  const man=c.split('\n  a15-gitleaks-worktree-manual:\n',2)[1]?.split('\n  # ONE-SHOT:',1)[0]||'';
+  const shot=c.split('\n  a15-gitleaks-one-shot-20261106:\n',2)[1]?.split('\n  onboarding-source-review-manual:',1)[0]||'';
+  assert.doesNotMatch(man,/targetBranch/);
+  assert.doesNotMatch(shot,/targetBranch/);
+  assert.match(man,/- fix\/onboarding-explicit-plan-boundary-test-20261105/);
+  assert.match(shot,/- ci\/a15-gitleaks-one-shot-20261106/);
+});
