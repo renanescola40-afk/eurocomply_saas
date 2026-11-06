@@ -460,7 +460,7 @@ jobs:
                 exit 1
               fi
             done
-            python3 - <<'PY'
+            python3 - \<<'PY'
             import json, os, sys
             root = 'artifacts/a15-gitleaks/'
             with open(root + 'identity.json', encoding='utf-8') as f:
