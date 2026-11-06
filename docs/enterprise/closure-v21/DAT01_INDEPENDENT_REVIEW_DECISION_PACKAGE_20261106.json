@@ -1952,6 +1952,28 @@
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false,
           "observedMatch": "provider stream matches alternative historical candidate only after TRIM_END; this is not byte-exact whole-file proof"
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+            "gitBlobSha": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+            "availableAtSnapshot": true
+          },
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260831100000_deterministic_commercial_contract_source_precedence.sql",
+            "gitBlobSha": "189c025264fb2295de1e91dbf3e94f9477cd3eda",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260831100000_deterministic_commercial_contract_source_precedence.sql",
+            "availableAtSnapshot": true,
+            "evidenceInterpretation": "Existing report records provider statement equals this alternative source after TRIM_END; identity still pending independent review."
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2022,6 +2044,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+            "gitBlobSha": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -2092,6 +2129,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+            "gitBlobSha": "0aca9099c57aabe9afa5cf240bfe9375a7b7c51c",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -2158,6 +2210,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260902162000_linkedin_marketing_queue.sql",
+            "gitBlobSha": "a7864789c6f3b4672d78ebeb8737bc9278c9c02e",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260902162000_linkedin_marketing_queue.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2224,6 +2289,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+            "gitBlobSha": "0324110de0279d5619f0b7023f8fc0249f287966",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2290,6 +2368,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql",
+            "gitBlobSha": "4c6751127df4dd74f2d1b2ce58ef3b4f8b10500c",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2356,6 +2447,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260909144000_finalize_backend_only_force_rls_and_trigger_acl.sql",
+            "gitBlobSha": "985b87aab915b76cdb1e00a48110669e277551f6",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260909144000_finalize_backend_only_force_rls_and_trigger_acl.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2426,6 +2530,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+            "gitBlobSha": "9591e772493d2dc84893407448927c8e8e7ef6f8",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "PREFIX_LF"
         }
       },
       {
@@ -2496,6 +2615,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+            "gitBlobSha": "4000b04cdf04e465eee4043dbc8e57b543c41b0d",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "PREFIX_LF"
         }
       },
       {
@@ -2562,6 +2696,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+            "gitBlobSha": "d82a1946504bbb9dc3c5f5d6c3312331eeb64f51",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2632,6 +2779,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261003221000_fix_team_invitation_acceptance_42702.sql",
+            "gitBlobSha": "763afbeeda820e042a8d8680918c404017cee4db",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261003221000_fix_team_invitation_acceptance_42702.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "TRIM_END"
         }
       },
       {
@@ -2698,6 +2860,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql",
+            "gitBlobSha": "95d287db168e532c07450706f56685ba3347e10f",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2764,6 +2939,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+            "gitBlobSha": "51853c8d20baded57d6da7c54d901dd67aa1727b",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2830,6 +3018,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql",
+            "gitBlobSha": "82c385142c9f4d6ac18dbc62affa75ad9a379096",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -2900,6 +3101,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql",
+            "gitBlobSha": "62ea5e6eb2e7c93eb81c19e99675b685943ee0c2",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -2970,6 +3186,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260721180100_annex_iv_package_section_integrity.sql",
+            "gitBlobSha": "cb53d8749531ce438482a07002fd3f8074c58d88",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260721180100_annex_iv_package_section_integrity.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -3040,6 +3271,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260722200000_annex_iv_operational_workflow.sql",
+            "gitBlobSha": "e00d5f11c7fcc0d3120749b90988618dd30dbbef",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260722200000_annex_iv_operational_workflow.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -3110,6 +3356,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260803133000_article_50_product_integration.sql",
+            "gitBlobSha": "702a9accd566e17b43b3d318f62a0d02bba39878",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260803133000_article_50_product_integration.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -3180,6 +3441,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql",
+            "gitBlobSha": "aadaa1856cb57acb8dac072463c82e8e2b884518",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -3250,6 +3526,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql",
+            "gitBlobSha": "640e6f2f7f5b5fd443b70063e56d12dc627125b9",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -3320,6 +3611,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261006140500_reconcile_gap_task_reference_integrity.sql",
+            "gitBlobSha": "7b8546ea62b1de88b27a3b872a6206e12c52fe2c",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261006140500_reconcile_gap_task_reference_integrity.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       },
       {
@@ -3386,6 +3692,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261009210000_harden_active_membership_governance_read.sql",
+            "gitBlobSha": "50083d15b3340dc8106eb4dd75cd5a3067db89f0",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261009210000_harden_active_membership_governance_read.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -3452,6 +3771,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+            "gitBlobSha": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -3518,6 +3850,19 @@
           "wholeFileBytesReproduced": false,
           "rawWholeFileByteEquality": false,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+            "gitBlobSha": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         }
       },
       {
@@ -3588,6 +3933,21 @@
           "wholeFileBytesReproduced": true,
           "rawWholeFileByteEquality": true,
           "sourceIdentityAccepted": false
+        },
+        "bestImmutableHistoricalEvidence": [
+          {
+            "repository": "renanescola40-afk/eurocomply_saas",
+            "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+            "path": "supabase/migrations/20261015090000_enterprise_entitlement_v3_compatibility.sql",
+            "gitBlobSha": "c16446c0502fe961745102e3a187978f6cbf6692",
+            "url": "https://github.com/renanescola40-afk/eurocomply_saas/blob/75fcb01585108a7af576580593605fcf8bec3e60/supabase/migrations/20261015090000_enterprise_entitlement_v3_compatibility.sql",
+            "availableAtSnapshot": true
+          }
+        ],
+        "mismatch": {
+          "result": "BYTE_EQUAL_SOURCE_TEXT",
+          "encoding": "UTF8",
+          "representation": "RAW"
         }
       }
     ]
