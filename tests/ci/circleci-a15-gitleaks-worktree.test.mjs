@@ -30,3 +30,12 @@ test('A-15 source scanner refuses privileged environments and does not deploy', 
   assert.doesNotMatch(job, /npm run deploy|stripe checkout|setup_remote_docker:/);
   assert.match(job, /resource_class: small/);
 });
+
+test('one-shot A-15 scan is limited to dedicated isolated branch', () => {
+  const scan = c.split('\n  a15-gitleaks-one-shot-20261106:\n', 2)[1]?.split('\n  onboarding-source-review-manual:', 1)[0] || '';
+  assert.match(scan, /- a15-gitleaks-exact-sha:/);
+  assert.match(scan, /only:\n\s+- ci\/a15-gitleaks-one-shot-20261106/);
+  assert.doesNotMatch(scan, /- main\b|- fix\/onboarding-explicit-plan-boundary-test-20261105\b/);
+  assert.match(job, /ci\/a15-gitleaks-one-shot-20261106/);
+  assert.match(job, /Refusing A-15 scanner on unauthorized branch/);
+});
