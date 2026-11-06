@@ -351,6 +351,48 @@ jobs:
 
   # A-15 opt-in source scan. This is NOT historical-secret scanning or a
   # substitute for CodeQL, Semgrep, native GitHub checks, or formal acceptance.
+  # A-15 diagnostic stage: a distinct GitHub check for binary acquisition.
+  # If this job fails the scanner has NOT tested the repository. No prod keys.
+  a15-gitleaks-tool-preflight:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify A-15 exact branch and refuse privileged credentials
+          command: |
+            set -euo pipefail
+            case "${CIRCLE_BRANCH:-}" in
+              fix/onboarding-explicit-plan-boundary-test-20261105|ci/a15-gitleaks-one-shot-20261106) ;;
+              *) echo "A-15 preflight refused branch" >&2; exit 1 ;;
+            esac
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing exact SHA}"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "A-15 preflight refused privileged variable: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Acquire immutable Gitleaks binary with SHA256 validation
+          command: |
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --max-time 90 --retry 2 \
+              "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            mkdir -p /tmp/a15-scanner
+            tar -xzf "/tmp/${archive}" -C /tmp/a15-scanner gitleaks
+            chmod 0755 /tmp/a15-scanner/gitleaks
+            /tmp/a15-scanner/gitleaks version
+      - persist_to_workspace:
+          root: /tmp/a15-scanner
+          paths:
+            - gitleaks
+
   a15-gitleaks-exact-sha:
     docker:
       - image: cimg/base:stable
@@ -358,6 +400,8 @@ jobs:
     working_directory: ~/project
     steps:
       - checkout
+      - attach_workspace:
+          at: /tmp/a15-scanner
       - run:
           name: Verify exact SHA, allowed branch and secret-free execution
           command: |
@@ -375,18 +419,12 @@ jobs:
               fi
             done
       - run:
-          name: Download digest-verified Gitleaks and scan exact worktree
+          name: Run fail-closed redacted Gitleaks on exact checkout
           command: |
             set -euo pipefail
+            test -x /tmp/a15-scanner/gitleaks
             mkdir -p artifacts/a15-gitleaks
-            version=8.30.1
-            archive="gitleaks_${version}_linux_x64.tar.gz"
-            curl --fail --silent --show-error --location --max-time 90 --retry 2 \
-              "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
-            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
-            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
-            chmod 0755 /tmp/gitleaks
-            /tmp/gitleaks dir --redact --no-banner --report-format json \
+            /tmp/a15-scanner/gitleaks dir --redact --no-banner --report-format json \
               --report-path artifacts/a15-gitleaks/findings-redacted.json .
             test -s artifacts/a15-gitleaks/findings-redacted.json
             printf '{"kind":"RISCK_A15_GITLEAKS_WORKTREE","sha":"%s","branch":"%s","scope":"current worktree only","formalAcceptance":"NOT_GRANTED"}\n' \
@@ -1065,7 +1103,14 @@ workflows:
   a15-gitleaks-worktree-manual:
     when: << pipeline.parameters.run_a15_gitleaks_worktree >>
     jobs:
+      - a15-gitleaks-tool-preflight:
+          filters:
+            branches:
+              only:
+                - fix/onboarding-explicit-plan-boundary-test-20261105
       - a15-gitleaks-exact-sha:
+          requires:
+            - a15-gitleaks-tool-preflight
           filters:
             branches:
               only:
@@ -1075,7 +1120,14 @@ workflows:
   # No production credentials, no deployment, no retries.
   a15-gitleaks-one-shot-20261106:
     jobs:
+      - a15-gitleaks-tool-preflight:
+          filters:
+            branches:
+              only:
+                - ci/a15-gitleaks-one-shot-20261106
       - a15-gitleaks-exact-sha:
+          requires:
+            - a15-gitleaks-tool-preflight
           filters:
             branches:
               only:
