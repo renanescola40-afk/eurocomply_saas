@@ -756,18 +756,9 @@ jobs:
             test "$version_num" = "170006"
             export DAT01_PG17_SERVER_VERSION_NUM="$version_num"
             mkdir -p artifacts/dat01-pg17-smoke
-            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U risck_synthetic -d risck_synthetic <<'SQL' | tee artifacts/dat01-pg17-smoke/transaction.log
-            BEGIN;
-            CREATE TEMP TABLE dat01_synthetic_smoke(id integer PRIMARY KEY, label text NOT NULL) ON COMMIT DROP;
-            INSERT INTO dat01_synthetic_smoke VALUES (1,'synthetic-a'),(2,'synthetic-b');
-            DO $dat01_smoke$ BEGIN
-              IF (SELECT count(*) FROM dat01_synthetic_smoke) <> 2 THEN
-                RAISE EXCEPTION 'synthetic smoke assertion failed';
-              END IF;
-            END $dat01_smoke$;
-            SELECT 'NON_AUTHORITATIVE_SYNTHETIC_ROLLBACK_SMOKE_PASS';
-            ROLLBACK;
-            SQL
+            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U risck_synthetic -d risck_synthetic \
+              -c "BEGIN; CREATE TEMP TABLE dat01_synthetic_smoke(id integer PRIMARY KEY, label text NOT NULL) ON COMMIT DROP; INSERT INTO dat01_synthetic_smoke VALUES (1,'synthetic-a'),(2,'synthetic-b'); DO \\$dat01_smoke\\$ BEGIN IF (SELECT count(*) FROM dat01_synthetic_smoke) <> 2 THEN RAISE EXCEPTION 'synthetic smoke assertion failed'; END IF; END \\$dat01_smoke\\$; SELECT 'NON_AUTHORITATIVE_SYNTHETIC_ROLLBACK_SMOKE_PASS'; ROLLBACK;" \
+              | tee artifacts/dat01-pg17-smoke/transaction.log
             node -e 'const fs=require("node:fs"); fs.writeFileSync("artifacts/dat01-pg17-smoke/result.json",JSON.stringify({classification:"NON_AUTHORITATIVE_SYNTHETIC_INFRASTRUCTURE_SMOKE",providerVersion:"postgres:17.6",serverVersionNum:process.env.DAT01_PG17_SERVER_VERSION_NUM,sourceSha:process.env.CIRCLE_SHA1,branch:process.env.CIRCLE_BRANCH,syntheticTransaction:"BEGIN/CREATE TEMP/INSERT/ASSERT/ROLLBACK",formalMigrationReplay:"NOT_RUN",sharedQaTouched:false,productionTouched:false,externalProviderCredentialsPresent:false},null,2)+"\n")'
       - store_artifacts:
           path: artifacts/dat01-pg17-smoke
