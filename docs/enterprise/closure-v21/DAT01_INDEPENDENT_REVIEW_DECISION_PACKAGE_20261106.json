@@ -7,7 +7,31 @@
     "pullRequest": 2603,
     "branch": "phase1/security-dat01-v22",
     "headAtPackagePreparation": "ce47f21f6b6ae03266b1b9b8b1bcd9612bc10698",
-    "base": "main"
+    "base": "main",
+    "pg17SmokeEvidence": {
+      "classification": "NON_AUTHORITATIVE_SYNTHETIC_INFRASTRUCTURE_SMOKE",
+      "circleCiPipeline": 1202,
+      "workflow": "dat01-pg17-smoke-manual",
+      "job": 462,
+      "status": "PASS",
+      "testedConfigAndSourceSha": "ce47f21f6b6ae03266b1b9b8b1bcd9612bc10698",
+      "branch": "phase1/security-dat01-v22",
+      "postgresImage": "postgres:17.6",
+      "serverVersionNum": "170006",
+      "durationSeconds": 20,
+      "operation": "Disposable CircleCI PostgreSQL container; synthetic temporary table, two synthetic rows, assertion, explicit ROLLBACK.",
+      "formalMigrationReplay": "NOT_RUN",
+      "sharedQaTouched": false,
+      "productionTouched": false,
+      "externalProviderCredentialsPresent": false,
+      "artifacts": [
+        "artifacts/dat01-pg17-smoke/result.json",
+        "artifacts/dat01-pg17-smoke/transaction.log"
+      ],
+      "executionCommand": "psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U risck_synthetic -d risck_synthetic -c \"BEGIN; CREATE TEMP TABLE dat01_synthetic_smoke(id integer PRIMARY KEY, label text NOT NULL) ON COMMIT DROP; INSERT INTO dat01_synthetic_smoke VALUES (1,'synthetic-a'),(2,'synthetic-b'); DO $dat01_smoke$ BEGIN IF (SELECT count(*) FROM dat01_synthetic_smoke) <> 2 THEN RAISE EXCEPTION 'synthetic smoke assertion failed'; END IF; END $dat01_smoke$; SELECT 'NON_AUTHORITATIVE_SYNTHETIC_ROLLBACK_SMOKE_PASS'; ROLLBACK;\""
+    },
+    "packageCommitWillAdvanceHead": true,
+    "smokeEvidenceAppliesTo": "Exact config/source SHA ce47f21; later change is this review package only."
   },
   "currentGate": {
     "gate": "A-12",
