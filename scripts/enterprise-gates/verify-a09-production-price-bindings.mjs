@@ -161,7 +161,7 @@ async function main() {
   const path = resolve('docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json');
   const evidence = JSON.parse(readFileSync(path, 'utf8'));
   const result = await verifyA09ProductionBindings({ evidence, token: process.env.VERCEL_TOKEN });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\\n`);
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (!result.verified) process.exitCode = 1;
 }
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
