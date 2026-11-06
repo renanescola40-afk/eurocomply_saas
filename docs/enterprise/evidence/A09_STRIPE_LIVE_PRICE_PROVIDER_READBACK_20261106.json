@@ -130,6 +130,31 @@
         },
         "allMatched": true
       }
+    ],
+    "products_checked": 3,
+    "products_active": 3,
+    "product_rows": [
+      {
+        "sourceProductId": "prod_V7B9TKop4XFVZD",
+        "providerIdMatch": true,
+        "active": true,
+        "livemode": true,
+        "verified": true
+      },
+      {
+        "sourceProductId": "prod_V7B9MSMOjw6ScY",
+        "providerIdMatch": true,
+        "active": true,
+        "livemode": true,
+        "verified": true
+      },
+      {
+        "sourceProductId": "prod_V7B9xkn8ud8f1d",
+        "providerIdMatch": true,
+        "active": true,
+        "livemode": true,
+        "verified": true
+      }
     ]
   },
   "vercel_production_binding_check": {
@@ -152,5 +177,6 @@
     "live_payments_created": 0,
     "env_credentials_read_or_recorded": false
   },
-  "reproduction": "Using the authorized Stripe LIVE account, retrieve each listed sourcePriceId using GET /v1/prices/{id}; compare id, active, livemode, unit_amount, currency, product, recurring.interval, recurring.interval_count and lookup_key with the immutable source catalog. Separately verify all six built-in Production-only Vercel environment bindings with complete, non-truncated authenticated GET metadata before A-09 acceptance."
+  "reproduction": "Using the authorized Stripe LIVE account, retrieve each listed sourcePriceId using GET /v1/prices/{id}; compare id, active, livemode, unit_amount, currency, product, recurring.interval, recurring.interval_count and lookup_key with the immutable source catalog. Separately verify all six built-in Production-only Vercel environment bindings with complete, non-truncated authenticated GET metadata before A-09 acceptance. Retrieve the three sourceProductId objects with GET /v1/products/{id} and verify each exists, active and livemode=true.",
+  "observed_at_utc_verified_products": "2026-11-06T23:54:04.011Z"
 }
