@@ -3995,5 +3995,15 @@
     ],
     "existingEvidenceUnmodified": true,
     "notes": "This package adds decisions/status fields and links existing facts; it does not alter the frozen provider ledger, existing source evidence, or the 137-row draft. Source bytes reproduced at mapped candidate paths are not themselves proof that these were the original bytes applied by the provider; all 25 production identity decisions remain pending."
+  },
+  "reviewRouting": {
+    "existingRequestedGitHubReviewers": [
+      "renansilva2002-tech",
+      "sastestezoer-commits"
+    ],
+    "reviewRequestResent": false,
+    "qualificationIndependentlyVerified": false,
+    "reviewerQualificationMustBeConfirmedByGovernance": "Reviewers must confirm independence and competence for migration provenance, PostgreSQL replay, and security/RLS implications. GitHub request status alone is not evidence of qualification.",
+    "notificationConstraint": "No new review request/comment sent; use the existing PR review request and its normal governance path."
   }
 }
