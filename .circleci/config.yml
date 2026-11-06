@@ -1,13 +1,10 @@
 version: 2.1
 
-# DAT-01 exact-SHA structural validation; opt-in to avoid consuming credits on pushes.
+# Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
 parameters:
   run_dat01_preflight:
     type: boolean
     default: false
-
-# Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
-parameters:
   run_main_source:
     type: boolean
     default: false
