@@ -53,3 +53,8 @@ test('finding gate branch filters are literal approved names, never template pla
   assert.match(man,/- fix\/onboarding-explicit-plan-boundary-test-20261105/);
   assert.match(shot,/- ci\/a15-gitleaks-one-shot-20261106/);
 });
+
+test('CircleCI v2.1 escapes Python heredoc in fail-closed A-15 findings gate',()=>{
+  assert.match(gate, /python3 - \\<<'PY'/);
+  assert.doesNotMatch(gate, /python3 - <<'PY'/);
+});
