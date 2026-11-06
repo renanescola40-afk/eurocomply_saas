@@ -127,3 +127,21 @@ test('unified candidate smoke runs source-only security billing and evidence con
  assert.match(config,/run_actions_recovery:\n    type: boolean\n    default: false/);
 });
 
+test('onboarding repair quality route is manual, exact-branch, Node 22 and secret-free', () => {
+  const branch = 'fix/onboarding-explicit-plan-boundary-test-20261105';
+  const route = config.split('\n  onboarding-source-review-manual:\n', 2)[1]
+    ?.split('\n  main-source-validation-manual:\n', 1)[0] ?? '';
+  const quality = circleJob('github-actions-recovery-quality');
+  assert.match(config, /run_onboarding_review:\n    type: boolean\n    default: false/);
+  assert.match(route, /when: << pipeline\.parameters\.run_onboarding_review >>/);
+  assert.match(route, /- github-actions-recovery-quality:/);
+  assert.ok(route.includes('only:\n                - ' + branch));
+  assert.doesNotMatch(route, /- main\b/);
+  assert.ok(quality.includes(branch), 'quality guard rejects the exact review branch');
+  assert.match(quality, /image: cimg\/node:22/);
+  assert.match(quality, /git rev-parse HEAD/);
+  assert.match(quality, /CIRCLE_SHA1/);
+  assert.match(quality, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(quality, /STRIPE_SECRET_KEY/);
+});
+

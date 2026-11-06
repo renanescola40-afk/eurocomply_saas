@@ -33,6 +33,10 @@ parameters:
     type: boolean
     default: false
 
+  run_onboarding_review:
+    type: boolean
+    default: false
+
   run_enterprise_source:
     type: boolean
     default: false
@@ -352,7 +356,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              fix/actions-p0-runner-storm-20261102|ci/circleci-gh-actions-one-shot-20261102|integration/enterprise-unified-candidate-20261102) ;;
+              fix/actions-p0-runner-storm-20261102|ci/circleci-gh-actions-one-shot-20261102|integration/enterprise-unified-candidate-20261102|fix/onboarding-explicit-plan-boundary-test-20261105) ;;
               *) echo "Recovery quality must run only on an approved branch" >&2; exit 1 ;;
             esac
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing CircleCI commit}" || {
@@ -1005,6 +1009,16 @@ workflows:
             branches:
               only:
                 - audit/g5-02-p0f-readonly-drift-20261023
+
+  onboarding-source-review-manual:
+    # One reviewed repair branch, explicit opt-in, Node 22 source quality only.
+    when: << pipeline.parameters.run_onboarding_review >>
+    jobs:
+      - github-actions-recovery-quality:
+          filters:
+            branches:
+              only:
+                - fix/onboarding-explicit-plan-boundary-test-20261105
 
   main-source-validation-manual:
     # Explicit trigger only. No automatic main build, production writes or secrets.
