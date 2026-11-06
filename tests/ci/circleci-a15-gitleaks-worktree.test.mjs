@@ -54,7 +54,12 @@ test('finding gate branch filters are literal approved names, never template pla
   assert.match(shot,/- ci\/a15-gitleaks-one-shot-20261106/);
 });
 
-test('CircleCI v2.1 escapes Python heredoc in fail-closed A-15 findings gate',()=>{
-  assert.match(gate, /python3 - \\<<'PY'/);
-  assert.doesNotMatch(gate, /python3 - <<'PY'/);
+test('A-15 findings gate avoids CircleCI heredoc interpolation and validates redacted report using jq',()=>{
+  assert.doesNotMatch(gate, /python3 -|<<.*PY/);
+  assert.match(gate, /jq -e --arg sha/);
+  assert.match(gate, /type == "array" and all\(\.\[\]; type == "object"\)/);
+  assert.match(gate, /A15_GITLEAKS_FINDINGS_PRESENT_SECURITY_GATE_BLOCKED/);
+  assert.match(gate, /A15_GITLEAKS_IDENTITY_MISMATCH/);
+  assert.match(gate, /A15_GITLEAKS_INVALID_REPORT/);
+  assert.match(gate, /formalAcceptance == "NOT_GRANTED"/);
 });

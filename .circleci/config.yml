@@ -460,26 +460,31 @@ jobs:
                 exit 1
               fi
             done
-            python3 - \<<'PY'
-            import json, os, sys
-            root = 'artifacts/a15-gitleaks/'
-            with open(root + 'identity.json', encoding='utf-8') as f:
-                identity = json.load(f)
-            if identity.get('sha') != os.environ.get('CIRCLE_SHA1') or identity.get('formalAcceptance') != 'NOT_GRANTED':
-                print('A15_GITLEAKS_IDENTITY_MISMATCH')
-                sys.exit(2)
-            with open(root + 'findings-redacted.json', encoding='utf-8') as f:
-                findings = json.load(f)
-            if not isinstance(findings, list):
-                print('A15_GITLEAKS_INVALID_REPORT')
-                sys.exit(2)
-            count = len(findings)
-            print('A15_GITLEAKS_FINDING_COUNT=' + str(count))
-            if count:
-                print('A15_GITLEAKS_FINDINGS_PRESENT_SECURITY_GATE_BLOCKED')
-                sys.exit(3)
-            print('A15_GITLEAKS_WORKTREE_SCAN_ZERO_FINDINGS_NOT_FULL_ENTERPRISE_ACCEPTANCE')
-            PY
+            root='artifacts/a15-gitleaks'
+            if ! test -s "$root/identity.json" || ! jq -e --arg sha "$CIRCLE_SHA1" --arg branch "${CIRCLE_BRANCH:?missing branch}" '
+              type == "object" and
+              .kind == "RISCK_A15_GITLEAKS_COLLECTION" and
+              .sha == $sha and
+              .branch == $branch and
+              .scope == "current worktree only" and
+              .formalAcceptance == "NOT_GRANTED"
+            ' "$root/identity.json" >/dev/null 2>&1; then
+              echo 'A15_GITLEAKS_IDENTITY_MISMATCH'
+              exit 2
+            fi
+            if ! test -s "$root/findings-redacted.json" || ! jq -e '
+              type == "array" and all(.[]; type == "object")
+            ' "$root/findings-redacted.json" >/dev/null 2>&1; then
+              echo 'A15_GITLEAKS_INVALID_REPORT'
+              exit 2
+            fi
+            count=$(jq -r 'length' "$root/findings-redacted.json")
+            printf 'A15_GITLEAKS_FINDING_COUNT=%s\n' "$count"
+            if [ "$count" -gt 0 ]; then
+              echo 'A15_GITLEAKS_FINDINGS_PRESENT_SECURITY_GATE_BLOCKED'
+              exit 3
+            fi
+            echo 'A15_GITLEAKS_WORKTREE_SCAN_ZERO_FINDINGS_NOT_FULL_ENTERPRISE_ACCEPTANCE'
 
   # Second-stage opt-in; never auto-trigger, deploy, write to production or use provider secrets.
   github-actions-recovery-quality:
