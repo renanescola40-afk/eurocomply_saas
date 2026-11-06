@@ -98,8 +98,10 @@
       "entries": 25,
       "sourceBytesReproducedButIdentityPending": 14,
       "wholeFileSourceUnrecovered": 11,
-      "independentReviews": 0,
-      "reviewerFields": "All 25 records have decision/reviewer/approval fields unset and PENDING."
+      "reviewerFields": "All 25 records have decision/reviewer/approval fields unset and PENDING.",
+      "independentReviewsApproved": 0,
+      "independentReviewsPending": 25,
+      "formalIdentityApprovals": 0
     },
     "additionalReadOnlySearches": [
       {
