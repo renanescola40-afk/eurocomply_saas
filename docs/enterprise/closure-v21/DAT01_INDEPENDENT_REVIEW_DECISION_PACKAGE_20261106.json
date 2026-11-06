@@ -1946,7 +1946,7 @@
           }
         ],
         "originalWholeFileBytesProven": false,
-        "evidenceClass": "ORIGINAL_SOURCE_WHOLE_BYTES_PROVEN_IDENTITY_PENDING",
+        "evidenceClass": "ALTERNATIVE_SOURCE_TRIM_END_STATEMENT_MATCH_ORIGINAL_BYTES_UNPROVEN_IDENTITY_PENDING",
         "preciseMismatch": {
           "result": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS"
         },
