@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.dat01.work-handoff.v1",
-  "observedAt": "2026-11-06T15:23:00+00:00",
+  "observedAt": "2026-11-06T16:20:00+00:00",
   "control": "DAT-01",
   "gate": "A-12",
   "status": "BLOCKED",
@@ -12,10 +12,11 @@
   "prStateAtVerification": {
     "state": "open",
     "draft": false,
+    "headBeforeThisHandoffCommit": "f48a2cd4d5bef95cc5a30dc6662e7d37c048fff2",
     "baseSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
-    "headBeforeFinalHandoffRecordCommit": "554cbedba4f663ef269ed991dce27e87a1fcc8f8",
-    "ciValidatedSourceSha": "266b5e5c6ac58e1b473d4b04d7214aa28a03c25b",
-    "relationship": "The tested source/config SHA passed CircleCI before handoff-only evidence record commits. The two later commits update only DAT01_WORK_HANDOFF_LATEST.json; no code, tests, or CircleCI configuration changed."
+    "headAfterCircleCiTestSha": "EVIDENCE_ONLY_COMMITS_AFTER_CI",
+    "lastCodeConfigTestedSha": "266b5e5c6ac58e1b473d4b04d7214aa28a03c25b",
+    "relationship": "Changes after CircleCI #1189 are documentation-only updates to DAT01_WORK_HANDOFF_LATEST.json and DAT01_NONEXACT_CONSOLIDATION_SOURCE_RECOVERY_20261104.json; tests and CI configuration are unchanged."
   },
   "ci": {
     "circleciDecision": "RUNNABLE_FREE_EXACT_SHA",
@@ -82,7 +83,46 @@
   "sourceRecovery": {
     "newSourceProofs": 0,
     "existingHistoricalRevisionMapReviewed": true,
-    "reviewedFindings": "The existing map already records 20260726070000 reconciliation-source drift and two historical rename candidates (20260804224915, 20260804230433); those records establish neither applied whole-file byte identity nor replay authorization."
+    "reviewedFindings": "The existing map already records 20260726070000 reconciliation-source drift and two historical rename candidates (20260804224915, 20260804230433); those records establish neither applied whole-file byte identity nor replay authorization.",
+    "sourceSnapshotCandidate": {
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "commit": "75fcb01585108a7af576580593605fcf8bec3e60",
+      "commitUrl": "https://github.com/renanescola40-afk/eurocomply_saas/commit/75fcb01585108a7af576580593605fcf8bec3e60",
+      "mappedPathsRetrieved": "23/23 unique nonexact crosswalk source paths",
+      "alternativePathRetrieved": "supabase/migrations/20260831100000_deterministic_commercial_contract_source_precedence.sql; blob 189c025264fb2295de1e91dbf3e94f9477cd3eda",
+      "canonicalBlobMetadataMismatches": 0,
+      "limitation": "Immutable candidate file availability and blob identity do not prove original production-version identity or whole-file equivalence to provider SQL. No source-proof count changed."
+    },
+    "nonexactReviewPacket": {
+      "path": "docs/enterprise/closure-v21/DAT01_NONEXACT_CONSOLIDATION_SOURCE_RECOVERY_20261104.json",
+      "entries": 25,
+      "sourceBytesReproducedButIdentityPending": 14,
+      "wholeFileSourceUnrecovered": 11,
+      "independentReviews": 0,
+      "reviewerFields": "All 25 records have decision/reviewer/approval fields unset and PENDING."
+    },
+    "additionalReadOnlySearches": [
+      {
+        "source": "GitLab project 88025157 releases and tags",
+        "result": "0 releases and 0 tags returned."
+      },
+      {
+        "source": "GitLab get_commit for 75fcb01585108a7af576580593605fcf8bec3e60",
+        "result": "404; this candidate snapshot SHA is available in the GitHub repository, where the mapped source paths were fetched."
+      },
+      {
+        "source": "CircleCI project pipeline search by 20260805",
+        "result": "No matching pipeline."
+      },
+      {
+        "source": "CircleCI related historical DAT-01/migration pipelines visible in project history",
+        "result": "Pipelines #948, #939, #933, #930, #913 and earlier listed evidence commits show no workflows; no jobs/artifacts in those pipeline rows. Scope is only visible relevant history, not a guarantee about every retained artifact in the account."
+      },
+      {
+        "source": "CircleCI #1189 job #461 artifacts",
+        "result": "Only preflight.json and tests.tap; no historical SQL archive in this source-only job."
+      }
+    ]
   },
   "safety": {
     "productionWrites": false,
@@ -99,5 +139,28 @@
     "Only after review and explicit authorization, execute the ordered disposable PostgreSQL 17 replay and run the existing formal acceptance engine."
   ],
   "objectiveCompletion": "A-12 is binary; formal acceptance remains BLOCKED. No percentage assigned.",
-  "localTestedSourceSha": "8f648aceb50bfa7e3b6967f127c1f1c8a7a63a2d"
+  "localTestedSourceSha": "8f648aceb50bfa7e3b6967f127c1f1c8a7a63a2d",
+  "postgres17Readiness": {
+    "result": "NO_DIRECTLY_REUSABLE_DAT01_REPLAY_JOB",
+    "existingCandidates": [
+      {
+        "job": "g5-02-postgres17-canonical-replay",
+        "postgres": "17.6",
+        "limitation": "Branch-pinned to audit/g5-02-p0f-readonly-drift-20261023; not this DAT-01 candidate."
+      },
+      {
+        "job": "enterprise-pg-synthetic-replay",
+        "postgres": "17.6",
+        "limitation": "Synthetic-only and pinned to a different Enterprise source branch; not the authoritative 137-entry replay."
+      }
+    ],
+    "replayRun": "NOT_RUN",
+    "reason": "Full authoritative replay remains gated on provenance, approved ordered manifest, independent authorization and synthetic disposable target setup."
+  },
+  "acceptanceEngine": {
+    "validator": "scripts/enterprise-evidence/validate-evidence.mjs",
+    "formalLedger": "docs/enterprise/gate-closure-v23/FORMAL_ACCEPTANCE_LEDGER.json",
+    "dat01Requirement": "Approved ordered manifest, migration hashes, exact-SHA replay log, schema/security parity and qualified independent review; the formal ledger currently records A-12 BLOCKED.",
+    "candidateApplicability": "The main-branch ledger snapshot has a stale candidate SHA and is not current PR-head acceptance evidence. No validator PASS was run or claimed."
+  }
 }
