@@ -27,6 +27,11 @@ parameters:
     type: boolean
     default: false
 
+  run_a15_gitleaks_worktree:
+    type: boolean
+    default: false
+
+
   run_enterprise_source:
     type: boolean
     default: false
@@ -208,6 +213,50 @@ jobs:
               tests/billing/phase2-qa-webhook-preflight.test.mjs
             node --experimental-strip-types --test --test-reporter=tap \
               tests/product/evidence-upload-recovery.test.mjs
+
+
+  # A-15 opt-in source scan. This is NOT historical-secret scanning or a
+  # substitute for CodeQL, Semgrep, native GitHub checks, or formal acceptance.
+  a15-gitleaks-exact-sha:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact SHA, allowed branch and secret-free execution
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "fix/onboarding-explicit-plan-boundary-test-20261105"
+            test -n "${CIRCLE_SHA1:-}"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "Forbidden provider variable in source-only scan: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Download digest-verified Gitleaks and scan exact worktree
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/a15-gitleaks
+            version=8.30.1
+            archive="gitleaks_${version}_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --max-time 90 --retry 2 \
+              "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+            /tmp/gitleaks dir --redact --no-banner --report-format json \
+              --report-path artifacts/a15-gitleaks/findings-redacted.json .
+            test -s artifacts/a15-gitleaks/findings-redacted.json
+            printf '{"kind":"RISCK_A15_GITLEAKS_WORKTREE","sha":"%s","branch":"%s","scope":"current worktree only","formalAcceptance":"NOT_GRANTED"}\n' \
+              "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/a15-gitleaks/identity.json
+      - store_artifacts:
+          path: artifacts/a15-gitleaks
+          destination: a15-gitleaks-current-worktree-exact-sha
 
   # Second-stage opt-in; never auto-trigger, deploy, write to production or use provider secrets.
   github-actions-recovery-quality:
@@ -776,6 +825,15 @@ workflows:
             branches:
               only:
                 - audit/g5-02-p0f-readonly-drift-20261023
+
+  a15-gitleaks-worktree-manual:
+    when: << pipeline.parameters.run_a15_gitleaks_worktree >>
+    jobs:
+      - a15-gitleaks-exact-sha:
+          filters:
+            branches:
+              only:
+                - fix/onboarding-explicit-plan-boundary-test-20261105
 
   onboarding-source-review-manual:
     # One reviewed repair branch, explicit opt-in, Node 22 source quality only.
