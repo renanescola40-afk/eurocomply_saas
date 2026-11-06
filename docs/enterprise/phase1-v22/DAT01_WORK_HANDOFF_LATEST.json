@@ -1,6 +1,6 @@
 {
   "schema": "risck-comply.dat01.work-handoff.v1",
-  "observedAt": "2026-11-06T15:22:00+00:00",
+  "observedAt": "2026-11-06T15:23:00+00:00",
   "control": "DAT-01",
   "gate": "A-12",
   "status": "BLOCKED",
@@ -12,10 +12,10 @@
   "prStateAtVerification": {
     "state": "open",
     "draft": false,
-    "headMatchesTestedSha": false,
-    "headSha": "96a3a050c6beab11e55b99c348a52d5d2e7cdc43",
     "baseSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
-    "testedShaRelationship": "Hosted CircleCI passed on 266b5e5c6ac58e1b473d4b04d7214aa28a03c25b. Current PR head 96a3a050c6beab11e55b99c348a52d5d2e7cdc43 adds only this evidence-record update; no CI rerun was triggered for the handoff-only commit."
+    "headBeforeFinalHandoffRecordCommit": "554cbedba4f663ef269ed991dce27e87a1fcc8f8",
+    "ciValidatedSourceSha": "266b5e5c6ac58e1b473d4b04d7214aa28a03c25b",
+    "relationship": "The tested source/config SHA passed CircleCI before handoff-only evidence record commits. The two later commits update only DAT01_WORK_HANDOFF_LATEST.json; no code, tests, or CircleCI configuration changed."
   },
   "ci": {
     "circleciDecision": "RUNNABLE_FREE_EXACT_SHA",
