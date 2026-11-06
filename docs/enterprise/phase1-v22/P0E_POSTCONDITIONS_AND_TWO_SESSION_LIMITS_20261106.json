@@ -1,0 +1,65 @@
+{
+  "schema": "risck-comply.p0e.qa-postconditions-and-session-provenance.v1",
+  "recordedAt": "2026-11-06T23:32:00Z",
+  "objective": "Prevent silent privilege regression in owner/seat release RPC; quantify concurrency evidence honestly.",
+  "source": {
+    "candidate": "supabase/reconciliation/20261106_p0e_seat_release_actor_authority_candidate.sql",
+    "candidateGitBlobSha1": "603ddc05c808ee8be2e638eb97b5a4faef5ca1c8",
+    "readonlyPostconditions": "scripts/security/verify-p0e-seat-release-actor-postconditions.sql",
+    "postconditionsGitBlobSha1": "9dec680683a7281b0989be45e4da7094545644b5"
+  },
+  "environment": {
+    "supabaseProject": "zrxrrfbllsxtleyxjpsz",
+    "postgres": "17.11",
+    "qaMarker": "20261105185729"
+  },
+  "verification": {
+    "originalPublicRpcDefinitionMd5": "d4714bb9382ae0322376ed433e859162",
+    "candidatePublicRpcDefinitionMd5InRolledBackTransaction": "d14689e31afa4a7e8096fec686d39bd4",
+    "appliedCandidateTransientlyWithinQaTransaction": true,
+    "postconditionsExecutedAgainstCandidate": true,
+    "postconditionResult": "P0E_SQL_IDENTITY_AND_ACL_POSTCONDITIONS_PASS",
+    "negativeTestAgainstOriginalQaFunction": "P0E_POSTCONDITION_EXACT_FUNCTION_IDENTITY_MISMATCH",
+    "exactAclEnforced": true,
+    "originalQaFunctionRestored": true
+  },
+  "twoSessionRehearsal": {
+    "actors": "two synthetic active owners on one isolated QA tenant",
+    "method": "Separate authenticated provider SQL sessions each running temporary pg_temp function derived from candidate; a short lock hold and staggered second request",
+    "firstOutcome": "released",
+    "secondOutcome": "permission_denied",
+    "finalActiveOwners": 1,
+    "finalSuspendedOwners": 1,
+    "finalActiveMemberCounter": 1,
+    "finalLegacyAuditCount": 1,
+    "finalReleasedOperationCount": 1,
+    "observedOperationsOverlapped": false,
+    "qualifiedConcurrencyEvidence": false,
+    "explanation": "The two SQL requests started at different recorded times with no overlapping execution; provider scheduling serialized the attempted calls, so this remains a two-session sequential interleaving test and must not be credited as a race test.",
+    "cleanup": {
+      "initiallyBlockedByForeignKey": true,
+      "remediation": "Deleted synthetic QA organization entitlements then synthetic contract, synthetic organization and both synthetic auth users within an identity-guarded transaction.",
+      "verifiedResidualOrganizations": 0,
+      "verifiedResidualMembers": 0,
+      "verifiedResidualAuthUsers": 0,
+      "verifiedResidualContracts": 0
+    }
+  },
+  "safety": {
+    "qaPersistentDataRemaining": 0,
+    "qaPublicFunctionChanged": false,
+    "productionWrites": 0,
+    "emailsSent": 0,
+    "stripeLiveCalls": 0,
+    "executableMigrationApplied": false,
+    "formalGateAccepted": false
+  },
+  "outstanding": [
+    "Independent qualified security and database acceptance",
+    "Versioned migration generation using an authorized Supabase CLI engineering workspace",
+    "Genuinely overlapping independent PostgreSQL sessions/concurrency test",
+    "SCIM token creator lifecycle and authenticated Step-Up HTTP runtime proof",
+    "Signed audit chain acceptance and source CI on exact final head",
+    "Review and governed production promotion"
+  ]
+}
