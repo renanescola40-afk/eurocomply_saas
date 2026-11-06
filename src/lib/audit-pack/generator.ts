@@ -1,6 +1,6 @@
 import { tryLoadLatestGapAssessment } from '@/lib/gap-analysis/storage';
 import { tryLoadOpenComplianceWork } from '@/lib/compliance/remediation';
-import { listEvidenceItems, resolveEvidenceOrganization, summarizeEvidence } from '@/lib/evidence/storage';
+import { listEvidenceItemsForReport, resolveEvidenceOrganization, summarizeEvidence } from '@/lib/evidence/storage';
 
 export type AuditPackData = {
   generatedAt: string;
@@ -47,7 +47,7 @@ export async function buildAuditPackData(params: {
   const [assessment, work, evidenceItems] = await Promise.all([
     tryLoadLatestGapAssessment({ userId: params.userId, workspaceId: params.workspaceId || null }),
     tryLoadOpenComplianceWork({ userId: params.userId, workspaceId: params.workspaceId || null }),
-    listEvidenceItems({ organizationId, limit: 100 }),
+    listEvidenceItemsForReport({ organizationId }),
   ]);
 
   const evidenceSummary = summarizeEvidence(evidenceItems);

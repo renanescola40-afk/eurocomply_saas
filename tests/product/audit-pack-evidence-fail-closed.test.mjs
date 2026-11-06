@@ -15,14 +15,14 @@ const storage = readFileSync('src/lib/evidence/storage.ts', 'utf8');
 
 test('audit generator resolves tenant before fetching evidence', () => {
   assert.match(generator, /resolveEvidenceOrganization\(params\.userId, params\.organizationId\)/);
-  assert.match(generator, /listEvidenceItems\(\{ organizationId, limit: 100 \}\)/);
+  assert.match(generator, /listEvidenceItemsForReport\(\{ organizationId \}\)/);
   assert.doesNotMatch(generator, /tryListEvidenceItems|Promise\.resolve\(\[\]\)/);
 });
 
 test('provider errors propagate through evidence listing', () => {
   assert.match(storage, /export async function listEvidenceItems/);
   assert.match(storage, /if \(error\) throw error/);
-  assert.match(generator, /listEvidenceItems\(\{/);
+  assert.match(generator, /listEvidenceItemsForReport\(\{/);
 });
 
 test('Evidence Vault register surfaces database or authorization errors', () => {
@@ -58,4 +58,15 @@ test('both report routes bind a server-authorized current organization', () => {
   assert.match(auditPage, /organizationId: canonicalOrganizationId/);
   assert.match(boardPage, /organizationId: canonicalOrganizationId/);
   assert.match(boardGenerator, /organizationId\?: string \| null/);
+});
+
+test('audit and board reports never compute coverage from the first 100 records only', () => {
+  assert.match(generator, /listEvidenceItemsForReport\(\{ organizationId \}\)/);
+  assert.doesNotMatch(generator, /listEvidenceItems\(\{ organizationId, limit: 100 \}\)/);
+  assert.match(storage, /export async function listEvidenceItemsForReport/);
+  assert.match(storage, /collectEvidencePages<EvidenceItem>/);
+  assert.match(storage, /select\('id', \{ count: 'exact', head: true \}\)/);
+  assert.match(storage, /beforeCount !== afterCount \|\| beforeCount !== items\.length/);
+  assert.match(storage, /order\('created_at', \{ ascending: false \}\)/);
+  assert.match(storage, /order\('id', \{ ascending: false \}\)/);
 });
