@@ -15,7 +15,8 @@ export function makeQualityProof({ env, gitSha, timestamp }) {
   }
   if (!['fix/actions-p0-runner-storm-20261102',
     'ci/circleci-gh-actions-one-shot-20261102',
-    'integration/enterprise-unified-candidate-20261102'].includes(env.CIRCLE_BRANCH)) {
+    'integration/enterprise-unified-candidate-20261102',
+    'fix/onboarding-explicit-plan-boundary-test-20261105'].includes(env.CIRCLE_BRANCH)) {
     throw new Error('quality_branch_not_allowed');
   }
   for (const key of ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ACCESS_TOKEN',
