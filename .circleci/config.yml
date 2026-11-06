@@ -702,7 +702,62 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: enterprise-postgres-synthetic-exact-sha
 
+  # A-07: bounded source-only proof on the exact PR branch. No deploy or secrets.
+  a07-evidence-source-proof:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Deny production credentials and prove exact PR source SHA
+          command: |
+            set -euo pipefail
+            test "\${CIRCLE_BRANCH:-}" = "fix/e2-a07-evidence-truthful-readback-20261104"
+            test -n "\${CIRCLE_SHA1:-}"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "\${!key:-}" ]; then
+                echo "A07 source-only job refuses privileged provider variable: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Exact-SHA pagination TypeScript parse and runtime regression
+          command: |
+            set -euo pipefail
+            node --version
+            node --experimental-strip-types --check src/lib/evidence/report-pagination.ts
+            node --experimental-strip-types --test tests/product/evidence-report-pagination.test.mjs
+      - run:
+          name: Evidence Vault and Audit Pack fail-closed source contracts
+          command: |
+            set -euo pipefail
+            node --test tests/product/audit-pack-evidence-fail-closed.test.mjs
+            node --test tests/ci/a07-evidence-circleci-proof.test.mjs
+      - run:
+          name: Publish source proof metadata without granting formal acceptance
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/a07-source-proof
+            printf '{"kind":"RISCK_A07_SOURCE_TEST_ONLY","sha":"%s","branch":"%s","tests":"pagination + audit-pack source contracts","formalAcceptance":"NOT_GRANTED"}\n' \
+              "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/a07-source-proof/identity.json
+      - store_artifacts:
+          path: artifacts/a07-source-proof
+          destination: a07-source-proof-exact-sha
+
+
 workflows:
+  # A single existing PR branch push runs this bounded source check.
+  a07-evidence-proof-one-shot:
+    jobs:
+      - a07-evidence-source-proof:
+          filters:
+            branches:
+              only:
+                - fix/e2-a07-evidence-truthful-readback-20261104
+
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
