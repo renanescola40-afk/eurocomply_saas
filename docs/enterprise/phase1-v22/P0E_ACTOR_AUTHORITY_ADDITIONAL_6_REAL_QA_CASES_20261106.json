@@ -1,0 +1,72 @@
+{
+  "schema": "risck-comply.p0e.qa-actor-matrix-6-case-proof.v1",
+  "observedDate": "2026-11-06",
+  "scope": "SUPABASE_QA_POSTGRES17_SYNTHETIC_ONE_TRANSACTION_ROLLED_BACK",
+  "sourceCandidatePath": "supabase/reconciliation/20261106_p0e_seat_release_actor_authority_candidate.sql",
+  "candidateGitBlobSha1": "603ddc05c808ee8be2e638eb97b5a4faef5ca1c8",
+  "baselineFunctionMd5": "d4714bb9382ae0322376ed433e859162",
+  "qaProjectId": "zrxrrfbllsxtleyxjpsz",
+  "testMethod": "Fetched exact SQL candidate from GitHub; removed only its top-level BEGIN/COMMIT; applied replacement transiently inside outer QA transaction; ran 6 synthetic role/tenancy cases and rolled back",
+  "cases": [
+    {
+      "case": "09_active_admin_releases_member",
+      "observed": "released",
+      "result": "PASS"
+    },
+    {
+      "case": "10_regular_member_denied",
+      "observed": "permission_denied",
+      "result": "PASS"
+    },
+    {
+      "case": "11_suspended_admin_denied",
+      "observed": "permission_denied",
+      "result": "PASS"
+    },
+    {
+      "case": "12_other_tenant_owner_denied",
+      "observed": "permission_denied",
+      "result": "PASS"
+    },
+    {
+      "case": "13_denied_targets_unchanged",
+      "observed": "3",
+      "result": "PASS"
+    },
+    {
+      "case": "14_denied_leases_removed",
+      "observed": "0",
+      "result": "PASS"
+    }
+  ],
+  "summary": {
+    "thisBatchPassed": 6,
+    "priorBatchPassed": 8,
+    "totalDistinctQaCasesPassed": 14,
+    "failed": 0
+  },
+  "postRollback": {
+    "functionMd5Restored": "d4714bb9382ae0322376ed433e859162",
+    "syntheticOrgCount": 0,
+    "serviceRoleExecute": true
+  },
+  "limits": [
+    "This is single-transaction synthetic QA behavior, not multi-session concurrency.",
+    "This is not full authenticated API/JWT/Step-Up or SCIM bearer-token E2E.",
+    "The legacy audit row check is not an independent signed chain proof.",
+    "A SQL candidate is NOT a Supabase versioned migration; no persistent QA or Production function replacement performed.",
+    "Hosted CI and qualified independent security acceptance remain outstanding."
+  ],
+  "formal": {
+    "p0eAccepted": false,
+    "enterpriseGatesNewlyAccepted": 0,
+    "productionReleaseAuthorized": false
+  },
+  "writes": {
+    "production": 0,
+    "qaAfterRollback": 0,
+    "emails": 0,
+    "liveStripe": 0,
+    "newPaidCompute": 0
+  }
+}
