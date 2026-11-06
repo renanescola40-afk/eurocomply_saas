@@ -449,5 +449,59 @@
       "identityQualified": false,
       "approvedForReplay": false
     }
-  ]
+  ],
+  "historicalRenamedSourceComparison20261106": {
+    "observedDate": "2026-11-06",
+    "method": "GitLab immutable historical commit repository-file readback (content_sha256, blob_id, size) compared in memory against read-only Supabase PROD supabase_migrations.schema_migrations.statements, with exact string equality and contiguous subspan checks; no SQL source copied into artifact.",
+    "productionProject": "tganhbbhfxcpblmgqprg",
+    "historicalRenameCommit": "f4933361d3d1d768614aa31b503b60a60db60d71",
+    "historicalRenameCommitUrl": "https://gitlab.com/risck-comply-group/eurocomply_saas/-/commit/f4933361d3d1d768614aa31b503b60a60db60d71",
+    "records": [
+      {
+        "productionVersion": "20260804224915",
+        "oldHistoricalPath": "supabase/migrations/20260804230000_live_security_definer_acl_hardening.sql",
+        "currentMappedPath": "supabase/migrations/20260804224915_live_security_definer_acl_hardening.sql",
+        "originCommit": "a60e2487c1be7768cffb2067ac7f4b78fb9fe54b",
+        "originCommitDate": "2026-08-04T23:51:59+01:00",
+        "originFileUrl": "https://gitlab.com/risck-comply-group/eurocomply_saas/-/blob/a60e2487c1be7768cffb2067ac7f4b78fb9fe54b/supabase/migrations/20260804230000_live_security_definer_acl_hardening.sql",
+        "sourceGitBlobSha1": "e82dd33f0f5a5052572ee36228667fe14db7eb74",
+        "sourceContentSha256": "1f6257aec7494176ece41ed8c1ee32d73624f9c0d90348581b22137f81dce672",
+        "sourceFileBytes": 3008,
+        "providerAppliedStatementCount": 1,
+        "providerStatementCharacters": 3767,
+        "wholeSourceEqualsProvider": false,
+        "providerStatementContiguousInSource": false,
+        "sourceContiguousInProviderStatement": false,
+        "collisionOrder": "NOT_TESTED_IN_ORDERED_REPLAY",
+        "classification": "HISTORICAL_RENAME_CONFIRMED_SQL_PROVENANCE_UNRESOLVED"
+      },
+      {
+        "productionVersion": "20260804230433",
+        "oldHistoricalPath": "supabase/migrations/20260804230332_move_rls_helpers_to_private_schema.sql",
+        "currentMappedPath": "supabase/migrations/20260804230433_move_rls_helpers_to_private_schema.sql",
+        "originCommit": "c8587211e6cc3ed6e4e3e12a39d86bbe6a9a72c2",
+        "originCommitDate": "2026-08-05T00:21:14+01:00",
+        "originFileUrl": "https://gitlab.com/risck-comply-group/eurocomply_saas/-/blob/c8587211e6cc3ed6e4e3e12a39d86bbe6a9a72c2/supabase/migrations/20260804230332_move_rls_helpers_to_private_schema.sql",
+        "sourceGitBlobSha1": "513a04a0e244dd5acd4a3e54f270334e84dba4ae",
+        "sourceContentSha256": "ed3e922b21e8634e777dc2f3093581ffe8d3241cdedfff48024bde746f11833f",
+        "sourceFileBytes": 2341,
+        "providerAppliedStatementCount": 1,
+        "providerStatementCharacters": 3271,
+        "wholeSourceEqualsProvider": false,
+        "providerStatementContiguousInSource": false,
+        "sourceContiguousInProviderStatement": false,
+        "collisionOrder": "NOT_TESTED_IN_ORDERED_REPLAY",
+        "classification": "HISTORICAL_RENAME_CONFIRMED_SQL_PROVENANCE_UNRESOLVED"
+      }
+    ],
+    "result": "ZERO_ADDITIONAL_FULL_FILE_SOURCE_BYTE_PROOFS; ZERO_NEW_APPROVED_REPLAY_ROWS",
+    "requiredCustodianAction": "Provide authentic immutable applied original SQL source or independently reviewed, explicit provider-statement substitution/exception with version/order/collision proof; legacy renamed files alone fail source equality.",
+    "safety": {
+      "productionWrites": false,
+      "sharedQAChanges": false,
+      "sqlReplayExecuted": false,
+      "approvalRecorded": false,
+      "dat01StatusChanged": false
+    }
+  }
 }
