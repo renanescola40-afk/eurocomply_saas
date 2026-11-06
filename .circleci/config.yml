@@ -1,5 +1,11 @@
 version: 2.1
 
+# DAT-01 exact-SHA structural validation; opt-in to avoid consuming credits on pushes.
+parameters:
+  run_dat01_preflight:
+    type: boolean
+    default: false
+
 # Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
 parameters:
   run_main_source:
@@ -703,6 +709,15 @@ jobs:
           destination: enterprise-postgres-synthetic-exact-sha
 
 workflows:
+  dat01-ledger-preflight-manual:
+    when: << pipeline.parameters.run_dat01_preflight >>
+    jobs:
+      - dat01-ledger-preflight:
+          filters:
+            branches:
+              only:
+                - phase1/security-dat01-v22
+
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
@@ -836,3 +851,36 @@ workflows:
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
 
+
+
+  # Source-only structural guard. It does not execute SQL or authorize the 137-row replay.
+  dat01-ledger-preflight:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify DAT-01 branch, exact SHA and credential isolation
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "phase1/security-dat01-v22"
+            test -n "${CIRCLE_SHA1:-}"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_ACCESS_TOKEN SUPABASE_SERVICE_ROLE_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "Forbidden provider credential present in source-only DAT-01 job: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Run DAT-01 structural regression and preflight
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/dat01-preflight
+            node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs 2>&1 | tee artifacts/dat01-preflight/tests.tap
+            node scripts/diagnostics/dat01-ledger-bound-manifest-preflight.mjs 2>&1 | tee artifacts/dat01-preflight/preflight.json
+      - store_artifacts:
+          path: artifacts/dat01-preflight
+          destination: dat01-structural-preflight-exact-sha
