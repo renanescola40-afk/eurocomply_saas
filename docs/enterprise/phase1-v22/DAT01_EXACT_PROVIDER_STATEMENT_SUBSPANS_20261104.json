@@ -286,5 +286,54 @@
       "acceptedGateA12": false
     },
     "nextReviewerAction": "Determine and sign independent provenance/replay disposition for each of the two original provider versions versus the forward-only canonical reconciliation; keep migration order and do not perform an unreviewed two-to-one collapsing replay."
+  },
+  "newStatementLevelRecovery20261106": {
+    "observedAt": "2026-11-06",
+    "classification": "IMMUTABLE_HISTORICAL_GITLAB_SOURCE_CONTAINS_EXACT_PROVIDER_APPLIED_SQL_STATEMENT_WITH_COMMENT_ONLY_PREFIX; NOT_WHOLE_FILE_SOURCE_EQUALITY",
+    "productionProject": "tganhbbhfxcpblmgqprg",
+    "providerReadback": "READ_ONLY Supabase supabase_migrations.schema_migrations SELECT version, name, statements, SHA256(digest(array_to_string(statements,''))), octet_length",
+    "sourceReadback": "GitLab repository file at immutable historical commit; Base64 decoded and compared verbatim to provider statement in memory",
+    "newRecord": {
+      "order": 101,
+      "version": "20260922112154",
+      "migrationName": "reconcile_transactional_email_delivery_logs_v1",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 2850,
+      "providerStatementSha256": "3a4af676fb07d8f1565a22d657a888fb1d59f19f74b92a08057e71209ea33ae9",
+      "originalSourcePath": "supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql",
+      "gitlabProjectId": 88025157,
+      "immutableHistoricalCommit": "ececf502cd9272d1379b1bdd5e51d1ed29a9ce7d",
+      "commitTimestamp": "2026-09-22T12:22:29+01:00",
+      "sourceURL": "https://gitlab.com/risck-comply-group/eurocomply_saas/-/blob/ececf502cd9272d1379b1bdd5e51d1ed29a9ce7d/supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql",
+      "blobSha1": "22171ecefdf0f0d29494869d64bef9cf1ee68ae7",
+      "fullFileSha256": "9fee42b08dd0c87058382e9e36ac90772b26737e3653a420efdddaedadd2d353",
+      "sourceFileBytes": 3002,
+      "providerStatementExactContiguousSubspan": true,
+      "sourceStartOffsetCharacters": 152,
+      "sourceEndOffsetCharacters": 3002,
+      "commentOrWhitespaceOnlyPrefix": true,
+      "commentOrWhitespaceOnlySuffix": true,
+      "originalWholeFileEqualsProviderStatement": false,
+      "versionDuplicateInStructuralManifest": false,
+      "orderedPostgres17ReplayPerformed": false,
+      "independentlyQualifiedSourceProvenance": false,
+      "originalApplyTimeIndependentlyEstablished": false,
+      "authorizedForReplay": false
+    },
+    "existingVerifiedSubspanRecordsBefore": 7,
+    "verifiedSubspanRecordsAfterAtThisEvidenceLevel": 8,
+    "existingArchivedWholeFileSourceProofClaimsUnchanged": 103,
+    "unresolvedWholeFileSourceClaimsUnchanged": 34,
+    "nonexactVersionIdentityReviewsPending": 25,
+    "independentReplayApprovals": 0,
+    "formalGateA12": "BLOCKED",
+    "safety": {
+      "productionWrites": false,
+      "sharedQaWrites": false,
+      "newCost": false,
+      "newManifest": false,
+      "replayPerformed": false
+    },
+    "note": "This is one new direct exact source-subspan verification; it must NOT be promoted to original applied whole-migration-file byte proof or formal DAT-01 acceptance. Source timestamp is commit time, not verified production apply time."
   }
 }
