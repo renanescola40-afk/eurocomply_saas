@@ -1,0 +1,86 @@
+{
+  "schema": "risck-comply.qa.p0e-p0f-seat-release-transactional-proof.v1",
+  "observedDate": "2026-11-06",
+  "scope": "ISOLATED_QA_SYNTHETIC_POSTGRESQL_ROLLBACK_ONLY",
+  "provider": "Supabase execute_sql (real PostgreSQL, not mock)",
+  "qaProjectId": "zrxrrfbllsxtleyxjpsz",
+  "postgresVersion": "17.11",
+  "testedSource": {
+    "path": "scripts/security/qa-p0e-seat-release-transactional-rehearsal.sql",
+    "githubBlobSha1": "857b37b19316bb403239121e5617d53bed72d563",
+    "introductionCommitSha": "d98ccf01e3eecc0da65057d62011bdefce806a8b",
+    "exactSourceReadbackBeforeExecution": true
+  },
+  "guard": {
+    "isolatedQaMigrationVersion": "20261105185729",
+    "productionProjectDoesNotHaveMarker": true,
+    "postgres17Required": true,
+    "transaction": "BEGIN + explicit ROLLBACK"
+  },
+  "cases": [
+    {
+      "name": "01_last_owner_blocked",
+      "observed": "last_owner",
+      "result": "PASS"
+    },
+    {
+      "name": "02_admin_owner_denied",
+      "observed": "permission_denied",
+      "result": "PASS"
+    },
+    {
+      "name": "03_owner_scim_allowed",
+      "observed": "released",
+      "result": "PASS"
+    },
+    {
+      "name": "04_usage_reconciled",
+      "observed": "2",
+      "result": "PASS"
+    },
+    {
+      "name": "05_exactly_one_audit",
+      "observed": "1",
+      "result": "PASS"
+    },
+    {
+      "name": "06_duplicate_denied",
+      "observed": "duplicate",
+      "result": "PASS"
+    },
+    {
+      "name": "07_remaining_owner_protected",
+      "observed": "last_owner",
+      "result": "PASS"
+    }
+  ],
+  "summary": {
+    "tests": 7,
+    "pass": 7,
+    "fail": 0
+  },
+  "cleanup": {
+    "explicitRollback": true,
+    "syntheticOrgLabel": "QA_SYNTHTEST_P0E_ROLLBACK",
+    "readOnlyPostExecutionResidualOrgCount": 0
+  },
+  "production": {
+    "writes": 0,
+    "customerRecordsChanged": 0,
+    "emailsSentByExecutor": 0,
+    "stripeLiveCalls": 0
+  },
+  "limitations": [
+    "These are real database assertions on a single PostgreSQL QA transaction, not authenticated HTTP/JWT application E2E.",
+    "No multi-session concurrency tests or signed chained audit acceptance were executed by this proof.",
+    "Legacy public audit row count is observed; it is not a signed audit-chain verification.",
+    "Source tests were executed through V8 adapters, not native Node 22 or hosted CircleCI; native exact-HEAD CI remains pending.",
+    "No qualified independent reviewer accepted this as a formal P0-E, P0-F, DAT or OPS control.",
+    "No production maintenance, two-row historical counter repair, or protected main merge authorized."
+  ],
+  "formal": {
+    "p0e": "PARTIAL_QA_BEHAVIOR_VERIFIED_NOT_ACCEPTED",
+    "p0f": "PARTIAL_COUNTER_BEHAVIOR_VERIFIED_NOT_ACCEPTED",
+    "enterpriseGateAcceptance": false
+  }
+}
