@@ -760,11 +760,11 @@ jobs:
             BEGIN;
             CREATE TEMP TABLE dat01_synthetic_smoke(id integer PRIMARY KEY, label text NOT NULL) ON COMMIT DROP;
             INSERT INTO dat01_synthetic_smoke VALUES (1,'synthetic-a'),(2,'synthetic-b');
-            DO $ BEGIN
+            DO $dat01_smoke$ BEGIN
               IF (SELECT count(*) FROM dat01_synthetic_smoke) <> 2 THEN
                 RAISE EXCEPTION 'synthetic smoke assertion failed';
               END IF;
-            END $;
+            END $dat01_smoke$;
             SELECT 'NON_AUTHORITATIVE_SYNTHETIC_ROLLBACK_SMOKE_PASS';
             ROLLBACK;
             SQL
