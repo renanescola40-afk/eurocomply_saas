@@ -259,7 +259,9 @@ jobs:
           paths:
             - gitleaks
 
-  a15-gitleaks-exact-sha:
+  # Diagnostic collection deliberately uses --exit-code 0 to distinguish tool
+  # execution from findings. The required dependent findings gate fails closed.
+  a15-gitleaks-report-collection:
     docker:
       - image: cimg/base:stable
     resource_class: small
@@ -269,35 +271,81 @@ jobs:
       - attach_workspace:
           at: /tmp/a15-scanner
       - run:
-          name: Verify exact SHA, allowed branch and secret-free execution
+          name: Verify exact source and no provider credentials for collection
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
               fix/onboarding-explicit-plan-boundary-test-20261105|ci/a15-gitleaks-one-shot-20261106) ;;
-              *) echo "Refusing A-15 scanner on unauthorized branch" >&2; exit 1 ;;
+              *) echo "Gitleaks collection branch not authorized" >&2; exit 1 ;;
             esac
-            test -n "${CIRCLE_SHA1:-}"
-            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+            test -x /tmp/a15-scanner/gitleaks
             for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
               if [ -n "${!key:-}" ]; then
-                echo "Forbidden provider variable in source-only scan: $key" >&2
+                echo "Gitleaks collection refused privileged variable: $key" >&2
                 exit 1
               fi
             done
       - run:
-          name: Run fail-closed redacted Gitleaks on exact checkout
+          name: Collect redacted Gitleaks report without claiming security PASS
           command: |
             set -euo pipefail
-            test -x /tmp/a15-scanner/gitleaks
             mkdir -p artifacts/a15-gitleaks
-            /tmp/a15-scanner/gitleaks dir --redact --no-banner --report-format json \
-              --report-path artifacts/a15-gitleaks/findings-redacted.json .
+            # Diagnostic only: the dependent gate checks all actual findings.
+            /tmp/a15-scanner/gitleaks dir --exit-code 0 --redact --no-banner \
+              --report-format json --report-path artifacts/a15-gitleaks/findings-redacted.json .
             test -s artifacts/a15-gitleaks/findings-redacted.json
-            printf '{"kind":"RISCK_A15_GITLEAKS_WORKTREE","sha":"%s","branch":"%s","scope":"current worktree only","formalAcceptance":"NOT_GRANTED"}\n' \
+            printf '{"kind":"RISCK_A15_GITLEAKS_COLLECTION","sha":"%s","branch":"%s","scope":"current worktree only","formalAcceptance":"NOT_GRANTED"}\n' \
               "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/a15-gitleaks/identity.json
+      - persist_to_workspace:
+          root: artifacts/a15-gitleaks
+          paths:
+            - findings-redacted.json
+            - identity.json
       - store_artifacts:
           path: artifacts/a15-gitleaks
           destination: a15-gitleaks-current-worktree-exact-sha
+
+  a15-gitleaks-findings-gate:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/project/artifacts/a15-gitleaks
+      - run:
+          name: Fail closed unless redacted report has zero findings on exact SHA
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "Gitleaks findings gate refused privileged variable: $key" >&2
+                exit 1
+              fi
+            done
+            python3 - <<'PY'
+            import json, os, sys
+            root = 'artifacts/a15-gitleaks/'
+            with open(root + 'identity.json', encoding='utf-8') as f:
+                identity = json.load(f)
+            if identity.get('sha') != os.environ.get('CIRCLE_SHA1') or identity.get('formalAcceptance') != 'NOT_GRANTED':
+                print('A15_GITLEAKS_IDENTITY_MISMATCH')
+                sys.exit(2)
+            with open(root + 'findings-redacted.json', encoding='utf-8') as f:
+                findings = json.load(f)
+            if not isinstance(findings, list):
+                print('A15_GITLEAKS_INVALID_REPORT')
+                sys.exit(2)
+            count = len(findings)
+            print('A15_GITLEAKS_FINDING_COUNT=' + str(count))
+            if count:
+                print('A15_GITLEAKS_FINDINGS_PRESENT_SECURITY_GATE_BLOCKED')
+                sys.exit(3)
+            print('A15_GITLEAKS_WORKTREE_SCAN_ZERO_FINDINGS_NOT_FULL_ENTERPRISE_ACCEPTANCE')
+            PY
 
   # Second-stage opt-in; never auto-trigger, deploy, write to production or use provider secrets.
   github-actions-recovery-quality:
@@ -875,7 +923,7 @@ workflows:
             branches:
               only:
                 - fix/onboarding-explicit-plan-boundary-test-20261105
-      - a15-gitleaks-exact-sha:
+      - a15-gitleaks-report-collection:
           requires:
             - a15-gitleaks-tool-preflight
           filters:
@@ -883,6 +931,13 @@ workflows:
               only:
                 - fix/onboarding-explicit-plan-boundary-test-20261105
 
+      - a15-gitleaks-findings-gate:
+          requires:
+            - a15-gitleaks-report-collection
+          filters:
+            branches:
+              only:
+                - ${targetBranch}
   # ONE-SHOT: source-only small runner on this isolated branch only.
   # No production credentials, no deployment, no retries.
   a15-gitleaks-one-shot-20261106:
@@ -892,7 +947,7 @@ workflows:
             branches:
               only:
                 - ci/a15-gitleaks-one-shot-20261106
-      - a15-gitleaks-exact-sha:
+      - a15-gitleaks-report-collection:
           requires:
             - a15-gitleaks-tool-preflight
           filters:
@@ -900,6 +955,13 @@ workflows:
               only:
                 - ci/a15-gitleaks-one-shot-20261106
 
+      - a15-gitleaks-findings-gate:
+          requires:
+            - a15-gitleaks-report-collection
+          filters:
+            branches:
+              only:
+                - ${targetBranch}
   onboarding-source-review-manual:
     # One reviewed repair branch, explicit opt-in, Node 22 source quality only.
     when: << pipeline.parameters.run_onboarding_review >>
