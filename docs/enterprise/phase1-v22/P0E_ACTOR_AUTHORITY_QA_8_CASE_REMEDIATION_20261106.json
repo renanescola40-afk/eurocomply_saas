@@ -1,0 +1,89 @@
+{
+  "schema": "risck-comply.p0e.qa-actor-authority-reconciliation.v1",
+  "observedDate": "2026-11-06",
+  "category": "SECURITY_CORRECTION_P0E_QA_EXECUTED_NOT_RELEASED",
+  "issue": "P0-E seat release actor authority for ordinary members",
+  "baseline": {
+    "sourceFunction": "public.release_organization_seat_atomic(uuid,uuid,uuid,text,text)",
+    "baselineDefinitionMd5": "d4714bb9382ae0322376ed433e859162",
+    "sameHashQaAndProduction": true,
+    "reproducedOn": "Supabase QA PostgreSQL 17.11",
+    "syntheticScenario": "actor is not a member of target organization, target is an active ordinary member",
+    "expected": "permission_denied",
+    "actual": "released",
+    "databasePermissionBoundary": "service_role-only RPC; this test does not demonstrate direct public API exploit"
+  },
+  "proposedFix": {
+    "path": "supabase/reconciliation/20261106_p0e_seat_release_actor_authority_candidate.sql",
+    "gitBlobSha1": "603ddc05c808ee8be2e638eb97b5a4faef5ca1c8",
+    "sourceCommit": "e2e2dd1f8248058cd3b53cd6e2cc2c319b1099b1",
+    "type": "FORWARD_SQL_CANDIDATE_NOT_VERSIONED_MIGRATION_NOT_APPLIED",
+    "guard": "source fingerprint + service-role-only ACL fail-closed",
+    "policy": "active same-tenant owner or admin for any seat release; owner target still owner-only; preserve idempotency, existing locks, counter reconcile and audit"
+  },
+  "verification": {
+    "qaProjectId": "zrxrrfbllsxtleyxjpsz",
+    "postgres": "17.11",
+    "sourceReadback": "exact committed GitHub SQL candidate; outer transaction replaced candidate BEGIN/COMMIT with guaranteed ROLLBACK for rehearsal only",
+    "tests": [
+      [
+        "01_last_owner_blocked",
+        "last_owner"
+      ],
+      [
+        "02_admin_owner_denied",
+        "permission_denied"
+      ],
+      [
+        "03_owner_scim_allowed",
+        "released"
+      ],
+      [
+        "04_usage_reconciled",
+        "2"
+      ],
+      [
+        "05_exactly_one_audit",
+        "1"
+      ],
+      [
+        "06_duplicate_denied",
+        "duplicate"
+      ],
+      [
+        "07_remaining_owner_protected",
+        "last_owner"
+      ],
+      [
+        "08_nonmember_actor_denied",
+        "permission_denied"
+      ]
+    ],
+    "realSqlCasesPassed": 8,
+    "realSqlCasesFailed": 0,
+    "rollbackExecuted": true,
+    "postRollbackFunctionMd5": "d4714bb9382ae0322376ed433e859162",
+    "postRollbackSyntheticOrganizationsRemaining": 0,
+    "postRollbackServiceRoleExecute": true,
+    "postRollbackAuthenticatedExecute": false,
+    "sourceTestCallbacksPassingViaV8": 4,
+    "officialNode22TestRun": "NOT_RUN",
+    "exactShaHostedCI": "NOT_RUN"
+  },
+  "limitations": [
+    "No persistent QA or Production function change was applied.",
+    "No signed audit-chain validation or multi-session concurrency proof in this specific execution.",
+    "No authenticated API/JWT/SCIM token lifecycle integration run; the SCIM positive path used a synthetic active owner actor.",
+    "Service-only RPC authorization remains important, but is not a replacement for actor checks within the RPC.",
+    "The candidate must be converted to a Supabase CLI-created forward migration after independent qualified review.",
+    "No main merge, deployed source SHA, separate QA full suite or formal Enterprise control acceptance."
+  ],
+  "safety": {
+    "productionWrites": 0,
+    "qaPersistentWrites": 0,
+    "newPaidRuns": 0,
+    "emailsSent": 0,
+    "stripeLiveCalls": 0,
+    "formalGateAccepted": false
+  }
+}
