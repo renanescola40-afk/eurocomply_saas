@@ -23,3 +23,12 @@ test('A-07 source proof is not a deploy, accepts no privileged credentials, and 
   assert.match(job,/resource_class: small/);
   assert.doesNotMatch(job,/npm run deploy|stripe checkout|git push|curl -X POST/);
 });
+
+test('A-07 shell guards expand real CircleCI environment rather than literal strings',()=>{
+  assert.doesNotMatch(job,/\\\$\{CIRCLE_BRANCH:-\}/);
+  assert.doesNotMatch(job,/\\\$\{CIRCLE_SHA1:-\}/);
+  assert.doesNotMatch(job,/\\\$\{!key:-\}/);
+  assert.match(job,/test "\$\{CIRCLE_BRANCH:-\}" = "fix\/e2-a07-evidence-truthful-readback-20261104"/);
+  assert.match(job,/test -n "\$\{CIRCLE_SHA1:-\}"/);
+  assert.match(job,/if \[ -n "\$\{!key:-\}" \]; then/);
+});

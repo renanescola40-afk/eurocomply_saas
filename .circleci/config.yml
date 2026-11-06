@@ -714,11 +714,11 @@ jobs:
           name: Deny production credentials and prove exact PR source SHA
           command: |
             set -euo pipefail
-            test "\${CIRCLE_BRANCH:-}" = "fix/e2-a07-evidence-truthful-readback-20261104"
-            test -n "\${CIRCLE_SHA1:-}"
+            test "${CIRCLE_BRANCH:-}" = "fix/e2-a07-evidence-truthful-readback-20261104"
+            test -n "${CIRCLE_SHA1:-}"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
-              if [ -n "\${!key:-}" ]; then
+              if [ -n "${!key:-}" ]; then
                 echo "A07 source-only job refuses privileged provider variable: $key" >&2
                 exit 1
               fi
