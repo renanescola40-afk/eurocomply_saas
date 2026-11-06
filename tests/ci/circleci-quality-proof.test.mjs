@@ -43,6 +43,13 @@ test('quality evidence refuses production-capable credentials', () => {
   }
 });
 
+test('manual onboarding source review produces a bounded exact-SHA quality proof', () => {
+  const result = proof({ CIRCLE_BRANCH: 'fix/onboarding-explicit-plan-boundary-test-20261105' });
+  assert.equal(result.circleci.branch, 'fix/onboarding-explicit-plan-boundary-test-20261105');
+  assert.equal(result.sourceCommitSha, sha);
+  assert.equal(result.formalAcceptance, 'NOT_GRANTED');
+});
+
 test('quality job validates routes before emitting and archiving bounded evidence', () => {
   const config = readFileSync('.circleci/config.yml', 'utf8');
   const job = config.split('\n  github-actions-recovery-quality:\n')[1].split('\n  qa-preflight-offline:\n')[0];
