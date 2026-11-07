@@ -1,0 +1,142 @@
+{
+  "schema": "risck-comply.dat01.provider-applied-statement-recovery.v1",
+  "source": "supabase_migrations.schema_migrations read-only authenticated SELECT",
+  "sourceSnapshotSha": "75fcb01585108a7af576580593605fcf8bec3e60",
+  "classification": "PROVIDER_APPLIED_STATEMENTS_NOT_ORIGINAL_SOURCE_FILE",
+  "part": 4,
+  "partCount": 5,
+  "rowCount": 8,
+  "sourceSqlIncluded": true,
+  "productionWrites": 0,
+  "approvedForReplay": false,
+  "records": [
+    {
+      "providerVersion": "20261003173930",
+      "providerName": "reconcile_ai_incident_atomic_rpc",
+      "providerJoinedSha256": "1112bfa0b431e99ab473871d1f2e41ce0163c235a3b2535be44ba28b672dc3cf",
+      "providerJoinedUtf8Bytes": 4263,
+      "providerStatementCount": 1,
+      "mappingType": "exact_version",
+      "canonicalCandidatePath": "supabase/migrations/20261003173930_reconcile_ai_incident_atomic_rpc.sql",
+      "provenance": "AUTHENTICATED_SUPABASE_PRODUCTION_APPLIED_STATEMENTS",
+      "originalWholeFileProven": false,
+      "independentReviewerApproved": false,
+      "executableReplayAuthorized": false,
+      "statements": [
+        "create or replace function public.create_ai_incident_with_audit_atomic(\n  p_incident_id uuid,\n  p_organization_id uuid,\n  p_actor_user_id uuid,\n  p_ai_system_id uuid,\n  p_title text,\n  p_summary text,\n  p_category text,\n  p_severity text,\n  p_detected_at timestamptz,\n  p_report_status text,\n  p_authority text,\n  p_internal_owner text,\n  p_deadline_plan jsonb,\n  p_next_actions jsonb,\n  p_audit_id uuid,\n  p_audit_metadata jsonb,\n  p_audit_created_at timestamptz,\n  p_previous_hash text,\n  p_event_hash text,\n  p_hash_signature text default null\n)\nreturns table(outcome text, incident jsonb)\nlanguage plpgsql\nsecurity definer\nset search_path = 'pg_catalog', 'public'\nas $$\ndeclare\n  v_previous_hash text;\n  v_incident public.ai_incidents%rowtype;\nbegin\n  if p_incident_id is null or p_organization_id is null or p_actor_user_id is null or p_audit_id is null then\n    return query select 'invalid_input'::text, null::jsonb;\n    return;\n  end if;\n\n  if length(trim(coalesce(p_title, ''))) = 0\n    or length(trim(coalesce(p_summary, ''))) = 0\n    or p_event_hash !~ '^[0-9a-f]{64}$'\n    or (p_previous_hash is not null and p_previous_hash !~ '^[0-9a-f]{64}$')\n    or (p_hash_signature is not null and p_hash_signature !~ '^[0-9a-f]{64}$') then\n    return query select 'invalid_input'::text, null::jsonb;\n    return;\n  end if;\n\n  if p_ai_system_id is not null and not exists (\n    select 1 from public.ai_systems s\n    where s.id = p_ai_system_id and s.organization_id = p_organization_id\n  ) then\n    return query select 'invalid_ai_system'::text, null::jsonb;\n    return;\n  end if;\n\n  perform pg_advisory_xact_lock(hashtext(p_organization_id::text));\n\n  select ae.event_hash into v_previous_hash\n  from public.audit_events ae\n  where ae.organization_id = p_organization_id and ae.event_hash is not null\n  order by ae.created_at desc, ae.id desc\n  limit 1;\n\n  if coalesce(v_previous_hash, '') <> coalesce(p_previous_hash, '') then\n    raise exception 'audit chain previous hash mismatch' using errcode = '40001';\n  end if;\n\n  insert into public.ai_incidents (\n    id, organization_id, ai_system_id, title, summary, category, severity,\n    detected_at, report_status, authority, internal_owner, deadline_plan,\n    next_actions, created_by\n  ) values (\n    p_incident_id, p_organization_id, p_ai_system_id, p_title, p_summary,\n    p_category, p_severity, p_detected_at, p_report_status, p_authority,\n    p_internal_owner, coalesce(p_deadline_plan, '[]'::jsonb),\n    coalesce(p_next_actions, '[]'::jsonb), p_actor_user_id\n  ) returning * into v_incident;\n\n  insert into public.audit_events (\n    id, organization_id, actor_user_id, action, entity_type, entity_id,\n    metadata, created_at, previous_hash, event_hash, hash_algorithm, hash_signature\n  ) values (\n    p_audit_id, p_organization_id, p_actor_user_id, 'ai_incident_created',\n    'ai_incident', p_incident_id::text, coalesce(p_audit_metadata, '{}'::jsonb),\n    p_audit_created_at, v_previous_hash, p_event_hash, 'sha256', p_hash_signature\n  );\n\n  return query select 'created'::text, to_jsonb(v_incident);\nend;\n$$;\n\nrevoke all on function public.create_ai_incident_with_audit_atomic(uuid, uuid, uuid, uuid, text, text, text, text, timestamptz, text, text, text, jsonb, jsonb, uuid, jsonb, timestamptz, text, text, text) from public;\nrevoke all on function public.create_ai_incident_with_audit_atomic(uuid, uuid, uuid, uuid, text, text, text, text, timestamptz, text, text, text, jsonb, jsonb, uuid, jsonb, timestamptz, text, text, text) from anon;\nrevoke all on function public.create_ai_incident_with_audit_atomic(uuid, uuid, uuid, uuid, text, text, text, text, timestamptz, text, text, text, jsonb, jsonb, uuid, jsonb, timestamptz, text, text, text) from authenticated;\ngrant execute on function public.create_ai_incident_with_audit_atomic(uuid, uuid, uuid, uuid, text, text, text, text, timestamptz, text, text, text, jsonb, jsonb, uuid, jsonb, timestamptz, text, text, text) to service_role;\n\ncomment on function public.create_ai_incident_with_audit_atomic(uuid, uuid, uuid, uuid, text, text, text, text, timestamptz, text, text, text, jsonb, jsonb, uuid, jsonb, timestamptz, text, text, text)\n  is 'Creates one AI incident and its chained audit event atomically with organization-scoped serialization.';"
+      ]
+    },
+    {
+      "providerVersion": "20261003205557",
+      "providerName": "fix_team_invitation_persistence_42702",
+      "providerJoinedSha256": "5371aab27e28dfb4e3ad38397cc897fb20f6dcbac255a2e3371acf9675e30332",
+      "providerJoinedUtf8Bytes": 2338,
+      "providerStatementCount": 1,
+      "mappingType": "exact_version",
+      "canonicalCandidatePath": "supabase/migrations/20261003205557_fix_team_invitation_persistence_42702.sql",
+      "provenance": "AUTHENTICATED_SUPABASE_PRODUCTION_APPLIED_STATEMENTS",
+      "originalWholeFileProven": false,
+      "independentReviewerApproved": false,
+      "executableReplayAuthorized": false,
+      "statements": [
+        "begin;\n\ndo $hotfix$\ndeclare\n  fn_oid oid := to_regprocedure(\n    'public.create_organization_invitation_with_seat_atomic_reconciled(uuid,text,text,text,text,uuid,timestamptz)'\n  );\n  fn_def text;\n  patched_def text;\n  old_fragment constant text := 'on conflict (organization_id) do nothing;';\n  new_fragment constant text := 'on conflict on constraint organization_usage_pkey do nothing;';\nbegin\n  if fn_oid is null then raise exception 'enterprise invitation reconciled function is missing'; end if;\n  select pg_get_functiondef(fn_oid) into fn_def;\n  if position(old_fragment in lower(fn_def)) = 0 then\n    if position(new_fragment in lower(fn_def)) > 0 then return; end if;\n    raise exception 'expected ambiguous ON CONFLICT fragment was not found';\n  end if;\n  patched_def := replace(fn_def, old_fragment, new_fragment);\n  if patched_def = fn_def then raise exception 'enterprise invitation 42702 hotfix produced no change'; end if;\n  execute patched_def;\nend\n$hotfix$;\n\ndo $verify$\ndeclare\n  fn_oid oid := to_regprocedure(\n    'public.create_organization_invitation_with_seat_atomic_reconciled(uuid,text,text,text,text,uuid,timestamptz)'\n  );\n  fn_def text;\nbegin\n  if fn_oid is null then raise exception 'enterprise invitation reconciled function missing after hotfix'; end if;\n  select lower(pg_get_functiondef(fn_oid)) into fn_def;\n  if position('on conflict (organization_id) do nothing;' in fn_def) > 0 then raise exception 'ambiguous invitation ON CONFLICT remains after hotfix'; end if;\n  if position('on conflict on constraint organization_usage_pkey do nothing;' in fn_def) = 0 then raise exception 'constraint-qualified invitation ON CONFLICT is missing'; end if;\n  if not exists (\n    select 1 from pg_proc p cross join lateral unnest(coalesce(p.proconfig, array[]::text[])) setting\n    where p.oid = fn_oid and p.prosecdef and setting = 'search_path=pg_catalog, public'\n  ) then raise exception 'enterprise invitation reconciled function security boundary changed'; end if;\n  if has_function_privilege('anon', fn_oid, 'EXECUTE')\n     or has_function_privilege('authenticated', fn_oid, 'EXECUTE')\n     or has_function_privilege('service_role', fn_oid, 'EXECUTE') then\n    raise exception 'reconciled implementation unexpectedly became externally executable';\n  end if;\nend\n$verify$;\n\nnotify pgrst, 'reload schema';\ncommit;"
+      ]
+    },
+    {
+      "providerVersion": "20261003220519",
+      "providerName": "fix_team_invitation_membership_conflict_42702",
+      "providerJoinedSha256": "2cdf4141ab8bec955a5838243cd64f5142b670dcc01a7113576596df68a2c9cd",
+      "providerJoinedUtf8Bytes": 2616,
+      "providerStatementCount": 1,
+      "mappingType": "canonical_name_match",
+      "canonicalCandidatePath": "supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql",
+      "provenance": "AUTHENTICATED_SUPABASE_PRODUCTION_APPLIED_STATEMENTS",
+      "originalWholeFileProven": false,
+      "independentReviewerApproved": false,
+      "executableReplayAuthorized": false,
+      "statements": [
+        "begin;\n\ndo $hotfix$\ndeclare\n  target regprocedure;\n  target_name text;\n  fn_def text;\n  patched_def text;\n  old_fragment constant text := 'on conflict (organization_id, user_id) do update set';\n  new_fragment constant text := 'on conflict on constraint organization_members_organization_id_user_id_key do update set';\nbegin\n  foreach target_name in array array[\n    'public.accept_organization_invitation_atomic(text,uuid,text)',\n    'public.accept_billing_organization_invitation_atomic(text,uuid,text)'\n  ]\n  loop\n    target := to_regprocedure(target_name);\n    if target is null then\n      raise exception 'required invitation acceptance function is missing: %', target_name;\n    end if;\n    select pg_get_functiondef(target) into fn_def;\n    if position(old_fragment in lower(fn_def)) = 0 then\n      if position(new_fragment in lower(fn_def)) > 0 then\n        continue;\n      end if;\n      raise exception 'expected membership conflict fragment was not found in %', target_name;\n    end if;\n    patched_def := replace(fn_def, old_fragment, new_fragment);\n    if patched_def = fn_def then\n      raise exception 'membership conflict hotfix produced no change for %', target_name;\n    end if;\n    execute patched_def;\n  end loop;\nend\n$hotfix$;\n\ndo $verify$\ndeclare\n  target regprocedure;\n  target_name text;\n  fn_def text;\nbegin\n  foreach target_name in array array[\n    'public.accept_organization_invitation_atomic(text,uuid,text)',\n    'public.accept_billing_organization_invitation_atomic(text,uuid,text)'\n  ]\n  loop\n    target := to_regprocedure(target_name);\n    if target is null then\n      raise exception 'required invitation acceptance function missing after hotfix: %', target_name;\n    end if;\n    select lower(pg_get_functiondef(target)) into fn_def;\n    if position('on conflict (organization_id, user_id) do update set' in fn_def) > 0 then\n      raise exception 'ambiguous membership conflict target remains in %', target_name;\n    end if;\n    if position('on conflict on constraint organization_members_organization_id_user_id_key do update set' in fn_def) = 0 then\n      raise exception 'constraint-qualified membership conflict target missing in %', target_name;\n    end if;\n    if not exists (\n      select 1\n      from pg_proc p\n      cross join lateral unnest(coalesce(p.proconfig, array[]::text[])) setting\n      where p.oid = target\n        and p.prosecdef\n        and setting = 'search_path=pg_catalog, public'\n    ) then\n      raise exception 'invitation acceptance security boundary changed for %', target_name;\n    end if;\n  end loop;\nend\n$verify$;\n\nnotify pgrst, 'reload schema';\ncommit;"
+      ]
+    },
+    {
+      "providerVersion": "20261004082501",
+      "providerName": "validate_audit_logs_actor_user_fk",
+      "providerJoinedSha256": "db12bfe5613df5425519632bd17fed43b3f3215c8917b1c2df58b6d55f31ee41",
+      "providerJoinedUtf8Bytes": 82,
+      "providerStatementCount": 1,
+      "mappingType": "canonical_name_match",
+      "canonicalCandidatePath": "supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+      "provenance": "AUTHENTICATED_SUPABASE_PRODUCTION_APPLIED_STATEMENTS",
+      "originalWholeFileProven": false,
+      "independentReviewerApproved": false,
+      "executableReplayAuthorized": false,
+      "statements": [
+        "alter table public.audit_logs\n  validate constraint audit_logs_actor_user_id_fkey;"
+      ]
+    },
+    {
+      "providerVersion": "20261004103137",
+      "providerName": "force_rls_sales_console_backend_only",
+      "providerJoinedSha256": "85db3506d8a55a24d20be470e0735c4f6227de5624bf1e7b083942e243d8417b",
+      "providerJoinedUtf8Bytes": 859,
+      "providerStatementCount": 1,
+      "mappingType": "canonical_name_match",
+      "canonicalCandidatePath": "supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql",
+      "provenance": "AUTHENTICATED_SUPABASE_PRODUCTION_APPLIED_STATEMENTS",
+      "originalWholeFileProven": false,
+      "independentReviewerApproved": false,
+      "executableReplayAuthorized": false,
+      "statements": [
+        "alter table public.sales_leads force row level security;\nalter table public.sales_lead_activities force row level security;\nalter table public.sales_lead_notes force row level security;\nalter table public.sales_lead_activity_events force row level security;\n\nrevoke all on public.sales_leads from anon, authenticated;\nrevoke all on public.sales_lead_activities from anon, authenticated;\nrevoke all on public.sales_lead_notes from anon, authenticated;\nrevoke all on public.sales_lead_activity_events from anon, authenticated;\n\ngrant select, insert, update, delete on public.sales_leads to service_role;\ngrant select, insert, update, delete on public.sales_lead_activities to service_role;\ngrant select, insert, update, delete on public.sales_lead_notes to service_role;\ngrant select, insert, update, delete on public.sales_lead_activity_events to service_role;"
+      ]
+    },
+    {
+      "providerVersion": "20261004110936",
+      "providerName": "add_sales_lead_email_templates",
+      "providerJoinedSha256": "561206132e6a308b736564265583b4cc975a76738f80093225d43dc1d401785d",
+      "providerJoinedUtf8Bytes": 585,
+      "providerStatementCount": 1,
+      "mappingType": "exact_version",
+      "canonicalCandidatePath": "supabase/migrations/20261004110936_add_sales_lead_email_templates.sql",
+      "provenance": "AUTHENTICATED_SUPABASE_PRODUCTION_APPLIED_STATEMENTS",
+      "originalWholeFileProven": false,
+      "independentReviewerApproved": false,
+      "executableReplayAuthorized": false,
+      "statements": [
+        "alter table public.email_delivery_logs\n  drop constraint if exists email_delivery_logs_template_check;\n\nalter table public.email_delivery_logs\n  add constraint email_delivery_logs_template_check\n  check (\n    template in (\n      'welcome_onboarding',\n      'organization_created',\n      'member_invited',\n      'billing_started',\n      'invoice_failed',\n      'compliance_deadline_reminder',\n      'export_ready',\n      'security_alert',\n      'sales_lead_internal',\n      'sales_lead_acknowledgement',\n      'trial_upgrade',\n      'document_expiring',\n      'vendor_review'\n    )\n  );"
+      ]
+    },
+    {
+      "providerVersion": "20261005001641",
+      "providerName": "harden_sync_legacy_risk_score_trigger_acl",
+      "providerJoinedSha256": "83df4db3bbb83926e6de111c1d3b11166c3750594c10b41bb55047e98aa7642e",
+      "providerJoinedUtf8Bytes": 1186,
+      "providerStatementCount": 1,
+      "mappingType": "exact_version",
+      "canonicalCandidatePath": "supabase/migrations/20261005001641_harden_sync_legacy_risk_score_trigger_acl.sql",
+      "provenance": "AUTHENTICATED_SUPABASE_PRODUCTION_APPLIED_STATEMENTS",
+      "originalWholeFileProven": false,
+      "independentReviewerApproved": false,
+      "executableReplayAuthorized": false,
+      "statements": [
+        "\nbegin;\n\nrevoke all on function public.sync_legacy_risk_score() from public;\nrevoke all on function public.sync_legacy_risk_score() from anon;\nrevoke all on function public.sync_legacy_risk_score() from authenticated;\ngrant execute on function public.sync_legacy_risk_score() to service_role;\n\ndo $verify$\ndeclare\n  fn_oid oid := to_regprocedure('public.sync_legacy_risk_score()');\nbegin\n  if fn_oid is null then\n    raise exception 'public.sync_legacy_risk_score() is missing';\n  end if;\n\n  if has_function_privilege('anon', fn_oid, 'EXECUTE')\n     or has_function_privilege('authenticated', fn_oid, 'EXECUTE')\n     or not has_function_privilege('service_role', fn_oid, 'EXECUTE') then\n    raise exception 'sync_legacy_risk_score ACL is not hardened as expected';\n  end if;\n\n  if not exists (\n    select 1\n    from pg_trigger t\n    join pg_class c on c.oid=t.tgrelid\n    join pg_namespace n on n.oid=c.relnamespace\n    where not t.tgisinternal\n      and t.tgfoid=fn_oid\n      and n.nspname='public'\n      and c.relname='risks'\n      and t.tgname='sync_legacy_risk_score'\n  ) then\n    raise exception 'sync_legacy_risk_score trigger binding is missing';\n  end if;\nend\n$verify$;\n\ncommit;"
+      ]
+    },
+    {
+      "providerVersion": "20261010075142",
+      "providerName": "harden_active_membership_governance_read",
+      "providerJoinedSha256": "29bad3ef3fbb77aafc5ef789829f1f41acdcc0d1b4cd91fb2019e81c4b7430c6",
+      "providerJoinedUtf8Bytes": 2064,
+      "providerStatementCount": 1,
+      "mappingType": "canonical_name_match",
+      "canonicalCandidatePath": "supabase/migrations/20261009210000_harden_active_membership_governance_read.sql",
+      "provenance": "AUTHENTICATED_SUPABASE_PRODUCTION_APPLIED_STATEMENTS",
+      "originalWholeFileProven": false,
+      "independentReviewerApproved": false,
+      "executableReplayAuthorized": false,
+      "statements": [
+        "begin;\n\nalter policy ai_annex_iv_changes_member_select\non public.ai_annex_iv_changes\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_annex_iv_decisions_member_select\non public.ai_annex_iv_decisions\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_annex_iv_evidence_member_select\non public.ai_annex_iv_evidence\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_annex_iv_packages_member_select\non public.ai_annex_iv_packages\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_annex_iv_sections_member_select\non public.ai_annex_iv_sections\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy article50_assessments_member_read\non public.ai_article50_assessments\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy article50_events_member_read\non public.ai_article50_events\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy article50_evidence_member_read\non public.ai_article50_evidence\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_qms_audits_member_select\non public.ai_qms_audits\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_qms_controls_member_select\non public.ai_qms_controls\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_qms_decisions_member_select\non public.ai_qms_decisions\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_qms_management_reviews_member_select\non public.ai_qms_management_reviews\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_qms_nonconformities_member_select\non public.ai_qms_nonconformities\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\nalter policy ai_qms_systems_member_select\non public.ai_qms_systems\nto authenticated\nusing (app_private.is_org_member(organization_id));\n\ncommit;"
+      ]
+    }
+  ]
+}
