@@ -24,6 +24,9 @@ parameters:
   qat15_source_sha:
     type: string
     default: "none"
+  qat15_gitleaks_only:
+    type: boolean
+    default: false
 
   run_pr_head_validation:
     type: boolean
@@ -67,6 +70,7 @@ jobs:
     environment:
       TARGET_QAT15_BRANCH: << pipeline.parameters.qat15_source_branch >>
       TARGET_QAT15_SHA: << pipeline.parameters.qat15_source_sha >>
+      QAT15_GITLEAKS_ONLY: << pipeline.parameters.qat15_gitleaks_only >>
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
       NODE_OPTIONS: --max-old-space-size=5120
@@ -119,11 +123,13 @@ jobs:
               if [ "$code" -ne 0 ]; then failed=1; tail -n 100 /tmp/qat15-check.log; fi
               printf 'QAT15_CHECK=%s EXIT_CODE=%s\n' "$name" "$code"
             }
-            run_check deterministic-install npm ci --ignore-scripts --no-audit --no-fund
-            run_check offline-security node scripts/security/run-security-ci-without-audit.mjs
-            run_check dependency-audit npm run security:npm-audit:all
-            run_check next-build npm run build
-            run_check built-routes npm run quality:routes
+            if [ "$QAT15_GITLEAKS_ONLY" != "true" ]; then
+              run_check deterministic-install npm ci --ignore-scripts --no-audit --no-fund
+              run_check offline-security node scripts/security/run-security-ci-without-audit.mjs
+              run_check dependency-audit npm run security:npm-audit:all
+              run_check next-build npm run build
+              run_check built-routes npm run quality:routes
+            fi
             run_gitleaks() {
               set -uo pipefail
               version=8.30.1
