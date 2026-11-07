@@ -702,7 +702,51 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: enterprise-postgres-synthetic-exact-sha
 
+  a18-reviewed-source-proof-only:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact source SHA guard and refuse any production/provider credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "ci/a18-reviewed-source-validation-20261107"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD^)" = "33bf1a7897a73b3198a9a3506ef2b7ec1444d529"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "A18_SOURCE_ONLY_REFUSES_PROVIDER_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Node 22 A-18 reviewer-source ancestry, digest and enterprise validator contracts
+          command: |
+            set -euo pipefail
+            test "$(node --version)" = "v22.16.0"
+            git cat-file -e e3163b677b4fec76f4c388327d849acb4b09732c^{commit}
+            node --test tests/ci/a18-reviewed-source-exact-head.test.mjs tests/enterprise-evidence/validate-evidence.test.mjs tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
+            mkdir -p artifacts/a18-reviewed-source
+            printf '{"kind":"RISCK_A18_REVIEWED_SOURCE_ONLY","sha":"%s","reviewedPRHead":"33bf1a7897a73b3198a9a3506ef2b7ec1444d529","branch":"%s","providerReviewAuthenticatedInCircleCI":false,"formalGateAcceptanceAttestedByThisJob":false,"productionWrites":0,"releaseAuthorized":false}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/a18-reviewed-source/identity.json
+      - store_artifacts:
+          path: artifacts/a18-reviewed-source
+          destination: a18-source-only-ancestry-exact-sha
+
+
 workflows:
+
+  a18-reviewed-source-exact-head-one-shot-20261107:
+    jobs:
+      - a18-reviewed-source-proof-only:
+          filters:
+            branches:
+              only:
+                - ci/a18-reviewed-source-validation-20261107
+
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
