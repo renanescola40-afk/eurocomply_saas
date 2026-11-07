@@ -1,5 +1,5 @@
-import { tryLoadLatestGapAssessment } from '@/lib/gap-analysis/storage';
-import { tryLoadOpenComplianceWork } from '@/lib/compliance/remediation';
+import { loadLatestGapAssessment } from '@/lib/gap-analysis/storage';
+import { loadOpenComplianceWork } from '@/lib/compliance/remediation';
 import { listEvidenceItemsForReport, resolveEvidenceOrganization, summarizeEvidence } from '@/lib/evidence/storage';
 
 export type AuditPackData = {
@@ -45,8 +45,8 @@ export async function buildAuditPackData(params: {
   // Report generation must resolve an actual tenant before calculating coverage.
   const organizationId = await resolveEvidenceOrganization(params.userId, params.organizationId);
   const [assessment, work, evidenceItems] = await Promise.all([
-    tryLoadLatestGapAssessment({ userId: params.userId, workspaceId: params.workspaceId || null }),
-    tryLoadOpenComplianceWork({ userId: params.userId, workspaceId: params.workspaceId || null }),
+    loadLatestGapAssessment({ userId: params.userId, workspaceId: params.workspaceId || null }),
+    loadOpenComplianceWork({ userId: params.userId, workspaceId: params.workspaceId || null }),
     listEvidenceItemsForReport({ organizationId }),
   ]);
 

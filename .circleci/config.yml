@@ -748,7 +748,49 @@ jobs:
           destination: a07-source-proof-exact-sha
 
 
+  a07-report-complete-read-source:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Enforce exact A-07 branch SHA and refuse privileged provider credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "ci/a07-report-complete-read-20261107"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "A07_COMPLETE_READ_REFUSES_PROVIDER_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Node 22 A-07 fail-closed cross-report contracts and original pagination regressions
+          command: |
+            set -euo pipefail
+            node --test tests/product/a07-report-complete-read.test.mjs tests/product/audit-pack-evidence-fail-closed.test.mjs
+            node --experimental-strip-types --test tests/product/evidence-report-pagination.test.mjs
+            mkdir -p artifacts/a07-full-report-read
+            printf '{"kind":"RISCK_A07_FAIL_CLOSED_FULL_REPORT_READ","sha":"%s","branch":"%s","providerReads":"NONE_MOCK_OR_SOURCE_ONLY","productionWrites":0,"runtimeTenantNegativeVerified":false,"formalA07Accepted":false}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/a07-full-report-read/identity.json
+      - store_artifacts:
+          path: artifacts/a07-full-report-read
+          destination: a07-strict-full-report-source-exact-sha
+
+
 workflows:
+
+  a07-report-complete-read-20261107:
+    jobs:
+      - a07-report-complete-read-source:
+          filters:
+            branches:
+              only:
+                - ci/a07-report-complete-read-20261107
+
   # A single existing PR branch push runs this bounded source check.
   a07-evidence-proof-one-shot:
     jobs:
