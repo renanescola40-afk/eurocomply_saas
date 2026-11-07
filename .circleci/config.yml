@@ -128,19 +128,7 @@ jobs:
               tar -xzf "/tmp/${archive}" -C /tmp gitleaks
               chmod 0755 /tmp/gitleaks
               /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/qat15-gitleaks.json .
-              node - /tmp/qat15-gitleaks.json <<'NODE'
-              const fs = require("fs");
-              const findings = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-              const groups = {
-                ci: findings.filter(x => /^(\.github|\.circleci)\//.test(String(x.File || ""))),
-                app: findings.filter(x => /^(src|scripts)\//.test(String(x.File || ""))),
-                assurance: findings.filter(x => /^(docs|supabase|tests)\//.test(String(x.File || ""))),
-                other: findings.filter(x => !/^(\.github|\.circleci|src|scripts|docs|supabase|tests)\//.test(String(x.File || "")))
-              };
-              const counts = Object.fromEntries(Object.entries(groups).map(([key, rows]) => [key, rows.length]));
-              console.log(JSON.stringify({ groups: counts, findingCount: findings.length }));
-              process.exit(findings.length === 0 ? 0 : 3);
-            NODE
+              node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const groups={ci:rows.filter(x=>/^(\\.github|\\.circleci)\\//.test(String(x.File||"")),app:rows.filter(x=>/^(src|scripts)\\//.test(String(x.File||"")),assurance:rows.filter(x=>/^(docs|supabase|tests)\\//.test(String(x.File||"")),other:rows.filter(x=>!/^(\\.github|\\.circleci|src|scripts|docs|supabase|tests)\\//.test(String(x.File||"")))};const counts=Object.fromEntries(Object.entries(groups).map(([k,v])=>[k,v.length]));console.log(JSON.stringify({groups:counts,findingCount:rows.length}));process.exit(rows.length===0?0:3)' /tmp/qat15-gitleaks.json
             }
             run_check gitleaks-findings run_gitleaks
             printf '],"overall":"%s"}\n' "$([ "$failed" -eq 0 ] && echo PASS || echo FAIL)" >> artifacts/qat15/results.json
