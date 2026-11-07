@@ -356,3 +356,43 @@ test('provider authentication rejects stale, self, unauthenticated and missing-c
  assert.equal(await verifyGitHubA18CurrentHead(claim,{expectedSha:expected,prNumber:2620,token:'synthetic-token',
   request:async()=>({ok:false})}),false);
 });
+
+
+test('post-merge A-18 uses authenticated exact-merge attribution, not a missing PR event or editable proof',async()=>{
+ const mergedSha='f'.repeat(40),sourceHead='e'.repeat(40);
+ const historicalHead='1dc9b63f6f13ea9b090b2840610582a39d3ac90e';
+ const claim={gate_id:'A-18',accepted:true,reviewer_id:'renansilva2002-tech',
+  approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+  acceptance_evidence_ref:'docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json'};
+ const merged={number:2620,state:'closed',draft:false,merged_at:'2026-11-07T10:00:00Z',
+  merge_commit_sha:mergedSha,
+  head:{sha:sourceHead,repo:{full_name:'renanescola40-afk/eurocomply_saas'}},
+  base:{ref:'main',repo:{full_name:'renanescola40-afk/eurocomply_saas'}},
+  user:{login:'renanescola40-afk'}};
+ const prior={id:5784789887,state:'APPROVED',user:{login:'renansilva2002-tech'},
+  commit_id:historicalHead};
+ const followup={user:{login:'renansilva2002-tech'},body:'Reviewed A-18/OPS-01 independently'};
+ const current=[{state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:sourceHead,
+  body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED'}];
+ const verify=async({linked=[merged],reviews=current,token='synthetic-token',prNumber=undefined}={})=>{
+  const request=async(url)=>({ok:true,json:async()=>{
+   if(url.includes('/commits/'+mergedSha+'/pulls?per_page=100'))return linked;
+   if(url.includes('/pulls/2610/reviews/'))return prior;
+   if(url.includes('/issues/comments/'))return followup;
+   if(url.endsWith('/pulls/2620/reviews?per_page=100'))return reviews;
+   return merged;
+  }});
+  return verifyGitHubA18CurrentHead(claim,{expectedSha:mergedSha,prNumber,token,request});
+ };
+ assert.equal(await verify(),true,'exact merged commit and reviewed PR source permit provider proof');
+ assert.equal(await verify({linked:[]}),false,'direct push has no authenticated merged PR');
+ assert.equal(await verify({linked:[merged,merged]}),false,'ambiguous merge association must fail closed');
+ assert.equal(await verify({linked:[{...merged,merge_commit_sha:'a'.repeat(40)}]}),false,'another merge SHA is not proof');
+ assert.equal(await verify({linked:[{...merged,state:'open',merged_at:null}]}),false,'open PR cannot be a merged commit');
+ assert.equal(await verify({linked:[{...merged,base:{...merged.base,ref:'dev'}}]}),false,'merge to non-main is not sufficient');
+ assert.equal(await verify({linked:[{...merged,user:{login:'renansilva2002-tech'}}]}),false,'self-reviewed merge rejected');
+ assert.equal(await verify({reviews:[{...current[0],commit_id:'b'.repeat(40)}]}),false,'stale source review rejected');
+ assert.equal(await verify({reviews:[{...current[0],body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: NOT APPROVED'}]}),false,'explicit rejection is not acceptance');
+ assert.equal(await verify({token:''}),false,'missing provider authentication fails closed');
+ assert.equal(await verify({prNumber:2620}),false,'merged PR is not confused with active PR CI');
+});
