@@ -81,6 +81,22 @@ BEGIN
      AND name=own_org::text||'/qa-sec03-write-own.txt'
      AND metadata='{"qa":"unauthorized-update"}'::jsonb)
  THEN RAISE EXCEPTION 'SEC03_STORAGE_WRITE_UNAUTHORIZED_UPDATE_BYPASS'; END IF;
+ -- DELETE must not remove the existing own-tenant object. The storage.objects
+ -- protect_delete statement trigger may reject the attempt independently of RLS.
+ -- Both SQLSTATE 42501 and a zero-row DELETE are legitimate denials.
+ blocked:=false;
+ BEGIN
+   DELETE FROM storage.objects
+   WHERE bucket_id='compliance-documents'
+     AND name=own_org::text||'/qa-sec03-write-own.txt';
+ EXCEPTION WHEN insufficient_privilege THEN blocked:=true;
+ END;
+ IF NOT EXISTS (
+   SELECT 1 FROM storage.objects
+   WHERE bucket_id='compliance-documents'
+     AND name=own_org::text||'/qa-sec03-write-own.txt'
+ )
+ THEN RAISE EXCEPTION 'SEC03_STORAGE_WRITE_UNAUTHORIZED_DELETE_BYPASS'; END IF;
  -- Same AAL2 owner cannot write in a separately entitled foreign tenant.
  blocked:=false;
  BEGIN
