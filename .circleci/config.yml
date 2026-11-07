@@ -86,6 +86,9 @@ jobs:
               echo "Unexpected provider credential name is present; refusing source-only execution" >&2
               exit 1
             fi
+      - run:
+          name: QAT-01 policy positive and negative regressions
+          command: node --test tests/ci/qat15-circleci-exact-sha-policy.test.mjs
             remote_sha="$(git ls-remote --exit-code origin "refs/heads/$TARGET_QAT15_BRANCH" | awk '{print $1}')"
             test "$remote_sha" = "$TARGET_QAT15_SHA" || { echo "QAT-01 target SHA is stale or incorrect" >&2; exit 1; }
             git fetch --depth=1 origin "refs/heads/$TARGET_QAT15_BRANCH"
@@ -93,9 +96,6 @@ jobs:
             test "$(git rev-parse HEAD)" = "$TARGET_QAT15_SHA"
             mkdir -p artifacts/qat15
             printf '{"kind":"RISCK_QAT01_MISSING_CHECKS","configBranch":"%s","configSha":"%s","sourceBranch":"%s","sourceSha":"%s","nodeVersion":"%s","providerCredentialsPresent":false,"productionWrites":0,"scope":"source-only; no provider credentials or mutation commands"}\n' "$CIRCLE_BRANCH" "$CIRCLE_SHA1" "$TARGET_QAT15_BRANCH" "$TARGET_QAT15_SHA" "$(node --version)" > artifacts/qat15/identity.json
-      - run:
-          name: QAT-01 policy positive and negative regressions
-          command: node --test tests/ci/qat15-circleci-exact-sha-policy.test.mjs
       - run:
           name: Execute only missing source quality checks and record exit codes
           command: |
@@ -113,7 +113,7 @@ jobs:
               set -e
               printf '%s{"name":"%s","exitCode":%s}' "$separator" "$name" "$code" >> artifacts/qat15/results.json
               separator=","
-              if [ "$code" -ne 0 ]; then failed=1; fi
+              if [ "$code" -ne 0 ]; then failed=1; tail -n 100 /tmp/qat15-check.log; fi
               printf 'QAT15_CHECK=%s EXIT_CODE=%s\n' "$name" "$code"
             }
             run_check deterministic-install npm ci --ignore-scripts --no-audit --no-fund
@@ -121,7 +121,7 @@ jobs:
             run_check dependency-audit npm run security:npm-audit:all
             run_check next-build npm run build
             run_check built-routes npm run quality:routes
-            run_check gitleaks-findings bash -c '
+            run_gitleaks() {
               set -euo pipefail
               version=8.30.1
               archive="gitleaks_${version}_linux_x64.tar.gz"
@@ -130,7 +130,7 @@ jobs:
               tar -xzf "/tmp/${archive}" -C /tmp gitleaks
               chmod 0755 /tmp/gitleaks
               /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/qat15-gitleaks.json .
-              node - /tmp/qat15-gitleaks.json <<'"'"'NODE'"'"'
+              node - /tmp/qat15-gitleaks.json <<'NODE'
               const fs = require("fs");
               const findings = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
               const groups = {
@@ -143,15 +143,13 @@ jobs:
               console.log(JSON.stringify({ groups: counts, findingCount: findings.length }));
               process.exit(findings.length === 0 ? 0 : 3);
               NODE
-            '
+            }
+            run_check gitleaks-findings run_gitleaks
             printf '],"overall":"%s"}\n' "$([ "$failed" -eq 0 ] && echo PASS || echo FAIL)" >> artifacts/qat15/results.json
             test "$failed" -eq 0
-      - when:
-          condition: always
-          steps:
-            - store_artifacts:
-                path: artifacts/qat15
-                destination: qat15-exact-sha-source-quality
+      - store_artifacts:
+          path: artifacts/qat15
+          destination: qat15-exact-sha-source-quality
 
   pr-source-validation:
     docker:
