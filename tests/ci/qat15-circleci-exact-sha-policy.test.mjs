@@ -58,3 +58,14 @@ test('QAT-01 can rerun only the previously unproven Gitleaks gate', () => {
   assert.ok(config.includes('run_check gitleaks-findings run_gitleaks'));
   assert.ok(config.includes('overall'));
 });
+
+
+test('QAT-01 stores only SHA-bound redacted Gitleaks metadata', () => {
+  assert.ok(config.includes('QAT15_GITLEAKS_SANITIZED'));
+  assert.ok(config.includes('sourceSha:process.env.TARGET_QAT15_SHA'));
+  assert.ok(config.includes('gitleaks-findings.json'));
+  assert.ok(config.includes('file:String(x.File||"")'));
+  assert.ok(config.includes('line:Number(x.StartLine||0)'));
+  assert.ok(config.includes('ruleId:String(x.RuleID||"")'));
+  assert.ok(config.includes('process.exit(rows.length===0?0:3)'));
+});
