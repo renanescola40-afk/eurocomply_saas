@@ -116,5 +116,24 @@ BEGIN
   THEN RAISE EXCEPTION 'SEC03_STORAGE_OUTSIDER_READ_LEAK'; END IF;
 END $qa_rls$;
 RESET ROLE;
+-- Anonymous clients must not read either tenant's private object metadata.
+SET LOCAL ROLE anon;
+DO $qa_anon_rls$
+DECLARE denied boolean := false;
+  exposed bigint := 0;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub','',true);
+  PERFORM set_config('request.jwt.claims','{"role":"anon"}',true);
+  BEGIN
+    SELECT count(*) INTO exposed FROM storage.objects
+    WHERE bucket_id='compliance-documents'
+      AND name LIKE '%/qa-sec03-rollback-only.txt';
+  EXCEPTION WHEN insufficient_privilege THEN
+    denied := true;
+  END;
+  IF NOT denied AND exposed <> 0
+  THEN RAISE EXCEPTION 'SEC03_STORAGE_ANON_READ_LEAK'; END IF;
+END $qa_anon_rls$;
+RESET ROLE;
 ROLLBACK;
 SELECT 'QA_SEC03_STORAGE_TWO_TENANTS_AAL2_ROLLBACK_PASS'::text AS result;
