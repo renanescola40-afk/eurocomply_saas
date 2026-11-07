@@ -86,9 +86,7 @@ jobs:
               echo "Unexpected provider credential name is present; refusing source-only execution" >&2
               exit 1
             fi
-      - run:
-          name: QAT-01 policy positive and negative regressions
-          command: node --test tests/ci/qat15-circleci-exact-sha-policy.test.mjs
+            node --test tests/ci/qat15-circleci-exact-sha-policy.test.mjs
             remote_sha="$(git ls-remote --exit-code origin "refs/heads/$TARGET_QAT15_BRANCH" | awk '{print $1}')"
             test "$remote_sha" = "$TARGET_QAT15_SHA" || { echo "QAT-01 target SHA is stale or incorrect" >&2; exit 1; }
             git fetch --depth=1 origin "refs/heads/$TARGET_QAT15_BRANCH"
