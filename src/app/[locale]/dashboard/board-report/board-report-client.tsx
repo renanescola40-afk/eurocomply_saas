@@ -58,6 +58,13 @@ export default function BoardReportClient({ canonicalOrganizationId }: { canonic
   }
 
   useEffect(() => {
+    if (!user?.id) {
+      latestRequest.current += 1;
+      setData(null);
+      setLoadError(null);
+      setLoading(false);
+      return;
+    }
     generateReport();
     return () => { latestRequest.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
