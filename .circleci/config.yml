@@ -829,7 +829,50 @@ jobs:
           destination: dat01-provenance-source-exact-sha
 
 
+  dat01-applied-provider-snapshot-review:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact immutable recovery branch SHA; refuse privileged provider credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "recovery/dat01-provider-applied-20261107"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "DAT01_PROVIDER_RECOVERY_SOURCE_ONLY_REJECTS_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Verify original decision queue and all 34 SQL recovery SHA256 and 25 mapping contracts
+          command: |
+            set -euo pipefail
+            test "$(node --version)" = "v22.16.0"
+            node --test tests/diagnostics/dat01-provenance-decision-queue.test.mjs tests/diagnostics/dat01-provider-applied-snapshot.test.mjs
+            mkdir -p artifacts/dat01-provider-recovery
+            node scripts/diagnostics/dat01-provider-applied-snapshot.mjs > artifacts/dat01-provider-recovery/summary-no-sql.json
+            printf '{"kind":"RISCK_DAT01_PROVIDER_SQL_RECOVERY_SOURCE_ONLY","sha":"%s","branch":"%s","frozenLedgerRecords":137,"recoveredAppliedSQL":34,"nonexactMappings":25,"productionWrites":0,"postgres17ReplayExecuted":false,"originalWholeSourceFilesNewlyApproved":0,"qualifiedHumanAcceptance":false,"gateA12":"BLOCKED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/dat01-provider-recovery/identity.json
+      - store_artifacts:
+          path: artifacts/dat01-provider-recovery
+          destination: dat01-provider-applied-34-crosswalk-25-exact-sha
+
+
 workflows:
+
+  dat01-applied-provider-snapshot-one-shot-20261107:
+    jobs:
+      - dat01-applied-provider-snapshot-review:
+          filters:
+            branches:
+              only:
+                - recovery/dat01-provider-applied-20261107
+
 
   dat01-provenance-source-one-shot-20261107:
     jobs:
