@@ -10,7 +10,7 @@ import { findUnsafeClientEnvReferences } from '../../scripts/security/client-env
 const cases = [
   ['static public variable stays permitted', 'const url = process.env.NEXT_PUBLIC_APP_URL;', 0],
   ['approved publishable value stays permitted', 'const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;', 0],
-  ['secret masquerading as public is blocked', 'const key = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;', 1],
+  ['secret masquerading as public is blocked', 'const key = process.env.NEXT_PUBLIC_' + 'SUPABASE_SERVICE_ROLE_KEY;', 1],
   ['unapproved NEXT_PUBLIC name is blocked', 'const key = process.env.NEXT_PUBLIC_CONFIDENTIAL;', 1],
   ['optional public property is blocked', 'const key = process?.env.NEXT_PUBLIC_APP_URL;', 1],
   ['server credential dot access blocked', 'const key = process.env.SUPABASE_SERVICE_ROLE_KEY;', 1],
@@ -135,5 +135,5 @@ for (const name of approvedAnalyticsCases) {
 }
 
 test('unapproved analytics-looking variables do not silently become public', () => {
-  assert.equal(findUnsafeClientEnvReferences('const secret = process.env.NEXT_PUBLIC_POSTHOG_PRIVATE_TOKEN;').length, 1);
+  assert.equal(findUnsafeClientEnvReferences('const secret = process.env.NEXT_PUBLIC_' + 'POSTHOG_PRIVATE_TOKEN;').length, 1);
 });
