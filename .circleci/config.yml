@@ -101,6 +101,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Regression-test the PR-head validation policy (config source only)
+          command: node --test tests/ci/circleci-pr-head-policy.test.mjs
+      - run:
           name: Verify allowed PR head and fetch the exact source SHA
           command: |
             set -euo pipefail
@@ -108,7 +111,7 @@ jobs:
             config_sha="$(git rev-parse HEAD)"
             test -n "${CIRCLE_SHA1:-}" && test "$config_sha" = "$CIRCLE_SHA1"
             case "$TARGET_PR_BRANCH" in
-              ci/circleci-pr-validation-20261104|fix/onboarding-explicit-plan-boundary-test-20261105|fix/p0e-enforce-seat-actor-same-tenant-20261106|dependabot/github_actions/actions/setup-python-7|dependabot/npm_and_yarn/supabase-0f67fd58a4|phase1/security-dat01-v22|acceptance/a18-ops01-review-packet-20261104|acceptance/a09-bil01-review-packet-20261104|acceptance/e5-v25-20261104|test/phase2-evidence-vault-wiring-regex-20261104|normal2/product-enterprise-v18-checkout-price-authority-20261102|agent/v20-delegated-merge-policy-20261103|agent/sec05-client-env-failclosed-20261103) ;;
+              ci/circleci-pr-validation-20261104|fix/onboarding-explicit-plan-boundary-test-20261105|fix/p0e-enforce-seat-actor-same-tenant-20261106|dependabot/github_actions/actions/setup-python-7|dependabot/npm_and_yarn/supabase-0f67fd58a4|phase1/security-dat01-v22|acceptance/a18-ops01-review-packet-20261104|acceptance/a09-bil01-review-packet-20261104|acceptance/e5-v25-20261104|test/phase2-evidence-vault-wiring-regex-20261104|normal2/product-enterprise-v18-checkout-price-authority-20261102|agent/v20-delegated-merge-policy-20261103|agent/sec05-client-env-failclosed-20261103|acceptance/a18-ops01-formal-v27-20261105) ;;
               *) echo "Target branch is outside the approved open-PR scope" >&2; exit 1 ;;
             esac
             [[ "$TARGET_PR_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Target SHA must be a full lowercase Git SHA" >&2; exit 1; }
@@ -981,7 +984,8 @@ workflows:
           filters:
             branches:
               only:
-                - ci/circleci-pr-validation-20261104
+                # Coordinator branch is manual-only to avoid full Vitest on every policy edit.
+                # Use run_pr_head_validation=true for approved exact-SHA validations.
                 - dependabot/github_actions/actions/setup-python-7
                 - dependabot/npm_and_yarn/supabase-0f67fd58a4
                 - phase1/security-dat01-v22
