@@ -702,7 +702,48 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: enterprise-postgres-synthetic-exact-sha
 
+  a10-qa-webhook-admission-source:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact source SHA and refuse provider credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "ci/a10-qa-webhook-admission-20261107"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SMTP_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "A10_SOURCE_REFUSES_PROVIDER_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Run existing QA guard and webhook preflight negative contracts
+          command: |
+            set -euo pipefail
+            node --test scripts/qa-environment-guard.test.mjs tests/billing/phase2-qa-webhook-preflight.test.mjs
+            mkdir -p artifacts/a10-qa-webhook
+            printf '{"kind":"RISCK_A10_QA_WEBHOOK_SOURCE_GUARD","sha":"%s","providerCalls":0,"qaWrites":0,"productionWrites":0,"stripeTestEventsDelivered":0,"endpointEnabled":false,"gateA10":"NOT_ACCEPTED"}\n' "$CIRCLE_SHA1" > artifacts/a10-qa-webhook/identity.json
+      - store_artifacts:
+          path: artifacts/a10-qa-webhook
+          destination: a10-qa-webhook-source-guard
+
+
 workflows:
+
+  a10-qa-webhook-admission-one-shot-20261107:
+    jobs:
+      - a10-qa-webhook-admission-source:
+          filters:
+            branches:
+              only:
+                - ci/a10-qa-webhook-admission-20261107
+
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
