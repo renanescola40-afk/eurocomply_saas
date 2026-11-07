@@ -15,6 +15,16 @@ parameters:
     type: boolean
     default: false
 
+  run_qat15_missing_checks:
+    type: boolean
+    default: false
+  qat15_source_branch:
+    type: string
+    default: "none"
+  qat15_source_sha:
+    type: string
+    default: "none"
+
   run_pr_head_validation:
     type: boolean
     default: false
@@ -49,6 +59,100 @@ parameters:
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
+  qat15-missing-checks:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: large
+    working_directory: ~/project
+    environment:
+      TARGET_QAT15_BRANCH: << pipeline.parameters.qat15_source_branch >>
+      TARGET_QAT15_SHA: << pipeline.parameters.qat15_source_sha >>
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+      NODE_OPTIONS: --max-old-space-size=5120
+    steps:
+      - checkout
+      - run:
+          name: Verify coordinator, exact source and credential-free scope
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/qat15-exact-sha-quality-20261107"
+            config_sha="$(git rev-parse HEAD)"
+            test -n "${CIRCLE_SHA1:-}" && test "$config_sha" = "$CIRCLE_SHA1"
+            test "$(node --version)" = "v22.16.0"
+            test "$TARGET_QAT15_BRANCH" = "ci/circleci-pr-validation-20261104"
+            [[ "$TARGET_QAT15_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "QAT-01 target SHA must be a full lowercase Git SHA" >&2; exit 1; }
+            if env | cut -d= -f1 | grep -Eiq '(^|_)(TOKEN|SECRET|API_KEY|PASSWORD|PRIVATE_KEY)$|^(DATABASE_URL|DIRECT_URL|SUPABASE_|STRIPE_|VERCEL_|RESEND_|SENTRY_|QA_DB_|PGPASSWORD)'; then
+              echo "Unexpected provider credential name is present; refusing source-only execution" >&2
+              exit 1
+            fi
+            remote_sha="$(git ls-remote --exit-code origin "refs/heads/$TARGET_QAT15_BRANCH" | awk '{print $1}')"
+            test "$remote_sha" = "$TARGET_QAT15_SHA" || { echo "QAT-01 target SHA is stale or incorrect" >&2; exit 1; }
+            git fetch --depth=1 origin "refs/heads/$TARGET_QAT15_BRANCH"
+            git checkout --detach "$TARGET_QAT15_SHA"
+            test "$(git rev-parse HEAD)" = "$TARGET_QAT15_SHA"
+            mkdir -p artifacts/qat15
+            printf '{"kind":"RISCK_QAT01_MISSING_CHECKS","configBranch":"%s","configSha":"%s","sourceBranch":"%s","sourceSha":"%s","nodeVersion":"%s","providerCredentialsPresent":false,"productionWrites":0,"scope":"source-only; no provider credentials or mutation commands"}\n' "$CIRCLE_BRANCH" "$CIRCLE_SHA1" "$TARGET_QAT15_BRANCH" "$TARGET_QAT15_SHA" "$(node --version)" > artifacts/qat15/identity.json
+      - run:
+          name: QAT-01 policy positive and negative regressions
+          command: node --test tests/ci/qat15-circleci-exact-sha-policy.test.mjs
+      - run:
+          name: Execute only missing source quality checks and record exit codes
+          command: |
+            set -uo pipefail
+            mkdir -p artifacts/qat15
+            printf '{"sourceSha":"%s","checks":[' "$TARGET_QAT15_SHA" > artifacts/qat15/results.json
+            separator=""
+            failed=0
+            run_check() {
+              name="$1"
+              shift
+              set +e
+              "$@" >/tmp/qat15-check.log 2>&1
+              code=$?
+              set -e
+              printf '%s{"name":"%s","exitCode":%s}' "$separator" "$name" "$code" >> artifacts/qat15/results.json
+              separator=","
+              if [ "$code" -ne 0 ]; then failed=1; fi
+              printf 'QAT15_CHECK=%s EXIT_CODE=%s\n' "$name" "$code"
+            }
+            run_check deterministic-install npm ci --ignore-scripts --no-audit --no-fund
+            run_check offline-security node scripts/security/run-security-ci-without-audit.mjs
+            run_check dependency-audit npm run security:npm-audit:all
+            run_check next-build npm run build
+            run_check built-routes npm run quality:routes
+            run_check gitleaks-findings bash -c '
+              set -euo pipefail
+              version=8.30.1
+              archive="gitleaks_${version}_linux_x64.tar.gz"
+              curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+              echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
+              tar -xzf "/tmp/${archive}" -C /tmp gitleaks
+              chmod 0755 /tmp/gitleaks
+              /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/qat15-gitleaks.json .
+              node - /tmp/qat15-gitleaks.json <<'"'"'NODE'"'"'
+              const fs = require("fs");
+              const findings = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+              const groups = {
+                ci: findings.filter(x => /^(\.github|\.circleci)\//.test(String(x.File || ""))),
+                app: findings.filter(x => /^(src|scripts)\//.test(String(x.File || ""))),
+                assurance: findings.filter(x => /^(docs|supabase|tests)\//.test(String(x.File || ""))),
+                other: findings.filter(x => !/^(\.github|\.circleci|src|scripts|docs|supabase|tests)\//.test(String(x.File || "")))
+              };
+              const counts = Object.fromEntries(Object.entries(groups).map(([key, rows]) => [key, rows.length]));
+              console.log(JSON.stringify({ groups: counts, findingCount: findings.length }));
+              process.exit(findings.length === 0 ? 0 : 3);
+              NODE
+            '
+            printf '],"overall":"%s"}\n' "$([ "$failed" -eq 0 ] && echo PASS || echo FAIL)" >> artifacts/qat15/results.json
+            test "$failed" -eq 0
+      - when:
+          condition: always
+          steps:
+            - store_artifacts:
+                path: artifacts/qat15
+                destination: qat15-exact-sha-source-quality
+
   pr-source-validation:
     docker:
       - image: cimg/node:22.16.0
@@ -1059,3 +1163,13 @@ workflows:
                 - agent/sec05-client-env-failclosed-20261103
                 - test/fix-onboarding-plan-boundary-contract-20261104
 
+
+  qat15-missing-checks-manual:
+    # Manual-only: no automatic run on pushes; exact source SHA is supplied at trigger time.
+    when: << pipeline.parameters.run_qat15_missing_checks >>
+    jobs:
+      - qat15-missing-checks:
+          filters:
+            branches:
+              only:
+                - ci/qat15-exact-sha-quality-20261107
