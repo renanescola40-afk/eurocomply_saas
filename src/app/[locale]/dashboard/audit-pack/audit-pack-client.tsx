@@ -148,6 +148,13 @@ export default function AuditPackClient({ canonicalOrganizationId }: { canonical
   }
 
   useEffect(() => {
+    if (!user?.id) {
+      latestRequest.current += 1;
+      setData(null);
+      setLoadError(null);
+      setLoading(false);
+      return;
+    }
     generatePack();
     return () => { latestRequest.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
