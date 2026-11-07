@@ -24,7 +24,8 @@ test('Audit Pack uses strict provider-backed reads, never catch-to-empty helpers
 
 test('underlying strict readers do not swallow failure or silently return null/empty work', () => {
   assert.match(gap, /export async function loadLatestGapAssessment/);
-  assert.match(gap, /return await gapApi<\{ assessment: LatestGapAssessment \| null \}>/);
+  assert.match(gap, /const result = await gapApi<\{ assessment: LatestGapAssessment \| null \}>/);
+  assert.match(gap, /return result\.assessment/);
   assert.match(work, /export async function loadOpenComplianceWork/);
   assert.match(work, /return await remediationApi<ComplianceWork>/);
   const strictGap=gap.split('export async function loadLatestGapAssessment',2)[1].split('export async function tryLoadLatestGapAssessment',1)[0];
