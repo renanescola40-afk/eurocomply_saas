@@ -140,7 +140,7 @@ jobs:
               const counts = Object.fromEntries(Object.entries(groups).map(([key, rows]) => [key, rows.length]));
               console.log(JSON.stringify({ groups: counts, findingCount: findings.length }));
               process.exit(findings.length === 0 ? 0 : 3);
-              NODE
+            NODE
             }
             run_check gitleaks-findings run_gitleaks
             printf '],"overall":"%s"}\n' "$([ "$failed" -eq 0 ] && echo PASS || echo FAIL)" >> artifacts/qat15/results.json
