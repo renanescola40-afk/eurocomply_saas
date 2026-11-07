@@ -124,7 +124,7 @@ jobs:
               fi
             done
             mkdir -p artifacts/pr-validation
-            printf '{"kind":"RISCK_PR_HEAD_SOURCE_ONLY_VALIDATION","pipelineConfigBranch":"%s","pipelineConfigSha":"%s","validatedSourceBranch":"%s","validatedSourceSha":"%s","productionWrites":0,"providerCredentialsPresent":false}\\n' "$CIRCLE_BRANCH" "$CIRCLE_SHA1" "$TARGET_PR_BRANCH" "$TARGET_PR_SHA" > artifacts/pr-validation/identity.json
+            printf '{"kind":"RISCK_PR_HEAD_SOURCE_ONLY_VALIDATION","pipelineConfigBranch":"%s","pipelineConfigSha":"%s","validatedSourceBranch":"%s","validatedSourceSha":"%s","productionWrites":0,"providerCredentialsPresent":false}\n' "$CIRCLE_BRANCH" "$CIRCLE_SHA1" "$TARGET_PR_BRANCH" "$TARGET_PR_SHA" > artifacts/pr-validation/identity.json
       - run:
           name: Install deterministic dependencies without lifecycle scripts
           command: npm ci --ignore-scripts --no-audit --no-fund
