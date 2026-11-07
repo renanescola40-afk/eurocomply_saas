@@ -854,7 +854,7 @@ jobs:
           command: |
             set -euo pipefail
             test "$(node --version)" = "v22.16.0"
-            node --test tests/diagnostics/dat01-provenance-decision-queue.test.mjs tests/diagnostics/dat01-provider-applied-snapshot.test.mjs tests/diagnostics/dat01-case-review-triage.test.mjs
+            node --test tests/diagnostics/dat01-provenance-decision-queue.test.mjs tests/diagnostics/dat01-provider-applied-snapshot.test.mjs tests/diagnostics/dat01-case-review-triage.test.mjs tests/diagnostics/dat01-review-submission-preflight.test.mjs
             mkdir -p artifacts/dat01-provider-recovery
             node scripts/diagnostics/dat01-provider-applied-snapshot.mjs > artifacts/dat01-provider-recovery/summary-no-sql.json
             node scripts/diagnostics/dat01-case-review-triage.mjs > artifacts/dat01-provider-recovery/triage-48-no-sql.json
