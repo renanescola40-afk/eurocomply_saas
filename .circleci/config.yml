@@ -854,9 +854,10 @@ jobs:
           command: |
             set -euo pipefail
             test "$(node --version)" = "v22.16.0"
-            node --test tests/diagnostics/dat01-provenance-decision-queue.test.mjs tests/diagnostics/dat01-provider-applied-snapshot.test.mjs
+            node --test tests/diagnostics/dat01-provenance-decision-queue.test.mjs tests/diagnostics/dat01-provider-applied-snapshot.test.mjs tests/diagnostics/dat01-case-review-triage.test.mjs
             mkdir -p artifacts/dat01-provider-recovery
             node scripts/diagnostics/dat01-provider-applied-snapshot.mjs > artifacts/dat01-provider-recovery/summary-no-sql.json
+            node scripts/diagnostics/dat01-case-review-triage.mjs > artifacts/dat01-provider-recovery/triage-48-no-sql.json
             printf '{"kind":"RISCK_DAT01_PROVIDER_SQL_RECOVERY_SOURCE_ONLY","sha":"%s","branch":"%s","frozenLedgerRecords":137,"recoveredAppliedSQL":34,"nonexactMappings":25,"productionWrites":0,"postgres17ReplayExecuted":false,"originalWholeSourceFilesNewlyApproved":0,"qualifiedHumanAcceptance":false,"gateA12":"BLOCKED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/dat01-provider-recovery/identity.json
       - store_artifacts:
           path: artifacts/dat01-provider-recovery
