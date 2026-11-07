@@ -32,7 +32,7 @@
     "gates_total": 24,
     "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
-    "gates_accepted": 1,
+    "gates_accepted": 0,
     "evidence_records_validation": "PENDING_EXACT_SHA_CI_VALIDATION",
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
-      "notes": "PR-only acceptance proposal: standalone explicit native current-HEAD gate approval from the independent reviewer, verified by GitHub API, and official exact-HEAD CI are required before any formal PASS. The frozen 1577fc36 code-source SHA is the direct ancestor of acceptance-only proof/index updates; post-merge attestation remains unverified.",
+      "notes": "PR-only proposal: source frozen at e3163b6 after authenticated merge-provenance validator change. Independent fresh exact-head approval, native CI and post-merge provider validation remain required. The source ancestor-to-current check must allow ONLY proof/index updates.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "1577fc36d90581a0033a124819b41590a0ca49c5",
-      "acceptance_evidence_sha256": "0435bc8ebe1197f64c5ed4dcc7c2c777a267a728b0d9c61830a22e9874cb0d0c"
+      "acceptance_sha": "e3163b677b4fec76f4c388327d849acb4b09732c",
+      "acceptance_evidence_sha256": "bdbc59df3e539102d376809865e4dc52db60fc2a0b66d477bce14544ffe80aa0"
     },
     {
       "gate_id": "A-19",
