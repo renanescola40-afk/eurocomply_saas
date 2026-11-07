@@ -146,3 +146,39 @@ test('committed review queue is reproducible byte-for-byte as JSON data', () => 
   assert.equal(committed.safety.independentHumanApproval, false);
   assert.equal(committed.counts.independentlyApprovedReplayRows, 0);
 });
+
+test('rejects contradictory verified source bytes even when 34 unresolved counts stay unchanged', () => {
+  const contradictory = fixtures();
+  const record = contradictory.manifest.records.find(r => r.sourceByteEqualityConfirmed === true);
+  assert.ok(record);
+  record.sourceByteProof.status = 'NO_PROVEN_WHOLE_SOURCE_BYTES';
+  failsWith(contradictory, 'SOURCE_PROOF_STATUS_CONTRADICTION');
+});
+
+test('rejects identity qualification claims before independent review', () => {
+  const forged = fixtures();
+  const record = forged.manifest.records.find(r => r.mappingType === 'exact_version');
+  assert.ok(record);
+  record.identityQualified = 'INDEPENDENTLY_APPROVED';
+  failsWith(forged, 'IDENTITY_QUALIFICATION_CONTRADICTION');
+});
+
+test('the real frozen ledger maintains approved source-status and identity classifications', () => {
+  const input = fixtures();
+  const verifiedStatuses = new Set([
+    'CURRENT_CANONICAL_SOURCE_BYTES_VERIFIED',
+    'IMMUTABLE_HISTORICAL_GIT_SOURCE_BYTES_VERIFIED',
+    'ALTERNATIVE_SOURCE_FILE_BYTES_VERIFIED_IDENTITY_PENDING',
+    'CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING',
+  ]);
+  for (const record of input.manifest.records) {
+    const expectedStatus = record.sourceByteEqualityConfirmed
+      ? verifiedStatuses.has(record.sourceByteProof.status)
+      : record.sourceByteProof.status === 'NO_PROVEN_WHOLE_SOURCE_BYTES';
+    assert.equal(expectedStatus, true, 'proof contradiction at ' + record.version);
+    assert.equal(record.identityQualified, record.mappingType === 'exact_version'
+      ? 'EXACT_VERSION_METADATA_ONLY' : 'NONEXACT_MAPPING_REVIEW_REQUIRED');
+  }
+  assert.equal(build(input).counts.uniqueReviewCases, 48);
+  assert.equal(build(input).safety.gateA12, 'BLOCKED');
+});
