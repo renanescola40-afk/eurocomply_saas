@@ -30,5 +30,5 @@ test('QAT-01 job runs only missing checks and does not repeat Vitest', () => {
   assert.match(job, /gitleaks/);
   assert.match(job, /store_artifacts/);
   assert.doesNotMatch(job, /npm run test|vitest/i);
-  assert.doesNotMatch(job, /vercel|stripe|supabase.*access_token|deploy/i);
+  assert.doesNotMatch(job, /DATABASE_URL|DIRECT_URL|SUPABASE_ACCESS_TOKEN|STRIPE_SECRET_KEY|VERCEL_TOKEN|RESEND_API_KEY|SENTRY_AUTH_TOKEN|deploy/i);
 });
