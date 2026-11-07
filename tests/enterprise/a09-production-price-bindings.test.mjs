@@ -133,3 +133,74 @@ test('missing decrypted value is never verified', async () => {
   assert.equal(result.status, 'BLOCKED');
   assert.ok(result.states.every(s => s.reason === 'provider_binding_value_unavailable'));
 });
+
+
+test('two-page Vercel metadata list verifies all six bindings only after cursor completion', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    const u = new URL(url);
+    calls.push({ path: u.pathname, until: u.searchParams.get('until'), method: init.method });
+    if (u.pathname.endsWith('/env')) {
+      if (u.searchParams.has('until')) {
+        assert.equal(u.searchParams.get('until'), '1700000000000');
+        return json({ envs: listRows.slice(4), pagination: { count: 2, next: null } });
+      }
+      return json({ envs: listRows.slice(0, 4), pagination: { count: 4, next: 1700000000000 } });
+    }
+    const row = listRows.find(r => r.id === u.pathname.split('/').at(-1));
+    return row ? json({ id: row.id, key: row.key, value: expected[A09_KEYS.indexOf(row.key)].stripePriceId }) : json({}, 404);
+  };
+  const result = await run({ fetchImpl });
+  assert.equal(result.status, 'VERIFIED');
+  assert.equal(result.states.length, 6);
+  assert.equal(calls.filter(c => c.path.endsWith('/env')).length, 2);
+  assert.equal(calls.length, 8);
+  assert.ok(calls.every(c => c.method === 'GET'));
+  assert.ok(!JSON.stringify(result).includes('price_ABCDEF'));
+});
+
+test('repeated provider page, stagnant cursor, malformed cursor block A-09', async () => {
+  assert.equal((await run({
+    fetchImpl: async () => json({ envs: listRows, pagination: { next: 1700000000000 } }),
+  })).code, 'vercel_environment_listing_incomplete');
+  assert.equal((await run({
+    fetchImpl: async (url) => json({
+      envs: new URL(url).searchParams.has('until') ? listRows.slice(3) : listRows.slice(0, 3),
+      pagination: { next: 1700000000000 },
+    }),
+  })).code, 'vercel_environment_listing_incomplete');
+  for (const next of ['cursor-string', -1, 1.5, Number.MAX_SAFE_INTEGER + 2]) {
+    assert.equal((await run({
+      fetchImpl: async () => json({ envs: listRows, pagination: { next } }),
+    })).code, 'vercel_environment_listing_incomplete');
+  }
+});
+
+test('any truncated subsequent page or duplicate provider ID blocks A-09', async () => {
+  for (const second of [
+    { envs: listRows.slice(3), truncated: true },
+    { envs: listRows.slice(3), truncation: { arrays: 1 } },
+    { envs: listRows.slice(2) },
+  ]) {
+    const result = await run({
+      fetchImpl: async (url) => json(
+        new URL(url).searchParams.has('until')
+          ? second
+          : { envs: listRows.slice(0, 3), pagination: { next: 1700000000000 } },
+      ),
+    });
+    assert.equal(result.code, 'vercel_environment_listing_incomplete');
+  }
+});
+
+test('pagination is bounded to eight pages and never follows unlimited cursors', async () => {
+  let count = 0;
+  const result = await run({
+    fetchImpl: async () => json({
+      envs: [{ id: 'env_case_' + (++count), key: 'IRRELEVANT', target: ['preview'] }],
+      pagination: { next: 1700000000000 - count * 1000 },
+    }),
+  });
+  assert.equal(count, 8);
+  assert.equal(result.code, 'vercel_environment_listing_incomplete');
+});
