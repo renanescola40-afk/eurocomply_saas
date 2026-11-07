@@ -702,7 +702,52 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: enterprise-postgres-synthetic-exact-sha
 
+  sec05-computed-process-source:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify SEC-05 isolated source SHA and refuse provider credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "ci/sec05-computed-process-20261107"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_ACCESS_TOKEN SUPABASE_SERVICE_ROLE_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "SEC05_FORBIDDEN_PROVIDER_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Install locked Node dependencies without lifecycle scripts
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Run SEC-05 compiler-driven positive and negative source regressions
+          command: |
+            set -euo pipefail
+            node --test tests/security/client-env-access.test.mjs
+            node scripts/security/check-client-boundaries.mjs
+            mkdir -p artifacts/sec05-client-source
+            printf '{"kind":"RISCK_SEC05_CLIENT_SOURCE_REGRESSION","sourceSha":"%s","branch":"%s","nodeVersion":"%s","providerSecretsPresent":false,"productionWrites":0,"runtimeBundleVerified":false,"formalAcceptance":"NOT_GRANTED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" "$(node --version)" > artifacts/sec05-client-source/identity.json
+      - store_artifacts:
+          path: artifacts/sec05-client-source
+          destination: sec05-computed-process-exact-sha
+
+
 workflows:
+
+  sec05-computed-process-one-shot-20261107:
+    jobs:
+      - sec05-computed-process-source:
+          filters:
+            branches:
+              only:
+                - ci/sec05-computed-process-20261107
+
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
