@@ -84,3 +84,9 @@ test('both report clients invalidate stale tenant and user requests before commi
     assert.doesNotMatch(source, /\n\s*setData\((?:pack|report)\);/);
   }
 });
+
+test('audit and leadership reports clear protected data immediately after auth disappears', () => {
+  for (const source of [auditPage, boardPage]) {
+    assert.match(source, /if \(!user\?\.id\) \{\s*latestRequest\.current \+= 1;\s*setData\(null\);\s*setLoadError\(null\);\s*setLoading\(false\);\s*return;/);
+  }
+});
