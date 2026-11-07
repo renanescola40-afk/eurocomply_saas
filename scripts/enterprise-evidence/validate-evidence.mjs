@@ -14,14 +14,18 @@ const read=p=>JSON.parse(fs.readFileSync(path.join(ROOT,p),'utf8'));
  * The source proof uses #2610, while the NEW independent native approval is
  * discovered from GitHub on this PR's exact tested HEAD without editing JSON.
  * This avoids embedding an as-yet-uncreated current-HEAD review ID in that HEAD.
- * On merge/push without PR context this fails closed; a separate independently
- * reviewed merge-provenance contract is required before accepting on main.
+ * PR CI authenticates a review of the exact PR HEAD. Post-merge CI uses the
+ * GitHub commit-to-PR association for its exact merge commit and authenticates
+ * an approval on the merged source HEAD. A direct push or unrelated commit
+ * must fail closed, and git source ancestry still requires evidence-only
+ * changes since the frozen reviewed source.
  */
 export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT}={}){
  if(gate?.gate_id!=='A-18'||!SHA40.test(expectedSha||'')||
     typeof token!=='string'||!token.trim()||typeof request!=='function')return false;
+ const prSpecified=prNumber!==null&&prNumber!==undefined&&String(prNumber).trim()!=='';
  const n=Number(prNumber);
- if(!Number.isSafeInteger(n)||n<1)return false;
+ if(prSpecified&&(!Number.isSafeInteger(n)||n<1))return false;
  const url=/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/pull\/(\d+)#pullrequestreview-(\d+)$/.exec(gate.approval_url||'');
  if(!url||gate.reviewer_id!=='renansilva2002-tech')return false;
  const oldPr=Number(url[1]),oldId=Number(url[2]);
@@ -43,15 +47,32 @@ export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,toke
   if(proof.gate_id!=='A-18'||proof.qualified_review?.reviewer_login!==gate.reviewer_id||
      proof.qualified_review?.review_url!==gate.approval_url||
      !Number.isSafeInteger(proof.qualified_review?.reviewer_followup_comment_id))return false;
-  const pull=await readProvider('/pulls/'+n);
-  if(pull?.state!=='open'||pull.draft===true||pull.head?.sha!==expectedSha||
+  let pull,reviewedHead,reviewPrNumber;
+  if(prSpecified){
+   pull=await readProvider('/pulls/'+n);
+   if(pull?.state!=='open'||pull.head?.sha!==expectedSha)return false;
+   reviewedHead=expectedSha;
+   reviewPrNumber=n;
+  }else{
+   // GitHub must associate this EXACT commit with a single merged PR.
+   // Never infer merge provenance from commit text, a local ledger or a stale URL.
+   const associated=await readProvider('/commits/'+expectedSha+'/pulls?per_page=100');
+   if(!Array.isArray(associated)||associated.length!==1)return false;
+   pull=associated[0];
+   if(pull?.state!=='closed'||!pull.merged_at||pull.merge_commit_sha!==expectedSha||
+      !Number.isSafeInteger(pull.number)||pull.number<1||
+      !SHA40.test(pull.head?.sha||''))return false;
+   reviewedHead=pull.head.sha;
+   reviewPrNumber=pull.number;
+  }
+  if(pull?.draft===true||
      pull.head?.repo?.full_name!=='renanescola40-afk/eurocomply_saas'||
      pull.base?.repo?.full_name!=='renanescola40-afk/eurocomply_saas'||
      pull.base?.ref!=='main'||pull.user?.login===gate.reviewer_id)return false;
   const [prior,followup,current]=await Promise.all([
    readProvider('/pulls/'+oldPr+'/reviews/'+oldId),
    readProvider('/issues/comments/'+proof.qualified_review.reviewer_followup_comment_id),
-   readProvider('/pulls/'+n+'/reviews?per_page=100')
+   readProvider('/pulls/'+reviewPrNumber+'/reviews?per_page=100')
   ]);
   if(prior?.id!==oldId||prior.state!=='APPROVED'||
      prior.user?.login!==gate.reviewer_id||
@@ -62,7 +83,7 @@ export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,toke
   // mutable review URL or an approval ID embedded before the review existed.
   return Array.isArray(current)&&current.some(r=>
    r?.state==='APPROVED'&&r.user?.login===gate.reviewer_id&&
-   r.user?.login!==pull.user?.login&&r.commit_id===expectedSha&&
+   r.user?.login!==pull.user?.login&&r.commit_id===reviewedHead&&
    // Require an affirmative standalone gate decision rather than a mere mention.
    // A native APPROVED code review may explicitly withhold formal gate acceptance.
    typeof r.body==='string'&&
