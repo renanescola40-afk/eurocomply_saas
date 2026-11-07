@@ -864,7 +864,50 @@ jobs:
           destination: dat01-provider-applied-34-crosswalk-25-exact-sha
 
 
+  dat01-local-pg17-target-source:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Validate G5-02 local-only exact SHA and reject provider credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "ci/dat01-local-target-guard-20261107"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY VERCEL_TOKEN PGPASSWORD PGHOSTADDR PGSERVICE PGSERVICEFILE PGPASSFILE; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "DAT01_TARGET_SOURCE_REFUSES_PROVIDER_ENV: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Run source-only PG17 pristine target and G5-02 replay-refusal tests
+          command: |
+            set -euo pipefail
+            python3 --version
+            python3 -B tests/diagnostics/test_dat01_pg17_target_boundary.py
+            python3 -B tests/diagnostics/test_dat01_replay_guard.py
+            mkdir -p artifacts/dat01-local-target
+            printf '{"kind":"DAT01_LOCAL_PG17_TARGET_GUARD","sha":"%s","branch":"%s","remoteDatabaseReads":false,"providerCredentialsPresent":false,"sqlExecuted":false,"replayAuthorized":false,"productionWrites":0,"A12":"BLOCKED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/dat01-local-target/identity.json
+      - store_artifacts:
+          path: artifacts/dat01-local-target
+          destination: dat01-local-pg17-clean-target-guard
+
+
 workflows:
+
+  dat01-local-pg17-target-guard-one-shot-20261107:
+    jobs:
+      - dat01-local-pg17-target-source:
+          filters:
+            branches:
+              only:
+                - ci/dat01-local-target-guard-20261107
+
 
   dat01-applied-provider-snapshot-one-shot-20261107:
     jobs:
