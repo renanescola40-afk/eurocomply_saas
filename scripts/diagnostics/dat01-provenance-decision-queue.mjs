@@ -36,6 +36,24 @@ export function buildDat01ReviewQueue({ manifest, history, subspans }) {
       'PROVIDER_IDENTITY_' + r.version);
     demand(r.approvedForExecutableReplay === false && r.independentReviewer === 'PENDING',
       'ROW_APPROVAL_IN_DRAFT_' + r.version);
+    // The frozen ledger cannot describe a source as byte-proven while carrying
+    // a NO_PROVEN_WHOLE_SOURCE_BYTES proof. A changed boolean alone is not
+    // sufficient: require a recognized status for every claimed proof.
+    const verifiedStatuses = new Set([
+      'CURRENT_CANONICAL_SOURCE_BYTES_VERIFIED',
+      'IMMUTABLE_HISTORICAL_GIT_SOURCE_BYTES_VERIFIED',
+      'ALTERNATIVE_SOURCE_FILE_BYTES_VERIFIED_IDENTITY_PENDING',
+      'CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING',
+    ]);
+    demand(r.sourceByteEqualityConfirmed === true
+      ? verifiedStatuses.has(r.sourceByteProof?.status)
+      : r.sourceByteEqualityConfirmed === false &&
+        r.sourceByteProof?.status === 'NO_PROVEN_WHOLE_SOURCE_BYTES',
+      'SOURCE_PROOF_STATUS_CONTRADICTION_' + r.version);
+    demand(r.identityQualified === (r.mappingType === 'exact_version'
+      ? 'EXACT_VERSION_METADATA_ONLY' : 'NONEXACT_MAPPING_REVIEW_REQUIRED'),
+      'IDENTITY_QUALIFICATION_CONTRADICTION_' + r.version);
+
     demand(typeof r.canonicalSourcePath === 'string' &&
       /^supabase\/migrations\/[A-Za-z0-9_-]+\.sql$/.test(r.canonicalSourcePath),
       'SOURCE_PATH_' + r.version);
