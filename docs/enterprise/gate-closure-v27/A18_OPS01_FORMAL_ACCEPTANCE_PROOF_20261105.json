@@ -43,7 +43,7 @@
     "Provider READY/domain ID is not runtime health or customer E2E",
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
-  "governance_status": "PR_ONLY_PROPOSED_NOT_MERGED; EXACT_CURRENT_HEAD_NATIVE_GATE_APPROVAL_AND_REQUIRED_CI_PENDING; POST_MERGE_ATTESTATION_UNVERIFIED",
-  "acceptance_source_sha": "1577fc36d90581a0033a124819b41590a0ca49c5",
-  "acceptance_source_selection": "Final validator, tests and workflow source commit, prior to acceptance-proof and canonical-index-only commits. Current-head native human approval is verified from authenticated GitHub provider data, not embedded in the proof. Reviewer approval and CI remain pending."
+  "governance_status": "PR_ONLY_PROPOSED_NOT_MERGED; NEW_EXACT_CURRENT_HEAD_NATIVE_GATE_APPROVAL_REQUIRED; CI_AND_POST_MERGE_PROVIDER_TESTS_NOT_RUN",
+  "acceptance_source_sha": "e3163b677b4fec76f4c388327d849acb4b09732c",
+  "acceptance_source_selection": "Current validator/test source commit e3163b6 includes authenticated exact-merge association and fail-closed negative coverage. PR-level and post-merge acceptance are both subject to a NEW independent current-head reviewer decision and the official exact-SHA CI. No gate PASS yet."
 }
