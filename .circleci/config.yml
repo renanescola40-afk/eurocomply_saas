@@ -25,6 +25,13 @@ parameters:
     type: string
     default: "none"
 
+  run_a18_exact_validation:
+    type: boolean
+    default: false
+  a18_pr_head_sha:
+    type: string
+    default: "none"
+
   run_actions_recovery:
     type: boolean
     default: false
@@ -166,6 +173,51 @@ jobs:
       - store_artifacts:
           path: artifacts/pr-validation
           destination: validated-pr-head-exact-sha
+  a18-exact-sha-validation:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    environment:
+      TARGET_A18_SHA: << pipeline.parameters.a18_pr_head_sha >>
+    steps:
+      - checkout
+      - run:
+          name: Regression-test A-18 CI policy before target checkout
+          command: node --test tests/ci/circleci-pr-head-policy.test.mjs
+      - run:
+          name: Verify A-18 exact source SHA and run focused suites
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/circleci-pr-validation-20261104"
+            config_sha="$(git rev-parse HEAD)"
+            test -n "${CIRCLE_SHA1:-}" && test "$config_sha" = "$CIRCLE_SHA1"
+            test "$(node --version)" = "v22.16.0"
+            [[ "$TARGET_A18_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "A-18 target SHA must be a full lowercase Git SHA" >&2; exit 1; }
+            target_branch="acceptance/a18-ops01-formal-v27-20261105"
+            remote_sha="$(git ls-remote --exit-code origin "refs/heads/$target_branch" | awk '{print $1}')"
+            test "$remote_sha" = "$TARGET_A18_SHA" || { echo "A-18 SHA does not match the current PR branch head" >&2; exit 1; }
+            git fetch --depth=1 origin "refs/heads/$target_branch"
+            git checkout --detach "$TARGET_A18_SHA"
+            test "$(git rev-parse HEAD)" = "$TARGET_A18_SHA"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "Provider credential is forbidden in source-only A-18 validation: $key" >&2
+                exit 1
+              fi
+            done
+            test -f tests/enterprise-evidence/validate-evidence.test.mjs
+            test -f tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
+            test -f scripts/enterprise-evidence/validate-evidence.mjs
+            mkdir -p artifacts/a18-validation
+            printf '{"kind":"RISCK_A18_SOURCE_REGRESSION","pipelineConfigBranch":"%s","pipelineConfigSha":"%s","sourceBranch":"%s","sourceSha":"%s","nodeVersion":"%s","providerCredentialsPresent":false,"productionWrites":0}\n' "$CIRCLE_BRANCH" "$CIRCLE_SHA1" "$target_branch" "$TARGET_A18_SHA" "$(node --version)" > artifacts/a18-validation/identity.json
+            node --test tests/enterprise-evidence/validate-evidence.test.mjs
+            node --test tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
+            printf '{"sourceSha":"%s","commands":["node --test tests/enterprise-evidence/validate-evidence.test.mjs","node --test tests/ci/enterprise-evidence-exact-sha-contract.test.mjs"],"result":"PASS"}\n' "$TARGET_A18_SHA" > artifacts/a18-validation/results.json
+      - store_artifacts:
+          path: artifacts/a18-validation
+          destination: a18-exact-sha-source-regressions
+
   synthetic-backup-components:
     machine:
       image: ubuntu-2204:2026.05.1
@@ -969,6 +1021,16 @@ workflows:
 # G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
+  a18-exact-sha-validation-manual:
+    # Focused, manual-only source regression; never runs on coordinator pushes.
+    when: << pipeline.parameters.run_a18_exact_validation >>
+    jobs:
+      - a18-exact-sha-validation:
+          filters:
+            branches:
+              only:
+                - ci/circleci-pr-validation-20261104
+
   pr-head-validation-manual:
     when: << pipeline.parameters.run_pr_head_validation >>
     jobs:

@@ -69,3 +69,33 @@ test('coordinator policy edits do not automatically launch heavy source validati
   assert.match(workflow, /^\s+- normal2\/product-enterprise-v18-checkout-price-authority-20261102\s*$/m,
     'do not remove existing product-source validation coverage');
 });
+
+const a18Start = config.indexOf('\n  a18-exact-sha-validation:\n');
+const a18End = config.indexOf('\n  synthetic-backup-components:\n', a18Start);
+assert.ok(a18Start !== -1 && a18End > a18Start, 'expected isolated A-18 exact-SHA job');
+const a18Job = config.slice(a18Start, a18End);
+test('A-18 focused validation is opt-in, Node 22 only, exact-head and production-read-only', () => {
+  assert.match(config, /  run_a18_exact_validation:\n    type: boolean\n    default: false/);
+  assert.match(config, /a18-exact-sha-validation-manual:[\s\S]*?when: << pipeline\.parameters\.run_a18_exact_validation >>[\s\S]*?only:\n                - ci\/circleci-pr-validation-20261104/);
+  assert.ok(a18Job.includes('cimg/node:22.16.0'));
+  assert.ok(a18Job.includes('test "$(node --version)" = "v22.16.0"'));
+  assert.ok(a18Job.includes('test "$(git rev-parse HEAD)" = "$TARGET_A18_SHA"'));
+  assert.ok(a18Job.includes('git ls-remote --exit-code origin "refs/heads/$target_branch"'));
+  assert.ok(a18Job.includes('test "$remote_sha" = "$TARGET_A18_SHA"'));
+  assert.ok(a18Job.includes('git checkout --detach "$TARGET_A18_SHA"'));
+  assert.match(a18Job, /providerCredentialsPresent":false/);
+  assert.match(a18Job, /productionWrites":0/);
+});
+
+test('A-18 job runs both required source suites and records exact SHA provenance', () => {
+  for (const command of [
+    'node --test tests/enterprise-evidence/validate-evidence.test.mjs',
+    'node --test tests/ci/enterprise-evidence-exact-sha-contract.test.mjs',
+  ]) assert.ok(a18Job.includes(command), 'missing required A-18 test command: ' + command);
+  assert.ok(a18Job.includes('test -f tests/enterprise-evidence/validate-evidence.test.mjs'));
+  assert.ok(a18Job.includes('test -f tests/ci/enterprise-evidence-exact-sha-contract.test.mjs'));
+  assert.ok(a18Job.includes('pipelineConfigSha'));
+  assert.ok(a18Job.includes('sourceSha'));
+  assert.ok(a18Job.includes('nodeVersion'));
+  assert.ok(a18Job.includes('a18-exact-sha-source-regressions'));
+});
