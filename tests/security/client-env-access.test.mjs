@@ -101,12 +101,22 @@ const aliasRegressionCases = [
   ['process as an ordinary domain object property is not global process', 'const record = event.process;', 0],
   ['process as an object literal key is not global process', 'const result = { process: "complete" };', 0],
   ['template literal expression is executable', 'const label = `${process.env.STRIPE_SECRET_KEY}`;', 1],
+  ['globalThis concatenated static process key is blocked', "const key = globalThis['pro' + 'cess'].env.SUPABASE_SERVICE_ROLE_KEY;", 1],
+  ['window constant template process key is blocked', "const key = window[\`pro\${'cess'}\`].env.STRIPE_SECRET_KEY;", 1],
+  ['self parenthesized concatenated process key is blocked', "const key = self[('pro' + 'cess')].env.DATABASE_URL;", 1],
+  ['ordinary globalThis computed non-process property is allowed', "const profile = globalThis['pro' + 'file'];", 0],
 ];
 for (const [description, source, expectedCount] of aliasRegressionCases) {
   test(description, () => {
     assert.equal(findUnsafeClientEnvReferences(source).length, expectedCount);
   });
 }
+
+test('whole scanner rejects compile-time-concatenated global process property', () => {
+  const result = runClientBoundaryScanner("export const credential = globalThis['pro' + 'cess'].env.SUPABASE_SERVICE_ROLE_KEY;");
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stderr, /indirect process alias|client boundary references process\.env/);
+});
 
 test('whole scanner rejects process object alias in a client component', () => {
   const result = runClientBoundaryScanner('const runtime = process; export const key = runtime.env.STRIPE_SECRET_KEY;');
