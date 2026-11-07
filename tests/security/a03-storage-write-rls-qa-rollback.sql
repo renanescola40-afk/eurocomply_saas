@@ -66,6 +66,21 @@ BEGIN
  IF NOT EXISTS (SELECT 1 FROM storage.objects
                 WHERE name=own_org::text||'/qa-sec03-write-own.txt')
  THEN RAISE EXCEPTION 'SEC03_STORAGE_WRITE_OWN_POSITIVE_FAILED'; END IF;
+ -- UPDATE must also be denied: no UPDATE policy exists for compliance-documents.
+ -- The positive INSERT row makes this non-vacuous (an actual own row exists).
+ blocked:=false;
+ BEGIN
+   UPDATE storage.objects SET metadata='{"qa":"unauthorized-update"}'::jsonb
+   WHERE bucket_id='compliance-documents'
+     AND name=own_org::text||'/qa-sec03-write-own.txt';
+ EXCEPTION WHEN insufficient_privilege THEN blocked:=true;
+ END;
+ IF NOT blocked AND EXISTS (
+   SELECT 1 FROM storage.objects
+   WHERE bucket_id='compliance-documents'
+     AND name=own_org::text||'/qa-sec03-write-own.txt'
+     AND metadata='{"qa":"unauthorized-update"}'::jsonb)
+ THEN RAISE EXCEPTION 'SEC03_STORAGE_WRITE_UNAUTHORIZED_UPDATE_BYPASS'; END IF;
  -- Same AAL2 owner cannot write in a separately entitled foreign tenant.
  blocked:=false;
  BEGIN
