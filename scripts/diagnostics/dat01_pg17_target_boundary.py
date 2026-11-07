@@ -110,13 +110,17 @@ def read_only_target_preflight(*, env=None, runner=None):
         return lines[0]
     try:
         metadata = json.loads(read(TARGET_METADATA_SQL))
+    except TargetRefused:
+        raise
     except (ValueError, TypeError):
         raise TargetRefused("TARGET_METADATA_INVALID") from None
-    if not isinstance(metadata.get("migration_table_present"), bool):
+    if not isinstance(metadata, dict) or not isinstance(metadata.get("migration_table_present"), bool):
         raise TargetRefused("TARGET_METADATA_INVALID")
     if metadata["migration_table_present"]:
         try:
             history_count = int(read(MIGRATION_COUNT_SQL))
+        except TargetRefused:
+            raise
         except (ValueError, TypeError):
             raise TargetRefused("TARGET_LEDGER_COUNT_INVALID") from None
     else:
