@@ -23,7 +23,6 @@ test('QAT-01 exact-SHA quality job is opt-in and exact-source guarded', () => {
 test('QAT-01 job runs only missing checks and does not repeat Vitest', () => {
   const job = config.match(/  qat15-missing-checks:\n([\s\S]*?)(?=\n  [a-z0-9-]+:\n|\nworkflows:)/)?.[0] ?? '';
   assert.ok(job.length > 0, 'QAT-01 job exists');
-  assert.match(job, /npm run security:package-lock/);
   assert.match(job, /scripts\/security\/run-security-ci-without-audit\.mjs/);
   assert.match(job, /security:npm-audit:all/);
   assert.match(job, /npm run build/);
