@@ -53,7 +53,7 @@ DO $rls_write$
 DECLARE own_org uuid:=current_setting('qa.sec03_write.own')::uuid;
  foreign_org uuid:=current_setting('qa.sec03_write.foreign')::uuid;
  owner_sub text:=current_setting('qa.sec03_write.owner');
- blocked boolean;
+ blocked boolean; affected_rows bigint;
 BEGIN
  IF current_setting('role',true)<>'authenticated'
  THEN RAISE EXCEPTION 'SEC03_STORAGE_WRITE_ROLE_MISMATCH'; END IF;
@@ -73,13 +73,14 @@ BEGIN
    UPDATE storage.objects SET metadata='{"qa":"unauthorized-update"}'::jsonb
    WHERE bucket_id='compliance-documents'
      AND name=own_org::text||'/qa-sec03-write-own.txt';
- EXCEPTION WHEN insufficient_privilege THEN blocked:=true;
+   GET DIAGNOSTICS affected_rows = ROW_COUNT;
+ EXCEPTION WHEN insufficient_privilege THEN blocked:=true; affected_rows:=0;
  END;
- IF NOT blocked AND EXISTS (
+ IF affected_rows <> 0 OR (NOT blocked AND EXISTS (
    SELECT 1 FROM storage.objects
    WHERE bucket_id='compliance-documents'
      AND name=own_org::text||'/qa-sec03-write-own.txt'
-     AND metadata='{"qa":"unauthorized-update"}'::jsonb)
+     AND metadata='{"qa":"unauthorized-update"}'::jsonb))
  THEN RAISE EXCEPTION 'SEC03_STORAGE_WRITE_UNAUTHORIZED_UPDATE_BYPASS'; END IF;
  -- DELETE must not remove the existing own-tenant object. The storage.objects
  -- protect_delete statement trigger may reject the attempt independently of RLS.
@@ -89,9 +90,10 @@ BEGIN
    DELETE FROM storage.objects
    WHERE bucket_id='compliance-documents'
      AND name=own_org::text||'/qa-sec03-write-own.txt';
- EXCEPTION WHEN insufficient_privilege THEN blocked:=true;
+   GET DIAGNOSTICS affected_rows = ROW_COUNT;
+ EXCEPTION WHEN insufficient_privilege THEN blocked:=true; affected_rows:=0;
  END;
- IF NOT EXISTS (
+ IF affected_rows <> 0 OR NOT EXISTS (
    SELECT 1 FROM storage.objects
    WHERE bucket_id='compliance-documents'
      AND name=own_org::text||'/qa-sec03-write-own.txt'
