@@ -39,3 +39,14 @@ test('QAT-01 job runs only missing checks and does not repeat Vitest', () => {
   assert.doesNotMatch(environment, /DATABASE_URL|DIRECT_URL|SUPABASE_ACCESS_TOKEN|STRIPE_SECRET_KEY|VERCEL_TOKEN|RESEND_API_KEY|SENTRY_AUTH_TOKEN/i);
   assert.doesNotMatch(job, /npm run deploy|vercel .*deploy|stripe (?:live|charges?)/i);
 });
+
+
+test('QAT-01 Gitleaks failure is captured and the results artifact is completed', () => {
+  const job = config.match(/  qat15-missing-checks:\n([\s\S]*?)(?=\n  [a-z0-9-]+:\n|\nworkflows:)/)?.[0] ?? '';
+  const scan = job.match(/            run_gitleaks\(\) \{([\s\S]*?)\n            \}/)?.[1] ?? '';
+  assert.match(scan, /set -uo pipefail/);
+  assert.doesNotMatch(scan, /set -euo pipefail/);
+  assert.ok(scan.includes('|| return $?'));
+  assert.match(job, /run_check gitleaks-findings run_gitleaks/);
+  assert.match(job, /overall/);
+});
