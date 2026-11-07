@@ -231,7 +231,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              fix/onboarding-explicit-plan-boundary-test-20261105|ci/a15-gitleaks-one-shot-20261106) ;;
+              fix/onboarding-explicit-plan-boundary-test-20261105|ci/a15-gitleaks-one-shot-20261106|ci/a15-unified-evidence-20261107) ;;
               *) echo "A-15 preflight refused branch" >&2; exit 1 ;;
             esac
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?Missing exact SHA}"
@@ -275,7 +275,7 @@ jobs:
           command: |
             set -euo pipefail
             case "${CIRCLE_BRANCH:-}" in
-              fix/onboarding-explicit-plan-boundary-test-20261105|ci/a15-gitleaks-one-shot-20261106) ;;
+              fix/onboarding-explicit-plan-boundary-test-20261105|ci/a15-gitleaks-one-shot-20261106|ci/a15-unified-evidence-20261107) ;;
               *) echo "Gitleaks collection branch not authorized" >&2; exit 1 ;;
             esac
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing source SHA}"
@@ -849,7 +849,115 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: enterprise-postgres-synthetic-exact-sha
 
+  a15-actionlint-exact-sha:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Enforce isolated exact-SHA checkout without provider credentials
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/a15-unified-evidence-20261107"
+            test -n "${CIRCLE_SHA1:-}"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "A-15 Actionlint source-only job refuses provider credential: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Download SHA256-verified Actionlint v1.7.12
+          command: |
+            set -euo pipefail
+            version=1.7.12
+            archive="actionlint_${version}_linux_amd64.tar.gz"
+            curl --fail --silent --show-error --location --max-time 90 --retry 2 \
+              "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
+            echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/${archive}" | sha256sum --check -
+            tar -xzf "/tmp/${archive}" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            test -x /tmp/actionlint
+      - run:
+          name: Check every GitHub Actions workflow with actual Actionlint
+          command: |
+            set -euo pipefail
+            /tmp/actionlint
+            mkdir -p artifacts/a15-actionlint
+            count="$(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) | wc -l | tr -d ' ')"
+            printf '{"kind":"RISCK_A15_ACTIONLINT_SOURCE","sha":"%s","branch":"%s","workflowCount":%s,"toolVersion":"1.7.12","scope":"GitHub Actions YAML source validation","formalAcceptance":"NOT_GRANTED"}\n' \
+              "$CIRCLE_SHA1" "$CIRCLE_BRANCH" "$count" > artifacts/a15-actionlint/identity.json
+      - store_artifacts:
+          path: artifacts/a15-actionlint
+          destination: a15-actionlint-exact-sha
+
+
+  a15-unified-contracts:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify isolated exact-source checkout and run A-15 safety contracts
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/a15-unified-evidence-20261107"
+            test -n "${CIRCLE_SHA1:-}"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN DATABASE_URL DIRECT_URL RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "A-15 unified contracts refused privileged environment variable: $key" >&2
+                exit 1
+              fi
+            done
+            test "$(node --version)" = "v22.16.0"
+            node --test tests/ci/circleci-a15-actionlint-contract.test.mjs tests/ci/circleci-a15-unified-contract.test.mjs
+
 workflows:
+
+  # ONE SHOT: integrate already proven A-15 Actionlint and Gitleaks source checks
+  # on the SAME immutable SHA. No PR merge, QA provider credentials or production.
+  a15-unified-evidence-once-20261107:
+    jobs:
+      - a15-unified-contracts:
+          filters:
+            branches:
+              only:
+                - ci/a15-unified-evidence-20261107
+      - a15-actionlint-exact-sha:
+          requires:
+            - a15-unified-contracts
+          filters:
+            branches:
+              only:
+                - ci/a15-unified-evidence-20261107
+      - a15-gitleaks-tool-preflight:
+          requires:
+            - a15-unified-contracts
+          filters:
+            branches:
+              only:
+                - ci/a15-unified-evidence-20261107
+      - a15-gitleaks-report-collection:
+          requires:
+            - a15-gitleaks-tool-preflight
+          filters:
+            branches:
+              only:
+                - ci/a15-unified-evidence-20261107
+      - a15-gitleaks-findings-gate:
+          requires:
+            - a15-gitleaks-report-collection
+          filters:
+            branches:
+              only:
+                - ci/a15-unified-evidence-20261107
+
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
