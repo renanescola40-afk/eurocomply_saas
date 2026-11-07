@@ -105,7 +105,7 @@ test('rejects forged source proof and provider digest corruption', () => {
   const forged = fixtures();
   forged.manifest.records.find(r => r.sourceByteEqualityConfirmed === false)
     .sourceByteEqualityConfirmed = true;
-  failsWith(forged, 'FROZEN_COUNTS_DRIFT');
+  failsWith(forged, 'SOURCE_PROOF_STATUS_CONTRADICTION');
   const digest = fixtures();
   digest.manifest.records[0].providerJoinedSha256 = 'incorrect';
   failsWith(digest, 'PROVIDER_IDENTITY');
