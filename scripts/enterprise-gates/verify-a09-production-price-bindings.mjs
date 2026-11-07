@@ -26,6 +26,8 @@ const TEAM = 'team_wu3LZI6ReFxO16xipv73GLwG';
 const ID = /^[A-Za-z0-9_-]{8,128}$/;
 const PRICE = /^price_[A-Za-z0-9]+$/;
 const MAX_JSON_BYTES = 1_000_000;
+const MAX_ENV_PAGES = 8;
+const MAX_ENV_ROWS = 2000;
 
 export function expectedA09Prices(evidence) {
   if (evidence?.schema !== 'risck-comply.g1-billing-catalog-live-prices.v1'
@@ -85,6 +87,44 @@ async function getJson(fetchImpl, url, token) {
     throw new Error('provider_invalid_json');
   }
 }
+// Pagination cursor handling is deliberately fail-closed: on the Vercel env
+// endpoint the "until" query param is not explicitly documented. If it does
+// not advance the page, duplicate IDs or stagnant cursors block A-09.
+export async function readCompleteVercelEnvironmentRows({ fetchImpl, token, projectId = PROJECT, teamId = TEAM }) {
+  const seenIds = new Set();
+  const rows = [];
+  let previousCursor = null;
+  for (let page = 0; page < MAX_ENV_PAGES; page += 1) {
+    const url = new URL('https://api.vercel.com/v10/projects/' + projectId + '/env');
+    url.searchParams.set('teamId', teamId);
+    url.searchParams.set('decrypt', 'false');
+    if (previousCursor !== null) url.searchParams.set('until', String(previousCursor));
+    const listing = await getJson(fetchImpl, url.toString(), token);
+    if (!Array.isArray(listing?.envs)) throw new Error('vercel_environment_listing_invalid');
+    if (listing.truncated === true || listing.truncation?.arrays > 0) {
+      throw new Error('vercel_environment_listing_incomplete');
+    }
+    for (const row of listing.envs) {
+      const id = row?.id;
+      if (typeof id !== 'string' || !ID.test(id) || seenIds.has(id)) {
+        throw new Error('vercel_environment_listing_incomplete');
+      }
+      seenIds.add(id);
+      rows.push(row);
+      if (rows.length > MAX_ENV_ROWS) throw new Error('vercel_environment_listing_incomplete');
+    }
+    const next = listing.pagination?.next;
+    if (next === null || next === undefined || next === 0) return rows;
+    if (!Number.isSafeInteger(next) || next <= 0
+      || (previousCursor !== null && next >= previousCursor)
+      || listing.envs.length === 0) {
+      throw new Error('vercel_environment_listing_incomplete');
+    }
+    previousCursor = next;
+  }
+  throw new Error('vercel_environment_listing_incomplete');
+}
+
 function safeResult(status, code, states = []) {
   return {
     schema: 'risck-comply.a09-production-bindings-readback.v1',
@@ -106,24 +146,20 @@ export async function verifyA09ProductionBindings({
   catch { return safeResult('BLOCKED', 'historical_evidence_invalid'); }
   if (typeof token !== 'string' || !token.trim()) return safeResult('BLOCKED', 'vercel_read_token_missing');
 
-  let listing;
+  let rows;
   try {
-    const url = new URL(`https://api.vercel.com/v10/projects/${PROJECT}/env`);
-    url.searchParams.set('teamId', TEAM);
-    url.searchParams.set('decrypt', 'false');
-    listing = await getJson(fetchImpl, url.toString(), token);
-  } catch { return safeResult('BLOCKED', 'vercel_environment_listing_unavailable'); }
-  if (!Array.isArray(listing?.envs)) return safeResult('BLOCKED', 'vercel_environment_listing_invalid');
-  // Incomplete listing must never be treated as full Production coverage.
-  // Do not guess unsupported/undocumented Vercel env pagination options.
-  if ((listing.pagination?.next != null && listing.pagination.next !== 0)
-    || listing.truncated === true || listing.truncation?.arrays > 0) {
-    return safeResult('BLOCKED', 'vercel_environment_listing_incomplete');
+    rows = await readCompleteVercelEnvironmentRows({ fetchImpl, token, projectId, teamId });
+  } catch (error) {
+    const reason = error?.message;
+    const code = reason === 'vercel_environment_listing_invalid'
+      ? reason : reason === 'vercel_environment_listing_incomplete'
+        ? reason : 'vercel_environment_listing_unavailable';
+    return safeResult('BLOCKED', code);
   }
 
   const states = [];
   for (const key of A09_KEYS) {
-    const matches = listing.envs.filter(row => row?.key === key && isExplicitProductionVariable(row));
+    const matches = rows.filter(row => row?.key === key && isExplicitProductionVariable(row));
     if (matches.length !== 1) {
       states.push({ key, state: 'BLOCKED', reason: 'production_binding_missing_or_ambiguous' });
       continue;
