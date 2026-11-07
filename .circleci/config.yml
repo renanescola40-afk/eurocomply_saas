@@ -20,10 +20,10 @@ parameters:
     default: false
   pr_head_branch:
     type: string
-    default: "none"
+    default: "acceptance/a18-ops01-formal-v27-20261105"
   pr_head_sha:
     type: string
-    default: "none"
+    default: "33bf1a7897a73b3198a9a3506ef2b7ec1444d529"
 
   run_actions_recovery:
     type: boolean
@@ -107,7 +107,7 @@ jobs:
           name: Verify allowed PR head and fetch the exact source SHA
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "ci/circleci-pr-validation-20261104"
+            test "${CIRCLE_BRANCH:-}" = "ci/circleci-pr-validation-20261104" || test "${CIRCLE_BRANCH:-}" = "ci/circleci-a18-2620-one-shot-20261107"
             config_sha="$(git rev-parse HEAD)"
             test -n "${CIRCLE_SHA1:-}" && test "$config_sha" = "$CIRCLE_SHA1"
             case "$TARGET_PR_BRANCH" in
@@ -969,6 +969,19 @@ workflows:
 # G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
+
+  # One-time operator-approved exact-source run for PR #2620.
+  # Uses the existing credential-isolated, SHA-checked source validation job.
+  # Branch filter makes it impossible to run on main or other PR branches.
+  # This is a ONE-SHOT experiment and must not be merged into protected main.
+  a18-pr2620-one-shot-20261107:
+    jobs:
+      - pr-head-validation:
+          filters:
+            branches:
+              only:
+                - ci/circleci-a18-2620-one-shot-20261107
+
   pr-head-validation-manual:
     when: << pipeline.parameters.run_pr_head_validation >>
     jobs:
