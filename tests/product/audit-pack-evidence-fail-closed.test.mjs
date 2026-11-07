@@ -70,3 +70,17 @@ test('audit and board reports never compute coverage from the first 100 records 
   assert.match(storage, /order\('created_at', \{ ascending: false \}\)/);
   assert.match(storage, /order\('id', \{ ascending: false \}\)/);
 });
+
+test('both report clients invalidate stale tenant and user requests before committing state', () => {
+  for (const source of [auditPage, boardPage]) {
+    assert.match(source, /import \{[^}]*useRef[^}]*\} from 'react'/);
+    assert.match(source, /const latestRequest = useRef\(0\)/);
+    assert.match(source, /const requestId = \+\+latestRequest\.current/);
+    assert.match(source, /if \(requestId === latestRequest\.current\) setData\(/);
+    assert.match(source, /if \(requestId === latestRequest\.current\) \{\s*setLoadError\(/);
+    assert.match(source, /if \(requestId === latestRequest\.current\) setLoading\(false\)/);
+    assert.match(source, /return \(\) => \{ latestRequest\.current \+= 1; \}/);
+    assert.match(source, /\[user\?\.id, canonicalOrganizationId\]/);
+    assert.doesNotMatch(source, /\n\s*setData\((?:pack|report)\);/);
+  }
+});
