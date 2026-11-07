@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Download, FileArchive, FileCheck2, FileText, PackageCheck, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -127,24 +127,29 @@ export default function AuditPackClient({ canonicalOrganizationId }: { canonical
   const [data, setData] = useState<AuditPackData | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const latestRequest = useRef(0);
 
   async function generatePack() {
     if (!user?.id) return;
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setLoadError(null);
     setData(null);
     try {
       const pack = await buildAuditPackData({ userId: user.id, organizationId: canonicalOrganizationId });
-      setData(pack);
+      if (requestId === latestRequest.current) setData(pack);
     } catch {
-      setLoadError('The audit package could not load verified evidence. Check workspace access and retry.');
+      if (requestId === latestRequest.current) {
+        setLoadError('The audit package could not load verified evidence. Check workspace access and retry.');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }
 
   useEffect(() => {
     generatePack();
+    return () => { latestRequest.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, canonicalOrganizationId]);
 
