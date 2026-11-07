@@ -27,6 +27,10 @@ test('QAT-01 job runs only missing checks and does not repeat Vitest', () => {
   assert.match(job, /security:npm-audit:all/);
   assert.match(job, /npm run build/);
   assert.match(job, /npm run quality:routes/);
+  assert.match(job, /CIRCLE_OIDC_TOKEN\\(_V\\[23\\]\\)\\?/);
+  assert.match(job, /"circleOidcTokenUsed":false/);
+  assert.match(job, /"privilegedProviderCredentialsPresent":false/);
+  assert.doesNotMatch(job, /\\$CIRCLE_OIDC_TOKEN|printenv CIRCLE_OIDC_TOKEN/);
   assert.match(job, /gitleaks/);
   assert.match(job, /store_artifacts/);
   assert.doesNotMatch(job, /npm run test|vitest/i);
