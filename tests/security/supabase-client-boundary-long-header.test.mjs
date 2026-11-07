@@ -56,7 +56,7 @@ test('proper client module with no secrets remains accepted', () => {
 });
 
 test('secret-like public environment name is always rejected regardless of client directive', () => {
-  const result = scanFixture("export const publicKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;\n", 'environment.ts');
+  const result = scanFixture("export const publicKey = process.env.NEXT_PUBLIC_" + "SUPABASE_SERVICE_ROLE_KEY;\n", 'environment.ts');
   assert.equal(result.status, 1);
   assert.match(result.output, /NEXT_PUBLIC service-role-like variable/);
 });
