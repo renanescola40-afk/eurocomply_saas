@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Download, Printer, ShieldCheck, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,24 +37,29 @@ export default function BoardReportClient({ canonicalOrganizationId }: { canonic
   const [data, setData] = useState<BoardReportData | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const latestRequest = useRef(0);
 
   async function generateReport() {
     if (!user?.id) return;
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setLoadError(null);
     setData(null);
     try {
       const report = await buildBoardReportData({ userId: user.id, organizationId: canonicalOrganizationId });
-      setData(report);
+      if (requestId === latestRequest.current) setData(report);
     } catch {
-      setLoadError('The leadership report could not load verified evidence. Check workspace access and retry.');
+      if (requestId === latestRequest.current) {
+        setLoadError('The leadership report could not load verified evidence. Check workspace access and retry.');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }
 
   useEffect(() => {
     generateReport();
+    return () => { latestRequest.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, canonicalOrganizationId]);
 
