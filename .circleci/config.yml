@@ -702,7 +702,47 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: enterprise-postgres-synthetic-exact-sha
 
+  a09-paginated-price-binding-source:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify isolated exact SHA and refuse provider credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "ci/a09-pagination-one-shot-20261107"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "A09_SOURCE_JOB_REFUSES_PROVIDER_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Node 22 Vercel pagination source-only synthetic regression
+          command: |
+            set -euo pipefail
+            node --test tests/enterprise/a09-production-price-bindings.test.mjs tests/enterprise/vercel-stripe-price-bindings.test.mjs
+            mkdir -p artifacts/a09-pagination
+            printf '{"kind":"RISCK_A09_PAGINATION_SOURCE_ONLY","sha":"%s","branch":"%s","providerReads":"MOCK_ONLY","productionWrites":0,"formalGateAcceptance":"NOT_GRANTED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/a09-pagination/identity.json
+      - store_artifacts:
+          path: artifacts/a09-pagination
+          destination: a09-pagination-source-exact-sha
+
 workflows:
+
+  a09-pagination-one-shot-20261107:
+    jobs:
+      - a09-paginated-price-binding-source:
+          filters:
+            branches:
+              only:
+                - ci/a09-pagination-one-shot-20261107
+
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
