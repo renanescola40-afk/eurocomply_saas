@@ -9,6 +9,7 @@ test('QAT-01 exact-SHA quality job is opt-in and exact-source guarded', () => {
   assert.match(config, /^  run_qat15_missing_checks:\n    type: boolean\n    default: false/m);
   assert.match(config, /^  qat15_source_branch:\n    type: string\n    default: "none"/m);
   assert.match(config, /^  qat15_source_sha:\n    type: string\n    default: "none"/m);
+  assert.match(config, /^  qat15_gitleaks_only:\n    type: boolean\n    default: false/m);
   assert.match(config, /qat15-missing-checks-manual:[\s\S]*?when: << pipeline\.parameters\.run_qat15_missing_checks >>[\s\S]*?only:[\s\S]*?ci\/qat15-exact-sha-quality-20261107/);
   assert.match(config, /qat15-missing-checks:\n[\s\S]*?test "\$\(git rev-parse HEAD\)" = "\$\{CIRCLE_SHA1/);
   assert.match(config, /TARGET_QAT15_SHA/);
@@ -48,5 +49,12 @@ test('QAT-01 Gitleaks failure is captured and the results artifact is completed'
   assert.doesNotMatch(scan, /set -euo pipefail/);
   assert.ok(scan.includes('|| return $?'));
   assert.match(job, /run_check gitleaks-findings run_gitleaks/);
+  assert.match(job, /overall/);
+});
+
+test('QAT-01 can rerun only the previously unproven Gitleaks gate', () => {
+  const job = config.match(/  qat15-missing-checks:\n([\\s\\S]*?)(?=\n  [a-z0-9-]+:\n|\nworkflows:)/)?.[0] ?? '';
+  assert.match(job, /QAT15_GITLEAKS_ONLY: << pipeline\\.parameters\\.qat15_gitleaks_only >>/);
+  assert.match(job, /if \\[ "\\$QAT15_GITLEAKS_ONLY" != "true" \\]; then[\\s\\S]*?run_check built-routes[\\s\\S]*?fi[\\s\\S]*?run_check gitleaks-findings run_gitleaks/);
   assert.match(job, /overall/);
 });
