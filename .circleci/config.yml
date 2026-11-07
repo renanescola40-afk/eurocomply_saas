@@ -125,15 +125,15 @@ jobs:
             run_check next-build npm run build
             run_check built-routes npm run quality:routes
             run_gitleaks() {
-              set -euo pipefail
+              set -uo pipefail
               version=8.30.1
               archive="gitleaks_${version}_linux_x64.tar.gz"
-              curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}"
-              echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check -
-              tar -xzf "/tmp/${archive}" -C /tmp gitleaks
-              chmod 0755 /tmp/gitleaks
-              /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/qat15-gitleaks.json .
-              node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const groups={ci:rows.filter(x=>/^(\.github|\.circleci)\//.test(String(x.File||""))),app:rows.filter(x=>/^(src|scripts)\//.test(String(x.File||""))),assurance:rows.filter(x=>/^(docs|supabase|tests)\//.test(String(x.File||""))),other:rows.filter(x=>!/^(\.github|\.circleci|src|scripts|docs|supabase|tests)\//.test(String(x.File||"")))};const counts=Object.fromEntries(Object.entries(groups).map(([k,v])=>[k,v.length]));console.log(JSON.stringify({groups:counts,findingCount:rows.length}));process.exit(rows.length===0?0:3)' /tmp/qat15-gitleaks.json
+              curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}" || return $?
+              echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check - || return $?
+              tar -xzf "/tmp/${archive}" -C /tmp gitleaks || return $?
+              chmod 0755 /tmp/gitleaks || return $?
+              /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/qat15-gitleaks.json . || return $?
+              node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const groups={ci:rows.filter(x=>/^(\.github|\.circleci)\//.test(String(x.File||""))),app:rows.filter(x=>/^(src|scripts)\//.test(String(x.File||""))),assurance:rows.filter(x=>/^(docs|supabase|tests)\//.test(String(x.File||""))),other:rows.filter(x=>!/^(\.github|\.circleci|src|scripts|docs|supabase|tests)\//.test(String(x.File||"")))};const counts=Object.fromEntries(Object.entries(groups).map(([k,v])=>[k,v.length]));console.log(JSON.stringify({groups:counts,findingCount:rows.length}));process.exit(rows.length===0?0:3)' /tmp/qat15-gitleaks.json || return $?
             }
             run_check gitleaks-findings run_gitleaks
             printf '],"overall":"%s"}\n' "$([ "$failed" -eq 0 ] && echo PASS || echo FAIL)" >> artifacts/qat15/results.json
