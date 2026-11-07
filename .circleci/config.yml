@@ -796,7 +796,49 @@ jobs:
           path: artifacts/dat01-preflight
           destination: dat01-structural-preflight-exact-sha
 
+  dat01-provenance-review-only:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Confirm DAT-01 one-shot exact checkout and reject provider credentials
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "ci/dat01-provenance-failclosed-20261107"
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "DAT01_SOURCE_ONLY_REFUSES_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Node 22 original provenance queue and fail-closed negative regressions
+          command: |
+            set -euo pipefail
+            test "$(node --version)" = "v22.16.0"
+            node --test tests/diagnostics/dat01-provenance-decision-queue.test.mjs
+            mkdir -p artifacts/dat01-review-provenance
+            printf '{"kind":"RISCK_DAT01_REVIEW_SOURCE_ONLY","sha":"%s","branch":"%s","sourceRecords":137,"expectedReviewCases":48,"postgresqlReplayExecuted":false,"databaseAccess":false,"productionWrites":0,"independentAcceptance":false,"gateA12":"BLOCKED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/dat01-review-provenance/identity.json
+      - store_artifacts:
+          path: artifacts/dat01-review-provenance
+          destination: dat01-provenance-source-exact-sha
+
+
 workflows:
+
+  dat01-provenance-source-one-shot-20261107:
+    jobs:
+      - dat01-provenance-review-only:
+          filters:
+            branches:
+              only:
+                - ci/dat01-provenance-failclosed-20261107
+
   dat01-pg17-smoke-manual:
     when: << pipeline.parameters.run_dat01_pg17_smoke >>
     jobs:
