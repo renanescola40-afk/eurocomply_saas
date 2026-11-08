@@ -1,0 +1,110 @@
+# A-18 / OPS-01 official Evidence Factory validation on the EXACT unchanged
+# independently approved GitHub PR #2620 source SHA.
+#
+# CircleCI GitHub App only:
+# - Set CONFIG source to branch ci/a18-exact-sha-github-app-20261108,
+#   path .circleci/a18-exact-sha-acceptance.yml.
+# - Set CHECKOUT source to the same repository, but branch
+#   acceptance/a18-ops01-formal-v27-20261105 (PR #2620).
+# - Trigger MANUALLY once; no automated trigger or production environment.
+# - Supply GITHUB_TOKEN as a short-lived, read-only GitHub token in CircleCI
+#   project environment variables; NEVER put it in this file or job output.
+#
+# IMPORTANT: A green result is a genuine PR-HEAD CircleCI status, NOT a
+# GitHub-Actions replacement recognized by branch rules unless governance
+# expressly configures that equivalence. This job NEVER merges or deploys.
+version: 2.1
+
+jobs:
+  a18-official-exact-head-validation:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Reject wrong checkout and any privileged runtime
+          command: |
+            set -euo pipefail
+            set +x
+            EXPECTED_SHA=33bf1a7897a73b3198a9a3506ef2b7ec1444d529
+            EXPECTED_BRANCH=acceptance/a18-ops01-formal-v27-20261105
+            test "${CIRCLE_SHA1:-}" = "$EXPECTED_SHA" || {
+              echo "BLOCKED: CircleCI pipeline does not identify approved PR source SHA" >&2
+              exit 1
+            }
+            test "$(git rev-parse HEAD)" = "$EXPECTED_SHA" || {
+              echo "BLOCKED: actual checkout differs from reviewed PR source SHA" >&2
+              exit 1
+            }
+            test "${CIRCLE_BRANCH:-}" = "$EXPECTED_BRANCH" || {
+              echo "BLOCKED: wrong checkout branch; do not use config-branch code" >&2
+              exit 1
+            }
+            test -n "${GITHUB_TOKEN:-}" || {
+              echo "BLOCKED: required read-only GitHub PR access missing" >&2
+              exit 1
+            }
+            for name in SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN DATABASE_URL DIRECT_URL STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET RESEND_API_KEY VERCEL_TOKEN; do
+              if printenv "$name" >/dev/null 2>&1; then
+                echo "BLOCKED: unexpected privileged provider environment" >&2
+                exit 1
+              fi
+            done
+            if test "$(git rev-parse --is-shallow-repository)" = true; then
+              git fetch --quiet --no-tags --unshallow origin
+            fi
+            echo "A18_CIRCLECI_EXACT_HEAD_ADMISSION=PASS"
+
+      - run:
+          name: Official Node 22 evidence contracts and private-review validator
+          command: |
+            set -euo pipefail
+            set +x
+            mkdir -p artifacts/a18-exact-head
+            node --version
+            node --test tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
+            node --test tests/enterprise-evidence/validate-evidence.test.mjs
+            EVIDENCE_EXACT_SHA="$CIRCLE_SHA1" EVIDENCE_PR_NUMBER=2620 \
+              node scripts/enterprise-evidence/validate-evidence.mjs --report \
+                > artifacts/a18-exact-head/full-local-validator-output.json
+            node --input-type=module <<'NODE'
+            import { readFileSync, writeFileSync } from 'node:fs';
+            const r = JSON.parse(readFileSync(
+              'artifacts/a18-exact-head/full-local-validator-output.json','utf8'
+            ));
+            const a18 = r.gates?.find(g => g.gate_id === 'A-18');
+            const summary = {
+              source_sha: process.env.CIRCLE_SHA1,
+              environment: 'CircleCI read-only exact-head',
+              valid: r.valid === true,
+              gate_id: a18?.gate_id ?? null,
+              accepted_in_pr_candidate: a18?.accepted === true,
+              errors: Array.isArray(r.errors) ? r.errors : ['missing_errors_array'],
+              formal_main_acceptance: false,
+              production_writes: 0,
+              deployment_performed: false,
+              claimed_required_github_actions_pass: false
+            };
+            writeFileSync('artifacts/a18-exact-head/summary.json',
+              JSON.stringify(summary,null,2)+'\n');
+            console.log(JSON.stringify({
+              source_sha: summary.source_sha,
+              valid: summary.valid,
+              candidate_gate_accepted: summary.accepted_in_pr_candidate,
+              error_count: summary.errors.length,
+              main_gate_accepted: false
+            }));
+            if (!summary.valid || !summary.accepted_in_pr_candidate ||
+                summary.errors.length !== 0) process.exitCode = 1;
+            NODE
+
+      - store_artifacts:
+          path: artifacts/a18-exact-head/summary.json
+          destination: a18-official-exact-head-summary
+
+workflows:
+  a18-exact-head-manual:
+    jobs:
+      - a18-official-exact-head-validation
