@@ -72,7 +72,7 @@ jobs:
             SEC01_QA_EXECUTE=QA_ONLY_AUTH_PROOF node scripts/enterprise-gates/a01-sec01-supabase-qa-provider-proof.mjs > artifacts/enterprise-sec01/provider-proof.json
             provider_status=$?
             set -e
-            node --input-type=module - "$provider_status" <<'NODE'
+            node --input-type=module - "$provider_status" \<<'NODE'
             import { readFileSync } from 'node:fs';
             const status = Number(process.argv[2]);
             let p;
