@@ -108,6 +108,17 @@ function isLoginPath(url) {
   return new URL(url).pathname === '/en/login';
 }
 
+async function isApiAuthResult(response, expectedStatus, expectedError) {
+  if (response.status() !== expectedStatus) return false;
+  try {
+    const body = await response.json();
+    return body && typeof body === 'object' &&
+      !Array.isArray(body) && body.error === expectedError;
+  } catch {
+    return false;
+  }
+}
+
 function ensureQaOnly() {
   requireTrue(process.env.SEC01_APP_EXECUTE === 'QA_ONLY_APP_BROWSER_PROOF', 'explicit_qa_app_flag_required');
   requireTrue(process.env.SEC01_QA_PROJECT_REF === QA_REF, 'approved_qa_ref_required');
@@ -172,7 +183,7 @@ try {
 
   stage = 'unauthenticated_api_denied';
   const anonApi = await context.request.get('/api/ai-systems', { failOnStatusCode: false });
-  check(stage, anonApi.status() === 401);
+  check(stage, await isApiAuthResult(anonApi, 401, 'unauthorized'));
 
   stage = 'unauthenticated_profile_redirected';
   await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
@@ -210,7 +221,7 @@ try {
   const authApi = await context.request.get('/api/ai-systems', { failOnStatusCode: false });
   // The disposable user has NO organization or paid license; 403 is expected,
   // and no AI-system records are read or written.
-  check(stage, authApi.status() === 403);
+  check(stage, await isApiAuthResult(authApi, 403, 'organization_required'));
 
   stage = 'capture_session_cookies_in_memory_only';
   const staleCookies = (await context.cookies(LOCAL_URL))
@@ -224,7 +235,7 @@ try {
 
   stage = 'after_logout_api_denied';
   const afterLogoutApi = await context.request.get('/api/ai-systems', { failOnStatusCode: false });
-  check(stage, afterLogoutApi.status() === 401);
+  check(stage, await isApiAuthResult(afterLogoutApi, 401, 'unauthorized'));
 
   stage = 'after_logout_private_profile_denied';
   await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
@@ -233,8 +244,14 @@ try {
 
   stage = 'revoked_cookie_replay_api_denied';
   await context.addCookies(staleCookies);
+  const replayedCookies = await context.cookies(LOCAL_URL);
+  requireTrue(
+    staleCookies.every((cookie) => replayedCookies.some((candidate) =>
+      candidate.name === cookie.name && candidate.value === cookie.value)),
+    'revoked_cookies_not_actually_replayed',
+  );
   const replayApi = await context.request.get('/api/ai-systems', { failOnStatusCode: false });
-  check(stage, replayApi.status() === 401);
+  check(stage, await isApiAuthResult(replayApi, 401, 'unauthorized'));
 
   stage = 'revoked_cookie_replay_private_profile_denied';
   await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
