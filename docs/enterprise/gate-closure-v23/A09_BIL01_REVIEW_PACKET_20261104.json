@@ -1,0 +1,138 @@
+{
+  "schema": "risck-comply.a09-bil01-review-packet.v1",
+  "generated_at": "2026-11-04T19:21:16.277Z",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "gate_id": "A-09",
+  "control_id": "BIL-01",
+  "current_source_main_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+  "source_pr_merge_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+  "source_pr": 2598,
+  "review_status": "INDEPENDENT_REVIEW_PENDING",
+  "formal_acceptance_status": "NOT_ACCEPTED",
+  "formally_accepted": false,
+  "historical_source_control_status": "PASS",
+  "source_evidence": {
+    "path": "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json",
+    "git_blob_sha1": "1f8fc82fa6710b0fea777d28cd811b016d744784",
+    "original_observed_at": "2026-10-22T21:03:16.517Z"
+  },
+  "stripe_readback": {
+    "account_context": "acct_1U6IuJGt3cgjPOtq",
+    "livemode": true,
+    "access": "read-only GET /v1/prices?active=true&limit=100; GET /v1/products?active=true&limit=100",
+    "returned_active_prices": 32,
+    "returned_active_products": 16,
+    "canonical_prices_total": 6,
+    "canonical_products_total": 3,
+    "canonical_price_product_matches": 6,
+    "all_six_canonical_price_product_matches": true,
+    "rows": [
+      {
+        "plan": "essential",
+        "interval": "month",
+        "price_id": "price_1U6wnYGt3cgjPOtqIATM8DeH",
+        "product_id": "prod_V7B9TKop4XFVZD",
+        "amount_cents": 4900,
+        "currency": "eur",
+        "observed_active_livemode": true,
+        "amount_matched_historical_catalog": true,
+        "product_id_matched_historical_catalog": true,
+        "interval_matched_historical_catalog": true,
+        "provider": "Stripe LIVE read-only"
+      },
+      {
+        "plan": "essential",
+        "interval": "year",
+        "price_id": "price_1U6wnjGt3cgjPOtqAgMbZdQa",
+        "product_id": "prod_V7B9TKop4XFVZD",
+        "amount_cents": 49000,
+        "currency": "eur",
+        "observed_active_livemode": true,
+        "amount_matched_historical_catalog": true,
+        "product_id_matched_historical_catalog": true,
+        "interval_matched_historical_catalog": true,
+        "provider": "Stripe LIVE read-only"
+      },
+      {
+        "plan": "professional",
+        "interval": "month",
+        "price_id": "price_1U6wnpGt3cgjPOtqmL7HoPDw",
+        "product_id": "prod_V7B9MSMOjw6ScY",
+        "amount_cents": 14900,
+        "currency": "eur",
+        "observed_active_livemode": true,
+        "amount_matched_historical_catalog": true,
+        "product_id_matched_historical_catalog": true,
+        "interval_matched_historical_catalog": true,
+        "provider": "Stripe LIVE read-only"
+      },
+      {
+        "plan": "professional",
+        "interval": "year",
+        "price_id": "price_1U6wnuGt3cgjPOtqdWopnIyX",
+        "product_id": "prod_V7B9MSMOjw6ScY",
+        "amount_cents": 149000,
+        "currency": "eur",
+        "observed_active_livemode": true,
+        "amount_matched_historical_catalog": true,
+        "product_id_matched_historical_catalog": true,
+        "interval_matched_historical_catalog": true,
+        "provider": "Stripe LIVE read-only"
+      },
+      {
+        "plan": "business",
+        "interval": "month",
+        "price_id": "price_1U6wo2Gt3cgjPOtqOr91hofs",
+        "product_id": "prod_V7B9xkn8ud8f1d",
+        "amount_cents": 39900,
+        "currency": "eur",
+        "observed_active_livemode": true,
+        "amount_matched_historical_catalog": true,
+        "product_id_matched_historical_catalog": true,
+        "interval_matched_historical_catalog": true,
+        "provider": "Stripe LIVE read-only"
+      },
+      {
+        "plan": "business",
+        "interval": "year",
+        "price_id": "price_1U6wo9Gt3cgjPOtqa8vSvgaM",
+        "product_id": "prod_V7B9xkn8ud8f1d",
+        "amount_cents": 399000,
+        "currency": "eur",
+        "observed_active_livemode": true,
+        "amount_matched_historical_catalog": true,
+        "product_id_matched_historical_catalog": true,
+        "interval_matched_historical_catalog": true,
+        "provider": "Stripe LIVE read-only"
+      }
+    ],
+    "additional_active_prices_outside_core_six": 26,
+    "additional_active_products_outside_core_three": 13,
+    "interpretation": "Additional 13 active products are add-on products; they are not the three Essential/Professional/Business base plans. The six base price IDs and products match historical core catalog evidence."
+  },
+  "vercel_production_environment_readback": {
+    "status": "NOT_CURRENTLY_CONFIRMED",
+    "project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "historical_source_evidence_claims_six_correct_production_bindings": true,
+    "current_production_binding_values_verified": false,
+    "reason": "Current Vercel env listing has 100 returned and hidden production entries; six same-named observed variables were scoped to a custom QA environment, not built-in Production. Cannot assert current Production env value equality."
+  },
+  "required_before_qualified_gate_acceptance": [
+    "Re-verify six exact current Vercel Production price keys and values against canonical six Stripe LIVE Price IDs without printing secrets",
+    "Qualify independent reviewer identity, independence and expertise for A-09",
+    "Obtain real gate-specific GitHub review approval attached to immutable source and evidence SHA",
+    "Generate reviewed hashed gate acceptance artifact and run existing Evidence Factory exact-SHA formal validator",
+    "Record official gate PASS only if validator and governance controls succeed"
+  ],
+  "excluded_claims": [
+    "No authentic Stripe LIVE transaction created or modified",
+    "No Stripe LIVE checkout/webhook or TEST signed event/entitlement persistence proved by this check",
+    "No Enterprise GO claim",
+    "Do not count 32 prices as 32 core plans",
+    "This submission does not change official gate index or source statuses"
+  ],
+  "production_written": false,
+  "stripe_live_written": false,
+  "source_changed": false,
+  "official_gate_pass_added": 0
+}

@@ -8,10 +8,20 @@ function validFixture() {
   return {
     release: { repository: REPO, exactSha: SHA },
     deployment: { id: 'dpl_Valid12345', status: 'READY', environment: 'qa',
-      qaAliasVerified: true, gitSha: SHA, gitRepository: REPO,
+      qaAliasVerified: true, qaAliasTargetId: 'dpl_Valid12345',
+      createdAtMs: 1793915000000, gitSha: SHA, gitRepository: REPO,
       gitProviderReadback: true, runtimeDatabaseProjectRef: 'zrxrrfbllsxtleyxjpsz' },
     database: { projectRef: 'zrxrrfbllsxtleyxjpsz', isProduction: false, providerReadback: true },
-    stripe: { accountId: 'acct_1U6IuJGt3cgjPOtq', livemode: false, secretKeyMode: 'TEST',
+    qaEnvironment: {
+      id: 'env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj', providerReadback:true,
+      releaseSha:SHA, stripeSecretUpdatedAtMs:1793912811931,
+      stripePublishableUpdatedAtMs:1793912584481,
+      webhookSecretUpdatedAtMs:1793905161877,
+      runtimeOutboundEmailBlocked:true, runtimeMailSinkAttested:true,
+      productionCredentialsAbsentAttested:true,
+    },
+    stripe: { candidateEndpointUrl:'https://eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app/api/stripe/webhook',
+      accountId: 'acct_1U6IuJGt3cgjPOtq', livemode: false, secretKeyMode: 'TEST',
       providerReadback: true, qaSigningSecretConfigured: true,
       qaSigningSecretBindingVerified: true, signingSecretValueRead: false,
       existingEndpoint: { status: 'disabled' } },
@@ -52,3 +62,34 @@ denied('refuses to overwrite an enabled webhook aimed at an older Preview', x =>
 test('a pre-existing disabled old endpoint remains untouched while configuring a new TEST-only endpoint', () => {
   assert.equal(evaluate(validFixture()).readyToConfigureTestWebhook, true);
 });
+
+denied('rejects actual stale QA deployment created before TEST secret keys', x => {
+  x.deployment.createdAtMs = 1793906608949;
+}, 'qa_deployment_predates_stripe_test_configuration');
+denied('rejects alias targeting a different READY deployment', x => {
+  x.deployment.qaAliasTargetId = 'dpl_OldPreview1234';
+}, 'qa_environment_alias_identity_unverified');
+denied('rejects environment whose release SHA does not match reviewed SHA', x => {
+  x.qaEnvironment.releaseSha = 'b'.repeat(40);
+}, 'qa_environment_alias_identity_unverified');
+denied('rejects QA runtime without confirmed outbound email block', x => {
+  x.qaEnvironment.runtimeOutboundEmailBlocked = false;
+}, 'qa_runtime_email_and_secret_isolation_unverified');
+denied('rejects QA runtime without independently attested mail sink', x => {
+  x.qaEnvironment.runtimeMailSinkAttested = false;
+}, 'qa_runtime_email_and_secret_isolation_unverified');
+denied('rejects QA runtime with unverified credential isolation', x => {
+  x.qaEnvironment.productionCredentialsAbsentAttested = false;
+}, 'qa_runtime_email_and_secret_isolation_unverified');
+denied('rejects webhook target containing Vercel bypass query token', x => {
+  x.stripe.candidateEndpointUrl += '?x-vercel-protection-bypass=SYNTHETIC';
+}, 'stripe_test_endpoint_qa_alias_unverified');
+denied('rejects webhook configured against obsolete Vercel preview URL', x => {
+  x.stripe.candidateEndpointUrl='https://old-preview.example.vercel.app/api/stripe/webhook';
+}, 'stripe_test_endpoint_qa_alias_unverified');
+denied('rejects webhook endpoint URL using the production host', x => {
+  x.stripe.candidateEndpointUrl='https://www.risckcomply.com/api/stripe/webhook';
+}, 'stripe_test_endpoint_qa_alias_unverified');
+denied('rejects preflight with fake or missing provider evidence freshness', x => {
+  x.qaEnvironment.stripeSecretUpdatedAtMs = undefined;
+}, 'qa_deployment_predates_stripe_test_configuration');

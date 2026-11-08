@@ -12,6 +12,27 @@ function evaluatePhase2QaWebhookPreflight(input) {
   if(database.projectRef!=="zrxrrfbllsxtleyxjpsz" || deployment.runtimeDatabaseProjectRef!==database.projectRef || database.isProduction!==false || database.providerReadback!==true) fail("runtime_qa_database_unverified");
   if(stripe.accountId!=="acct_1U6IuJGt3cgjPOtq" || stripe.livemode!==false || stripe.secretKeyMode!=="TEST" || stripe.providerReadback!==true) fail("stripe_test_account_unverified");
   if(stripe.qaSigningSecretConfigured!==true || stripe.qaSigningSecretBindingVerified!==true || stripe.signingSecretValueRead!==false) fail("stripe_qa_signing_binding_unverified");
+  // Evidence claims are structural only; a provider must independently
+  // authenticate each timestamp/alias/credential-mode assertion.
+  const qaEnv=input?.qaEnvironment??{};
+  if (qaEnv.id!=="env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj" || qaEnv.providerReadback!==true ||
+      qaEnv.releaseSha!==release.exactSha || deployment.qaAliasTargetId!==deployment.id)
+    fail("qa_environment_alias_identity_unverified");
+  const timeKeys=["stripeSecretUpdatedAtMs","stripePublishableUpdatedAtMs","webhookSecretUpdatedAtMs"];
+  if (!Number.isSafeInteger(deployment.createdAtMs) || deployment.createdAtMs<=0 ||
+      timeKeys.some(k=>!Number.isSafeInteger(qaEnv[k]) || qaEnv[k]<=0 ||
+                       qaEnv[k]>deployment.createdAtMs))
+    fail("qa_deployment_predates_stripe_test_configuration");
+  if (qaEnv.runtimeOutboundEmailBlocked!==true || qaEnv.runtimeMailSinkAttested!==true ||
+      qaEnv.productionCredentialsAbsentAttested!==true)
+    fail("qa_runtime_email_and_secret_isolation_unverified");
+  try {
+    const url=new URL(String(stripe.candidateEndpointUrl??""));
+    if (url.origin!=="https://eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app" ||
+        url.pathname!=="/api/stripe/webhook" || url.search || url.hash ||
+        url.username || url.password)
+      fail("stripe_test_endpoint_qa_alias_unverified");
+  } catch { fail("stripe_test_endpoint_qa_alias_unverified"); }
   const previous=stripe.existingEndpoint;
   if(previous && (previous.status!=="disabled" && !(previous.status==="enabled" && previous.verifiedQaDeploymentId===deployment.id && previous.mode==="TEST" && previous.providerReadback===true))) fail("existing_webhook_must_remain_safe");
   return {readyToConfigureTestWebhook:problems.length===0,blockers:problems,formalGateAccepted:false,providerDeliveryVerified:false};
