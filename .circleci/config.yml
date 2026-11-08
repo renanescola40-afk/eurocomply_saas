@@ -102,10 +102,10 @@ jobs:
             }));
             if (!valid) process.exit(1);
             NODE
+      # Store artifacts automatically on failed prior run steps too.
       - store_artifacts:
           path: artifacts/enterprise-sec01
           destination: sec01-qa-provider-partial-evidence
-          when: always
 
   synthetic-backup-components:
     machine:
