@@ -44,6 +44,6 @@
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
   "governance_status": "PR_ONLY_PROPOSED_NOT_MERGED; NEW_EXACT_CURRENT_HEAD_NATIVE_GATE_APPROVAL_REQUIRED; CI_AND_POST_MERGE_PROVIDER_TESTS_NOT_RUN",
-  "acceptance_source_sha": "e3163b677b4fec76f4c388327d849acb4b09732c",
-  "acceptance_source_selection": "Current validator/test source commit e3163b6 includes authenticated exact-merge association and fail-closed negative coverage. PR-level and post-merge acceptance are both subject to a NEW independent current-head reviewer decision and the official exact-SHA CI. No gate PASS yet."
+  "acceptance_source_sha": "3f8d34520327c8845c5b843f1f6d25ae3c7e0873",
+  "acceptance_source_selection": "Branch-local validator/test source commit 3f8d345 includes authenticated exact-merge association and fail-closed negative coverage. PR-level and post-merge acceptance are both subject to a NEW independent current-head reviewer decision and the official exact-SHA CI. No gate PASS yet."
 }
