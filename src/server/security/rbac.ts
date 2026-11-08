@@ -7,6 +7,7 @@ export {
   getOrganizationPermissionMatrix,
   getRolePermissions,
   normalizeOrganizationRole,
+  parseOrganizationRole,
   ORGANIZATION_PERMISSIONS,
   ORGANIZATION_ROLES,
   roleHasPermission,
