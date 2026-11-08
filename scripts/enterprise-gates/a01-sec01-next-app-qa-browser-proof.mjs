@@ -189,8 +189,17 @@ try {
   stage = 'real_browser_password_login';
   await page.locator('form input[type="password"]').fill(password);
   await page.locator('form button[type="submit"]').click();
-  await page.waitForURL((url) => url.pathname === '/en/onboarding', { timeout: 60000 });
-  check(stage, new URL(page.url()).pathname === '/en/onboarding');
+  // The onboarding screen may immediately redirect (e.g. payment-first).
+  // Prove that navigation left login and that SSR session cookies exist;
+  // actual authority is separately verified on the protected profile + API.
+  await page.waitForFunction(
+    () => window.location.pathname !== '/en/login',
+    undefined,
+    { timeout: 60000 },
+  );
+  const loginSessionCookies = (await context.cookies(LOCAL_URL))
+    .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
+  check(stage, loginSessionCookies.length > 0);
 
   stage = 'authenticated_private_profile_available';
   await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
