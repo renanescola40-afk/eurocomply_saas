@@ -7,8 +7,9 @@
 # - Set CHECKOUT source to the same repository, but branch
 #   acceptance/a18-ops01-formal-v27-20261105 (PR #2620).
 # - Trigger MANUALLY once; no automated trigger or production environment.
-# - Supply GITHUB_TOKEN as a short-lived, read-only GitHub token in CircleCI
-#   project environment variables; NEVER put it in this file or job output.
+# - Supply GITHUB_TOKEN as a short-lived, read-only GitHub token in a CircleCI
+#   RESTRICTED context risck-a18-github-readonly; restrict this context by
+#   this project and checkout branch. Never use project-wide secrets.
 #
 # IMPORTANT: A green result is a genuine PR-HEAD CircleCI status, NOT a
 # GitHub-Actions replacement recognized by branch rules unless governance
@@ -107,4 +108,5 @@ jobs:
 workflows:
   a18-exact-head-manual:
     jobs:
-      - a18-official-exact-head-validation
+      - a18-official-exact-head-validation:
+          context: risck-a18-github-readonly
