@@ -16,8 +16,10 @@ const matrixFile = 'docs/security/RBAC_MATRIX.md';
 const roles = ORGANIZATION_ROLES as readonly OrganizationRole[];
 
 function documentedMatrix() {
-  const text = readFileSync(matrixFile, 'utf8');
-  return text.split(/\r?\n/)
+  const document = readFileSync(matrixFile, 'utf8');
+  const section = document.split('## Permission matrix\\n')[1]?.split(/\\n## /)[0];
+  if (!section) throw new Error('SEC-02 canonical permission matrix section missing');
+  return section.split(/\\r?\\n/)
     .filter((line) => /^\|\s*`[a-z_]+`\s*\|/.test(line))
     .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()))
     .map((cells) => ({
