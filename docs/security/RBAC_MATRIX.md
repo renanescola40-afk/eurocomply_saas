@@ -32,6 +32,17 @@ This document defines the canonical enterprise authorization model for the SaaS.
 | `export_data` | yes | yes | yes | no | no |
 | `manage_settings` | yes | yes | no | no | no |
 
+## Fail-closed role parsing
+
+The five documented roles and their supported legacy aliases are the only recognized authorization roles.
+An unexpected, empty or null role grants **zero** permissions: no read access, no writes, no
+team management and no audit/export access. Unknown active membership rows are treated as
+unauthorized by the server. `normalizeOrganizationRole` retains a display-only viewer fallback;
+server checks use `parseOrganizationRole` and cannot rely on that fallback.
+
+This safeguard is source-level only until validated by authenticated QA API denials and
+reviewed exact-SHA evidence. It does not close SEC-02 on its own.
+
 ## Engineering rules
 
 1. New app routes, API routes and server actions must use the canonical permission names above.
