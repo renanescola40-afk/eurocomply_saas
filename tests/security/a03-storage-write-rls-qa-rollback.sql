@@ -133,5 +133,23 @@ BEGIN
  THEN RAISE EXCEPTION 'SEC03_STORAGE_WRITE_OUTSIDER_BYPASS'; END IF;
 END $rls_write$;
 RESET ROLE;
+-- Anonymous role must not be able to create a metadata object in a private
+-- tenant bucket, even when it knows the synthetic tenant UUID.
+SET LOCAL ROLE anon;
+DO $anon_storage_insert$
+DECLARE own_org uuid:=current_setting('qa.sec03_write.own')::uuid;
+ denied boolean:=false;
+BEGIN
+ IF current_setting('role',true)<>'anon'
+ THEN RAISE EXCEPTION 'SEC03_STORAGE_ANON_ROLE_MISMATCH'; END IF;
+ BEGIN
+   INSERT INTO storage.objects(bucket_id,name)
+   VALUES('compliance-documents',own_org::text||'/qa-sec03-write-anon.txt');
+ EXCEPTION WHEN insufficient_privilege THEN denied:=true;
+ END;
+ IF denied IS DISTINCT FROM true
+ THEN RAISE EXCEPTION 'SEC03_STORAGE_ANON_INSERT_BYPASS'; END IF;
+END $anon_storage_insert$;
+RESET ROLE;
 ROLLBACK;
-SELECT 'QA_SEC03_STORAGE_TENANT_INSERT_AAL2_ROLLBACK_PASS'::text AS result;
+SELECT 'QA_SEC03_STORAGE_TENANT_INSERT_AAL2_ANON_ROLLBACK_PASS'::text AS result;
