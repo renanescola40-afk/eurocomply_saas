@@ -30,6 +30,11 @@ parameters:
     type: boolean
     default: false
 
+  # A-02 SEC-02 source tests. Manual opt-in only; no provider credentials/deploy.
+  run_sec02_source:
+    type: boolean
+    default: false
+
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
   synthetic-backup-components:
@@ -702,7 +707,68 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: enterprise-postgres-synthetic-exact-sha
 
+  # A-02 / SEC-02 manual source verification. No database/API tests, no deploy.
+  sec02-rbac-source-proof:
+    docker:
+      - image: cimg/node:22
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify A-02 branch and immutable Git SHA without provider access
+          command: |
+            set -euo pipefail
+            expected_branch="fix/a02-sec02-fail-closed-unknown-roles-20261108"
+            test "${CIRCLE_BRANCH:-}" = "$expected_branch" || { echo "SEC02 wrong branch"; exit 1; }
+            test -n "${CIRCLE_SHA1:-}" || { echo "SEC02 missing Git SHA"; exit 1; }
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1" || { echo "SEC02 checkout SHA mismatch"; exit 1; }
+            node -e "if (Number(process.versions.node.split('.')[0]) !== 22) process.exit(1)"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "SEC02 privileged variable forbidden: $key"
+                exit 1
+              fi
+            done
+            echo "SEC02_SOURCE_SHA=$CIRCLE_SHA1"
+      - run:
+          name: Install reproducible dependencies without lifecycle hooks
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: SEC-02 exact-SHA unit, membership, matrix, and API role-guard regression
+          command: |
+            set -euo pipefail
+            ./node_modules/.bin/vitest run \
+              src/server/security/rbac.test.ts \
+              src/server/security/rbac-membership.test.ts \
+              src/server/security/api-guards.test.ts \
+              tests/unit/permissions.test.ts \
+              tests/unit/sec02-rbac-matrix-contract.test.ts
+      - run:
+          name: Repository TypeScript typecheck
+          command: npm run typecheck
+      - run:
+          name: Record scoped source evidence with no PASS inference
+          when: always
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/sec02-source
+            node -e 'const fs=require("node:fs");fs.writeFileSync("artifacts/sec02-source/provenance.json",JSON.stringify({kind:"SEC02_SOURCE_ONLY",branch:process.env.CIRCLE_BRANCH,sha:process.env.CIRCLE_SHA1,job:process.env.CIRCLE_JOB,workflowId:process.env.CIRCLE_WORKFLOW_ID,qaAuthenticatedTests:"NOT_RUN",sqlRlsPolicyDeployed:false,formalAcceptance:"NOT_GRANTED"},null,2)+"\n")'
+      - store_artifacts:
+          path: artifacts/sec02-source
+          destination: sec02-source-only-exact-sha
+
 workflows:
+
+  sec02-source-proof-manual:
+    # No automatic jobs/credits: only an explicit CircleCI pipeline parameter.
+    when: << pipeline.parameters.run_sec02_source >>
+    jobs:
+      - sec02-rbac-source-proof:
+          filters:
+            branches:
+              only:
+                - fix/a02-sec02-fail-closed-unknown-roles-20261108
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
