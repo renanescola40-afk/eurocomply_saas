@@ -5,6 +5,7 @@ import {
   hasOrganizationPermission,
   ORGANIZATION_PERMISSIONS,
   ORGANIZATION_ROLES,
+  roleHasPermission,
   type OrganizationPermission,
   type OrganizationRole,
 } from '@/lib/security/permissions';
@@ -102,6 +103,16 @@ describe('organization permission matrix', () => {
     expect(hasOrganizationPermission(undefined, 'manage_billing')).toBe(false);
     expect(() => assertOrganizationPermission(null, 'read_documents')).toThrow('read_documents');
     expect(() => assertOrganizationPermission(undefined, 'manage_billing')).toThrow('manage_billing');
+  });
+
+  it('denies all permissions to unrecognized roles including supposedly read-only actions', () => {
+    for (const rawRole of ['superuser', 'unknown', 'org:owner-admin', '', '  ']) {
+      expect(getOrganizationPermissions(rawRole)).toEqual([]);
+      for (const permission of ORGANIZATION_PERMISSIONS) {
+        expect(roleHasPermission(rawRole, permission)).toBe(false);
+        expect(() => assertOrganizationPermission(rawRole, permission)).toThrow(permission);
+      }
+    }
   });
 
   it('documents the supported enterprise roles', () => {
