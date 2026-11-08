@@ -43,6 +43,33 @@ Seven authenticated-executable internal functions in QA were:
 `app_private.has_org_write_role`,
 `app_private.is_org_member`.
 
+## Seven authenticated-executable helpers — body review (QA)
+
+On 2026-11-08, retrieved the actual definitions with a **read-only**
+`pg_get_functiondef` query scoped to exactly the seven
+`app_private` SECURITY DEFINER functions executable by `authenticated`.
+
+| Function | Observed authorization behavior |
+| --- | --- |
+| `enterprise_member_can_manage(uuid)` | Delegates to `has_org_role` for owner/admin/editor/compliance_manager |
+| `enterprise_member_can_read(uuid)` | Delegates to `is_org_member` |
+| `has_commercial_authority(uuid)` | For authenticated sessions requires `is_org_member` and a resolved plan |
+| `has_minimum_commercial_plan(uuid,text)` | For authenticated sessions requires `is_org_member`; compares allowed plan rank |
+| `has_org_role(uuid,text[])` | Checks tenant MFA, active association, allowed role and current user identity |
+| `has_org_write_role(uuid)` | Delegates to `has_org_role` for owner/admin/editor |
+| `is_org_member(uuid)` | Checks tenant MFA, active association and current user identity; does **not** check canonical role whitelist |
+
+**Specific mismatch:** `is_org_member` authorizes *any* active stored role
+matching user/tenant identity, including an unexpected role string. It is
+appropriate for some ordinary reads but **insufficient for `read_audit`**,
+which canonical RBAC restricts to owner/admin. The separate SEC-02 SQL
+barrier proposal therefore uses `has_org_role(..., ARRAY['owner','admin'])`.
+The application-side SEC-02 patch also rejects unrecognized role strings.
+
+This review is **source/body inspection**, not a runtime unauthorized
+invocation test. It does not establish that an authenticated user can call
+these functions directly via the exposed PostgREST schemas.
+
 ## Interpretation and follow-up
 
 The absence of effective anonymous/PUBLIC `EXECUTE` grants in the inspected
