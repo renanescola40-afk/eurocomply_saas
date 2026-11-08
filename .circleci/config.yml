@@ -14,6 +14,9 @@ parameters:
   run_sec01_qa_provider:
     type: boolean
     default: false
+  run_sec01_qa_browser:
+    type: boolean
+    default: false
   run_g5_02_pg_replay:
     type: boolean
     default: false
@@ -106,6 +109,53 @@ jobs:
       - store_artifacts:
           path: artifacts/enterprise-sec01
           destination: sec01-qa-provider-partial-evidence
+
+  # SEC-01 application proof: opt-in, QA-only, localhost Next.js + real Chromium.
+  # The QA admin secret is confined to the test harness and never reaches Next.
+  sec01-next-app-browser-qa:
+    docker:
+      - image: cimg/node:22.16.0-browsers
+    resource_class: medium
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact-source isolated QA Auth preflight
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "qa/a01-sec01-provider-proof-20261107"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test "$SEC01_QA_PROJECT_REF" = "zrxrrfbllsxtleyxjpsz"
+            test "$NEXT_PUBLIC_SUPABASE_URL" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
+            test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+            test -n "$SUPABASE_SERVICE_ROLE_KEY"
+            test "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != "$SUPABASE_SERVICE_ROLE_KEY"
+            test -z "$(printenv RESEND_API_KEY || true)"
+            test -z "$(printenv SMTP_HOST || true)"
+            test -z "$(printenv VERCEL_TOKEN || true)"
+            test "$(printenv VERCEL_ENV || true)" != "production"
+            test "$(printenv E2E_ALLOW_SYNTHETIC_APP_WRITES || true)" != "true"
+            case "$(printenv STRIPE_SECRET_KEY || true)" in sk_live_*) echo "LIVE Stripe is forbidden"; exit 1;; esac
+            printf '%s\n' "SEC01 QA application proof: exact SHA and environment verified; no deployment."
+      - run:
+          name: Install locked application dependencies (no scripts)
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Install isolated Chromium browser for real local Next.js tests
+          command: npx playwright install chromium
+      - run:
+          name: Verify real browser login/logout plus protected API and cookie replay in QA
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/enterprise-sec01
+            set +e
+            SEC01_APP_EXECUTE=QA_ONLY_APP_BROWSER_PROOF node scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs > artifacts/enterprise-sec01/next-app-browser-proof.json
+            qa_status=$?
+            set -e
+            node scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs "$qa_status"
+      - store_artifacts:
+          path: artifacts/enterprise-sec01
+          destination: sec01-next-app-browser-partial-evidence
 
   synthetic-backup-components:
     machine:
@@ -792,6 +842,25 @@ workflows:
       - sec01-qa-provider-proof:
           requires:
             - hold-a01-sec01-qa-provider
+          context: risck-sec01-qa-only
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
+
+  # Disabled by default and held for explicit owner approval. No automatic CI run.
+  a01-sec01-next-app-browser-qa-manual:
+    when: << pipeline.parameters.run_sec01_qa_browser >>
+    jobs:
+      - hold-a01-sec01-browser-qa:
+          type: approval
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
+      - sec01-next-app-browser-qa:
+          requires:
+            - hold-a01-sec01-browser-qa
           context: risck-sec01-qa-only
           filters:
             branches:
