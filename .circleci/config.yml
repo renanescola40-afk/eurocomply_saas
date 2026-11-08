@@ -11,6 +11,12 @@ parameters:
   run_qa_full:
     type: boolean
     default: false
+  run_sec01_qa_provider:
+    type: boolean
+    default: false
+  run_sec01_qa_browser:
+    type: boolean
+    default: false
   run_g5_02_pg_replay:
     type: boolean
     default: false
@@ -37,6 +43,125 @@ parameters:
 
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
+  # Manual-only, restricted-QA provider proof. No deployment, email or PROD calls.
+  # QA service_role is supplied ONLY by CircleCI context risck-sec01-qa-only.
+  sec01-qa-provider-proof:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA and isolated QA preflight (no secrets printed)
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "qa/a01-sec01-provider-proof-20261107"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing_pipeline_source_sha}"
+            test "${SEC01_QA_PROJECT_REF:-}" = "zrxrrfbllsxtleyxjpsz"
+            test "${NEXT_PUBLIC_SUPABASE_URL:-}" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
+            test -n "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+            test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+            test "${NEXT_PUBLIC_SUPABASE_ANON_KEY}" != "${SUPABASE_SERVICE_ROLE_KEY}"
+            test -z "${RESEND_API_KEY:-}"
+            test -z "${SMTP_HOST:-}"
+            test "${VERCEL_ENV:-}" != "production"
+            case "${STRIPE_SECRET_KEY:-}" in sk_live_*) echo "LIVE Stripe is forbidden"; exit 1;; esac
+            printf '%s\n' "SEC01 QA-only source checked. Provider test is intentionally incomplete for formal acceptance."
+      - run:
+          name: Install locked dependencies without lifecycle scripts
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Execute real QA Auth lifecycle and verify sanitized partial evidence
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/enterprise-sec01
+            set +e
+            SEC01_QA_EXECUTE=QA_ONLY_AUTH_PROOF node scripts/enterprise-gates/a01-sec01-supabase-qa-provider-proof.mjs > artifacts/enterprise-sec01/provider-proof.json
+            provider_status=$?
+            set -e
+            node --input-type=module - "$provider_status" \<<'NODE'
+            import { readFileSync } from 'node:fs';
+            const status = Number(process.argv[2]);
+            let p;
+            try { p = JSON.parse(readFileSync('artifacts/enterprise-sec01/provider-proof.json', 'utf8')); }
+            catch { console.error('SEC01 evidence JSON unavailable or invalid'); process.exit(1); }
+            const valid = status === 2 &&
+              p.schema === 'risck-sec01-qa-provider-proof-v1' &&
+              p.source_sha === process.env.CIRCLE_SHA1 &&
+              p.qa_ref === 'zrxrrfbllsxtleyxjpsz' &&
+              p.execution === 'QA_PROVIDER_RUNTIME' &&
+              p.outcome === 'PARTIAL_PROVIDER_PASS' &&
+              p.passed_checks === 14 &&
+              p.qa_cleanup_verified === true &&
+              p.emails_sent === 0 &&
+              p.gate === 'NOT_ACCEPTED' &&
+              p.control === 'NOT_VERIFIED' &&
+              Array.isArray(p.checks) && p.checks.length === 14 &&
+              p.checks.every((c) => c.status === 'PASS');
+            console.log(JSON.stringify({
+              source_sha: process.env.CIRCLE_SHA1,
+              qa_ref: 'zrxrrfbllsxtleyxjpsz',
+              provider_case_count: Number(p.passed_checks ?? 0),
+              cleanup_verified: p.qa_cleanup_verified === true,
+              classification: valid ? 'PROVIDER_ONLY_PARTIAL_PASS' : 'PROVIDER_PROOF_FAILED',
+              SEC01: 'NOT_VERIFIED',
+              A01: 'NOT_ACCEPTED',
+            }));
+            if (!valid) process.exit(1);
+            NODE
+      # Store artifacts automatically on failed prior run steps too.
+      - store_artifacts:
+          path: artifacts/enterprise-sec01
+          destination: sec01-qa-provider-partial-evidence
+
+  # SEC-01 application proof: opt-in, QA-only, localhost Next.js + real Chromium.
+  # The QA admin secret is confined to the test harness and never reaches Next.
+  sec01-next-app-browser-qa:
+    docker:
+      - image: cimg/node:22.23.4-browsers
+    resource_class: medium
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact-source isolated QA Auth preflight
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "qa/a01-sec01-provider-proof-20261107"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test "$SEC01_QA_PROJECT_REF" = "zrxrrfbllsxtleyxjpsz"
+            test "$NEXT_PUBLIC_SUPABASE_URL" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
+            test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+            test -n "$SUPABASE_SERVICE_ROLE_KEY"
+            test "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != "$SUPABASE_SERVICE_ROLE_KEY"
+            test -z "$(printenv RESEND_API_KEY || true)"
+            test -z "$(printenv SMTP_HOST || true)"
+            test -z "$(printenv VERCEL_TOKEN || true)"
+            test "$(printenv VERCEL_ENV || true)" != "production"
+            test "$(printenv E2E_ALLOW_SYNTHETIC_APP_WRITES || true)" != "true"
+            case "$(printenv STRIPE_SECRET_KEY || true)" in sk_live_*) echo "LIVE Stripe is forbidden"; exit 1;; esac
+            printf '%s\n' "SEC01 QA application proof: exact SHA and environment verified; no deployment."
+      - run:
+          name: Install locked application dependencies (no scripts)
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Install isolated Chromium browser for real local Next.js tests
+          command: npx playwright install chromium
+      - run:
+          name: Verify real browser login/logout plus protected API and cookie replay in QA
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/enterprise-sec01
+            set +e
+            SEC01_APP_EXECUTE=QA_ONLY_APP_BROWSER_PROOF node scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs > artifacts/enterprise-sec01/next-app-browser-proof.json
+            qa_status=$?
+            set -e
+            node scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs "$qa_status"
+      - store_artifacts:
+          path: artifacts/enterprise-sec01
+          destination: sec01-next-app-browser-partial-evidence
+
   synthetic-backup-components:
     machine:
       image: ubuntu-2204:2026.05.1
@@ -760,15 +885,43 @@ jobs:
 
 workflows:
 
-  sec02-source-proof-manual:
-    # No automatic jobs/credits: only an explicit CircleCI pipeline parameter.
-    when: << pipeline.parameters.run_sec02_source >>
+  # Explicit opt-in only: no source push, PR event, or default pipeline may run this job.
+  a01-sec01-qa-provider-manual:
+    when: << pipeline.parameters.run_sec01_qa_provider >>
     jobs:
-      - sec02-rbac-source-proof:
+      - hold-a01-sec01-qa-provider:
+          type: approval
           filters:
             branches:
               only:
-                - fix/a02-sec02-fail-closed-unknown-roles-20261108
+                - qa/a01-sec01-provider-proof-20261107
+      - sec01-qa-provider-proof:
+          requires:
+            - hold-a01-sec01-qa-provider
+          context: risck-sec01-qa-only
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
+
+  # Disabled by default and held for explicit owner approval. No automatic CI run.
+  a01-sec01-next-app-browser-qa-manual:
+    when: << pipeline.parameters.run_sec01_qa_browser >>
+    jobs:
+      - hold-a01-sec01-browser-qa:
+          type: approval
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
+      - sec01-next-app-browser-qa:
+          requires:
+            - hold-a01-sec01-browser-qa
+          context: risck-sec01-qa-only
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.
