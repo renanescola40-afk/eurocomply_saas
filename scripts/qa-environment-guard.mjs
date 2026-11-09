@@ -45,13 +45,12 @@ export function validateQaEnvironment(e) {
   for (const [name,value] of Object.entries(e)) {
     if (/^STRIPE_PRICE_/.test(name) && value && !String(value).startsWith('price_')) errors.push(name+' invalid price identifier');
   }
-  // Current application authentication uses Supabase. Legacy Clerk keys are
-  // optional, but a partial pair or any LIVE credential is forbidden in QA.
-  const clerkPublic = e.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
-  const clerkSecret = e.CLERK_SECRET_KEY || '';
-  if (clerkPublic && !String(clerkPublic).startsWith('pk_test_')) errors.push('Clerk publishable key must be test');
-  if (clerkSecret && !String(clerkSecret).startsWith('sk_test_')) errors.push('Clerk secret key must be test');
-  if (Boolean(clerkPublic) !== Boolean(clerkSecret)) errors.push('Clerk TEST keys must be paired');
+  // Supabase Auth is the sole identity provider. Historical Clerk credentials
+  // must not be required for QA builds or carried into the runtime at all.
+  for (const [name, value] of Object.entries(e)) {
+    if (/^(?:CLERK_|NEXT_PUBLIC_CLERK_)/.test(name) && value)
+      errors.push(name + ' is an unsupported legacy identity credential in QA');
+  }
   // Until an independent credential-to-project attestation exists, do not allow any
   // inherited privileged Supabase credential into Preview, even if it is opaque.
   for (const name of ['SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','SUPABASE_ADMIN_KEY','SUPABASE_SECRET_KEY']) {

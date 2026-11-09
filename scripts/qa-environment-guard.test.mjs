@@ -15,7 +15,9 @@ test('preview lacking QA flag fails',()=>assert.ok(validateQaEnvironment({...bas
 test('prod database destination fails',()=>assert.ok(validateQaEnvironment({...base,SUPABASE_URL:'https://tganhbbhfxcpblmgqprg.supabase.co'}).errors.length));
 test('prod database alternate variable fails',()=>assert.ok(validateQaEnvironment({...base,DATABASE_URL:'postgres://db.tganhbbhfxcpblmgqprg.supabase.co'}).errors.length));
 test('Stripe LIVE fails',()=>assert.ok(validateQaEnvironment({...base,STRIPE_SECRET_KEY:'sk_live_synthetic'}).errors.length));
-test('Clerk LIVE fails',()=>assert.ok(validateQaEnvironment({...base,CLERK_SECRET_KEY:'sk_live_synthetic'}).errors.length));
+test('legacy Clerk TEST secret is prohibited in Supabase-only QA',()=>assert.ok(validateQaEnvironment({...base,CLERK_SECRET_KEY:'sk_test_synthetic'}).errors.some(x=>x.includes('unsupported legacy identity'))));
+test('legacy Clerk LIVE secret is prohibited in Supabase-only QA',()=>assert.ok(validateQaEnvironment({...base,CLERK_SECRET_KEY:'sk_live_synthetic'}).errors.some(x=>x.includes('unsupported legacy identity'))));
+test('legacy Clerk public key is prohibited even when TEST',()=>assert.ok(validateQaEnvironment({...base,NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:'pk_test_synthetic'}).errors.some(x=>x.includes('unsupported legacy identity'))));
 test('real outbound email API fails',()=>assert.ok(validateQaEnvironment({...base,RESEND_API_KEY:'re_synthetic'}).errors.length));
 test('real SMTP fails',()=>assert.ok(validateQaEnvironment({...base,SMTP_HOST:'smtp.example.com'}).errors.length));
 test('production app origin fails',()=>assert.ok(validateQaEnvironment({...base,NEXT_PUBLIC_APP_URL:'https://www.risckcomply.com'}).errors.length));
@@ -38,6 +40,6 @@ test('regular QA rejects wrongly typed public key in server secret',()=>assert.o
 test('regular QA rejects missing webhook secret',()=>assert.ok(validateQaEnvironment({...base,STRIPE_WEBHOOK_SECRET:''}).errors.length));
 test('Supabase-only auth does not require obsolete Clerk keys',()=>assert.deepEqual(validateQaEnvironment(base),{checked:true,errors:[]}));
 test('partial legacy Clerk TEST pair fails closed',()=>assert.ok(validateQaEnvironment({...base,CLERK_SECRET_KEY:'sk_test_synthetic'}).errors.length));
-test('complete optional Clerk TEST pair passes',()=>assert.deepEqual(validateQaEnvironment({...base,CLERK_SECRET_KEY:'sk_test_synthetic',NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:'pk_test_synthetic'}),{checked:true,errors:[]}));
+test('bootstrap also rejects a complete legacy Clerk TEST key pair',()=>assert.ok(validateQaEnvironment({...bootstrap,CLERK_SECRET_KEY:'sk_test_synthetic',NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:'pk_test_synthetic'}).errors.some(x=>x.includes('unsupported legacy identity'))));
 test('disabled QA Stripe TEST webhook signing secret is safe without Stripe API keys',()=>assert.deepEqual(validateQaEnvironment({...bootstrap,STRIPE_WEBHOOK_SECRET:'whsec_disabled_test_endpoint'}),{checked:true,errors:[]}));
 test('malformed signing secret is rejected in no-billing bootstrap',()=>assert.ok(validateQaEnvironment({...bootstrap,STRIPE_WEBHOOK_SECRET:'sk_live_invalid'}).errors.length));

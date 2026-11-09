@@ -58,7 +58,7 @@ describe('onboarding runtime boundary', () => {
   it('catches both server mutations and exposes one assisted Enterprise path', () => {
     expect(pageSource).toContain("toOnboardingMutationFailure(error, safeLocale, 'save')");
     expect(pageSource).toContain("toOnboardingMutationFailure(error, safeLocale, 'complete')");
-    expect(pageSource).toContain('getOnboardingPlanIntent(resolvedSearchParams.plan)');
+    expect(pageSource).toContain('getOnboardingPlanIntent(normalizedPublicPlan)');
 
     expect(boundarySource).toContain('if (!result.ok)');
     expect(boundarySource).toContain('throw new Error(result.message)');
