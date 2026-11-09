@@ -29,14 +29,15 @@ test('QAT-01 job runs only missing checks and does not repeat Vitest', () => {
   assert.match(job, /npm run build/);
   assert.match(job, /npm run quality:routes/);
   assert.match(job, /CIRCLE_OIDC_TOKEN_V2/);
-  assert.match(job, /\\*_TOKEN/);
+  assert.match(job, /\*_TOKEN/);
   assert.match(job, /"circleOidcTokenUsed":false/);
   assert.match(job, /"privilegedProviderCredentialsPresent":false/);
-  assert.doesNotMatch(job, /\\$CIRCLE_OIDC_TOKEN|printenv CIRCLE_OIDC_TOKEN/);
+  assert.doesNotMatch(job, /\$CIRCLE_OIDC_TOKEN|printenv CIRCLE_OIDC_TOKEN/);
   assert.match(job, /gitleaks/);
   assert.match(job, /store_artifacts/);
   assert.doesNotMatch(job, /npm run test|vitest/i);
-  const environment = job.match(/    environment:\\n((?:      .*\\n)+)/)?.[0] ?? '';
+  const environment = job.match(/    environment:\n((?:      .*\n)+)/)?.[0] ?? '';
+  assert.ok(environment.length > 0, 'must parse the actual CircleCI job environment before checking for forbidden credentials');
   assert.doesNotMatch(environment, /DATABASE_URL|DIRECT_URL|SUPABASE_ACCESS_TOKEN|STRIPE_SECRET_KEY|VERCEL_TOKEN|RESEND_API_KEY|SENTRY_AUTH_TOKEN/i);
   assert.doesNotMatch(job, /npm run deploy|vercel .*deploy|stripe (?:live|charges?)/i);
 });
@@ -68,4 +69,10 @@ test('QAT-01 stores only SHA-bound redacted Gitleaks metadata', () => {
   assert.ok(config.includes('line:Number(x.StartLine||0)'));
   assert.ok(config.includes('ruleId:String(x.RuleID||"")'));
   assert.ok(config.includes('process.exit(rows.length===0?0:3)'));
+});
+
+test('QAT-01 policy regexes actually match forbidden literal OIDC reads and job environment lines', () => {
+  assert.match('echo "$CIRCLE_OIDC_TOKEN"', /\$CIRCLE_OIDC_TOKEN|printenv CIRCLE_OIDC_TOKEN/);
+  assert.match('  *_TOKEN)', /\*_TOKEN/);
+  assert.match('    environment:\n      STRIPE_SECRET_KEY: forbidden\n', /    environment:\n((?:      .*\n)+)/);
 });
