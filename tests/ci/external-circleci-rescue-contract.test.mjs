@@ -86,3 +86,20 @@ test('Gitleaks scans checked-out sources before npm install and Next build, with
   assert.match(job, /process\.exit\(rows\.length\?3:0\)/);
   assert.doesNotMatch(job, /--no-git|--exclude-path|allow_failure:\s*true|continue-on-error:\s*true/);
 });
+
+test('source Actionlint job uses a pinned real binary and fails closed', () => {
+  const actionJob = circleJob('source-actionlint');
+  const actionWorkflow = circleWorkflow('source-actionlint-one-shot-20261109');
+  for (const required of [
+    'test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"',
+    'test "$CIRCLE_BRANCH" = "ci/rescue-external-pr-quality-20261109"',
+    'Privileged variable forbidden in source Actionlint job',
+    '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8',
+    'sha256sum --check -',
+    '/tmp/actionlint -color=false',
+    'set -euo pipefail',
+  ]) assert.ok(actionJob.includes(required), 'Missing fail-closed Actionlint invariant: ' + required);
+  assert.match(actionWorkflow, /when: pipeline\.event\.name == "pull_request"/);
+  assert.match(actionWorkflow, /only:\n\s+- ci\/rescue-external-pr-quality-20261109/);
+  assert.doesNotMatch(actionJob, /context:|npm run deploy|curl.*supabase|continue-on-error:\s*true|allow_failure:\s*true/);
+});
