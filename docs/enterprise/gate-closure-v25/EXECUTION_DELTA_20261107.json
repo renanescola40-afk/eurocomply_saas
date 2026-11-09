@@ -1,0 +1,159 @@
+{
+  "schema": "risck-comply.enterprise-execution-delta.v1",
+  "recorded_date": "2026-11-07",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "canonical_ledger": "docs/enterprise/gate-closure-v25/ACCEPTANCE_LEDGER.json",
+  "purpose": "Evidence-backed execution supplement; this does not grant formal acceptance or modify frozen denominators.",
+  "acceptance_snapshot": {
+    "formal_gates_accepted": 0,
+    "formal_gates_total": 24,
+    "formal_atomic_controls_accepted": 0,
+    "formal_atomic_controls_total": 38,
+    "historical_source_passes_reported_by_canonical_ledger": {
+      "gates": 2,
+      "controls": 2
+    },
+    "formally_accepted_changes_in_this_delta": 0
+  },
+  "execution": [
+    {
+      "pr": 2613,
+      "branch": "ci/circleci-pr-validation-20261104",
+      "head_sha": "fc3b94d488f379766a14cb9ec3f9d37ce8c7c3e1",
+      "implementation": "Added the #2622 onboarding branch to the manual exact-SHA target allowlist; retained full-SHA syntax, remote-ref equality, detached checkout, source-only credential denylist, production-write identity fields, and isolated Node 22 validation.",
+      "tests": [
+        {
+          "command": "CircleCI pr-source-validation",
+          "result": "PASS",
+          "pipeline": 1286,
+          "job": 494
+        },
+        {
+          "command": "CircleCI pr-head-validation-manual against fix/p0e-enforce-seat-actor-same-tenant-20261106 at b2e1371e3714fe498827ed75e71adce57bcda3b5",
+          "result": "PASS",
+          "pipeline": 1286,
+          "job": 493
+        },
+        {
+          "command": "npm ci --ignore-scripts --no-audit --no-fund",
+          "result": "PASS"
+        },
+        {
+          "command": "npm run security:package-lock",
+          "result": "PASS"
+        },
+        {
+          "command": "npm run lint",
+          "result": "PASS"
+        },
+        {
+          "command": "npm run typecheck",
+          "result": "PASS"
+        },
+        {
+          "command": "npm run test -- --reporter=verbose",
+          "result": "PASS"
+        },
+        {
+          "command": "node --experimental-strip-types --test tests/product/evidence-upload-recovery.test.mjs",
+          "result": "PASS"
+        },
+        {
+          "command": "Present specialist source regressions",
+          "result": "PASS"
+        }
+      ],
+      "evidence": {
+        "ci_config_sha": "fc3b94d488f379766a14cb9ec3f9d37ce8c7c3e1",
+        "target_repository": "renanescola40-afk/eurocomply_saas",
+        "target_branch": "fix/p0e-enforce-seat-actor-same-tenant-20261106",
+        "target_commit_sha": "b2e1371e3714fe498827ed75e71adce57bcda3b5",
+        "identity_artifact": "CircleCI pipeline 1286, job 493, validated-pr-head-exact-sha/identity.json; provider credential presence false; production writes 0",
+        "provider_job_urls": [
+          "https://app.circleci.com/pipelines/github/renanescola40-afk/eurocomply_saas/1286/workflows/01fa1d6b-962b-48b5-a9f2-bb593b0cad22/jobs/494",
+          "https://app.circleci.com/pipelines/github/renanescola40-afk/eurocomply_saas/1286/workflows/730f3330-d2b7-4582-a5d6-10272e3a62c4/jobs/493"
+        ]
+      },
+      "negative_cases": {
+        "source_review": "Fail-closed code paths statically reviewed: disallowed branch, malformed SHA, non-head remote SHA, config branch/SHA mismatch, and any named provider credential cause job failure.",
+        "executed_negative_cases": "No invalid-parameter or injected-credential CI jobs were executed; these runtime negative cases remain unverified."
+      },
+      "review": "One independent approval predates current fc3b94d head and is not current-head approval; reviewer remains requested.",
+      "formal_acceptance": "NOT_GRANTED"
+    },
+    {
+      "pr": 2630,
+      "branch": "fix/p0e-enforce-seat-actor-same-tenant-20261106",
+      "head_sha": "b2e1371e3714fe498827ed75e71adce57bcda3b5",
+      "implementation": "Adjusted the Evidence Vault recovery source assertion to accept the implementation's multiline .download( objectPath call. Runtime code and immutable/fail-closed behavior were not changed.",
+      "tests": [
+        {
+          "command": "CircleCI pipeline 1286 exact-SHA manual validation",
+          "job": 493,
+          "result": "PASS"
+        },
+        {
+          "command": "npm ci --ignore-scripts --no-audit --no-fund",
+          "result": "PASS"
+        },
+        {
+          "command": "npm run security:package-lock",
+          "result": "PASS"
+        },
+        {
+          "command": "npm run lint",
+          "result": "PASS"
+        },
+        {
+          "command": "npm run typecheck",
+          "result": "PASS"
+        },
+        {
+          "command": "npm run test -- --reporter=verbose",
+          "result": "PASS"
+        },
+        {
+          "command": "Evidence Vault upload-recovery regression suite",
+          "result": "PASS"
+        },
+        {
+          "command": "Present specialist source regressions",
+          "result": "PASS"
+        }
+      ],
+      "independent_review": "No approval reported in this execution.",
+      "formal_acceptance": "NOT_GRANTED"
+    },
+    {
+      "pr": 2631,
+      "head_sha": "3e075f49b3dae12fcac8ca724626f89e3a03e287",
+      "dependency_state": "AWAITING_INDEPENDENT_REVIEW",
+      "review_request": "sastestezoer-commits remains requested; zero submitted reviews observed on 2026-11-07.",
+      "existing_exact_sha_gitleaks_evidence": "CircleCI pipeline 1262 mandatory findings gate reported zero findings; no new run in this execution.",
+      "integration": "Not merged; PR #2622 remains at ed189e3597bd309bed1441674a661fcb2c6865b."
+    },
+    {
+      "pr": 2622,
+      "head_sha": "ed189e3597bd309bed1441674a661fcb2c6865b8",
+      "validation": "No new validation run against this HEAD. Do not reuse #2631, #2613, or #2630 results as acceptance evidence for #2622.",
+      "integration": "No merge performed."
+    }
+  ],
+  "status_dimensions": {
+    "implemented": [
+      "PR #2613 allowlist and exact-SHA validation infrastructure",
+      "PR #2630 test assertion correction"
+    ],
+    "tested": [
+      "CircleCI pipeline #1286 source validation and exact-target full validation passed"
+    ],
+    "evidence_verified": [
+      "Exact target identity artifact readback matches repository, branch, and target SHA; productionWrites=0; providerCredentialsPresent=false"
+    ],
+    "independently_approved": [
+      "None current for the reported heads; PR #2631 reviewer request pending; PR #2613 prior approval predates current head"
+    ],
+    "formally_accepted": []
+  },
+  "boundary": "Engineering completion is distinct from formal gate acceptance. This supplement changes no gate or atomic-control status. No protected-main merge, production write, email, Stripe LIVE mutation, or new paid execution was performed."
+}
