@@ -31,6 +31,17 @@ describe('public procurement pack', () => {
     expect(assessment?.summary).toContain('clean independent retest/terminal assurance remains open');
   });
 
+  it('separates active CI provider from historical GitHub Actions runner evidence', () => {
+    const github = procurementProviders.find((provider) => provider.name === 'GitHub');
+    const circleci = procurementProviders.find((provider) => provider.name === 'CircleCI');
+
+    expect(github?.regionDisclosure).toContain('budget-blocked');
+    expect(github?.regionDisclosure).toMatch(/GitHub-hosted runners[^\\n]{0,260}(DPA|transfer)/i);
+    expect(circleci?.purpose).toContain('source-only');
+    expect(circleci?.regionDisclosure).toContain('account-specific DPA');
+    expect(procurementProviders.some((provider) => provider.name === 'GitHub Actions')).toBe(false);
+  });
+
   it('has unique control and document identifiers', () => {
     expect(new Set(procurementControls.map((control) => control.id)).size).toBe(procurementControls.length);
     expect(new Set(procurementDocuments.map((document) => document.path)).size).toBe(procurementDocuments.length);
