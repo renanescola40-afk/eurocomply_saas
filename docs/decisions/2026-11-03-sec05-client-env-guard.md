@@ -1,6 +1,10 @@
 # SEC-05 client-side environment reference detection (2026-11-03)
 
-## Context and observed defect
+- **Status:** Proposed
+- **Date:** 2026-11-03
+- **Scope:** Source-only SEC-05 client environment guard; no formal acceptance
+
+## Context
 
 The existing `scripts/security/check-client-boundaries.mjs` only matched direct `process.env.SERVER_SECRET` accesses and ran in report-only mode unless an optional environment flag was set. As a result, bracket access, destructuring, computed access and optional chaining could avoid detection, and even detected findings could exit with code 0 in the default security CI invocation.
 
@@ -8,9 +12,17 @@ The existing `scripts/security/check-client-boundaries.mjs` only matched direct 
 
 Fail closed on any client-boundary `process.env` access that is not a direct, static `process.env.NEXT_PUBLIC_*` property. Do not rely on optional flags to make the scanner fail for findings. The check remains source-level defense-in-depth; no claim is made that all client bundles or runtime logs have been scanned.
 
-## Safety and compatibility
+## Risks and trade-offs
 
-No runtime application or database code is changed. False positives in client-source strings or comments may need targeted parser-level refinement; any adjustment must preserve the fail-closed guarantee. Run `node --test tests/security/client-env-access.test.mjs`, then the full source/security/CI suites on the accepted SHA before merge. Revert this isolated change if a validated false positive prevents a legitimate build, and correct the analysis rather than relaxing the gate.
+No runtime application or database code is changed. False positives in client-source strings or comments may need targeted parser-level refinement; any adjustment must preserve the fail-closed guarantee.
+
+## Validation
+
+Run `node --test tests/security/client-env-access.test.mjs`, then the full source/security/CI suites on the accepted SHA before merge.
+
+## Rollback
+
+Revert this isolated change if a validated false positive prevents a legitimate build, and correct the analysis rather than relaxing the gate.
 
 ## Gate and release boundary
 
