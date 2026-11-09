@@ -157,10 +157,24 @@ function isTechnicalLiteralContext(line) {
 
 function scanValue(source, value) {
   const normalized = value.replace(/\\n/g, ' ').trim();
-  if (!normalized || normalized.endsWith('?') || isTechnicalString(normalized) || SAFE_NEGATION_CONTEXT.test(normalized)) return;
+  if (!normalized || isTechnicalString(normalized)) return;
 
-  for (const { label, pattern } of PROHIBITED_CLAIM_PATTERNS) {
-    if (pattern.test(normalized)) failures.push(`${source}: possible ${label}`);
+  // Scope a disclaimer to its own clause. A later, separate promise must
+  // still be reported, even if the same string also contains "not"/"without".
+  for (const sentence of normalized.split(/(?<=[.!?;])\\s+|\\n+/u)) {
+    if (sentence.trim().endsWith('?')) continue;
+    for (const clause of sentence.split(/(?:,\\s*|\\s+[—–]\\s+|\\s+\\b(?:but|however|yet|although|and)\\b\\s+)/iu)) {
+      for (const { label, pattern } of PROHIBITED_CLAIM_PATTERNS) {
+        const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+        for (const match of clause.matchAll(globalPattern)) {
+          const index = match.index ?? 0;
+          const preceding = clause.slice(Math.max(0, index - 100), index);
+          if (!SAFE_NEGATION_CONTEXT.test(preceding)) {
+            failures.push(`${source}: possible ${label}`);
+          }
+        }
+      }
+    }
   }
 }
 
