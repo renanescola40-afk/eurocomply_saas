@@ -76,3 +76,13 @@ test('Gitleaks findings never return a fabricated success', () => {
   assert.ok(job.includes('ruleId:String(x.RuleID||"")'));
   assert.doesNotMatch(job, /continue-on-error: true|allow_failure: true/);
 });
+
+test('Gitleaks scans checked-out sources before npm install and Next build, with strict failure', () => {
+  const scan = job.indexOf('name: CI-00 Pinned Gitleaks source scan');
+  const install = job.indexOf('name: CI-01 Deterministic dependency install');
+  const build = job.indexOf('name: CI-07 Next.js build');
+  assert.ok(scan !== -1 && install !== -1 && build !== -1 && scan < install && install < build);
+  assert.match(job, /\/tmp\/gitleaks dir --redact --no-banner --exit-code 0/);
+  assert.match(job, /process\.exit\(rows\.length\?3:0\)/);
+  assert.doesNotMatch(job, /--no-git|--exclude-path|allow_failure:\s*true|continue-on-error:\s*true/);
+});

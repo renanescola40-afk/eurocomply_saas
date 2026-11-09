@@ -984,6 +984,18 @@ jobs:
           name: Verify external CI safeguards
           command: node --test tests/ci/external-circleci-rescue-contract.test.mjs
       - run:
+          name: CI-00 Pinned Gitleaks source scan before dependency install
+          command: |
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_8.30.1_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 2 --retry-delay 2 "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/$archive" -o "/tmp/$archive"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/$archive" | sha256sum --check -
+            tar -xzf "/tmp/$archive" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/external-pr-gitleaks.json .
+            node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync("/tmp/external-pr-gitleaks.json","utf8"));const proof={kind:"RISCK_EXTERNAL_PR_CI_GITLEAKS",sourceSha:process.env.CIRCLE_SHA1,findingCount:rows.length,findings:rows.map(x=>({file:String(x.File||""),line:Number(x.StartLine||0),ruleId:String(x.RuleID||"")}))};fs.writeFileSync("artifacts/external-pr-ci/gitleaks-redacted.json",JSON.stringify(proof,null,2)+"\n");console.log("Redacted Gitleaks finding count: "+rows.length);process.exit(rows.length?3:0)'
+      - run:
           name: CI-01 Deterministic dependency install
           command: npm ci --ignore-scripts --no-audit --no-fund
       - run:
@@ -1015,18 +1027,6 @@ jobs:
       - run:
           name: CI-10 Supply-chain dependency audit
           command: npm run security:npm-audit:all
-      - run:
-          name: CI-10 Pinned Gitleaks scan and redacted evidence
-          command: |
-            set -euo pipefail
-            version=8.30.1
-            archive="gitleaks_8.30.1_linux_x64.tar.gz"
-            curl --fail --silent --show-error --location --retry 2 --retry-delay 2 "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/$archive" -o "/tmp/$archive"
-            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/$archive" | sha256sum --check -
-            tar -xzf "/tmp/$archive" -C /tmp gitleaks
-            chmod 0755 /tmp/gitleaks
-            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/external-pr-gitleaks.json .
-            node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync("/tmp/external-pr-gitleaks.json","utf8"));const proof={kind:"RISCK_EXTERNAL_PR_CI_GITLEAKS",sourceSha:process.env.CIRCLE_SHA1,findingCount:rows.length,findings:rows.map(x=>({file:String(x.File||""),line:Number(x.StartLine||0),ruleId:String(x.RuleID||"")}))};fs.writeFileSync("artifacts/external-pr-ci/gitleaks-redacted.json",JSON.stringify(proof,null,2)+"\n");console.log("Redacted Gitleaks finding count: "+rows.length);process.exit(rows.length?3:0)'
       - store_artifacts:
           path: artifacts/external-pr-ci
           destination: external-pr-ci-exact-sha
