@@ -2,6 +2,9 @@ version: 2.1
 
 # Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
 parameters:
+  run_external_pr_quality:
+    type: boolean
+    default: false
   # Manual, source-only validation for Dependabot PR #2590; never auto-run.
   run_pr2590_workflow_validation:
     type: boolean
@@ -887,7 +890,103 @@ jobs:
           path: artifacts/sec02-source
           destination: sec02-source-only-exact-sha
 
+  # CI RESCUE: source-only, exact-checkout test executor.
+  # Stage is intentionally opt-in until the CURRENT CircleCI Free credits,
+  # project trigger type and GitHub status delivery are verified in provider UI.
+  external-pr-quality:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: large
+    working_directory: ~/project
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+      NODE_OPTIONS: --max-old-space-size=5120
+    steps:
+      - checkout
+      - run:
+          name: Fail-closed exact SHA, stage branch and secret isolation
+          command: |
+            set -euo pipefail
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test "$CIRCLE_BRANCH" = "ci/rescue-external-pr-quality-20261109"
+            test "$(node --version)" = "v22.16.0"
+            while IFS='=' read -r name _; do
+              case "$name" in
+                CIRCLE_OIDC_TOKEN|CIRCLE_OIDC_TOKEN_V2|CIRCLE_OIDC_TOKEN_V3|NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY) ;;
+                DATABASE_URL|DIRECT_URL|SUPABASE_*|STRIPE_*|VERCEL_*|RESEND_*|SENTRY_*|QA_DB_*|PGPASSWORD|AWS_*|*_TOKEN|*_SECRET|*_API_KEY|*_PASSWORD|*_PRIVATE_KEY)
+                  echo "CI isolation refused a provider credential variable name" >&2
+                  exit 1 ;;
+              esac
+            done < <(env)
+            mkdir -p artifacts/external-pr-ci
+            printf '{"scope":"source-only","commitSha":"%s","branch":"%s","formalGateAcceptance":false}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/external-pr-ci/identity.json
+      - run:
+          name: Verify external CI safeguards
+          command: node --test tests/ci/external-circleci-rescue-contract.test.mjs
+      - run:
+          name: CI-01 Deterministic dependency install
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: CI-02 Verify package-lock integrity
+          command: npm run security:package-lock
+      - run:
+          name: CI-03 ESLint
+          command: npm run lint
+      - run:
+          name: CI-04 TypeScript
+          command: npm run typecheck
+      - run:
+          name: CI-05 Application unit tests
+          command: npm run test
+      - run:
+          name: CI-06 Existing source security policies
+          command: node scripts/security/run-security-ci-without-audit.mjs
+      - run:
+          name: CI-07 Next.js build with synthetic public inputs
+          command: npm run build
+      - run:
+          name: CI-08 Validate generated routes
+          command: npm run quality:routes
+      - run:
+          name: CI-09 Enterprise evidence source contract tests (not acceptance)
+          command: |
+            set -euo pipefail
+            node --test tests/enterprise-evidence/validate-evidence.test.mjs tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
+      - run:
+          name: CI-10 Supply-chain dependency audit
+          command: npm run security:npm-audit:all
+      - run:
+          name: CI-10 Pinned Gitleaks scan and redacted evidence
+          command: |
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_8.30.1_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 2 --retry-delay 2 "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/$archive" -o "/tmp/$archive"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/$archive" | sha256sum --check -
+            tar -xzf "/tmp/$archive" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/external-pr-gitleaks.json .
+            node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync("/tmp/external-pr-gitleaks.json","utf8"));const proof={kind:"RISCK_EXTERNAL_PR_CI_GITLEAKS",sourceSha:process.env.CIRCLE_SHA1,findingCount:rows.length,findings:rows.map(x=>({file:String(x.File||""),line:Number(x.StartLine||0),ruleId:String(x.RuleID||"")}))};fs.writeFileSync("artifacts/external-pr-ci/gitleaks-redacted.json",JSON.stringify(proof,null,2)+"\n");console.log("Redacted Gitleaks finding count: "+rows.length);process.exit(rows.length?3:0)'
+      - store_artifacts:
+          path: artifacts/external-pr-ci
+          destination: external-pr-ci-exact-sha
+
 workflows:
+
+  # Staged external replacement for GitHub Actions source checks.
+  # Do not remove manual guard/branch scope before confirming CircleCI credits,
+  # Only build pull requests trigger, GitHub status readback and code review.
+  external-pr-quality-manual:
+    when: << pipeline.parameters.run_external_pr_quality >>
+    jobs:
+      - external-pr-quality:
+          filters:
+            branches:
+              only:
+                - ci/rescue-external-pr-quality-20261109
+
 
   # Explicit opt-in only: no source push, PR event, or default pipeline may run this job.
   a01-sec01-qa-provider-manual:
