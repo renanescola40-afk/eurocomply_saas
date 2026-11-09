@@ -65,3 +65,57 @@ test('non-QA Preview is unchanged, because QA isolation guard lives separately',
     NEXT_PUBLIC_SUPABASE_URL: 'https://staging.example.org',
   }), { allowed: true, reason: 'not_qa' });
 });
+
+test('QA URL trailing slash must not accidentally allow signed billing events', () => {
+  assert.deepEqual(evaluateQaWebhookAdmission({
+    VERCEL_ENV: 'preview',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://zrxrrfbllsxtleyxjpsz.supabase.co/',
+  }), { allowed: false, reason: 'qa_environment_mismatch' });
+});
+
+test('QA uppercase host and standard HTTPS port are recognized as QA', () => {
+  assert.deepEqual(evaluateQaWebhookAdmission({
+    VERCEL_ENV: 'preview',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://ZRXRRFBLLSXTLEYXJPSZ.supabase.co:443',
+  }), { allowed: false, reason: 'qa_environment_mismatch' });
+});
+
+test('QA URL trailing DNS dot does not bypass environment-mismatch block', () => {
+  assert.deepEqual(evaluateQaWebhookAdmission({
+    VERCEL_ENV: 'preview',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://zrxrrfbllsxtleyxjpsz.supabase.co./',
+  }), { allowed: false, reason: 'qa_environment_mismatch' });
+});
+
+test('QA URL query and path must not bypass the block', () => {
+  assert.deepEqual(evaluateQaWebhookAdmission({
+    VERCEL_ENV: 'preview',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://zrxrrfbllsxtleyxjpsz.supabase.co/rest/v1?foo=bar',
+  }), { allowed: false, reason: 'qa_environment_mismatch' });
+});
+
+test('targeted QA environment does not allow production-backed webhook processing', () => {
+  assert.deepEqual(evaluateQaWebhookAdmission({
+    VERCEL_ENV: 'preview',
+    VERCEL_TARGET_ENV: 'qa',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co',
+  }), { allowed: false, reason: 'qa_environment_mismatch' });
+});
+
+test('QA hostname with username or insecure protocol remains rejected', () => {
+  for (const url of [
+    'http://zrxrrfbllsxtleyxjpsz.supabase.co',
+    'https://someone@zrxrrfbllsxtleyxjpsz.supabase.co',
+  ]) {
+    assert.deepEqual(evaluateQaWebhookAdmission({ ...qa, NEXT_PUBLIC_SUPABASE_URL: url }), {
+      allowed: false, reason: 'qa_environment_mismatch',
+    });
+  }
+});
+
+test('fake lookalike QA hostname stays outside QA identity', () => {
+  assert.deepEqual(evaluateQaWebhookAdmission({
+    VERCEL_ENV: 'preview',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://zrxrrfbllsxtleyxjpsz.supabase.co.attacker.example',
+  }), { allowed: true, reason: 'not_qa' });
+});

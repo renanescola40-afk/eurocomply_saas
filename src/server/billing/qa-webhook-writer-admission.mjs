@@ -2,7 +2,21 @@
 // non-RLS-bypassing QA persistence writer is actually implemented and attested.
 // Provider signature validation remains in the route, before this decision.
 // This is not a credential check, an event writer or an acceptance proof.
-const QA_SUPABASE_URL = 'https://zrxrrfbllsxtleyxjpsz.supabase.co';
+const QA_SUPABASE_HOST = 'zrxrrfbllsxtleyxjpsz.supabase.co';
+
+function getQaSupabaseEndpoint(input) {
+  try {
+    const url = new URL(String(input || ''));
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
+    return {
+      matchesQaHost: hostname === QA_SUPABASE_HOST,
+      validBaseUrl: url.protocol === 'https:' && !url.username && !url.password &&
+        !url.port && (url.pathname === '/' || url.pathname === '') && !url.search && !url.hash,
+    };
+  } catch {
+    return { matchesQaHost: false, validBaseUrl: false };
+  }
+}
 const PRIVILEGED_KEYS = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_SERVICE_KEY',
@@ -16,10 +30,11 @@ const PRIVILEGED_KEYS = [
  */
 export function evaluateQaWebhookAdmission(env) {
   const qaFlag = env.RISCK_QA_ENVIRONMENT === 'true';
-  const qaDatabase = env.NEXT_PUBLIC_SUPABASE_URL === QA_SUPABASE_URL;
-  if (!qaFlag && !qaDatabase) return { allowed: true, reason: 'not_qa' };
+  const qaTarget = env.VERCEL_TARGET_ENV === 'qa' || env.VERCEL_ENV === 'qa';
+  const qaDatabase = getQaSupabaseEndpoint(env.NEXT_PUBLIC_SUPABASE_URL);
+  if (!qaFlag && !qaTarget && !qaDatabase.matchesQaHost) return { allowed: true, reason: 'not_qa' };
 
-  if (!qaFlag || !qaDatabase || env.VERCEL_ENV !== 'preview') {
+  if (!qaFlag || !qaDatabase.matchesQaHost || !qaDatabase.validBaseUrl || env.VERCEL_ENV !== 'preview') {
     return { allowed: false, reason: 'qa_environment_mismatch' };
   }
   if (PRIVILEGED_KEYS.some((name) => Boolean(env[name]))) {
