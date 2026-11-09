@@ -779,7 +779,7 @@ jobs:
             node scripts/security/run-security-ci-without-audit.mjs
             node scripts/release/score-g1-product-ready.mjs > artifacts/circleci-enterprise/score.json
             node -e 'const r=require("./artifacts/circleci-enterprise/score.json");if(!r.valid||r.PRODUCTION_RELEASE_AUTHORIZED||r.productionReleaseAuthorized){process.exit(1)}'
-            node -e 'const fs=require("fs");fs.writeFileSync("artifacts/circleci-enterprise/identity.json",JSON.stringify({kind:"CIRCLECI_ENTERPRISE_SOURCE_ONLY",sha:process.env.CIRCLE_SHA1,branch:process.env.CIRCLE_BRANCH,pipeline:process.env.CIRCLE_WORKFLOW_ID||null,qaRuntime:"NOT_EXECUTED",historicalReplay:"NOT_EXECUTED",stripeTestRuntime:"NOT_EXECUTED",formalAcceptance:"NOT_GRANTED",productionWrites:0},null,2))'
+            node -e 'const fs=require("fs");fs.writeFileSync("artifacts/circleci-enterprise/identity.json",JSON.stringify({kind:"CIRCLECI_ENTERPRISE_SOURCE_ONLY",sha:process.env.CIRCLE_SHA1,branch:process.env.CIRCLE_BRANCH,pipeline:process.env.CIRCLE_WORKFLOW_ID||null,qaRuntime:"NOT_EXECUTED",historicalReplay:"NOT_EXECUTED",stripeTestRuntime:"NOT_EXECUTED",formalAcceptance:"NOT_GRANTED",productionWrites:0},null,2)+"\\n")'
       - store_artifacts:
           path: artifacts/circleci-enterprise
           destination: enterprise-source-only-exact-sha
@@ -940,7 +940,7 @@ jobs:
           command: |
             set -euo pipefail
             mkdir -p artifacts/pr-source-autopilot
-            node -e 'const fs=require("fs"); const s=process.env.CIRCLE_SHA1; if(!s||require("child_process").execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim()!==s) process.exit(1); fs.writeFileSync("artifacts/pr-source-autopilot/proof.json",JSON.stringify({schema:"risck-pr-source-autopilot-v1",source_sha:s,branch:process.env.CIRCLE_BRANCH||null,workflow_id:process.env.CIRCLE_WORKFLOW_ID||null,execution:"SOURCE_ONLY",checks:"lockfile,offline-security,lint,typecheck,unit-tests",provider_calls:"NOT_EXECUTED",qa_runtime:"NOT_EXECUTED",production_writes:0,formal_acceptance:"NOT_GRANTED"},null,2)+"\\n")'
+            node -e 'const fs=require("fs"); const s=process.env.CIRCLE_SHA1; if(!s||require("child_process").execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim()!==s) process.exit(1); fs.writeFileSync("artifacts/pr-source-autopilot/proof.json",JSON.stringify({schema:"risck-pr-source-autopilot-v1",source_sha:s,branch:process.env.CIRCLE_BRANCH||null,workflow_id:process.env.CIRCLE_WORKFLOW_ID||null,execution:"SOURCE_ONLY",checks:"lockfile,offline-security,lint,typecheck,unit-tests",provider_calls:"NOT_EXECUTED",qa_runtime:"NOT_EXECUTED",production_writes:0,formal_acceptance:"NOT_GRANTED"},null,2))'
       - store_artifacts:
           path: artifacts/pr-source-autopilot
           destination: pr-source-autopilot-exact-sha
