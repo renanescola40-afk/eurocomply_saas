@@ -3,7 +3,7 @@
 // matched source lines, commit messages, authors, emails or raw fingerprints.
 // The Gitleaks scan must retain its original fail-closed exit status.
 import { createHash } from 'node:crypto';
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, fstatSync, openSync, readSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
@@ -58,12 +58,34 @@ export function sanitizeFindings(raw, sourceSha) {
   };
 }
 
+// Open exactly once and read no more than MAX_RAW_BYTES from that descriptor.
+// This avoids path-based check/use races (CodeQL js/file-system-race).
+export function readBoundedGitleaksReport(rawPath) {
+  const fd = openSync(rawPath, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    if (!fstatSync(fd).isFile()) throw new Error('raw report is not a regular file');
+    const parts = [];
+    let count = 0;
+    while (true) {
+      // A single additional byte is enough to prove the cap was exceeded.
+      const buffer = Buffer.allocUnsafe(Math.min(64 * 1024, MAX_RAW_BYTES + 1 - count));
+      const bytes = readSync(fd, buffer, 0, buffer.length, null);
+      if (bytes === 0) break;
+      count += bytes;
+      if (count > MAX_RAW_BYTES) throw new Error('raw report exceeds safe parse size');
+      parts.push(buffer.subarray(0, bytes));
+    }
+    return Buffer.concat(parts).toString('utf8');
+  } finally {
+    closeSync(fd);
+  }
+}
+
 export function runCli() {
   const [rawPath, safePath] = process.argv.slice(2);
   const sourceSha = process.env.RISCK_ASSESSED_SOURCE_SHA;
   if (!rawPath || !safePath) throw new Error('missing report paths');
-  if (statSync(rawPath).size > MAX_RAW_BYTES) throw new Error('raw report exceeds safe parse size');
-  const output = sanitizeFindings(JSON.parse(readFileSync(rawPath, 'utf8')), sourceSha);
+  const output = sanitizeFindings(JSON.parse(readBoundedGitleaksReport(rawPath)), sourceSha);
   writeFileSync(safePath, JSON.stringify(output, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
   console.log('Sanitized ' + output.findingCount + ' Gitleaks finding locators; raw values are not retained in the artifact.');
 }

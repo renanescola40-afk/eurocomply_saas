@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sanitizeFindings } from '../../scripts/security/sanitize-gitleaks-findings.mjs';
+import { sanitizeFindings, readBoundedGitleaksReport } from '../../scripts/security/sanitize-gitleaks-findings.mjs';
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const SOURCE = 'a'.repeat(40);
 const FIXTURE = Object.freeze({
@@ -82,4 +85,27 @@ test('empty reports stay transparent without being mislabeled clean history proo
   assert.equal(output.findingCount, 0);
   assert.deepEqual(output.findings, []);
   assert.equal(output.proofClass, 'REDACTED_LOCATOR_ONLY_NOT_SECRET_VALIDATION');
+});
+
+
+test('reads a bounded regular Gitleaks report from one file descriptor', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'risck-gitleaks-safe-read-'));
+  try {
+    const path = join(dir, 'report.json');
+    writeFileSync(path, '[{"RuleID":"example"}]');
+    assert.equal(readBoundedGitleaksReport(path), '[{"RuleID":"example"}]');
+    writeFileSync(path, 'x'.repeat(5_000_001));
+    assert.throws(() => readBoundedGitleaksReport(path), /raw report exceeds safe parse size/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('rejects symbolic-link report substitution instead of following it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'risck-gitleaks-no-follow-'));
+  try {
+    const target = join(dir, 'target.json');
+    const link = join(dir, 'link.json');
+    writeFileSync(target, '{}');
+    symlinkSync(target, link);
+    assert.throws(() => readBoundedGitleaksReport(link));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
