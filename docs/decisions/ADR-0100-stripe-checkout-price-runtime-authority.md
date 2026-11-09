@@ -1,7 +1,7 @@
 # ADR-0100: Fail-closed Stripe Price authority and hosted Checkout reuse
 
 - **Status:** Proposed
-- **Review:** Pending qualified review and exact-head CI
+- **Review state:** Pending qualified review and exact-head CI
 - **Date:** 2026-11-03
 - **Owner:** NORMAL 2 billing workstream
 - **Scope:** initial Essential/Professional Checkout and self-serve subscription lifecycle

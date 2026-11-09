@@ -1,8 +1,8 @@
 # A-04 / SEC-05: independent security evidence admission contract (2026-11-04)
 
-- **Status:** Proposed
-- **Date:** 2026-11-04
-- **Review:** Source-only verifier implementation proposed for qualified review. **SEC-05 is NOT_VERIFIED; A-04 is NOT ACCEPTED.**
+Status: Proposed
+
+Status: source-only verifier implementation proposed for qualified review. **SEC-05 is NOT_VERIFIED; A-04 is NOT ACCEPTED.**
 
 ## Context
 
@@ -62,3 +62,16 @@ CircleCI and qualified independent review are still required.
 
 Roll back this small source change via the governed PR if it conflicts with the accepted
 formal contract. Do not set any registry status to PASS to make a test green.
+
+## Decision
+
+Implement only a SEC-05-specific evidence admission verifier while preserving rejection of every other unknown criterion. Require exact-source and production SHA binding, separately attributable provider artifacts, and qualified independent verification. Synthetic fixtures prove parser and denial behavior only; they do not satisfy provider provenance or approve SEC-05.
+
+## Rollback
+
+If this source-only verifier introduces a verified regression, revert the isolated verifier change through an independently reviewed PR and rerun its adversarial tests. Preserve the frozen 24-gate and 38-control denominators, fail-closed unknown-control handling and the prohibition on recording unverified provider evidence as PASS.
+
+## Risks and trade-offs
+
+A syntactically valid assertion can contain fabricated or stale provider URLs, timestamps, or fingerprints. Requiring independent provider readback and deployment-bound evidence slows admission but prevents unsupported compliance claims. This verifier cannot replace the eight provider proof kinds or qualified review.
+
