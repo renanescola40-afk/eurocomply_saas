@@ -165,4 +165,49 @@ describe('customer-facing claims guard', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('possible unsupported signed retention export');
   });
+  it('does not let a disclaimer in one sentence hide a later compliance guarantee', () => {
+    const result = runCheckerForFixture(
+      "const copy = 'We do not claim certification. We are fully compliant.';",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible full or guaranteed compliance claim');
+  });
+
+  it('detects an unsupported claim following a negated clause', () => {
+    const result = runCheckerForFixture(
+      "const copy = 'We are not certified but we are enterprise-ready.';",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible enterprise or procurement readiness claim');
+  });
+
+  it('does not allow a trailing disclaimer to hide a preceding readiness claim', () => {
+    const result = runCheckerForFixture(
+      "const copy = 'We provide procurement-ready answers — without unsupported legal claims.';",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible enterprise or procurement readiness claim');
+  });
+
+  it('does not let a question exempt a later unsupported claim', () => {
+    const result = runCheckerForFixture(
+      "const copy = 'Are lawyers still needed? We are certified.';",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible unsupported certification or pentest claim');
+  });
+
+  it('still permits genuine same-clause and separate-sentence non-claims', () => {
+    const result = runCheckerForFixture(
+      "const copy = 'We are not certified, and we do not guarantee compliance. This is not enterprise-ready.';",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Customer-facing claims: ok');
+  });
+
 });
