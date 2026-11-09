@@ -5,3 +5,13 @@ b372a0598a199fc2941dae7fd998a32b9215b792:src/components/analytics/posthog-script
 06adc0285c15759092e3b5196266ec8b23aa34d2:src/lib/security/env-guard.ts:risck-comply-public-env-sensitive-name:7
 06adc0285c15759092e3b5196266ec8b23aa34d2:src/lib/security/env-guard.ts:risck-comply-public-env-sensitive-name:8
 9a1a6bf5be37c21365c372067b115686922f6654:tests/security/supabase-client-boundary-long-header.test.mjs:risck-comply-public-env-sensitive-name:59
+
+# SEC-05 historical negative fixtures only (reviewable 2026-11-09 disposition)
+# Exact immutable commit/file/rule/line fingerprints; provider-secret-value rule remains active.
+# Source: GitHub Actions Gitleaks history run 42717923314, sanitized metadata; no raw values.
+77c597fb80c806f8d7492bc6e2d97b688a0574b9:tests/security/client-env-access.test.mjs:risck-comply-public-env-sensitive-name:13
+a00bed55bf285ac8135e0e7e066f96fd1fa90e84:tests/security/client-env-access.test.mjs:risck-comply-public-env-sensitive-name:138
+a00bed55bf285ac8135e0e7e066f96fd1fa90e84:docs/decisions/2026-11-03-sec05-client-env-guard.md:risck-comply-public-env-sensitive-name:33
+d36f4493855bc7b4ec2b874cf52cb04303acfcc3:tests/security/client-env-access.test.mjs:risck-comply-public-env-sensitive-name:138
+d36f4493855bc7b4ec2b874cf52cb04303acfcc3:docs/decisions/2026-11-03-sec05-client-env-guard.md:risck-comply-public-env-sensitive-name:33
+f6abcc43ac76f355e8879e8c24ad5d536f5eab26:tests/security/client-env-access.test.mjs:risck-comply-public-env-sensitive-name:13
