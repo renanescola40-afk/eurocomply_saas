@@ -75,7 +75,7 @@ const ROLE_PERMISSIONS: Record<OrganizationRole, OrganizationPermission[]> = {
   ],
 };
 
-export function normalizeOrganizationRole(role: string | null | undefined): OrganizationRole {
+export function parseOrganizationRole(role: string | null | undefined): OrganizationRole | null {
   const normalized = String(role ?? '')
     .trim()
     .toLowerCase()
@@ -89,11 +89,18 @@ export function normalizeOrganizationRole(role: string | null | undefined): Orga
   if (['visualizador', 'viewer', 'read_only', 'readonly', 'leitor'].includes(normalized)) return 'viewer';
   if (['member', 'membro'].includes(normalized)) return 'member';
 
-  return 'viewer';
+  return null;
+}
+
+// Display-only fallback. Server authorization must use parseOrganizationRole,
+// which denies unknown role values rather than treating them as a viewer.
+export function normalizeOrganizationRole(role: string | null | undefined): OrganizationRole {
+  return parseOrganizationRole(role) ?? 'viewer';
 }
 
 export function getRolePermissions(role: string | null | undefined) {
-  return [...ROLE_PERMISSIONS[normalizeOrganizationRole(role)]];
+  const verifiedRole = parseOrganizationRole(role);
+  return verifiedRole ? [...ROLE_PERMISSIONS[verifiedRole]] : [];
 }
 
 export function getOrganizationPermissions(role: string | null | undefined) {
@@ -108,10 +115,8 @@ export function getOrganizationPermissionMatrix() {
 }
 
 export function roleHasPermission(role: string | null | undefined, permission: OrganizationPermission) {
-  if (!role) return false;
-
-  const normalizedRole = normalizeOrganizationRole(role);
-  return ROLE_PERMISSIONS[normalizedRole].includes(permission);
+  const verifiedRole = parseOrganizationRole(role);
+  return verifiedRole ? ROLE_PERMISSIONS[verifiedRole].includes(permission) : false;
 }
 
 export const hasOrganizationPermission = roleHasPermission;

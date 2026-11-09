@@ -33,6 +33,17 @@ describe('billing Stripe price entitlements', () => {
     expect(getBillingPlanIdForStripePriceId('price_unknown')).toBeUndefined();
   });
 
+  it('refuses a Price ID shared by distinct plan tiers, without rejecting same-tier aliases', () => {
+    process.env['STRIPE_' + 'PRICE_ESSENTIAL_MONTHLY'] = 'price_shared';
+    process.env['STRIPE_' + 'PRICE_PROFESSIONAL_MONTHLY'] = 'price_shared';
+    expect(getBillingPlanIdForStripePriceId('price_shared')).toBeUndefined();
+
+    process.env['STRIPE_' + 'PRICE_PROFESSIONAL_MONTHLY'] = 'price_professional_unique';
+    process.env['STRIPE_' + 'PRICE_STARTER_MONTHLY'] = 'price_shared';
+    expect(getBillingPlanIdForStripePriceId('price_shared')).toBe('starter');
+    expect(getBillingPlanIdForStripePriceId('price_professional_unique')).toBe('professional');
+  });
+
   it('syncs webhook entitlements only from allowlisted Stripe price IDs', () => {
     expect(processor).toContain('resolveStripeSubscriptionPlan');
     expect(processor).toContain('getBillingPlanIdForStripePriceId(stripePriceId)');

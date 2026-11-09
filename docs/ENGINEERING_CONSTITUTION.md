@@ -269,6 +269,10 @@ Every pull request must include:
 
 Open pull requests as drafts. Never merge automatically.
 
+### Bounded delegated non-production integration
+
+The owner may delegate a direct merge to a specifically activated interactive operator under [DELEGATED_MERGE_POLICY.md](agents/DELEGATED_MERGE_POLICY.md). This requires human acceptance of the amendment, a separately reviewed human-merged activation record, effective provider protections, exact-HEAD successful mandatory checks, independent qualified human approval, additional security-critical review, resolved conversations, no material unresolved risks, verified absence of production side effects, and retained rollback/evidence. Missing or unreadable prerequisites block delegation. No self-approval, administrator bypass, automatic merge, protection reduction or production release authority is granted. Governance amendments and activations remain human-merged; existing classifier/autofix automation remains restricted.
+
 ## 13. Quality gates
 
 Never disable or bypass lint, typecheck, tests, E2E, build, security scans, CodeQL, Semgrep, Gitleaks, dependency review, or enterprise/release gates.
