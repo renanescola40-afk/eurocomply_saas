@@ -120,7 +120,7 @@ A required failed Vercel check keeps the PR open. A non-required provider result
 
 ## PR classifier and CI autofix authority
 
-Never merge a pull request automatically.
+Never merge a pull request automatically. A specifically activated interactive operator may perform a direct non-production merge only under [the bounded delegated merge policy](docs/agents/DELEGATED_MERGE_POLICY.md); this does not expand classifier or autofix authority.
 
 The workflow `.github/workflows/pr-autopilot.yml` is a read-only PR risk classifier. It may read trusted default-branch policy and add or remove classification labels. It must not:
 
@@ -133,13 +133,13 @@ The workflow `.github/workflows/pr-autopilot.yml` is a read-only PR risk classif
 - use an administrator bypass;
 - receive production or merge authority.
 
-The final merge action belongs to a human owner after branch protection accepts the exact current head SHA.
+The final merge action belongs to a human owner after branch protection accepts the exact current head SHA, unless the separate bounded delegated merge policy has been human-accepted and explicitly activated for the interactive operator and this PR. Without a valid activation and every per-merge condition, the human-only rule remains in force.
 
 Codex autofix may repair only the same trusted internal PR branch when `.github/pr-autopilot-policy.json` permits the complete file set. It is limited to bounded low-risk paths, at most the configured attempts, workspace-write without sudo, deterministic verification, remote-head comparison, and one repair commit. It must stop without a push when no safe correction exists.
 
 Authentication, authorization, RBAC, RLS, tenancy, Supabase authority, billing, Stripe, webhooks, migrations, security/release automation, secrets, audit evidence, legal material, package manifests, and governance files remain manual.
 
-## Human merge requirements
+## Human and bounded delegated merge requirements
 
 A human owner may merge only when:
 
@@ -149,6 +149,8 @@ A human owner may merge only when:
 - all review conversations are resolved;
 - GitHub reports a clean merge state;
 - no protected-path, incident, risk-acceptance, or owner-only blocker remains.
+
+A delegated operator must additionally satisfy every activation, qualified human review, protected-path, deployment-isolation and evidence condition in [DELEGATED_MERGE_POLICY.md](docs/agents/DELEGATED_MERGE_POLICY.md). Governance amendments and activations themselves always require human final merge. Existing automated workflows remain unable to merge.
 
 Never treat an earlier green SHA or stale approval as evidence for a newer push.
 
@@ -204,7 +206,7 @@ Work is done only when:
 - documentation and decision records are accurate;
 - rollback and evidence limitations are explicit;
 - the PR is reviewable and no automatic merge is enabled;
-- the final merge remains an explicit human action governed by branch protection.
+- the final merge is an explicit human action governed by branch protection, or a direct non-production action by an explicitly activated operator satisfying every condition of the bounded delegated merge policy.
 
 ## Persistent enterprise execution state
 

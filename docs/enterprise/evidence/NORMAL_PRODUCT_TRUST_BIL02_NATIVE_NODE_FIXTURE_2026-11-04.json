@@ -1,0 +1,69 @@
+{
+  "schema": "risck-comply.enterprise.bil02-native-node-fixture-test.v1",
+  "subject": "BIL-02",
+  "observedAt": "2026-11-04T11:33:30Z",
+  "source": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "canonicalPrNumber": 2598,
+    "candidateSourceHeadAtFetch": "367540595290dbc0ff3a552d52cb32b75aae7e48",
+    "helper": {
+      "path": "scripts/release/verify-g1-bil02-evidence.mjs",
+      "gitBlobSha": "5d89ebf8779e276964bc74344873795133749f80"
+    },
+    "test": {
+      "path": "tests/release/g1-bil02-evidence.test.mjs",
+      "gitBlobSha": "492c39bc4104e9c8b4d300648261c300fe83d5b2"
+    }
+  },
+  "execution": {
+    "runner": "isolated local Node 22.16.0, not GitHub Actions or CircleCI",
+    "command": "node --test tests/release/g1-bil02-evidence.test.mjs",
+    "testCount": 27,
+    "passed": 27,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "exitCode": 0,
+    "tapLogSha256": "40c50f86486f9708ca799d8c4dcb240cbfec27419d91807a8fbcf0b3c0133b3d",
+    "tapLogPath": "docs/enterprise/evidence/NORMAL_PRODUCT_TRUST_BIL02_NATIVE_NODE_TAP_2026-11-04.log",
+    "gitBlobShaHelperRechecked": true,
+    "gitBlobShaTestRechecked": true
+  },
+  "providerStatusReadback": {
+    "stripeMode": "TEST",
+    "stripeWebhookEndpointCount": 1,
+    "stripeWebhookEndpointState": "disabled",
+    "stripeTestEventsExist": true,
+    "stripeTestEventsObservedInLast30": 30,
+    "supabaseQaProjectRef": "zrxrrfbllsxtleyxjpsz",
+    "supabaseQaReadObservedAt": "2026-11-04T11:31:25.90514Z",
+    "supabaseQaOrganizationCount": 2,
+    "supabaseQaSubscriptionCount": 0,
+    "supabaseQaWebhookEventCount": 0,
+    "supabaseQaCheckoutAttemptCount": 0,
+    "supabaseQaLifecycleRequestCount": 0,
+    "providerWrites": false
+  },
+  "admissionBoundaries": {
+    "fullRepoCI": "NOT_VERIFIED",
+    "nativeNodeFixtureTests": "PASS_NOT_HOSTED",
+    "realSignedStripeTestDelivery": "NOT_VERIFIED",
+    "invalidSignatureRuntimeRejection": "NOT_VERIFIED",
+    "duplicateEventDurableIdempotency": "NOT_VERIFIED",
+    "stripeTestCheckoutE2E": "NOT_VERIFIED",
+    "sourceExactQaDeployment": "NOT_VERIFIED",
+    "independentReviewer": "NOT_VERIFIED",
+    "bil02FormalStatus": "NOT_VERIFIED",
+    "a10Accepted": false,
+    "productionGo": false
+  },
+  "safety": {
+    "productionWrites": false,
+    "stripeLiveWrites": false,
+    "qaWrites": false,
+    "sourceOfTruthModified": false,
+    "secretValuesRead": false,
+    "customerRowsRead": false,
+    "emailsSent": false
+  }
+}

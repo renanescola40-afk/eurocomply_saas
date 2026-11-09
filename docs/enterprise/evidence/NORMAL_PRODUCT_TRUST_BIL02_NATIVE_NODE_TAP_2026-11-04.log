@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: fully populated synthetic structure passes only a pure verifier; not provider acceptance
+ok 1 - fully populated synthetic structure passes only a pure verifier; not provider acceptance
+  ---
+  duration_ms: 3.605979
+  type: 'test'
+  ...
+# Subtest: rejects missing proof
+ok 2 - rejects missing proof
+  ---
+  duration_ms: 0.405361
+  type: 'test'
+  ...
+# Subtest: rejects unrelated source baseline
+ok 3 - rejects unrelated source baseline
+  ---
+  duration_ms: 0.278349
+  type: 'test'
+  ...
+# Subtest: rejects missing exact SHA
+ok 4 - rejects missing exact SHA
+  ---
+  duration_ms: 0.430069
+  type: 'test'
+  ...
+# Subtest: rejects LIVE event masquerading as TEST
+ok 5 - rejects LIVE event masquerading as TEST
+  ---
+  duration_ms: 0.528658
+  type: 'test'
+  ...
+# Subtest: rejects unsupported Stripe event type
+ok 6 - rejects unsupported Stripe event type
+  ---
+  duration_ms: 0.314294
+  type: 'test'
+  ...
+# Subtest: rejects missing provider event readback
+ok 7 - rejects missing provider event readback
+  ---
+  duration_ms: 0.274034
+  type: 'test'
+  ...
+# Subtest: rejects QA deployment without exact SHA
+ok 8 - rejects QA deployment without exact SHA
+  ---
+  duration_ms: 0.29821
+  type: 'test'
+  ...
+# Subtest: rejects READY deployment without attributable source
+ok 9 - rejects READY deployment without attributable source
+  ---
+  duration_ms: 0.518422
+  type: 'test'
+  ...
+# Subtest: rejects production DB mistaken for QA
+ok 10 - rejects production DB mistaken for QA
+  ---
+  duration_ms: 0.865185
+  type: 'test'
+  ...
+# Subtest: rejects disabled Stripe TEST webhook
+ok 11 - rejects disabled Stripe TEST webhook
+  ---
+  duration_ms: 0.448005
+  type: 'test'
+  ...
+# Subtest: rejects webhook targeting old deployment
+ok 12 - rejects webhook targeting old deployment
+  ---
+  duration_ms: 0.160542
+  type: 'test'
+  ...
+# Subtest: rejects fake signature acceptance
+ok 13 - rejects fake signature acceptance
+  ---
+  duration_ms: 0.184708
+  type: 'test'
+  ...
+# Subtest: rejects invalid request that created event row
+ok 14 - rejects invalid request that created event row
+  ---
+  duration_ms: 0.140402
+  type: 'test'
+  ...
+# Subtest: rejects accepted unsigned delivery
+ok 15 - rejects accepted unsigned delivery
+  ---
+  duration_ms: 1.4978
+  type: 'test'
+  ...
+# Subtest: rejects false replay report
+ok 16 - rejects false replay report
+  ---
+  duration_ms: 0.271029
+  type: 'test'
+  ...
+# Subtest: rejects duplicate attempt same as original
+ok 17 - rejects duplicate attempt same as original
+  ---
+  duration_ms: 0.130838
+  type: 'test'
+  ...
+# Subtest: rejects duplicate durable event rows
+ok 18 - rejects duplicate durable event rows
+  ---
+  duration_ms: 0.160812
+  type: 'test'
+  ...
+# Subtest: rejects replay side effects
+ok 19 - rejects replay side effects
+  ---
+  duration_ms: 0.173502
+  type: 'test'
+  ...
+# Subtest: rejects CI with stale SHA
+ok 20 - rejects CI with stale SHA
+  ---
+  duration_ms: 0.093131
+  type: 'test'
+  ...
+# Subtest: rejects missing negative CI test
+ok 21 - rejects missing negative CI test
+  ---
+  duration_ms: 0.07281
+  type: 'test'
+  ...
+# Subtest: rejects reviewer without approval
+ok 22 - rejects reviewer without approval
+  ---
+  duration_ms: 0.374075
+  type: 'test'
+  ...
+# Subtest: rejects reviewer without native review readback
+ok 23 - rejects reviewer without native review readback
+  ---
+  duration_ms: 0.082315
+  type: 'test'
+  ...
+# Subtest: rejects exposed secret values
+ok 24 - rejects exposed secret values
+  ---
+  duration_ms: 0.063265
+  type: 'test'
+  ...
+# Subtest: rejects use of production writes
+ok 25 - rejects use of production writes
+  ---
+  duration_ms: 0.061432
+  type: 'test'
+  ...
+# Subtest: rejects absent tenant isolation
+ok 26 - rejects absent tenant isolation
+  ---
+  duration_ms: 0.108864
+  type: 'test'
+  ...
+# Subtest: rejects self-review from the PR author
+ok 27 - rejects self-review from the PR author
+  ---
+  duration_ms: 0.087172
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 128.472054
