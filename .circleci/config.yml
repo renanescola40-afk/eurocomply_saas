@@ -1007,6 +1007,7 @@ jobs:
             set -euo pipefail
             test -n "$CIRCLE_SHA1"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test -n "$CIRCLE_BRANCH"
             test "$CIRCLE_BRANCH" = "ci/rescue-external-pr-quality-20261109"
             test "$(node --version)" = "v22.16.0"
             while IFS='=' read -r name _; do
