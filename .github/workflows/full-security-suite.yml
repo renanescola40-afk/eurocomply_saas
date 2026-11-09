@@ -280,11 +280,29 @@ jobs:
           tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
           chmod 0755 "$RUNNER_TEMP/gitleaks"
           "$RUNNER_TEMP/gitleaks" version
+      - name: Verify safe Gitleaks triage formatter using synthetic fixtures
+        run: node --test tests/security/sanitize-gitleaks-findings.test.mjs
       - name: Run Gitleaks fail-closed scan
+        id: gitleaks_scan
         shell: bash
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/gitleaks" git --redact --no-banner .
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner --report-format json --report-path "$RUNNER_TEMP/gitleaks-raw-private.json" .
+      - name: Create redacted Gitleaks triage locators without secret values
+        if: ${{ failure() && steps.gitleaks_scan.outcome == 'failure' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export RISCK_ASSESSED_SOURCE_SHA="$(git rev-parse HEAD)"
+          node scripts/security/sanitize-gitleaks-findings.mjs "$RUNNER_TEMP/gitleaks-raw-private.json" "$RUNNER_TEMP/gitleaks-triage-safe.json"
+      - name: Retain only the sanitized Gitleaks triage artifact
+        if: ${{ failure() && steps.gitleaks_scan.outcome == 'failure' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: gitleaks-redacted-triage-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/gitleaks-triage-safe.json
+          if-no-files-found: error
+          retention-days: 7
 
   semgrep:
     name: Semgrep SAST
