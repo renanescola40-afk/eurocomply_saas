@@ -36,7 +36,7 @@ describe('public procurement pack', () => {
     const circleci = procurementProviders.find((provider) => provider.name === 'CircleCI');
 
     expect(github?.regionDisclosure).toContain('budget-blocked');
-    expect(github?.regionDisclosure).toMatch(/GitHub-hosted runners[^\\n]{0,260}(DPA|transfer)/i);
+    expect(github?.regionDisclosure).toMatch(/GitHub-hosted runners[^\n]{0,260}(DPA|transfer)/i);
     expect(circleci?.purpose).toContain('source-only');
     expect(circleci?.regionDisclosure).toContain('account-specific DPA');
     expect(procurementProviders.some((provider) => provider.name === 'GitHub Actions')).toBe(false);
