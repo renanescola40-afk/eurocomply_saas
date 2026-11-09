@@ -161,9 +161,9 @@ function scanValue(source, value) {
 
   // Scope a disclaimer to its own clause. A later, separate promise must
   // still be reported, even if the same string also contains "not"/"without".
-  for (const sentence of normalized.split(/(?<=[.!?;])\\s+|\\n+/u)) {
+  for (const sentence of normalized.split(/(?<=[.!?;])\s+|\n+/u)) {
     if (sentence.trim().endsWith('?')) continue;
-    for (const clause of sentence.split(/(?:,\\s*|\\s+[—–]\\s+|\\s+\\b(?:but|however|yet|although|and)\\b\\s+)/iu)) {
+    for (const clause of sentence.split(/(?:,\s*|\s+[—–]\s+|\s+\b(?:but|however|yet|although|and)\b\s+)/iu)) {
       for (const { label, pattern } of PROHIBITED_CLAIM_PATTERNS) {
         const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
         for (const match of clause.matchAll(globalPattern)) {
