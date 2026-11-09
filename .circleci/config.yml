@@ -1054,18 +1054,6 @@ workflows:
                 - ci/rescue-external-pr-quality-20261109
 
 
-  # TEMPORARY ONE-PR-EVENT verification for exact-SHA DEEP_RELEASE only.
-  # Limited to the existing CI rescue PR branch; no context, provider keys, deployment or main writes.
-  # Remove immediately after provider check initiation; do not advertise this as a standing job.
-  external-pr-quality-one-shot-20261109:
-    when: pipeline.event.name == "pull_request"
-    jobs:
-      - external-pr-quality:
-          filters:
-            branches:
-              only:
-                - ci/rescue-external-pr-quality-20261109
-
   # Explicit opt-in only: no source push, PR event, or default pipeline may run this job.
   a01-sec01-qa-provider-manual:
     when: << pipeline.parameters.run_sec01_qa_provider >>
