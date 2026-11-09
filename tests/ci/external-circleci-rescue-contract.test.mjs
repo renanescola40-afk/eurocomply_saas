@@ -1,15 +1,78 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-const source = readFileSync('.circleci/config.yml','utf8');
-const job = source.split('\n  external-pr-quality:\n')[1]?.split('\n  [a-zA-Z]',1)[0] ?? '';
-test('staged CI rescue stays manual-only and exact SHA',()=>{
-  assert.match(source,/run_external_pr_quality:\n    type: boolean\n    default: false/);
-  assert.match(source,/external-pr-quality-manual:\n    when: << pipeline.parameters.run_external_pr_quality >>/);
-  assert.match(source,/only:\n\s+- ci\/rescue-external-pr-quality-20261109/);
-  for(const s of ['test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"','CI isolation refused a provider credential','formalGateAcceptance']) assert.ok(source.includes(s),s);
+
+const source = readFileSync('.circleci/config.yml', 'utf8');
+
+function circleJob(name) {
+  const marker = '\n  ' + name + ':\n';
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, 'Missing CircleCI job: ' + name);
+  const after = source.slice(start + marker.length);
+  const boundary = after.search(/\n  [A-Za-z][A-Za-z0-9_-]*:\n|\nworkflows:\n/);
+  return boundary === -1 ? after : after.slice(0, boundary);
+}
+
+function circleWorkflow(name) {
+  const marker = '\n  ' + name + ':\n';
+  const all = source.split('\nworkflows:\n')[1];
+  assert.ok(all, 'CircleCI workflow section missing');
+  const start = all.indexOf(marker);
+  assert.notEqual(start, -1, 'Missing CircleCI workflow: ' + name);
+  const after = all.slice(start + marker.length);
+  const boundary = after.search(/\n  [A-Za-z][A-Za-z0-9_-]*:\n/);
+  return boundary === -1 ? after : after.slice(0, boundary);
+}
+
+const job = circleJob('external-pr-quality');
+const workflow = circleWorkflow('external-pr-quality-manual');
+
+test('external rescue is strictly opt-in and scoped to approved CI branch', () => {
+  assert.match(source, /run_external_pr_quality:\n    type: boolean\n    default: false/);
+  assert.match(workflow, /when: << pipeline\.parameters\.run_external_pr_quality >>/);
+  assert.match(workflow, /only:\n\s+- ci\/rescue-external-pr-quality-20261109/);
+  assert.doesNotMatch(workflow, /- main\b|- qa\/|- prod\/|schedule:|context:/);
 });
-test('source-only job runs real quality and security checks',()=>{
-  for(const cmd of ['npm ci --ignore-scripts --no-audit --no-fund','npm run security:package-lock','npm run lint','npm run typecheck','npm run test','node scripts/security/run-security-ci-without-audit.mjs','npm run build','npm run quality:routes','tests/enterprise-evidence/validate-evidence.test.mjs','npm run security:npm-audit:all','/tmp/gitleaks dir --redact']) assert.ok(source.includes(cmd),cmd);
-  assert.ok(!source.includes('external-pr-quality:\n    machine:'));
+
+test('source executor uses exact SHA and fails closed if provider credentials exist', () => {
+  for (const invariant of [
+    'image: cimg/node:22.16.0',
+    'resource_class: large',
+    'test -n "$CIRCLE_SHA1"',
+    'test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"',
+    'test "$CIRCLE_BRANCH" = "ci/rescue-external-pr-quality-20261109"',
+    'CI isolation refused a provider credential',
+    'DATABASE_URL|DIRECT_URL|SUPABASE_*|STRIPE_*|VERCEL_*',
+    'formalGateAcceptance":false',
+  ]) assert.ok(job.includes(invariant), 'Missing source safeguard: ' + invariant);
+  assert.doesNotMatch(job, /machine:|setup_remote_docker:|persist_to_workspace:|npm run deploy|release:production/);
+});
+
+test('every required quality and supply-chain check is inside the actual job', () => {
+  for (const command of [
+    'npm ci --ignore-scripts --no-audit --no-fund',
+    'npm run security:package-lock',
+    'npm run lint',
+    'npm run typecheck',
+    'npm run test',
+    'node scripts/security/run-security-ci-without-audit.mjs',
+    'npm run build',
+    'npm run quality:routes',
+    'tests/enterprise-evidence/validate-evidence.test.mjs',
+    'tests/ci/enterprise-evidence-exact-sha-contract.test.mjs',
+    'npm run security:npm-audit:all',
+    'sha256sum --check -',
+    '/tmp/gitleaks dir --redact',
+    'process.exit(rows.length?3:0)',
+  ]) assert.ok(job.includes(command), 'Missing required quality guard: ' + command);
+  assert.match(job, /NEXT_PUBLIC_SUPABASE_URL: https:\/\/ci-placeholder\.supabase\.co/);
+  assert.match(job, /store_artifacts:\n\s+path: artifacts\/external-pr-ci/);
+});
+
+test('Gitleaks findings never return a fabricated success', () => {
+  assert.ok(job.includes('process.exit(rows.length?3:0)'));
+  assert.ok(job.includes('findingCount:rows.length'));
+  assert.ok(job.includes('sourceSha:process.env.CIRCLE_SHA1'));
+  assert.ok(job.includes('ruleId:String(x.RuleID||"")'));
+  assert.doesNotMatch(job, /continue-on-error: true|allow_failure: true/);
 });
