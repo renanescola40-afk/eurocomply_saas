@@ -102,8 +102,8 @@ describe('security-critical provider disclosure consistency', () => {
       const source = read(sourcePath);
       expect(source, sourcePath).toContain('CircleCI');
       expect(source, sourcePath).toContain('source-only');
-      expect(source, sourcePath).toMatch(/GitHub Actions[^\\n]{0,180}budget-blocked/i);
-      expect(source, sourcePath).not.toMatch(/GitHub Actions: protected release\\/recovery workflows can transiently/i);
+      expect(source, sourcePath).toMatch(/GitHub Actions[^\n]{0,180}budget-blocked/i);
+      expect(source, sourcePath).not.toMatch(/GitHub Actions: protected release\/recovery workflows can transiently/i);
     }
   });
 
