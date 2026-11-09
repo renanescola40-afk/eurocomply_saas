@@ -140,6 +140,7 @@ This closes the generic public-framework question without claiming an account-sp
 
 - Source: [merged PR #2657](https://github.com/renanescola40-afk/eurocomply_saas/pull/2657), exact `main` merge SHA `f4021f8c95f2c90ba9505f40a86f21eea1cb34e3` and [native GitHub external CI status target — CircleCI #545](https://circleci.com/gh/renanescola40-afk/eurocomply_saas/545). This verifies a real **source-only** external check, not a production runtime control.
 - GitHub Actions runner budget is blocked. Keeping historical Actions configuration does not make the runners active; CircleCI is now an attributable operational CI service and requires separate privacy/contract classification.
+- Historical GitHub-hosted runners: DPA applicability, any prior protected Production-data processing, international-transfer treatment and retention for authorised older Actions jobs remain unresolved. This does **not** say that GitHub Actions runner execution is currently available.
 - No CircleCI DPA, contracting entity, processing location, runner region, retention period, current credit/billing settings or current project-level secret isolation is claimed proved by a CI status. All remain **OPEN**.
 - The older provider-specific statements in this register retain their original dates and scope; this addendum does not freshly verify or legally approve those providers. Operational source-only CI must not automatically appear on the customer-facing *subprocessor* schedule until the actual personal-data flow and legal role are established.
 
