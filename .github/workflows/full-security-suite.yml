@@ -293,7 +293,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export RISCK_ASSESSED_SOURCE_SHA="$(git rev-parse HEAD)"
+          RISCK_ASSESSED_SOURCE_SHA="$(git rev-parse HEAD)"
+          export RISCK_ASSESSED_SOURCE_SHA
           node scripts/security/sanitize-gitleaks-findings.mjs "$RUNNER_TEMP/gitleaks-raw-private.json" "$RUNNER_TEMP/gitleaks-triage-safe.json"
       - name: Retain only the sanitized Gitleaks triage artifact
         if: ${{ failure() && steps.gitleaks_scan.outcome == 'failure' }}
