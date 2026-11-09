@@ -40,7 +40,7 @@ test('source executor uses exact SHA and fails closed if provider credentials ex
     'resource_class: large',
     'test -n "$CIRCLE_SHA1"',
     'test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"',
-    'test "$CIRCLE_BRANCH" = "ci/rescue-external-pr-quality-20261109"',
+    'test -n "$CIRCLE_BRANCH"',
     'CI isolation refused a provider credential',
     'DATABASE_URL|DIRECT_URL|SUPABASE_*|STRIPE_*|VERCEL_*',
     'formalGateAcceptance":false',
@@ -89,7 +89,7 @@ test('Gitleaks scans checked-out sources before npm install and Next build, with
 
 test('source Actionlint job uses a pinned real binary and fails closed', () => {
   const actionJob = circleJob('source-actionlint');
-  const actionWorkflow = circleWorkflow('source-actionlint-one-shot-20261109');
+  const actionWorkflow = circleWorkflow('source-actionlint-pr');
   for (const required of [
     'test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"',
     'test "$CIRCLE_BRANCH" = "ci/rescue-external-pr-quality-20261109"',
@@ -100,6 +100,6 @@ test('source Actionlint job uses a pinned real binary and fails closed', () => {
     'set -euo pipefail',
   ]) assert.ok(actionJob.includes(required), 'Missing fail-closed Actionlint invariant: ' + required);
   assert.match(actionWorkflow, /when: pipeline\.event\.name == "pull_request"/);
-  assert.match(actionWorkflow, /only:\n\s+- ci\/rescue-external-pr-quality-20261109/);
+  assert.doesNotMatch(actionWorkflow, /filters:|branches:|context:|schedule:/);
   assert.doesNotMatch(actionJob, /context:|npm run deploy|curl.*supabase|continue-on-error:\s*true|allow_failure:\s*true/);
 });
