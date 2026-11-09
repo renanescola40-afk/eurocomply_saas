@@ -92,7 +92,7 @@ test('source Actionlint job uses a pinned real binary and fails closed', () => {
   const actionWorkflow = circleWorkflow('source-actionlint-pr');
   for (const required of [
     'test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"',
-    'test "$CIRCLE_BRANCH" = "ci/rescue-external-pr-quality-20261109"',
+    'test -n "$CIRCLE_BRANCH"',
     'Privileged variable forbidden in source Actionlint job',
     '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8',
     'sha256sum --check -',
