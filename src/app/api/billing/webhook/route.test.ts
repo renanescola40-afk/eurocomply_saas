@@ -44,6 +44,16 @@ vi.mock('@/lib/security/rate-limit-response', () => ({
 import { BILLING_WEBHOOK_TOLERANCE_SECONDS, POST, getBillingWebhookContentLength, readBoundedBillingWebhookBody } from './route';
 
 const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
+
+function withQaEnv(run: () => Promise<void>) {
+  const keys = ['RISCK_QA_ENVIRONMENT','VERCEL_ENV','NEXT_PUBLIC_SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','SUPABASE_ADMIN_KEY','SUPABASE_SECRET_KEY'];
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  process.env.RISCK_QA_ENVIRONMENT = 'true';
+  process.env.VERCEL_ENV = 'preview';
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://zrxrrfbllsxtleyxjpsz.supabase.co';
+  for (const key of keys.slice(3)) delete process.env[key];
+  return run().finally(() => { for (const key of keys) { if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key]; } });
+}
 const originalStripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 function makeWebhookRequest(body: string, headers: HeadersInit = {}) {
@@ -121,6 +131,18 @@ describe('legacy billing webhook route hardening', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: 'missing_signature' });
     expect(mocks.constructEvent).not.toHaveBeenCalled();
+  });
+
+  it('returns retryable 503 for signed TEST QA event before any billing mutation', async () => {
+    await withQaEnv(async () => {
+      const event = makeStripeEvent();
+      mocks.constructEvent.mockReturnValue(event);
+      const response = await POST(makeWebhookRequest(JSON.stringify(event)));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'webhook_writer_unavailable' });
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    });
   });
 
   it('returns retryable server errors for verified webhook processing failures', async () => {

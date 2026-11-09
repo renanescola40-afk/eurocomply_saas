@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 
+import { evaluateQaWebhookAdmission } from '@/server/billing/qa-webhook-writer-admission.mjs';
+
 import { getStripeClient } from '@/lib/billing/stripe';
 import { reportError } from '@/lib/observability/report-error';
 import { logger } from '@/server/observability/logger';
@@ -134,6 +136,16 @@ export async function POST(request: Request) {
       { error: misconfigured ? 'webhook_mode_not_configured' : 'webhook_mode_mismatch' },
       { status: misconfigured ? 500 : 400 },
     );
+  }
+
+  const qaAdmission = evaluateQaWebhookAdmission(process.env);
+  if (!qaAdmission.allowed) {
+    await recordWebhookRouteAudit({ action: 'webhook_rejected', event, reason: qaAdmission.reason });
+    reportError(new Error('QA Stripe webhook persistence writer is not ready'), {
+      area: 'stripe_webhook_qa_writer_admission',
+      reason: qaAdmission.reason,
+    });
+    return noStoreJson({ error: 'webhook_writer_unavailable' }, { status: 503 });
   }
 
   try {
