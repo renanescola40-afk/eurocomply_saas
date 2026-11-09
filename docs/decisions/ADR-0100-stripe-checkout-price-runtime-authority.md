@@ -1,13 +1,14 @@
 # ADR-0100: Fail-closed Stripe Price authority and hosted Checkout reuse
 
-- **Status:** Proposed — pending qualified review and exact-head CI
+- **Status:** Proposed
+- **Review:** Pending qualified review and exact-head CI
 - **Date:** 2026-11-03
 - **Owner:** NORMAL 2 billing workstream
 - **Scope:** initial Essential/Professional Checkout and self-serve subscription lifecycle
 - **Source PR:** https://github.com/renanescola40-afk/eurocomply_saas/pull/2597
 - **Related work:** GitLab !2632, checkout lease/configuration failure handling (separate change requiring integration)
 
-## Context and incident prevention
+## Context
 
 A configured Stripe `price_...` identifier is not enough to prove that a
 subscription carries the reviewed commercial amount. The connected TEST account
