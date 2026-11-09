@@ -1,12 +1,18 @@
 # A-04 / SEC-05: independent security evidence admission contract (2026-11-04)
 
-Status: source-only verifier implementation proposed for qualified review. **SEC-05 is NOT_VERIFIED; A-04 is NOT ACCEPTED.**
+- **Status:** Proposed
+- **Date:** 2026-11-04
+- **Review:** Source-only verifier implementation proposed for qualified review. **SEC-05 is NOT_VERIFIED; A-04 is NOT ACCEPTED.**
 
-## Existing acceptance problem
+## Context
 
 The frozen G1 scorer validates proof contents only for OPS-01 and BIL-01. A fully
 sourced new SEC-05 PASS could not be admitted because the unknown-control
-branch failed closed. This patch adds only a SEC-05-specific verifier; every
+branch failed closed.
+
+## Decision
+
+This patch adds only a SEC-05-specific verifier; every
 other unknown criterion still fails closed. Neither 38 mandatory controls
 nor the 24-gate denominator, dependencies, acceptedBy/acceptedAt, or production
 release-authority state changes.
@@ -22,6 +28,8 @@ CircleCI source secret scan, client-boundary scan, emitted browser bundle scan;
 Vercel runtime log redaction, TLS cert and environment scoping; Supabase
 database encryption and storage encryption. A separate critical/high exposure
 disposition and independent reviewer acknowledgement are also mandatory.
+
+## Risks and trade-offs
 
 The verifier is *syntactic/admission-only*: a JSON assertion, fake URL, or
 SHA-256-shaped string is **not actual verified provider evidence**. The
@@ -43,11 +51,14 @@ live registry to PASS. Do not copy synthetic test fixtures to evidence folders.
 - GitHub hosted checks were experiencing admission-level failures. Historical
   CircleCI outcomes apply only to their actual tested SHA.
 
-## Validation, rollback, ownership
+## Validation and ownership
 
 Command: `node --test tests/release/sec05-acceptance-verifier.test.mjs`.
 Expected six tests with synthetic fixtures, including negative/adversarial
 fail-closed cases. Full exact-SHA Node tests, source scans, typecheck, build,
-CircleCI and qualified independent review are still required. Roll back this
-small source change via the governed PR if it conflicts with the accepted
+CircleCI and qualified independent review are still required.
+
+## Rollback
+
+Roll back this small source change via the governed PR if it conflicts with the accepted
 formal contract. Do not set any registry status to PASS to make a test green.
