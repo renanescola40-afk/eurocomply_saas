@@ -396,3 +396,56 @@ test('post-merge A-18 uses authenticated exact-merge attribution, not a missing 
  assert.equal(await verify({token:''}),false,'missing provider authentication fails closed');
  assert.equal(await verify({prNumber:2620}),false,'merged PR is not confused with active PR CI');
 });
+
+
+test('A-18 refuses mutable historical review URL before outbound network calls',async()=>{
+ const claim={
+  gate_id:'A-18',reviewer_id:'renansilva2002-tech',
+  approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/9999#pullrequestreview-123456',
+  acceptance_evidence_ref:'docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json'
+ };
+ let count=0;
+ const actual=await verifyGitHubA18CurrentHead(claim,{
+  expectedSha:'f'.repeat(40),prNumber:2620,token:'synthetic-token',
+  request:async()=>{count++;throw new Error('Untrusted URL must not be fetched');}
+ });
+ assert.equal(actual,false);
+ assert.equal(count,0);
+});
+
+test('A-18 provider uses immutable prior-review paths and forbids redirects',async()=>{
+ const exact='f'.repeat(40);
+ const claim={
+  gate_id:'A-18',reviewer_id:'renansilva2002-tech',
+  approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+  acceptance_evidence_ref:'docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json'
+ };
+ const calls=[];
+ const request=async(url,options)=>{
+  calls.push(url);
+  assert.equal(options.redirect,'error');
+  let result;
+  if(url.endsWith('/pulls/2620')){
+   result={state:'open',draft:false,head:{sha:exact,repo:{full_name:'renanescola40-afk/eurocomply_saas'}},
+    base:{ref:'main',repo:{full_name:'renanescola40-afk/eurocomply_saas'}},user:{login:'renanescola40-afk'}};
+  }else if(url.endsWith('/pulls/2610/reviews/5784789887')){
+   result={id:5784789887,state:'APPROVED',user:{login:'renansilva2002-tech'},
+    commit_id:'1dc9b63f6f13ea9b090b2840610582a39d3ac90e'};
+  }else if(url.endsWith('/issues/comments/6659265179')){
+   result={user:{login:'renansilva2002-tech'},body:'A-18/OPS-01 review'};
+  }else if(url.endsWith('/pulls/2620/reviews?per_page=100')){
+   result=[{state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:exact,
+    body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED'}];
+  }else throw Error('Unexpected provider path: '+url);
+  return {ok:true,json:async()=>result};
+ };
+ assert.equal(await verifyGitHubA18CurrentHead(claim,{
+  expectedSha:exact,prNumber:2620,token:'synthetic-token',request
+ }),true);
+ assert.deepEqual(calls.sort(),[
+  'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/pulls/2620',
+  'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/pulls/2610/reviews/5784789887',
+  'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/issues/comments/6659265179',
+  'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/pulls/2620/reviews?per_page=100'
+ ].sort());
+});

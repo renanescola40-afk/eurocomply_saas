@@ -29,12 +29,13 @@ export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,toke
  const url=/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/pull\/(\d+)#pullrequestreview-(\d+)$/.exec(gate.approval_url||'');
  if(!url||gate.reviewer_id!=='renansilva2002-tech')return false;
  const oldPr=Number(url[1]),oldId=Number(url[2]);
- if(!Number.isSafeInteger(oldPr)||!Number.isSafeInteger(oldId))return false;
+ // Immutable historical A-18 review. Committed metadata cannot select an outbound GitHub API URL.
+ if(oldPr!==2610||oldId!==5784789887)return false;
  const rootDir=path.resolve(root),proofPath=path.resolve(rootDir,gate.acceptance_evidence_ref||'');
  if(!proofPath.startsWith(rootDir+path.sep))return false;
  const api='https://api.github.com/repos/renanescola40-afk/eurocomply_saas';
  const readProvider=async(resource)=>{
-  const res=await request(api+resource,{headers:{
+  const res=await request(api+resource,{redirect:'error',headers:{
    Accept:'application/vnd.github+json',
    Authorization:'Bearer '+token,
    'X-GitHub-Api-Version':'2022-11-28'
@@ -46,7 +47,7 @@ export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,toke
   const proof=JSON.parse(fs.readFileSync(proofPath,'utf8'));
   if(proof.gate_id!=='A-18'||proof.qualified_review?.reviewer_login!==gate.reviewer_id||
      proof.qualified_review?.review_url!==gate.approval_url||
-     !Number.isSafeInteger(proof.qualified_review?.reviewer_followup_comment_id))return false;
+     proof.qualified_review?.reviewer_followup_comment_id!==6659265179)return false;
   let pull,reviewedHead,reviewPrNumber;
   if(prSpecified){
    pull=await readProvider('/pulls/'+n);
@@ -70,8 +71,8 @@ export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,toke
      pull.base?.repo?.full_name!=='renanescola40-afk/eurocomply_saas'||
      pull.base?.ref!=='main'||pull.user?.login===gate.reviewer_id)return false;
   const [prior,followup,current]=await Promise.all([
-   readProvider('/pulls/'+oldPr+'/reviews/'+oldId),
-   readProvider('/issues/comments/'+proof.qualified_review.reviewer_followup_comment_id),
+   readProvider('/pulls/2610/reviews/5784789887'),
+   readProvider('/issues/comments/6659265179),
    readProvider('/pulls/'+reviewPrNumber+'/reviews?per_page=100')
   ]);
   if(prior?.id!==oldId||prior.state!=='APPROVED'||
@@ -101,8 +102,13 @@ export function validateEvidenceRecord(r,{expectedSha,now=new Date()}={}){
  if(!['NOT_REVIEWED','IN_REVIEW','ACCEPTED','REJECTED'].includes(r.reviewer_status))e.push('reviewer_status_invalid');if(!['NOT_ACCEPTED','ACCEPTED','REJECTED'].includes(r.acceptance_status))e.push('acceptance_status_invalid');
  const artifactPath=path.resolve(ROOT,r.artifact_path||'');
  if(!artifactPath.startsWith(ROOT+path.sep))e.push('artifact_path_outside_repository');
- else if(!fs.existsSync(artifactPath)||!fs.statSync(artifactPath).isFile())e.push('artifact_missing');
- else if(crypto.createHash('sha256').update(fs.readFileSync(artifactPath)).digest('hex')!==r.artifact_sha256)e.push('artifact_sha256_mismatch');
+ else {
+  // Read a single immutable buffer instead of checking path metadata before reading it.
+  try{
+   const artifactBytes=fs.readFileSync(artifactPath);
+   if(crypto.createHash('sha256').update(artifactBytes).digest('hex')!==r.artifact_sha256)e.push('artifact_sha256_mismatch');
+  }catch{e.push('artifact_missing');}
+ }
  if(/runtime|provider|live/i.test(r.evidence_type||'')&&!Number.isNaN(d.getTime())&&(d>now||now.getTime()-d.getTime()>90*24*60*60*1000))e.push('runtime_evidence_stale');
  if(r.status==='PASS'){
   const approvedAt=Date.parse(r.accepted_at||'');
@@ -163,9 +169,10 @@ export function validateGateAcceptance(gate,{eligible,expectedSha,now=new Date()
  if(typeof ref==='string'&&ref.trim()){
   const absolute=path.resolve(root,ref);
   if(!absolute.startsWith(path.resolve(root)+path.sep))errors.push('acceptance_artifact_path_outside_repository');
-  else if(!fs.existsSync(absolute)||!fs.statSync(absolute).isFile())errors.push('acceptance_artifact_missing');
   else {
-   const proofBytes=fs.readFileSync(absolute);
+   let proofBytes;
+   try{proofBytes=fs.readFileSync(absolute);}
+   catch{errors.push('acceptance_artifact_missing');return errors;}
    const digest=crypto.createHash('sha256').update(proofBytes).digest('hex');
    if(!SHA256.test(gate.acceptance_evidence_sha256||'')||digest!==gate.acceptance_evidence_sha256){
     errors.push('acceptance_artifact_sha256_mismatch');
