@@ -53,8 +53,46 @@ try {
   if (dsrForceRls !== 1) throw new Error('dsr_force_rls_missing');
   checks.dsrForceRlsEnabled = true;
 
-  const policies = Number(sql(database, "select count(*) from pg_policies where schemaname='public' and tablename in ('data_retention_policies','data_subject_requests','audit_integrity_checkpoints');"));
-  if (policies < 7) throw new Error('governance_policies_incomplete');
+  // Current reconciled foundation deliberately revokes browser mutations and
+  // replaces the earlier broad policies with six tightly scoped policies.
+  // Verify policy identity, operation, role and predicate; never count obsolete grants.
+  const policyBoundary = JSON.parse(sql(database, `
+    with expected(tablename, policyname, cmd) as (
+      values
+      ('data_retention_policies','retention policies organization members read','SELECT'),
+      ('data_subject_requests','data subjects read own requests','SELECT'),
+      ('audit_integrity_checkpoints','audit checkpoints organization members read','SELECT'),
+      ('data_subject_requests','restrict_data_subject_requests_insert_server_only','INSERT'),
+      ('data_subject_requests','restrict_data_subject_requests_update_server_only','UPDATE'),
+      ('data_subject_requests','restrict_data_subject_requests_delete_server_only','DELETE')
+    ), checked as (
+      select e.tablename, e.policyname, e.cmd,
+        p.roles = ARRAY['authenticated'::name] as role_ok,
+        case
+          when e.cmd = 'SELECT' then
+            coalesce(p.qual,'') like '%auth.uid%'
+            and coalesce(p.qual,'') like '%organization_members%'
+            and (e.tablename <> 'data_subject_requests' or coalesce(p.qual,'') like '%requester_user_id%')
+          when e.cmd = 'INSERT' then lower(coalesce(p.with_check,'')) = 'false'
+          when e.cmd = 'UPDATE' then
+            lower(coalesce(p.qual,'')) = 'false' and lower(coalesce(p.with_check,'')) = 'false'
+          when e.cmd = 'DELETE' then lower(coalesce(p.qual,'')) = 'false'
+          else false
+        end as predicate_ok
+      from expected e left join pg_policies p
+        on p.schemaname='public' and p.tablename=e.tablename
+        and p.policyname=e.policyname and p.cmd=e.cmd
+    )
+    select jsonb_build_object(
+      'required',(select count(*) from expected),
+      'matched',(select count(*) from checked where role_ok = true and predicate_ok = true),
+      'actual',(select count(*) from pg_policies where schemaname='public'
+        and tablename in ('data_retention_policies','data_subject_requests','audit_integrity_checkpoints'))
+    )::text;
+  `));
+  if (policyBoundary.required !== 6 || policyBoundary.matched !== 6 || policyBoundary.actual !== 6) {
+    throw new Error('governance_policy_contract_incomplete');
+  }
   checks.tenantPoliciesPresent = true;
 
   const constraints = Number(sql(database, "select count(*) from pg_constraint where conrelid in ('public.data_retention_policies'::regclass,'public.data_subject_requests'::regclass,'public.audit_integrity_checkpoints'::regclass) and contype='c';"));
