@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository history
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -74,8 +74,27 @@ jobs:
           chmod 0755 "$RUNNER_TEMP/gitleaks"
           "$RUNNER_TEMP/gitleaks" version
 
+      - name: Verify redacted Gitleaks metadata schema
+        run: node --test tests/security/gitleaks-history-metadata.test.mjs
+
       - name: Run Gitleaks repository and history scan
         shell: bash
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/gitleaks" git --redact --no-banner .
+          report="$RUNNER_TEMP/gitleaks-history-report.json"
+          set +e
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner --report-format json --report-path "$report" .
+          scan_exit=$?
+          set -e
+          test -f "$report" || { echo "Gitleaks failed to produce report metadata" >&2; exit 1; }
+          node scripts/security/write-gitleaks-history-metadata.mjs "$report" artifacts/gitleaks-history-metadata.json
+          exit "$scan_exit"
+
+      - name: Preserve redacted Gitleaks history metadata
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: gitleaks-history-metadata
+          path: artifacts/gitleaks-history-metadata.json
+          retention-days: 14
+          if-no-files-found: warn

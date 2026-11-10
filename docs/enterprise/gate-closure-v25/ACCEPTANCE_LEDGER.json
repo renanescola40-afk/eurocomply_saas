@@ -1,0 +1,1530 @@
+{
+  "schema": "risck-comply.enterprise-gate-closure-v25.acceptance-ledger.v1",
+  "generated_at": "2026-11-04T22:22:17.088Z",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "mode": "ACCEPTANCE_ONLY_NO_ENGINEERING_NO_FALSE_PASS",
+  "immutable_source_main_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+  "archived_evidence_index_source_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+  "source_baseline_sha": "70d3545f414d063379d481fd238aed563e05edda",
+  "scope": {
+    "formal_gates": 24,
+    "atomic_controls": 38,
+    "denominators_frozen": true
+  },
+  "metrics": {
+    "historical_source_gates_pass": 2,
+    "historical_source_controls_pass": 2,
+    "independently_accepted_gates": 0,
+    "independently_accepted_controls": 0,
+    "formal_completion_percent": 0,
+    "formal_remaining_percent": 100,
+    "newly_accepted_in_this_audit": 0
+  },
+  "validator": {
+    "source_inspected": "scripts/enterprise-evidence/validate-evidence.mjs",
+    "actual_node_validator_executed": false,
+    "reason": "Private GitHub repository not mounted in this chat container; connector provides file reads but not repository-local node execution; no exact-main PR-triggered Actions runs were returned",
+    "result": "NOT_RUN",
+    "do_not_treat_structural_or_hash_checks_as_formal_acceptance": true
+  },
+  "integrity_checks": {
+    "sha256_recomputed_match": true,
+    "artifact_records": 4,
+    "unique_provider_artifacts_checked": 3,
+    "review_packets_checked": 2,
+    "files": [
+      {
+        "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
+        "sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34",
+        "verified": true
+      },
+      {
+        "path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_RLS_FORCE_GRANTS_2026-11-01.json",
+        "sha256": "2d8157a688c9823c743bcc93dd4fea0daaa5aa55c65375017263bf1c31450fbc",
+        "verified": true
+      },
+      {
+        "path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+        "sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
+        "verified": true
+      },
+      {
+        "path": "docs/enterprise/gate-closure-v23/A09_BIL01_REVIEW_PACKET_20261104.json",
+        "sha256": "426159d1ab27cd377a753639322e01a8e57d87f6e2df7775a5e27ff11dac2d04",
+        "pr": 2611,
+        "verified": true
+      },
+      {
+        "path": "docs/enterprise/gate-closure-v23/A18_OPS01_REVIEW_PACKET_20261104.json",
+        "sha256": "f70fecb8f8487732c7b0e4da145e1aa63a07a1d83d67de62b6b6bd3bb9589754",
+        "pr": 2610,
+        "verified": true
+      }
+    ]
+  },
+  "provider_observations": {
+    "vercel_production": {
+      "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+      "state": "READY",
+      "git_sha": "70d3545f414d063379d481fd238aed563e05edda",
+      "current_main_deployed": false,
+      "alias": "www.risckcomply.com"
+    },
+    "stripe_price_environment": {
+      "six_canonical_live_prices_reported_in_pr2611": true,
+      "current_six_built_in_production_bindings_verified": false,
+      "six_visible_same_name_env_vars_are_custom_environment": true,
+      "secret_values_stored": false
+    }
+  },
+  "acceptance_review_prs": {
+    "A09": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2611",
+    "A18": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610",
+    "independent_gate_approvals_observed": 0
+  },
+  "handoffs": [
+    {
+      "GATE_ID": "A-09",
+      "MISSING_CONTROL": "BIL-01",
+      "EXACT_MISSING_CRITERION": "Current exact six Vercel built-in Production Stripe Price bindings cannot be confirmed; apparent matching variable names belong to a custom environment; qualified independent gate-specific GitHub approval absent",
+      "CURRENT_EVIDENCE": "Historical BIL-01 source PASS; PR #2611 SHA 6814961ab37840577b39860947cba29690228668; Stripe six live catalog checks recorded; Vercel env IDs retrieved for target [] custom env only; packet digest recomputed and matched",
+      "REQUIRED_PROOF": "E3: privileged read-only comparison of SIX actual built-in Production bindings with canonical active Stripe LIVE Price IDs, scoped and time-stamped, no secrets printed",
+      "SOURCE_SHA": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "RESPONSIBLE_EXECUTOR": "E3",
+      "REVIEW_REQUIREMENT": "Qualified independent reviewer after production bindings are proven; native #2611 review with reviewer qualification and exact evidence SHA",
+      "NEXT_ACCEPTANCE_ACTION": "Reinspect Vercel production binding proof; only then independent gate-specific PR review"
+    },
+    {
+      "GATE_ID": "A-18",
+      "MISSING_CONTROL": "OPS-01",
+      "EXACT_MISSING_CRITERION": "Required qualified independent gate-specific review and formal acceptance artifact not supplied; main SHA is not the deployed production SHA and must not be misrepresented",
+      "CURRENT_EVIDENCE": "PR #2610 HEAD 1dc9b63f6f13ea9b090b2840610582a39d3ac90e; Vercel production READY deployment dpl_CmyiHWky6g41su26PE1nyGwwCS1f uses 70d3545f414d063379d481fd238aed563e05edda; domain alias observed; packet and provider digest verified; no GitHub reviews",
+      "REQUIRED_PROOF": "E3: maintain live exact production deployment/alias readback bound to frozen G1 baseline; explain intentional non-current-main deployment",
+      "SOURCE_SHA": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "RESPONSIBLE_EXECUTOR": "E3",
+      "REVIEW_REQUIREMENT": "Existing requested reviewer renansilva2002-tech must establish eligibility, expertise and independence, then native #2610 gate-specific approval at exact HEAD",
+      "NEXT_ACCEPTANCE_ACTION": "Obtain qualified review of existing A-18 packet; after review run formal validator and only then promote"
+    },
+    {
+      "GATE_ID": "A-04",
+      "MISSING_CONTROL": "SEC-05",
+      "EXACT_MISSING_CRITERION": "No all-criterion completed proof of source/client/log secret negatives, deployed server configuration, edge TLS and at-rest protection",
+      "CURRENT_EVIDENCE": "Source NOT_VERIFIED; index no accepted evidence record; PR #2600 covers detector tests only and is open; only SQL session TLS 1.3 observed in PR description",
+      "REQUIRED_PROOF": "E1: exact-SHA full secret scanner and built client bundle/log negatives; deployed configuration attestation; edge TLS negative and storage-at-rest evidence",
+      "SOURCE_SHA": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "RESPONSIBLE_EXECUTOR": "E1",
+      "REVIEW_REQUIREMENT": "Independent security reviewer after full technical packet",
+      "NEXT_ACCEPTANCE_ACTION": "Await E1 proof, then first review pass"
+    },
+    {
+      "GATE_ID": "A-15",
+      "MISSING_CONTROL": "QAT-01",
+      "EXACT_MISSING_CRITERION": "Complete mandatory application/integration/security regression evidence for exact source SHA absent",
+      "CURRENT_EVIDENCE": "Source NOT_VERIFIED; evidence index empty for QAT-01; no current-main PR-triggered Actions runs returned; Vercel commit status failure is not CI source-suite proof",
+      "REQUIRED_PROOF": "E3 + E1: successful full required CI/test suite output, logs/artifacts and exact immutable candidate SHA, source/security suite scope explicitly covered",
+      "SOURCE_SHA": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "RESPONSIBLE_EXECUTOR": "E1",
+      "REVIEW_REQUIREMENT": "Qualified QA/security reviewer only after complete CI",
+      "NEXT_ACCEPTANCE_ACTION": "Await exact-SHA E3/E1 test proof"
+    },
+    {
+      "GATE_ID": "A-19",
+      "MISSING_CONTROL": "OPS-02",
+      "EXACT_MISSING_CRITERION": "Actual enforcement of reviews/checks/controlled merge and explicit release decision not verified",
+      "CURRENT_EVIDENCE": "Source NOT_VERIFIED; evidence index empty for OPS-02; historical inaccessible branch protection/ruleset observations and lack of review do not establish policy enforcement",
+      "REQUIRED_PROOF": "E4: read-only enforcement of native rules or owner-audited equivalent approval procedure with actual decision evidence, no bypass; E3 exact-SHA check provenance if needed",
+      "SOURCE_SHA": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "RESPONSIBLE_EXECUTOR": "E4",
+      "REVIEW_REQUIREMENT": "Independent governance reviewer after enforcement and decision are demonstrable",
+      "NEXT_ACCEPTANCE_ACTION": "Await E4 enforcement and decision readback"
+    },
+    {
+      "GATE_ID": "A-12",
+      "MISSING_CONTROL": "DAT-01",
+      "EXACT_MISSING_CRITERION": "137-entry migration parity/provenance evidence and reviewed consolidation not accepted",
+      "CURRENT_EVIDENCE": "Source BLOCKED; Evidence Factory BLOCKED record from 2026-11-01; digest verified, not PASS",
+      "REQUIRED_PROOF": "E1: complete 137/137 source-to-QA provenance, reviewed identities and replay/parity evidence",
+      "SOURCE_SHA": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "RESPONSIBLE_EXECUTOR": "E1",
+      "REVIEW_REQUIREMENT": "Independent DB/migration reviewer after blocker resolved",
+      "NEXT_ACCEPTANCE_ACTION": "Await E1 migration parity closure and governed source reconciliation"
+    }
+  ],
+  "controls": [
+    {
+      "control_id": "SEC-01",
+      "gate_id": "A-01",
+      "criterion": "Session authentication, recovery and logout reject expired/revoked sessions in authenticated browser/API tests",
+      "dependencies": [],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await E1 exact-SHA evidence: Authenticated run logs, replayable negative session fixtures"
+    },
+    {
+      "control_id": "SEC-02",
+      "gate_id": "A-02",
+      "criterion": "Every mandatory read and mutation is authorized server-side by active membership and role, including deny tests",
+      "dependencies": [
+        "SEC-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "SEC-01"
+      ],
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await E1 exact-SHA evidence: Role/permission matrix plus negative API integration evidence"
+    },
+    {
+      "control_id": "SEC-03",
+      "gate_id": "A-03",
+      "criterion": "Tenant A cannot read, mutate, export or download tenant B records via API, RLS and Storage",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "SEC-02"
+      ],
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await E1 exact-SHA evidence: Tenant A/B authenticated runtime and SQL/RLS/Storage results"
+    },
+    {
+      "control_id": "SEC-04",
+      "gate_id": "A-02",
+      "criterion": "Privileged SQL functions, elevated writers, files and webhooks are restricted to intended principals",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "SEC-02"
+      ],
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await E1 exact-SHA evidence: Production grants/policy readback and unauthorized-invocation tests"
+    },
+    {
+      "control_id": "SEC-05",
+      "gate_id": "A-04",
+      "criterion": "Secrets never reach client bundles or logs; TLS and at-rest protection are appropriately configured",
+      "dependencies": [],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "SOURCE_PR_APPROVED_BUT_DEPLOYED_G1_CRITERION_NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E1",
+      "next_eligible_action": "E1 to supply remaining DEPLOYED SEC-05 evidence; do not equate PR #2600 source approval with formal gate acceptance"
+    },
+    {
+      "control_id": "SEC-06",
+      "gate_id": "A-03",
+      "criterion": "No known unaccepted material high/critical issue in committed flows; privileged actions have durable audit events",
+      "dependencies": [
+        "SEC-02"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "SEC-02"
+      ],
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await E1 exact-SHA evidence: Risk register, vulnerability dispositions, event replay and audit outputs"
+    },
+    {
+      "control_id": "FUN-01",
+      "gate_id": "A-05",
+      "criterion": "A legitimate user signs up, authenticates and creates/joins the intended workspace",
+      "dependencies": [
+        "SEC-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "SEC-01"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Authenticated signup/onboarding E2E and durable DB readback"
+    },
+    {
+      "control_id": "FUN-02",
+      "gate_id": "A-06",
+      "criterion": "AI inventory create/view/update and risk assessment persist with correct tenant and ownership",
+      "dependencies": [
+        "FUN-01",
+        "SEC-03"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "FUN-01",
+        "SEC-03"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Authenticated E2E plus persisted record and isolation evidence"
+    },
+    {
+      "control_id": "FUN-03",
+      "gate_id": "A-06",
+      "criterion": "Governance workflow records accountable owner, decision, timestamps, review state and supporting evidence",
+      "dependencies": [
+        "FUN-02",
+        "SEC-02"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "FUN-02",
+        "SEC-02"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Multi-role approval/deny E2E and durable audit trail"
+    },
+    {
+      "control_id": "FUN-04",
+      "gate_id": "A-07",
+      "criterion": "Evidence uploads/downloads, audit trail, mandatory reporting and document export work with access controls",
+      "dependencies": [
+        "FUN-03",
+        "SEC-03"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "FUN-03",
+        "SEC-03"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Authenticated browser/API tests, generated file inspection and data readback"
+    },
+    {
+      "control_id": "FUN-05",
+      "gate_id": "A-08",
+      "criterion": "Administration, retention/deletion/export and privacy request workflows fulfill the published offering",
+      "dependencies": [
+        "FUN-01",
+        "SEC-02"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "FUN-01",
+        "SEC-02"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Role-specific E2E, data deletion/retention and export evidence"
+    },
+    {
+      "control_id": "FUN-06",
+      "gate_id": "A-08",
+      "criterion": "Navigation and actual product contracts match what is marketed; incomplete optional flows are not sold as complete",
+      "dependencies": [
+        "FUN-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "FUN-01"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Release-scoped product route inventory and marketing/contract mismatch review"
+    },
+    {
+      "control_id": "BIL-01",
+      "gate_id": "A-09",
+      "criterion": "Publicly committed plans map to existing correctly configured Stripe prices and intended access limits",
+      "dependencies": [],
+      "historical_source_status": "PASS",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "HISTORICAL_SOURCE_PASS_ONLY",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [
+        "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json"
+      ],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Reinspect Vercel production binding proof; only then independent gate-specific PR review",
+      "evidence_reference_type": "REVIEW_PACKET_NOT_IMPLEMENTATION_TEST_SHA"
+    },
+    {
+      "control_id": "BIL-02",
+      "gate_id": "A-10",
+      "criterion": "Signed Stripe TEST webhooks reject invalid signatures and replay/duplicates safely",
+      "dependencies": [
+        "BIL-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "BIL-01"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Genuine Stripe test event, webhook delivery IDs and idempotency readback"
+    },
+    {
+      "control_id": "BIL-03",
+      "gate_id": "A-10",
+      "criterion": "A genuine test Checkout creates and persists the expected organization entitlement in isolated QA",
+      "dependencies": [
+        "BIL-02",
+        "DAT-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "BIL-02",
+        "DAT-01"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Exact-SHA Stripe TEST event linked to QA durable DB state and app entitlement"
+    },
+    {
+      "control_id": "BIL-04",
+      "gate_id": "A-11",
+      "criterion": "Plan changes, nonpayment and cancellation converge on durable, safe subscription states",
+      "dependencies": [
+        "BIL-03"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "BIL-03"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Genuine Stripe TEST lifecycle events plus authenticated UI/backend assertions"
+    },
+    {
+      "control_id": "BIL-05",
+      "gate_id": "A-11",
+      "criterion": "Access checks and billing modifications are authorized server-side; customer cannot self-grant a paid tier",
+      "dependencies": [
+        "SEC-02",
+        "BIL-03"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "SEC-02",
+        "BIL-03"
+      ],
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await E2 exact-SHA evidence: Negative API tests and tenant-isolated entitlement query evidence"
+    },
+    {
+      "control_id": "DAT-01",
+      "gate_id": "A-12",
+      "criterion": "An ordered, reconciled and reviewed migration manifest bootstraps isolated QA without version collisions",
+      "dependencies": [],
+      "historical_source_status": "BLOCKED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "BLOCKED",
+      "evidence_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "evidence_sha256": [
+        {
+          "evidence_id": "EV-DAT-01-SUPABASE-MIGRATION-PARITY-20261101",
+          "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+          "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
+          "sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34",
+          "status": "BLOCKED",
+          "review_status": "NOT_REVIEWED"
+        }
+      ],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await E1 migration parity closure and governed source reconciliation"
+    },
+    {
+      "control_id": "DAT-02",
+      "gate_id": "A-13",
+      "criterion": "Concurrent membership changes and usage quotas preserve critical invariants or fail atomically",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "DAT-01"
+      ],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await E3 exact-SHA evidence: Native PostgreSQL concurrent-session tests and repeatable invariant queries"
+    },
+    {
+      "control_id": "DAT-03",
+      "gate_id": "A-13",
+      "criterion": "High-value decisions, audit-chain and billing state survive transaction failure/retry without untracked divergence",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "DAT-01"
+      ],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await E3 exact-SHA evidence: Rollback/atomicity negative cases, constraint assertions and audit-chain validation"
+    },
+    {
+      "control_id": "DAT-04",
+      "gate_id": "A-14",
+      "criterion": "A bounded isolated restoration proves DB and relevant Auth/Storage/application recovery boundaries",
+      "dependencies": [
+        "DAT-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "DAT-01"
+      ],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await E3 exact-SHA evidence: Restore transcript, data integrity diff, Auth/Storage scope and recovery limitation log"
+    },
+    {
+      "control_id": "DAT-05",
+      "gate_id": "A-14",
+      "criterion": "Production migrations, RLS/FORCE RLS, RPC grants and data boundaries match the approved release",
+      "dependencies": [
+        "DAT-01",
+        "SEC-03"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "ARCHIVED_UNACCEPTED_EVIDENCE",
+      "evidence_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "evidence_sha256": [
+        {
+          "evidence_id": "EV-DAT-05-SUPABASE-SECURITY-ADVISORS-20261101",
+          "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+          "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_MIGRATION_PARITY_2026-11-01.json",
+          "sha256": "0067ded43b48025ed04c862b4c39996b2a9574356d7746036eeb98676ebb8e34",
+          "status": "NOT_VERIFIED",
+          "review_status": "NOT_REVIEWED"
+        },
+        {
+          "evidence_id": "EV-DAT-05-SUPABASE-RLS-FORCE-GRANTS-20261101",
+          "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+          "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_SUPABASE_RLS_FORCE_GRANTS_2026-11-01.json",
+          "sha256": "2d8157a688c9823c743bcc93dd4fea0daaa5aa55c65375017263bf1c31450fbc",
+          "status": "NOT_VERIFIED",
+          "review_status": "NOT_REVIEWED"
+        }
+      ],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "DAT-01",
+        "SEC-03"
+      ],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await E3 exact-SHA evidence: Version-scoped provider SQL readback, function ACL and grant tests"
+    },
+    {
+      "control_id": "QAT-01",
+      "gate_id": "A-15",
+      "criterion": "Mandatory application/unit/integration and security regression suites complete without failing checks",
+      "dependencies": [],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "SOURCE_CI_OTHER_SHA_ONLY_CURRENT_MAIN_NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E1",
+      "next_eligible_action": "E3/E1 to provide complete required suite results at frozen current main source SHA, and independent gate review"
+    },
+    {
+      "control_id": "QAT-02",
+      "gate_id": "A-16",
+      "criterion": "Real authenticated browser tests cover core user journeys and tenant A/B access denies",
+      "dependencies": [
+        "FUN-04",
+        "SEC-03",
+        "DAT-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "FUN-04",
+        "SEC-03",
+        "DAT-01"
+      ],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await E3 exact-SHA evidence: Exact-SHA Playwright logs, artifacts sanitized of private data"
+    },
+    {
+      "control_id": "QAT-03",
+      "gate_id": "A-16",
+      "criterion": "Billing plus error, retries, persistence, cancellations and degraded behavior pass application/runtime E2E",
+      "dependencies": [
+        "BIL-04",
+        "DAT-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "BIL-04",
+        "DAT-01"
+      ],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await E3 exact-SHA evidence: Exact-SHA runtime/Stripe sandbox QA report"
+    },
+    {
+      "control_id": "QAT-04",
+      "gate_id": "A-17",
+      "criterion": "Test source SHA, build, QA environment and deployed tested artifact are traceable; no synthetic substitution",
+      "dependencies": [
+        "QAT-01",
+        "OPS-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "QAT-01",
+        "OPS-01"
+      ],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await E3 exact-SHA evidence: Signed or otherwise independently verifiable check IDs, exact-SHA provenance"
+    },
+    {
+      "control_id": "OPS-01",
+      "gate_id": "A-18",
+      "criterion": "The current production deployment is READY, its exact SHA is known and release acceptance uses that SHA",
+      "dependencies": [],
+      "historical_source_status": "PASS",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "HISTORICAL_SOURCE_PASS_ONLY",
+      "evidence_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+      "evidence_sha256": [
+        {
+          "evidence_id": "EV-OPS-01-VERCEL-PRODUCTION-SHA-20261101",
+          "commit_sha": "6b54e899ffd4edd7ce26883f4fc715a3fef098e0",
+          "artifact_path": "docs/enterprise/evidence/PROVIDER_READBACK_VERCEL_PRODUCTION_IDENTITY_2026-11-01.json",
+          "sha256": "701913ec62be44a9fac4774afb79500466e352dd4020070e0c4fc4cdeccc97f8",
+          "status": "NOT_VERIFIED",
+          "review_status": "NOT_REVIEWED"
+        }
+      ],
+      "historical_source_evidence_refs": [
+        "docs/enterprise/evidence/G1_OPS01_EXACT_PRODUCTION_DEPLOYMENT_IDENTITY_2026-10-22.json"
+      ],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E3",
+      "next_eligible_action": "Obtain qualified review of existing A-18 packet; after review run formal validator and only then promote",
+      "evidence_reference_type": "REVIEW_PACKET_NOT_IMPLEMENTATION_TEST_SHA"
+    },
+    {
+      "control_id": "OPS-02",
+      "gate_id": "A-19",
+      "criterion": "Protected or equivalently controlled merges/releases require approved review, trustworthy checks and explicit release decision",
+      "dependencies": [],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 enforcement and decision readback"
+    },
+    {
+      "control_id": "OPS-03",
+      "gate_id": "A-20",
+      "criterion": "Public critical routes and an authenticated core workflow pass deployment-specific smoke checks",
+      "dependencies": [
+        "OPS-01",
+        "QAT-02"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "OPS-01",
+        "QAT-02"
+      ],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Runtime smoke results and health/endpoints with exact deployment identity"
+    },
+    {
+      "control_id": "OPS-04",
+      "gate_id": "A-20",
+      "criterion": "Production monitoring, alert routing, incident response and support contact operate and are documented",
+      "dependencies": [
+        "OPS-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "OPS-01"
+      ],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Provider alert check, incident drill, runbook and support route"
+    },
+    {
+      "control_id": "OPS-05",
+      "gate_id": "A-21",
+      "criterion": "A governed rollback/recovery exercise verifies safe restore of a known-good release without customer-data mutation",
+      "dependencies": [
+        "OPS-01",
+        "DAT-04"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "OPS-01",
+        "DAT-04"
+      ],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Isolated/staged rehearsal log, rollback target SHA and acceptance record"
+    },
+    {
+      "control_id": "OPS-06",
+      "gate_id": "A-21",
+      "criterion": "QA, live, preview and production configuration and credentials stay isolated and fail closed",
+      "dependencies": [
+        "SEC-05",
+        "DAT-01"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "SEC-05",
+        "DAT-01"
+      ],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Environment provenance matrix, safe negative-cross-environment tests"
+    },
+    {
+      "control_id": "TRU-01",
+      "gate_id": "A-22",
+      "criterion": "Operator/contracting entity and software rights are identified and supported by appropriate corporate evidence",
+      "dependencies": [],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Authoritative supplier/ownership records, reviewed identity statement"
+    },
+    {
+      "control_id": "TRU-02",
+      "gate_id": "A-23",
+      "criterion": "Product terms, privacy notice and applicable DPA are accurate, accessible and reviewed for the target service",
+      "dependencies": [],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Versioned terms/privacy/DPA, legal approver identity, effective dates"
+    },
+    {
+      "control_id": "TRU-03",
+      "gate_id": "A-23",
+      "criterion": "Subprocessors, retention/deletion, transfers and GDPR role allocation match operating reality",
+      "dependencies": [
+        "TRU-02",
+        "FUN-05"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "TRU-02",
+        "FUN-05"
+      ],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Verified vendor list and data flow, retention schedule and legal/privacy sign-off"
+    },
+    {
+      "control_id": "TRU-04",
+      "gate_id": "A-24",
+      "criterion": "AI Act and independent-assurance marketing statements are scoped, current and do not imply false certification",
+      "dependencies": [
+        "TRU-02"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "TRU-02"
+      ],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Fact/legal review checklist and approved claim inventory"
+    },
+    {
+      "control_id": "TRU-05",
+      "gate_id": "A-24",
+      "criterion": "Customer-ready security questionnaire, disclosure/contact route, support and incident commitments are truthful",
+      "dependencies": [
+        "OPS-04",
+        "TRU-02"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "OPS-04",
+        "TRU-02"
+      ],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Evidence-indexed procurement packet, tested contact path and approved commitments"
+    },
+    {
+      "control_id": "TRU-06",
+      "gate_id": "A-22",
+      "criterion": "All legal obligations applicable to the offered scope have a documented qualified acceptance or bounded unresolved decision",
+      "dependencies": [
+        "TRU-01",
+        "TRU-03",
+        "TRU-04"
+      ],
+      "historical_source_status": "NOT_VERIFIED",
+      "official_status": "NOT_ACCEPTED",
+      "current_evidence_status": "NOT_VERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": [],
+      "historical_source_evidence_refs": [],
+      "reviewer_requirement": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": [
+        "TRU-01",
+        "TRU-03",
+        "TRU-04"
+      ],
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 exact-SHA evidence: Applicable-obligation matrix, legal reviewer conclusions and approved exceptions"
+    }
+  ],
+  "gates": [
+    {
+      "gate_id": "A-01",
+      "atomic_controls": [
+        "SEC-01"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await verified atomic proofs from E1 before independent acceptance"
+    },
+    {
+      "gate_id": "A-02",
+      "atomic_controls": [
+        "SEC-02",
+        "SEC-04"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await verified atomic proofs from E1 before independent acceptance"
+    },
+    {
+      "gate_id": "A-03",
+      "atomic_controls": [
+        "SEC-03",
+        "SEC-06"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await verified atomic proofs from E1 before independent acceptance"
+    },
+    {
+      "gate_id": "A-04",
+      "atomic_controls": [
+        "SEC-05"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "PARTIAL_SOURCE_REVIEW_APPROVED_IMPLEMENTATION_STILL_UNVERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "PR #2600 scanner source patch received native APPROVED at its exact head, but no full source/client/log negative tests, deployed config, TLS at edge, at-rest proof or independent A-04 acceptance",
+      "responsible_executor": "E1",
+      "next_eligible_action": "E1 to supply remaining DEPLOYED SEC-05 evidence; do not equate PR #2600 source approval with formal gate acceptance"
+    },
+    {
+      "gate_id": "A-05",
+      "atomic_controls": [
+        "FUN-01"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await verified atomic proofs from E2 before independent acceptance"
+    },
+    {
+      "gate_id": "A-06",
+      "atomic_controls": [
+        "FUN-02",
+        "FUN-03"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await verified atomic proofs from E2 before independent acceptance"
+    },
+    {
+      "gate_id": "A-07",
+      "atomic_controls": [
+        "FUN-04"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await verified atomic proofs from E2 before independent acceptance"
+    },
+    {
+      "gate_id": "A-08",
+      "atomic_controls": [
+        "FUN-05",
+        "FUN-06"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await verified atomic proofs from E2 before independent acceptance"
+    },
+    {
+      "gate_id": "A-09",
+      "atomic_controls": [
+        "BIL-01"
+      ],
+      "historical_source_gate_status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "TECHNICAL_EVIDENCE_INCOMPLETE",
+      "evidence_sha": null,
+      "evidence_sha256": "426159d1ab27cd377a753639322e01a8e57d87f6e2df7775a5e27ff11dac2d04",
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "Current exact six Vercel built-in Production Stripe Price bindings cannot be confirmed; apparent matching variable names belong to a custom environment; qualified independent gate-specific GitHub approval absent",
+      "responsible_executor": "E3",
+      "next_eligible_action": "Reinspect Vercel production binding proof; only then independent gate-specific PR review",
+      "review_packet_head_sha": "6814961ab37840577b39860947cba29690228668"
+    },
+    {
+      "gate_id": "A-10",
+      "atomic_controls": [
+        "BIL-02",
+        "BIL-03"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await verified atomic proofs from E2 before independent acceptance"
+    },
+    {
+      "gate_id": "A-11",
+      "atomic_controls": [
+        "BIL-04",
+        "BIL-05"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E2",
+      "next_eligible_action": "Await verified atomic proofs from E2 before independent acceptance"
+    },
+    {
+      "gate_id": "A-12",
+      "atomic_controls": [
+        "DAT-01"
+      ],
+      "historical_source_gate_status": "BLOCKED",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "BLOCKED",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "137-entry migration parity/provenance evidence and reviewed consolidation not accepted",
+      "responsible_executor": "E1",
+      "next_eligible_action": "Await E1 migration parity closure and governed source reconciliation"
+    },
+    {
+      "gate_id": "A-13",
+      "atomic_controls": [
+        "DAT-02",
+        "DAT-03"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await verified atomic proofs from E3 before independent acceptance"
+    },
+    {
+      "gate_id": "A-14",
+      "atomic_controls": [
+        "DAT-04",
+        "DAT-05"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await verified atomic proofs from E3 before independent acceptance"
+    },
+    {
+      "gate_id": "A-15",
+      "atomic_controls": [
+        "QAT-01"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "OTHER_SHA_PARTIAL_SOURCE_CI_REPORTED_EXACT_MAIN_UNVERIFIED",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "PR #2613 reports CircleCI job #442 PASS 4244 tests for PR #2597 head c7ea6317..., NOT current main 6f7079a7...; GitHub commit status for PR #2613 has two PENDING CircleCI statuses #446/#447",
+      "responsible_executor": "E1",
+      "next_eligible_action": "E3/E1 to provide complete required suite results at frozen current main source SHA, and independent gate review"
+    },
+    {
+      "gate_id": "A-16",
+      "atomic_controls": [
+        "QAT-02",
+        "QAT-03"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await verified atomic proofs from E3 before independent acceptance"
+    },
+    {
+      "gate_id": "A-17",
+      "atomic_controls": [
+        "QAT-04"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E3",
+      "next_eligible_action": "Await verified atomic proofs from E3 before independent acceptance"
+    },
+    {
+      "gate_id": "A-18",
+      "atomic_controls": [
+        "OPS-01"
+      ],
+      "historical_source_gate_status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "READY_FOR_QUALIFIED_REVIEW_NOT_ACCEPTED",
+      "evidence_sha": null,
+      "evidence_sha256": "f70fecb8f8487732c7b0e4da145e1aa63a07a1d83d67de62b6b6bd3bb9589754",
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "Required qualified independent gate-specific review and formal acceptance artifact not supplied; main SHA is not the deployed production SHA and must not be misrepresented",
+      "responsible_executor": "E3",
+      "next_eligible_action": "Obtain qualified review of existing A-18 packet; after review run formal validator and only then promote",
+      "review_packet_head_sha": "1dc9b63f6f13ea9b090b2840610582a39d3ac90e"
+    },
+    {
+      "gate_id": "A-19",
+      "atomic_controls": [
+        "OPS-02"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "Actual enforcement of reviews/checks/controlled merge and explicit release decision not verified",
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await E4 enforcement and decision readback"
+    },
+    {
+      "gate_id": "A-20",
+      "atomic_controls": [
+        "OPS-03",
+        "OPS-04"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await verified atomic proofs from E4 before independent acceptance"
+    },
+    {
+      "gate_id": "A-21",
+      "atomic_controls": [
+        "OPS-05",
+        "OPS-06"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await verified atomic proofs from E4 before independent acceptance"
+    },
+    {
+      "gate_id": "A-22",
+      "atomic_controls": [
+        "TRU-01",
+        "TRU-06"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await verified atomic proofs from E4 before independent acceptance"
+    },
+    {
+      "gate_id": "A-23",
+      "atomic_controls": [
+        "TRU-02",
+        "TRU-03"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await verified atomic proofs from E4 before independent acceptance"
+    },
+    {
+      "gate_id": "A-24",
+      "atomic_controls": [
+        "TRU-04",
+        "TRU-05"
+      ],
+      "historical_source_gate_status": "NOT_ELIGIBLE",
+      "official_status": "NOT_ACCEPTED",
+      "accepted": false,
+      "current_evidence_status": "NOT_ELIGIBLE",
+      "evidence_sha": null,
+      "evidence_sha256": null,
+      "required_reviewer": "QUALIFIED_INDEPENDENT_HUMAN",
+      "review_result": "NOT_APPROVED",
+      "formal_acceptance_outcome": "NOT_ACCEPTED",
+      "outstanding_dependency": "All underlying atomic control proofs and their prerequisite dependencies must be formally accepted",
+      "responsible_executor": "E4",
+      "next_eligible_action": "Await verified atomic proofs from E4 before independent acceptance"
+    }
+  ],
+  "critical_acceptance_boundary": "A historical source PASS and a verified SHA-256 never constitute a new formal Evidence Factory gate PASS. Do not modify source controls or product-ready grouping. Approval must be independent, native GitHub and verified by the official validator before formal promotion.",
+  "latest_acceptance_update": {
+    "date": "2026-11-04",
+    "source_main_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+    "new_qualified_gate_reviews_observed": 0,
+    "pr2610_a18_gate_review_count": 0,
+    "pr2611_a09_gate_review_count": 0,
+    "source_pr2600_review": {
+      "pr": 2600,
+      "state": "APPROVED",
+      "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2600#pullrequestreview-5771890177",
+      "reviewer": "renansilva2002-tech",
+      "commit_sha": "370c17746eeeb167b6542c6b099598719a9f3082",
+      "accepted_gate": false,
+      "boundary": "CODE PR APPROVAL, NOT SEC-05/A-04 FORMAL GATE REVIEW"
+    },
+    "circleci_source_report": {
+      "source_pr": 2613,
+      "reported_pipeline": 1105,
+      "reported_job": 442,
+      "reported_result": "SUCCESS_PER_PR_DESCRIPTION_NOT_INDEPENDENTLY_CONFIRMED_VIA_CIRCLECI",
+      "reported_test_files": 867,
+      "reported_tests": 4244,
+      "validated_pr_branch": 2597,
+      "validated_source_sha": "c7ea6317c123c25863b08426afa6248b24dc8e29",
+      "ci_config_sha": "5bc43ee590b0d4fc031a2ee39cacf8e209a4c0a9",
+      "current_main_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "exact_main_evidence": false,
+      "pr2613_latest_statuses": [
+        {
+          "context": "ci/circleci: pr-head-validation",
+          "state": "pending",
+          "url": "https://circleci.com/gh/renanescola40-afk/eurocomply_saas/446"
+        },
+        {
+          "context": "ci/circleci: pr-source-validation",
+          "state": "pending",
+          "url": "https://circleci.com/gh/renanescola40-afk/eurocomply_saas/447"
+        }
+      ]
+    },
+    "validation_environment": {
+      "repository_worktree_present": false,
+      "github_network_available_in_container": false,
+      "official_node_validator_executed": false
+    },
+    "no_repeated_review_request": true
+  }
+}
