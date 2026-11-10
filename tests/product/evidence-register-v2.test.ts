@@ -8,7 +8,8 @@ describe('enterprise evidence register V2', () => {
     const source = await readFile(EVIDENCE_PAGE, 'utf8');
 
     expect(source).toContain('resolveEvidenceOrganization');
-    expect(source).toContain('tryListEvidenceItems');
+    expect(source).toContain('listEvidenceItems');
+    expect(source).not.toContain('tryListEvidenceItems');
     expect(source).toContain('createEvidenceItem');
     expect(source).toContain('summarizeEvidence');
     expect(source).toContain('requestedOrganizationId');
