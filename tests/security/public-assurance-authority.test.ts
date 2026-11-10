@@ -53,6 +53,23 @@ describe('verified public assurance authorities', () => {
     expect(trustContent).not.toContain('No live third-party status integration is connected');
   });
 
+  it('discloses sample Statuspage components and health-monitoring limits in every locale', () => {
+    const statusPage = read('src/components/marketing/verified-status-page.tsx');
+
+    // Provider-managed example components are not continuous health telemetry.
+    expect(statusPage.split('API (example)').length - 1).toBe(6);
+    expect(statusPage.split('Management Portal (example)').length - 1).toBe(6);
+    for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
+      expect(statusPage).toContain('  ' + locale + ': {');
+    }
+    expect(statusPage).toContain('does not prove continuous automated monitoring');
+    expect(statusPage).toContain('não prova monitorização automática contínua');
+    expect(statusPage).toContain('no demuestra supervisión automática continua');
+    expect(statusPage).toContain('ne prouve pas une surveillance automatisée continue');
+    expect(statusPage).toContain('non prova un monitoraggio automatico continuo');
+    expect(statusPage).toContain('kein Nachweis für eine kontinuierliche automatische Überwachung');
+  });
+
   it('keeps status and security claims conservative', () => {
     const statusPage = read('src/components/marketing/verified-status-page.tsx');
     const trustContent = read('src/lib/trust-center/content.ts');

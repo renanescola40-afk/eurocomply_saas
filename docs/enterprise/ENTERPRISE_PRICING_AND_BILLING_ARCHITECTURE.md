@@ -6,8 +6,10 @@
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | Essential | `starter` | €49 | €490 | 3 | 1 | Self-serve |
 | Professional | `professional` | €149 | €1,490 | 15 | 1 | Self-serve checkout |
-| Business | `business` | €399 | €3,990 | 75 | 3 | Demo / assisted sales |
+| Business | `business` | €399 | €3,990 | 75 | 1 | Demo / assisted sales |
 | Enterprise | `enterprise` | From €990/month | Contract | Contract/unlimited | Contract/unlimited | Sales-led |
+
+The Business organization entitlement is **one organization per subscription/contract**, consistent with `src/lib/billing/plans.ts` and the public pricing page. Do not promise multiple organizations under Business without an explicit implemented and approved contractual entitlement.
 
 The annual references retain the existing commercial convention of charging ten monthly payments for a twelve-month term. They are repository catalog values only until matching Stripe Prices are created and verified.
 

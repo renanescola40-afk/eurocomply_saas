@@ -14,4 +14,14 @@ describe('book demo form privacy boundary', () => {
     expect(source).toContain("method: 'POST'");
     expect(source).toContain("'Content-Type': 'application/json'");
   });
+  it('blocks the native HTML submission until hydration and provides a no-script alternative', () => {
+    expect(source).toContain('useSyncExternalStore(subscribeHydration, clientHydrated, serverHydrated)');
+    expect(source).toContain('const clientHydrated = () => true');
+    expect(source).toContain('const serverHydrated = () => false');
+    expect(source).toContain("disabled={!hydrated || state === 'submitting'}");
+    expect(source).toContain('<noscript>');
+    expect(source).toContain('JavaScript is required to submit this secure form.');
+    expect(source).toContain('href="mailto:comercial@risckcomply.com"');
+    expect(source).toContain("!hydrated ? 'Preparing secure form...'");
+  });
 });
