@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
-      "notes": "PROPOSAL ONLY, NOT FORMALLY ACCEPTED. Source OPS-01 PASS is historical deployed-identity proof; A-18 acceptance must be provider attested. Candidate anchored to authenticated main a9202d0e5e419d82d485139b882c63f08924aa5d after #2678 merge; exact final PR HEAD requires new independent native APPROVED review by renansilva2002-tech with literal standalone A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED, required checks, explicit owner-governed merge, and post-merge official valid=true/gates_accepted>=1. Previous #2677 review was empty; prior acceptance cannot carry forward. No Production deployment authorization.",
+      "notes": "CANDIDATE ONLY; not formally accepted. Reanchored to authenticated merged main eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b following the #2676 cross-scope merge that caused #2679 post-merge acceptance_sha_mismatch. Vercel production deployed identity is historical and intentionally distinct from current main. Require a NEW native independent APPROVED review of the exact final HEAD with standalone line A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED, exact-head required checks, owner-governed merge, strictly evidence-only source ancestry, and post-merge official valid=true/gates_accepted>=1. No product/runtime/release GO.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "a9202d0e5e419d82d485139b882c63f08924aa5d",
-      "acceptance_evidence_sha256": "d6a6a0b50738b554a69947e94231276147d06da15d1364f4d60531f7e3b1828f"
+      "acceptance_sha": "eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b",
+      "acceptance_evidence_sha256": "71b08ce1396dfc5ee8088148d5101fdd6e1aa35d0679bdf461533b8f42abc963"
     },
     {
       "gate_id": "A-19",
