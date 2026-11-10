@@ -11,7 +11,10 @@ function validFixture() {
       qaAliasVerified: true, qaAliasTargetId: 'dpl_Valid12345',
       createdAtMs: 1793915000000, gitSha: SHA, gitRepository: REPO,
       gitProviderReadback: true, runtimeDatabaseProjectRef: 'zrxrrfbllsxtleyxjpsz' },
-    database: { projectRef: 'zrxrrfbllsxtleyxjpsz', isProduction: false, providerReadback: true },
+    database: { projectRef: 'zrxrrfbllsxtleyxjpsz', isProduction: false, providerReadback: true,
+      webhookWriter: { type: 'rls_scoped', qaProjectRef: 'zrxrrfbllsxtleyxjpsz',
+        bypassRls: false, providerReadback: true, applicationIntegrationVerified: true,
+        canPersistEvents: true, canUpdateEntitlements: true } },
     qaEnvironment: {
       id: 'env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj', providerReadback:true,
       releaseSha:SHA, stripeSecretUpdatedAtMs:1793912811931,
@@ -93,3 +96,23 @@ denied('rejects webhook endpoint URL using the production host', x => {
 denied('rejects preflight with fake or missing provider evidence freshness', x => {
   x.qaEnvironment.stripeSecretUpdatedAtMs = undefined;
 }, 'qa_deployment_predates_stripe_test_configuration');
+
+denied('rejects absent webhook storage writer', x => {
+  delete x.database.webhookWriter;
+}, 'qa_webhook_storage_writer_unverified');
+denied('rejects QA service-role writer that bypasses RLS', x => {
+  x.database.webhookWriter.type = 'service_role';
+  x.database.webhookWriter.bypassRls = true;
+}, 'qa_webhook_storage_writer_unverified');
+denied('rejects webhook writer bound to production DB', x => {
+  x.database.webhookWriter.qaProjectRef = 'tganhbbhfxcpblmgqprg';
+}, 'qa_webhook_storage_writer_unverified');
+denied('rejects missing authenticated storage writer proof', x => {
+  x.database.webhookWriter.applicationIntegrationVerified = false;
+}, 'qa_webhook_storage_writer_unverified');
+denied('rejects scoped writer unable to persist event claims', x => {
+  x.database.webhookWriter.canPersistEvents = false;
+}, 'qa_webhook_storage_writer_unverified');
+denied('rejects scoped writer unable to reconcile entitlements', x => {
+  x.database.webhookWriter.canUpdateEntitlements = false;
+}, 'qa_webhook_storage_writer_unverified');
