@@ -66,8 +66,8 @@ describe('English-only canonical customer surface', () => {
   it('keeps authenticated secondary surfaces on canonical English runtime copy', () => {
     const surfaces = [
       'src/app/[locale]/dashboard/executive/page.tsx',
-      'src/app/[locale]/dashboard/board-report/page.tsx',
-      'src/app/[locale]/dashboard/audit-pack/page.tsx',
+      'src/app/[locale]/dashboard/board-report/board-report-client.tsx',
+      'src/app/[locale]/dashboard/audit-pack/audit-pack-client.tsx',
       'src/app/[locale]/dashboard/evidence/evidence-vault-client.tsx',
       'src/app/[locale]/dashboard/legal-assurance/page.tsx',
       'src/app/[locale]/dashboard/legal-assurance/[reviewId]/page.tsx',

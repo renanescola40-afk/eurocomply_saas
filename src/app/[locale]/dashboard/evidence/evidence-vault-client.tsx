@@ -9,7 +9,7 @@ import {
   createEvidenceItem,
   resolveEvidenceOrganization,
   summarizeEvidence,
-  tryListEvidenceItems,
+  listEvidenceItems,
   type EvidenceItem,
   type EvidenceType,
 } from '@/lib/evidence/storage';
@@ -81,7 +81,7 @@ export default function EvidenceVaultClient({ canonicalOrganizationId }: { canon
       const resolvedOrganizationId = await resolveEvidenceOrganization(user.id, requestedOrganizationId);
       setOrganizationId(resolvedOrganizationId);
       setTenantError(null);
-      const evidence = await tryListEvidenceItems({ organizationId: resolvedOrganizationId, limit: 50 });
+      const evidence = await listEvidenceItems({ organizationId: resolvedOrganizationId, limit: 50 });
       setItems(evidence);
     } catch (error) {
       setOrganizationId(null);
