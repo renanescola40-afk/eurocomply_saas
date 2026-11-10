@@ -1,21 +1,21 @@
 # Default ownership for all repository changes.
-* @renanescola40-afk
+* @renanescola40-afk @renansilva2002-tech
 
 # Repository governance and delivery controls.
-/.github/ @renanescola40-afk
-/package.json @renanescola40-afk
-/package-lock.json @renanescola40-afk
+/.github/ @renanescola40-afk @renansilva2002-tech
+/package.json @renanescola40-afk @renansilva2002-tech
+/package-lock.json @renanescola40-afk @renansilva2002-tech
 
 # Security-, identity-, billing-, and tenant-sensitive application paths.
-/src/app/api/ @renanescola40-afk
-/src/lib/security/ @renanescola40-afk
-/src/server/security/ @renanescola40-afk
-/src/lib/auth/ @renanescola40-afk
-/src/lib/billing/ @renanescola40-afk
+/src/app/api/ @renanescola40-afk @renansilva2002-tech
+/src/lib/security/ @renanescola40-afk @renansilva2002-tech
+/src/server/security/ @renanescola40-afk @renansilva2002-tech
+/src/lib/auth/ @renanescola40-afk @renansilva2002-tech
+/src/lib/billing/ @renanescola40-afk @renansilva2002-tech
 
 # Database policy, migrations, and operational evidence.
-/supabase/ @renanescola40-afk
-/scripts/security/ @renanescola40-afk
-/scripts/release/ @renanescola40-afk
-/docs/security/ @renanescola40-afk
-/docs/decisions/ @renanescola40-afk
+/supabase/ @renanescola40-afk @renansilva2002-tech
+/scripts/security/ @renanescola40-afk @renansilva2002-tech
+/scripts/release/ @renanescola40-afk @renansilva2002-tech
+/docs/security/ @renanescola40-afk @renansilva2002-tech
+/docs/decisions/ @renanescola40-afk @renansilva2002-tech

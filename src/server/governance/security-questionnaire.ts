@@ -38,9 +38,9 @@ export const SECURITY_QUESTIONNAIRE_ITEMS: SecurityQuestionnaireItem[] = [
     id: 'rbac',
     category: 'access_control',
     question: 'Does the product support role-based access control?',
-    answer: 'RISCK COMPLY includes centralized RBAC for organization roles such as owner, admin, editor, member and viewer, with feature-level permissions for sensitive operations.',
-    evidenceRefs: ['Access Center', 'RBAC tests', 'Audit events'],
-    readiness: 'ready',
+    answer: 'RISCK COMPLY implements organization-scoped owner/admin/member authorization. The shared RBAC model additionally supports editor/viewer permissions where a route adopts the common guards, but some legacy paths remain owner/admin/member-only. Full route-by-route editor/viewer coverage is not claimed.',
+    evidenceRefs: ['Access Center', 'RBAC tests', 'Audit events', 'Access control documentation'],
+    readiness: 'partial',
   },
   {
     id: 'data-storage',
@@ -102,8 +102,8 @@ export const SECURITY_QUESTIONNAIRE_ITEMS: SecurityQuestionnaireItem[] = [
     id: 'sso-mfa',
     category: 'access_control',
     question: 'Does RISCK COMPLY support SSO and enforced MFA?',
-    answer: 'Enterprise SSO and enforced MFA are roadmap items. Current authentication supports email and Google sign-in through Supabase Auth.',
-    evidenceRefs: ['Auth configuration', 'Enterprise roadmap'],
+    answer: 'SAML SSO runtime components are implemented, but activation requires buyer-specific IdP/domain configuration and verified end-to-end login. Step-up MFA/AAL2 is enforced for protected administration and high-risk actions. Tenant-wide mandatory MFA is an implemented organization-configurable policy, not enabled for every tenant by default. Buyer SSO activation and individual tenant MFA settings are not presumed.',
+    evidenceRefs: ['SSO/MFA enterprise plan', 'Access control documentation', 'SAML SSO runtime proof runbook'],
     readiness: 'needs_input',
   },
   {
@@ -134,7 +134,10 @@ export function calculateSecurityQuestionnaireScore(items: SecurityQuestionnaire
 }
 
 export function getSecurityQuestionnaireStatus(score: number): SecurityQuestionnaireSummary['status'] {
-  if (score >= 88) return 'enterprise_ready';
+  // This score measures completeness of drafted answers, not independently
+  // validated security controls or legal/release acceptance. Never expose an
+  // enterprise-ready status from self-reported questionnaire scores alone.
+  // An evidence-backed status requires a separate official acceptance source.
   if (score >= 60) return 'review_ready';
   return 'foundation';
 }

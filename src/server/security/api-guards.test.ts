@@ -6,6 +6,7 @@ import { z } from 'zod';
 const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   getOrganizationMembership: vi.fn(),
+  requireTenantMfaForOrganization: vi.fn(),
   assertOrganizationPermission: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
   buildRateLimitSubjectFromRequest: vi.fn(),
@@ -22,6 +23,11 @@ vi.mock('@/server/security/rbac', async () => {
     getOrganizationMembership: mocks.getOrganizationMembership,
     assertOrganizationPermission: mocks.assertOrganizationPermission,
   };
+});
+
+vi.mock('@/server/security/tenant-mfa', async () => {
+  const actual = await vi.importActual<typeof import('@/server/security/tenant-mfa')>('@/server/security/tenant-mfa');
+  return { ...actual, requireTenantMfaForOrganization: mocks.requireTenantMfaForOrganization };
 });
 
 vi.mock('@/lib/security/rate-limit', () => ({
@@ -52,6 +58,7 @@ describe('central API security guards', () => {
     vi.stubEnv('VERCEL_ENV', 'preview');
     vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.eurocomply.test');
     mocks.getCurrentUser.mockResolvedValue({ id: 'user_a' });
+    mocks.requireTenantMfaForOrganization.mockResolvedValue({ required: false, satisfied: true, assuranceLevel: null });
     mocks.getOrganizationMembership.mockResolvedValue({ membership: { organization_id: 'org_a', role: 'admin' }, error: null });
     mocks.assertOrganizationPermission.mockResolvedValue({
       ok: true,
@@ -91,6 +98,30 @@ describe('central API security guards', () => {
       code: 'organization_membership_required',
       status: 403,
     });
+  });
+
+  it('SEC-02 canonicalizes supported legacy membership roles at the API context boundary', async () => {
+    mocks.getOrganizationMembership.mockResolvedValue({
+      membership: { organization_id: 'org_a', role: 'administrador', status: 'active' },
+      error: null,
+    });
+
+    const context = await requireOrganizationAccess({ userId: 'user_a', organizationId: 'org_a' });
+
+    expect(context.role).toBe('admin');
+    expect(context.rawRole).toBe('administrador');
+    expect(mocks.requireTenantMfaForOrganization).toHaveBeenCalledWith('org_a');
+  });
+
+  it('SEC-02 denies unrecognized membership roles before tenant MFA when a provider returns unexpected data', async () => {
+    mocks.getOrganizationMembership.mockResolvedValue({
+      membership: { organization_id: 'org_a', role: 'superuser', status: 'active' },
+      error: null,
+    });
+
+    await expect(requireOrganizationAccess({ userId: 'user_a', organizationId: 'org_a' }))
+      .rejects.toMatchObject({ code: 'organization_membership_required', status: 403 });
+    expect(mocks.requireTenantMfaForOrganization).not.toHaveBeenCalled();
   });
 
   it('blocks viewer users from admin actions', async () => {
