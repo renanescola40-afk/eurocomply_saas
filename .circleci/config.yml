@@ -2,6 +2,13 @@ version: 2.1
 
 # Opt-in: avoid consuming CircleCI credits until the owner explicitly triggers QA.
 parameters:
+  run_external_pr_quality:
+    type: boolean
+    default: false
+  # Manual, source-only validation for Dependabot PR #2590; never auto-run.
+  run_pr2590_workflow_validation:
+    type: boolean
+    default: false
   run_dat01_preflight:
     type: boolean
     default: false
@@ -15,6 +22,12 @@ parameters:
     type: boolean
     default: false
   run_qa_full:
+    type: boolean
+    default: false
+  run_sec01_qa_provider:
+    type: boolean
+    default: false
+  run_sec01_qa_browser:
     type: boolean
     default: false
   run_g5_02_pg_replay:
@@ -36,8 +49,132 @@ parameters:
     type: boolean
     default: false
 
+  # A-02 SEC-02 source tests. Manual opt-in only; no provider credentials/deploy.
+  run_sec02_source:
+    type: boolean
+    default: false
+
 # RISCK COMPLY: validação isolada, sem deploy
 jobs:
+  # Manual-only, restricted-QA provider proof. No deployment, email or PROD calls.
+  # QA service_role is supplied ONLY by CircleCI context risck-sec01-qa-only.
+  sec01-qa-provider-proof:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA and isolated QA preflight (no secrets printed)
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "qa/a01-sec01-provider-proof-20261107"
+            test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing_pipeline_source_sha}"
+            test "${SEC01_QA_PROJECT_REF:-}" = "zrxrrfbllsxtleyxjpsz"
+            test "${NEXT_PUBLIC_SUPABASE_URL:-}" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
+            test -n "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+            test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+            test "${NEXT_PUBLIC_SUPABASE_ANON_KEY}" != "${SUPABASE_SERVICE_ROLE_KEY}"
+            test -z "${RESEND_API_KEY:-}"
+            test -z "${SMTP_HOST:-}"
+            test "${VERCEL_ENV:-}" != "production"
+            case "${STRIPE_SECRET_KEY:-}" in sk_live_*) echo "LIVE Stripe is forbidden"; exit 1;; esac
+            printf '%s\n' "SEC01 QA-only source checked. Provider test is intentionally incomplete for formal acceptance."
+      - run:
+          name: Install locked dependencies without lifecycle scripts
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Execute real QA Auth lifecycle and verify sanitized partial evidence
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/enterprise-sec01
+            set +e
+            SEC01_QA_EXECUTE=QA_ONLY_AUTH_PROOF node scripts/enterprise-gates/a01-sec01-supabase-qa-provider-proof.mjs > artifacts/enterprise-sec01/provider-proof.json
+            provider_status=$?
+            set -e
+            node --input-type=module - "$provider_status" \<<'NODE'
+            import { readFileSync } from 'node:fs';
+            const status = Number(process.argv[2]);
+            let p;
+            try { p = JSON.parse(readFileSync('artifacts/enterprise-sec01/provider-proof.json', 'utf8')); }
+            catch { console.error('SEC01 evidence JSON unavailable or invalid'); process.exit(1); }
+            const valid = status === 2 &&
+              p.schema === 'risck-sec01-qa-provider-proof-v1' &&
+              p.source_sha === process.env.CIRCLE_SHA1 &&
+              p.qa_ref === 'zrxrrfbllsxtleyxjpsz' &&
+              p.execution === 'QA_PROVIDER_RUNTIME' &&
+              p.outcome === 'PARTIAL_PROVIDER_PASS' &&
+              p.passed_checks === 14 &&
+              p.qa_cleanup_verified === true &&
+              p.emails_sent === 0 &&
+              p.gate === 'NOT_ACCEPTED' &&
+              p.control === 'NOT_VERIFIED' &&
+              Array.isArray(p.checks) && p.checks.length === 14 &&
+              p.checks.every((c) => c.status === 'PASS');
+            console.log(JSON.stringify({
+              source_sha: process.env.CIRCLE_SHA1,
+              qa_ref: 'zrxrrfbllsxtleyxjpsz',
+              provider_case_count: Number(p.passed_checks ?? 0),
+              cleanup_verified: p.qa_cleanup_verified === true,
+              classification: valid ? 'PROVIDER_ONLY_PARTIAL_PASS' : 'PROVIDER_PROOF_FAILED',
+              SEC01: 'NOT_VERIFIED',
+              A01: 'NOT_ACCEPTED',
+            }));
+            if (!valid) process.exit(1);
+            NODE
+      # Store artifacts automatically on failed prior run steps too.
+      - store_artifacts:
+          path: artifacts/enterprise-sec01
+          destination: sec01-qa-provider-partial-evidence
+
+  # SEC-01 application proof: opt-in, QA-only, localhost Next.js + real Chromium.
+  # The QA admin secret is confined to the test harness and never reaches Next.
+  sec01-next-app-browser-qa:
+    docker:
+      - image: cimg/node:22.23.4-browsers
+    resource_class: medium
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact-source isolated QA Auth preflight
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "qa/a01-sec01-provider-proof-20261107"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test "$SEC01_QA_PROJECT_REF" = "zrxrrfbllsxtleyxjpsz"
+            test "$NEXT_PUBLIC_SUPABASE_URL" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
+            test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+            test -n "$SUPABASE_SERVICE_ROLE_KEY"
+            test "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != "$SUPABASE_SERVICE_ROLE_KEY"
+            test -z "$(printenv RESEND_API_KEY || true)"
+            test -z "$(printenv SMTP_HOST || true)"
+            test -z "$(printenv VERCEL_TOKEN || true)"
+            test "$(printenv VERCEL_ENV || true)" != "production"
+            test "$(printenv E2E_ALLOW_SYNTHETIC_APP_WRITES || true)" != "true"
+            case "$(printenv STRIPE_SECRET_KEY || true)" in sk_live_*) echo "LIVE Stripe is forbidden"; exit 1;; esac
+            printf '%s\n' "SEC01 QA application proof: exact SHA and environment verified; no deployment."
+      - run:
+          name: Install locked application dependencies (no scripts)
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Install isolated Chromium browser for real local Next.js tests
+          command: npx playwright install chromium
+      - run:
+          name: Verify real browser login/logout plus protected API and cookie replay in QA
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/enterprise-sec01
+            set +e
+            SEC01_APP_EXECUTE=QA_ONLY_APP_BROWSER_PROOF node scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs > artifacts/enterprise-sec01/next-app-browser-proof.json
+            qa_status=$?
+            set -e
+            node scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs "$qa_status"
+      - store_artifacts:
+          path: artifacts/enterprise-sec01
+          destination: sec01-next-app-browser-partial-evidence
+
   synthetic-backup-components:
     machine:
       image: ubuntu-2204:2026.05.1
@@ -708,6 +845,241 @@ jobs:
           path: artifacts/g5-02-pg17
           destination: enterprise-postgres-synthetic-exact-sha
 
+  # A-02 / SEC-02 manual source verification. No database/API tests, no deploy.
+  sec02-rbac-source-proof:
+    docker:
+      - image: cimg/node:22
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify A-02 branch and immutable Git SHA without provider access
+          command: |
+            set -euo pipefail
+            expected_branch="fix/a02-sec02-fail-closed-unknown-roles-20261108"
+            test "${CIRCLE_BRANCH:-}" = "$expected_branch" || { echo "SEC02 wrong branch"; exit 1; }
+            test -n "${CIRCLE_SHA1:-}" || { echo "SEC02 missing Git SHA"; exit 1; }
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1" || { echo "SEC02 checkout SHA mismatch"; exit 1; }
+            node -e "if (Number(process.versions.node.split('.')[0]) !== 22) process.exit(1)"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "SEC02 privileged variable forbidden: $key"
+                exit 1
+              fi
+            done
+            echo "SEC02_SOURCE_SHA=$CIRCLE_SHA1"
+      - run:
+          name: Install reproducible dependencies without lifecycle hooks
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: SEC-02 exact-SHA unit, membership, matrix, and API role-guard regression
+          command: |
+            set -euo pipefail
+            ./node_modules/.bin/vitest run \
+              src/server/security/rbac.test.ts \
+              src/server/security/rbac-membership.test.ts \
+              src/server/security/api-guards.test.ts \
+              tests/unit/permissions.test.ts \
+              tests/unit/sec02-rbac-matrix-contract.test.ts
+      - run:
+          name: Repository TypeScript typecheck
+          command: npm run typecheck
+      - run:
+          name: Record scoped source evidence with no PASS inference
+          when: always
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/sec02-source
+            node -e 'const fs=require("node:fs");fs.writeFileSync("artifacts/sec02-source/provenance.json",JSON.stringify({kind:"SEC02_SOURCE_ONLY",branch:process.env.CIRCLE_BRANCH,sha:process.env.CIRCLE_SHA1,job:process.env.CIRCLE_JOB,workflowId:process.env.CIRCLE_WORKFLOW_ID,qaAuthenticatedTests:"NOT_RUN",sqlRlsPolicyDeployed:false,formalAcceptance:"NOT_GRANTED"},null,2)+"\n")'
+      - store_artifacts:
+          path: artifacts/sec02-source
+          destination: sec02-source-only-exact-sha
+
+  # Automatic, read-only CI for GitHub PR/push events. Never uses any QA or PROD context.
+  # This is deliberately narrower than a provider-backed Enterprise acceptance job.
+  pr-source-autopilot:
+    docker:
+      - image: cimg/node:22.23.4
+    resource_class: medium
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact SHA and reject privileged provider credentials
+          command: |
+            set -euo pipefail
+            set +x
+            test -n "${CIRCLE_SHA1:-}" || { echo "Missing CI SHA" >&2; exit 1; }
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1" || {
+              echo "Refusing checkout inconsistent with pipeline SHA" >&2
+              exit 1
+            }
+            node -e 'if (Number(process.versions.node.split(".")[0]) !== 22) process.exit(1)'
+            for key in DATABASE_URL DIRECT_URL PGPASSWORD QA_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "Privileged variable forbidden in untrusted PR CI: $key" >&2
+                exit 1
+              fi
+            done
+            echo "SOURCE_ONLY; exact SHA verified; no QA/PROD access, no deployment"
+      - run:
+          name: Install exact lockfile without lifecycle scripts
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Verify lockfile and offline security policy
+          command: |
+            set -euo pipefail
+            npm run security:package-lock
+            node scripts/security/run-security-ci-without-audit.mjs
+      - run:
+          name: Run ESLint and TypeScript
+          command: |
+            set -euo pipefail
+            npm run lint
+            npm run typecheck
+      - run:
+          name: Verify automatic CI and manual deep safety contracts
+          command: node --test tests/ci/circleci-pr-autopilot-contract.test.mjs tests/ci/external-circleci-rescue-contract.test.mjs
+      - run:
+          name: Run unit tests
+          command: npm run test
+      - run:
+          name: Preserve genuine source-only exact-SHA outcome
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/pr-source-autopilot
+            node -e 'const fs=require("fs"); const s=process.env.CIRCLE_SHA1; if(!s||require("child_process").execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim()!==s) process.exit(1); fs.writeFileSync("artifacts/pr-source-autopilot/proof.json",JSON.stringify({schema:"risck-pr-source-autopilot-v1",source_sha:s,branch:process.env.CIRCLE_BRANCH||null,workflow_id:process.env.CIRCLE_WORKFLOW_ID||null,execution:"SOURCE_ONLY",checks:"lockfile,offline-security,lint,typecheck,unit-tests",provider_calls:"NOT_EXECUTED",qa_runtime:"NOT_EXECUTED",production_writes:0,formal_acceptance:"NOT_GRANTED"},null,2))'
+      - store_artifacts:
+          path: artifacts/pr-source-autopilot
+          destination: pr-source-autopilot-exact-sha
+
+  # CI RESCUE: source-only, exact-checkout test executor.
+  # Stage is intentionally opt-in until the CURRENT CircleCI Free credits,
+  # project trigger type and GitHub status delivery are verified in provider UI.
+
+  # One-shot, no-context Actionlint validation on exact checked-out GitHub SHA.
+  source-actionlint:
+    docker:
+      - image: cimg/node:22.23.4
+    resource_class: medium
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify exact PR SHA and refuse privileged variables
+          command: |
+            set -euo pipefail
+            set +x
+            test -n "$CIRCLE_SHA1" || { echo "Missing CircleCI SHA" >&2; exit 1; }
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1" || { echo "Git checkout does not match CircleCI SHA" >&2; exit 1; }
+            test -n "$CIRCLE_BRANCH"
+            for key in DATABASE_URL DIRECT_URL PGPASSWORD SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "Privileged variable forbidden in source Actionlint job: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Verify Actionlint workflow contract
+          command: node --test tests/ci/external-circleci-rescue-contract.test.mjs
+      - run:
+          name: Run pinned Actionlint on all GitHub workflows (fail closed)
+          command: |
+            set -euo pipefail
+            set +x
+            archive=/tmp/actionlint_1.7.12_linux_amd64.tar.gz
+            curl --fail --silent --show-error --location --retry 2 --retry-delay 2 --max-time 60 https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$archive"
+            echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $archive" | sha256sum --check -
+            tar -xzf "$archive" -C /tmp actionlint
+            chmod 0755 /tmp/actionlint
+            /tmp/actionlint -version
+            /tmp/actionlint -color=false
+
+  external-pr-quality:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: large
+    working_directory: ~/project
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+      NODE_OPTIONS: --max-old-space-size=5120
+    steps:
+      - checkout
+      - run:
+          name: Fail-closed exact SHA, stage branch and secret isolation
+          command: |
+            set -euo pipefail
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test -n "$CIRCLE_BRANCH"
+            case "$CIRCLE_BRANCH" in
+              ci/rescue-external-pr-quality-20261109|ci/phase1-deep-release-20261110) ;;
+              *) echo "Unapproved external-pr-quality branch" >&2; exit 1 ;;
+            esac
+            test "$(node --version)" = "v22.16.0"
+            while IFS='=' read -r name _; do
+              case "$name" in
+                CIRCLE_OIDC_TOKEN|CIRCLE_OIDC_TOKEN_V2|CIRCLE_OIDC_TOKEN_V3|NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY) ;;
+                DATABASE_URL|DIRECT_URL|SUPABASE_*|STRIPE_*|VERCEL_*|RESEND_*|SENTRY_*|QA_DB_*|PGPASSWORD|AWS_*|*_TOKEN|*_SECRET|*_API_KEY|*_PASSWORD|*_PRIVATE_KEY)
+                  echo "CI isolation refused a provider credential variable name" >&2
+                  exit 1 ;;
+              esac
+            done < <(env)
+            mkdir -p artifacts/external-pr-ci
+            printf '{"scope":"source-only","commitSha":"%s","branch":"%s","formalGateAcceptance":false}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/external-pr-ci/identity.json
+      - run:
+          name: Verify external CI safeguards
+          command: node --test tests/ci/external-circleci-rescue-contract.test.mjs
+      - run:
+          name: CI-00 Pinned Gitleaks source scan before dependency install
+          command: |
+            set -euo pipefail
+            version=8.30.1
+            archive="gitleaks_8.30.1_linux_x64.tar.gz"
+            curl --fail --silent --show-error --location --retry 2 --retry-delay 2 "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/$archive" -o "/tmp/$archive"
+            echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/$archive" | sha256sum --check -
+            tar -xzf "/tmp/$archive" -C /tmp gitleaks
+            chmod 0755 /tmp/gitleaks
+            /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/external-pr-gitleaks.json .
+            node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync("/tmp/external-pr-gitleaks.json","utf8"));const proof={kind:"RISCK_EXTERNAL_PR_CI_GITLEAKS",sourceSha:process.env.CIRCLE_SHA1,findingCount:rows.length,findings:rows.map(x=>({file:String(x.File||""),line:Number(x.StartLine||0),ruleId:String(x.RuleID||"")}))};fs.writeFileSync("artifacts/external-pr-ci/gitleaks-redacted.json",JSON.stringify(proof,null,2)+"\n");console.log("Redacted Gitleaks finding count: "+rows.length);process.exit(rows.length?3:0)'
+      - run:
+          name: CI-01 Deterministic dependency install
+          command: npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: CI-02 Verify package-lock integrity
+          command: npm run security:package-lock
+      - run:
+          name: CI-03 ESLint
+          command: npm run lint
+      - run:
+          name: CI-04 TypeScript
+          command: npm run typecheck
+      - run:
+          name: CI-05 Application unit tests
+          command: npm run test
+      - run:
+          name: CI-06 Existing source security policies
+          command: node scripts/security/run-security-ci-without-audit.mjs
+      - run:
+          name: CI-07 Next.js build with synthetic public inputs
+          command: npm run build
+      - run:
+          name: CI-08 Validate generated routes
+          command: npm run quality:routes
+      - run:
+          name: CI-09 Enterprise evidence source contract tests (not acceptance)
+          command: |
+            set -euo pipefail
+            node --test tests/enterprise-evidence/validate-evidence.test.mjs tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
+      - run:
+          name: CI-10 Supply-chain dependency audit
+          command: npm run security:npm-audit:all
+      - store_artifacts:
+          path: artifacts/external-pr-ci
+          destination: external-pr-ci-exact-sha
+
 
   # NON-AUTHORITATIVE disposable PG17 infrastructure smoke only; never replays migrations.
   dat01-pg17-infrastructure-smoke:
@@ -865,6 +1237,12 @@ jobs:
 
 
 workflows:
+  # Auto-runs on GitHub VCS events only; API/manual/schedule executions remain opt-in.
+  # Trigger selection lives in CircleCI Project Settings; no privileged contexts attached.
+  pr-source-autopilot:
+    when: pipeline.event.name == "push" or pipeline.event.name == "pull_request"
+    jobs:
+      - pr-source-autopilot
 
   dat01-applied-provider-snapshot-one-shot-20261107:
     jobs:
@@ -891,6 +1269,66 @@ workflows:
             branches:
               only:
                 - phase1/security-dat01-v22
+
+
+
+  # Source-only Actionlint runs for PR updates. No contexts, deployments or privileged provider keys.
+  source-actionlint-pr:
+    when: pipeline.event.name == "pull_request"
+    jobs:
+      - source-actionlint
+
+  # Staged external replacement for GitHub Actions source checks.
+  # Do not remove manual guard/branch scope before confirming CircleCI credits,
+  # Only build pull requests trigger, GitHub status readback and code review.
+  external-pr-quality-manual:
+    when: << pipeline.parameters.run_external_pr_quality >>
+    jobs:
+      - external-pr-quality:
+          filters:
+            branches:
+              only:
+                - ci/rescue-external-pr-quality-20261109
+                - ci/phase1-deep-release-20261110
+
+
+  # Explicit opt-in only: no source push, PR event, or default pipeline may run this job.
+  a01-sec01-qa-provider-manual:
+    when: << pipeline.parameters.run_sec01_qa_provider >>
+    jobs:
+      - hold-a01-sec01-qa-provider:
+          type: approval
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
+      - sec01-qa-provider-proof:
+          requires:
+            - hold-a01-sec01-qa-provider
+          context: risck-sec01-qa-only
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
+
+  # Disabled by default and held for explicit owner approval. No automatic CI run.
+  a01-sec01-next-app-browser-qa-manual:
+    when: << pipeline.parameters.run_sec01_qa_browser >>
+    jobs:
+      - hold-a01-sec01-browser-qa:
+          type: approval
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
+      - sec01-next-app-browser-qa:
+          requires:
+            - hold-a01-sec01-browser-qa
+          context: risck-sec01-qa-only
+          filters:
+            branches:
+              only:
+                - qa/a01-sec01-provider-proof-20261107
 
   dat01-ledger-preflight-manual:
     when: << pipeline.parameters.run_dat01_preflight >>
@@ -933,6 +1371,16 @@ workflows:
             branches:
               only:
                 - ci/circleci-gh-actions-one-shot-20261102
+
+  # Manual opt-in, restricted to the Dependabot branch. Other pipelines unchanged.
+  pr2590-github-actions-manual:
+    when: << pipeline.parameters.run_pr2590_workflow_validation >>
+    jobs:
+      - pr2590-github-actions-validation:
+          filters:
+            branches:
+              only:
+                - dependabot/github_actions/actions/setup-python-7
 
   enterprise-source-proof-manual:
     when: << pipeline.parameters.run_enterprise_source >>
@@ -1033,3 +1481,4 @@ workflows:
 # G5-02 scoped CircleCI validation only. The gitleaks workflow is preserved on main;
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
+

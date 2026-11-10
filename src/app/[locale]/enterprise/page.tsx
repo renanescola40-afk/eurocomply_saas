@@ -74,7 +74,7 @@ export default async function EnterprisePage({ params }: PageProps) {
         <div>
           <p className="inline-flex rounded-lg border border-blue-400/25 bg-blue-500/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-blue-200">Enterprise AI governance readiness</p>
           <h1 className="mt-6 max-w-5xl text-5xl font-semibold tracking-[-0.06em] md:text-7xl">Enterprise AI governance without spreadsheet chaos.</h1>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">RISCK COMPLY helps European organizations map AI systems, classify risk, assign owners, manage policy evidence and prepare procurement-ready answers — without unsupported legal or certification claims.</p>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">RISCK COMPLY helps European organizations map AI systems, classify risk, assign owners, manage policy evidence and prepare answers for procurement review — without unsupported legal or certification claims.</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href={`/${locale}/book-demo?plan=enterprise`} className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Book Enterprise Readiness Demo</Link>
             <Link href={`/${locale}/security-questionnaire`} className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-700 px-6 text-sm font-bold transition hover:border-blue-400/35 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Review Security Questionnaire</Link>

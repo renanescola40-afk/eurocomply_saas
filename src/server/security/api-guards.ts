@@ -26,6 +26,7 @@ import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import {
   assertOrganizationPermission,
   getOrganizationMembership,
+  parseOrganizationRole,
   type OrganizationPermission,
   type OrganizationRole,
   type PermissionCheckResult,
@@ -162,6 +163,17 @@ export async function requireOrganizationAccess(options: RequireOrganizationAcce
     });
   }
 
+  // Canonicalize the provider's persisted role before exposing it as a typed API
+  // authority. Never cast a legacy or unknown string into OrganizationRole.
+  const role = parseOrganizationRole(membership.role);
+  if (!role) {
+    throw new ApiSecurityError({
+      code: 'organization_membership_required',
+      message: 'Organization membership required.',
+      status: 403,
+    });
+  }
+
   try {
     await requireTenantMfaForOrganization(organizationId);
   } catch (error) {
@@ -181,7 +193,7 @@ export async function requireOrganizationAccess(options: RequireOrganizationAcce
   return {
     userId: options.userId,
     organizationId,
-    role: membership.role as OrganizationRole,
+    role,
     rawRole: membership.role,
   };
 }

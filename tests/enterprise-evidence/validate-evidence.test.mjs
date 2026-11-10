@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile,evidenceExpectedSha} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import { execFileSync } from 'node:child_process';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile,evidenceExpectedSha,verifyGitHubA18CurrentHead} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 const sha='a'.repeat(40),hash='b'.repeat(64),base={evidence_id:'EV-SEC-01-001',control_id:'SEC-01',gate_id:'A-01',evidence_type:'runtime-test',status:'NOT_VERIFIED',repository:'renanescola40-afk/eurocomply_saas',branch:'enterprise/evidence-factory-v1-20261101',commit_sha:sha,workflow_run_id:null,environment:'isolated-qa',generated_at:'2026-11-01T10:00:00Z',source_system:'GitHub Actions',test_command_or_provider_query:'npm run test:auth',result_summary:'Recorded, not accepted.',artifact_path:'artifacts/evidence/sec-01.json',artifact_sha256:hash,reproducibility_instructions:'Run against exact commit SHA.',limitations:[],reviewer_status:'NOT_REVIEWED',acceptance_status:'NOT_ACCEPTED'};
 test('rejects evidence bound to another SHA',()=>assert.ok(validateEvidenceRecord(base,{expectedSha:'c'.repeat(40)}).includes('commit_sha_mismatch')));
 test('PASS requires independent acceptance and an existing digest-matched artifact',()=>{const e=validateEvidenceRecord({...base,status:'PASS'},{expectedSha:sha});assert.ok(e.includes('pass_requires_independent_acceptance'));assert.ok(e.includes('artifact_missing'));});
@@ -59,10 +59,12 @@ test('approved gate claim without all child PASS is rejected even with valid met
  const rel='artifacts/enterprise-evidence-factory/acceptance-gate-negative.json';
  const abs=path.resolve(process.cwd(),rel);
  fs.mkdirSync(path.dirname(abs),{recursive:true});
- const data='{"kind":"test-only"}';
+ const data=JSON.stringify({gate_id:'A-01',acceptance_source_sha:sha,
+   qualified_review:{reviewer_login:'reviewer-2',
+    review_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2598#pullrequestreview-123'}});
  fs.writeFileSync(abs,data);
  const digest=crypto.createHash('sha256').update(data).digest('hex');
- const claim={accepted:true,accepted_by:'Reviewer 2',reviewer_id:'reviewer-2',
+ const claim={gate_id:'A-01',accepted:true,accepted_by:'Reviewer 2',reviewer_id:'reviewer-2',
   reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
   accepted_at:'2026-11-02T12:00:00Z',acceptance_sha:sha,
   approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2598#pullrequestreview-123',
@@ -106,14 +108,14 @@ test('historical source PASS retains only two legitimate provider-backed control
  const frozen=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
  const gateMap=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
  const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
- const r=reconcile({scope:frozen,gates:gateMap,index,expectedSha:index.source.commit_sha,
-   now:new Date('2026-11-04T12:00:00Z')});
+ const testedSha=process.env.EVIDENCE_EXACT_SHA||execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+ const r=reconcile({scope:frozen,gates:gateMap,index,expectedSha:testedSha,now:new Date()});
  assert.equal(r.summary.controls_pass,2);
  assert.equal(r.controls.find(c=>c.control_id==='BIL-01').status,'PASS');
  assert.equal(r.controls.find(c=>c.control_id==='OPS-01').status,'PASS');
  assert.equal(r.gates.find(g=>g.gate_id==='A-09').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
  assert.equal(r.gates.find(g=>g.gate_id==='A-18').status,'ELIGIBLE_FOR_INDEPENDENT_REVIEW');
- assert.equal(r.summary.gates_accepted,0);
+ assert.equal(r.summary.gates_accepted,0,'without authenticated current-head provider review the A-18 gate fails closed');
 });
 
 
@@ -225,10 +227,225 @@ test('G1 content verification preserves the two legitimate frozen source PASS co
  const scope=JSON.parse(fs.readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
  const gates=JSON.parse(fs.readFileSync('config/g1-product-ready-24-gates.json','utf8'));
  const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
- const r=reconcile({scope,gates,index,expectedSha:index.source.commit_sha});
+ const testedSha=process.env.EVIDENCE_EXACT_SHA||execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+ const r=reconcile({scope,gates,index,expectedSha:testedSha});
  assert.equal(r.summary.controls_pass,2);
  assert.equal(r.controls.find(x=>x.control_id==='BIL-01').status,'PASS');
  assert.equal(r.controls.find(x=>x.control_id==='OPS-01').status,'PASS');
  assert.ok(!r.errors.includes('g1_source_acceptance_evidence_invalid'));
- assert.equal(r.summary.gates_accepted,0);
+ assert.equal(r.summary.gates_accepted,0,'without authenticated current-head provider review the A-18 gate fails closed');
+});
+
+
+test('accepted gate binds reviewed parent to tested HEAD without an impossible self-SHA reference',()=>{
+ const temp=fs.mkdtempSync(path.join(fs.realpathSync('/tmp'),'risck-a18-git-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:temp,encoding:'utf8'}).trim();
+ try{
+  git('init','-q');git('config','user.email','ci-fixture@example.invalid');git('config','user.name','CI fixture');
+  fs.writeFileSync(path.join(temp,'README.md'),'fixed source fixture\n');
+  git('add','.');git('commit','-q','-m','source baseline');
+  const source=git('rev-parse','HEAD');
+  const proof='docs/enterprise/gate-closure-v27/A18_FORMAL_ACCEPTANCE_TEST.json';
+  const index='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
+  fs.mkdirSync(path.dirname(path.join(temp,proof)),{recursive:true});
+  fs.mkdirSync(path.dirname(path.join(temp,index)),{recursive:true});
+  const artifact=JSON.stringify({gate_id:'A-18',acceptance_source_sha:source,
+    qualified_review:{reviewer_login:'reviewer',
+     review_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887'}})+'\n';
+  fs.writeFileSync(path.join(temp,proof),artifact);
+  fs.writeFileSync(path.join(temp,index),'{"gate_id":"A-18","accepted":true}\n');
+  git('add','.');git('commit','-q','-m','record reviewed gate and proof');
+  const head=git('rev-parse','HEAD');
+  assert.notEqual(source,head,'commits containing an acceptance claim cannot equal their source');
+  const gate={gate_id:'A-18',accepted:true,accepted_by:'Independent reviewer',reviewer_id:'reviewer',
+   reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
+   accepted_at:'2026-11-05T13:31:10Z',acceptance_sha:source,
+   approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+   acceptance_evidence_ref:proof,
+   acceptance_evidence_sha256:crypto.createHash('sha256').update(artifact).digest('hex')};
+  const options={eligible:true,expectedSha:head,root:temp,now:new Date('2026-11-05T15:00:00Z'),providerApproved:true};
+  assert.deepEqual(validateGateAcceptance(gate,options),[],
+   'immutable reviewed source plus evidence-only descendant must be accepted under exact HEAD');
+  assert.ok(validateGateAcceptance({...gate,acceptance_sha:'f'.repeat(40)},options)
+   .includes('acceptance_sha_mismatch'),'arbitrary SHA must not be accepted');
+  assert.ok(validateGateAcceptance({...gate,acceptance_evidence_sha256:'0'.repeat(64)},options)
+   .includes('acceptance_artifact_sha256_mismatch'),'tampered proof digest must fail');
+  fs.mkdirSync(path.join(temp,'src'),{recursive:true});
+  fs.writeFileSync(path.join(temp,'src','index.ts'),'export const change = true;\n');
+  git('add','.');git('commit','-q','-m','unreviewed application change');
+  assert.ok(validateGateAcceptance(gate,{...options,expectedSha:git('rev-parse','HEAD')})
+   .includes('acceptance_sha_mismatch'),'unreviewed code changes cannot inherit acceptance');
+   const unreviewed=git('rev-parse','HEAD');
+   // P1 reproduction: a new acceptance-only commit repins the editable SHA
+   // to a parent with unreviewed application code, retaining the OLD proof.
+   fs.writeFileSync(path.join(temp,index),JSON.stringify({gate_id:'A-18',accepted:true,acceptance_sha:unreviewed})+'\n');
+   git('add','.');git('commit','-q','-m','repin ledger without new independent source review');
+   const replay=validateGateAcceptance({...gate,acceptance_sha:unreviewed},
+    {...options,expectedSha:git('rev-parse','HEAD')});
+   assert.ok(replay.includes('acceptance_source_not_bound_to_proof'),
+    'stale approval may not be repinned after unreviewed code: '+JSON.stringify(replay));
+
+ }finally{fs.rmSync(temp,{recursive:true,force:true});}
+});
+
+test('accepted gate rejects unrelated evidence changes between reviewed SHA and tested HEAD',()=>{
+ const temp=fs.mkdtempSync(path.join(fs.realpathSync('/tmp'),'risck-a18-evidence-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:temp,encoding:'utf8'}).trim();
+ try{
+  git('init','-q');git('config','user.email','ci-fixture@example.invalid');git('config','user.name','CI fixture');
+  fs.writeFileSync(path.join(temp,'README.md'),'source\n');git('add','.');git('commit','-q','-m','source');
+  const source=git('rev-parse','HEAD');
+  const proof='docs/enterprise/gate-closure-v27/A18_ACCEPTANCE_TEST.json';
+  const file=path.join(temp,proof);fs.mkdirSync(path.dirname(file),{recursive:true});
+  fs.writeFileSync(file,JSON.stringify({gate_id:'A-18',acceptance_source_sha:source,
+   qualified_review:{reviewer_login:'reviewer',
+    review_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887'}})+'\n');
+  fs.writeFileSync(path.join(temp,'docs/enterprise/gate-closure-v27/UNREVIEWED_SOURCE.json'),'{"unrelated":true}\n');
+  git('add','.');git('commit','-q','-m','unrelated evidence change');
+  const gate={accepted:true,accepted_by:'Independent reviewer',reviewer_id:'reviewer',
+   reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED',
+   accepted_at:'2026-11-05T13:31:10Z',acceptance_sha:source,
+   approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+   acceptance_evidence_ref:proof,
+   acceptance_evidence_sha256:crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')};
+  const result=validateGateAcceptance(gate,{eligible:true,expectedSha:git('rev-parse','HEAD'),
+   root:temp,now:new Date('2026-11-05T15:00:00Z')});
+  assert.ok(result.includes('acceptance_sha_mismatch'),JSON.stringify(result));
+ }finally{fs.rmSync(temp,{recursive:true,force:true});}
+});
+
+
+test('A-18 cannot be promoted using only mutable proof and ledger metadata',()=>{
+ const claim={gate_id:'A-18',accepted:true,reviewer_id:'renansilva2002-tech'};
+ assert.ok(validateGateAcceptance(claim,{eligible:true,expectedSha:'a'.repeat(40)})
+  .includes('authenticated_current_head_review_required'));
+});
+
+test('provider authentication rejects stale, self, unauthenticated and missing-current-head approvals',async()=>{
+ const expected='f'.repeat(40),reviewed='1dc9b63f6f13ea9b090b2840610582a39d3ac90e';
+ const claim={gate_id:'A-18',accepted:true,reviewer_id:'renansilva2002-tech',
+  approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+  acceptance_evidence_ref:'docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json'};
+ const pr={state:'open',draft:false,head:{sha:expected,repo:{full_name:'renanescola40-afk/eurocomply_saas'}},
+  base:{ref:'main',repo:{full_name:'renanescola40-afk/eurocomply_saas'}},user:{login:'renanescola40-afk'}};
+ const old={id:5784789887,state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:reviewed};
+ const follow={user:{login:'renansilva2002-tech'},body:'Reviewed A-18/OPS-01 independently'};
+ const current=[{state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:expected,body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED\nI independently reviewed deployment identity and this exact PR head.'}];
+ const verify=async({pull=pr,prior=old,followup=follow,reviews=current,token='synthetic-token'}={})=>{
+  const request=async(url)=>({ok:true,json:async()=>{
+   if(url.includes('/issues/comments/'))return followup;
+   if(url.includes('/pulls/2610/reviews/'))return prior;
+   if(url.endsWith('/reviews?per_page=100'))return reviews;
+   return pull;
+  }});
+  return verifyGitHubA18CurrentHead(claim,{expectedSha:expected,prNumber:2620,token,request});
+ };
+ assert.equal(await verify(),true);
+ assert.equal(await verify({token:''}),false);
+ assert.equal(await verify({reviews:[{...current[0],commit_id:'e'.repeat(40)}]}),false);
+ assert.equal(await verify({reviews:[]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:''}]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:'A-18 / OPS-01 formal gate acceptance is explicitly NOT approved; keep this gate pending'}]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:'I reviewed the A-18 implementation, but did not approve the formal gate'}]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED\nA-18/OPS-01 NOT APPROVED'}]}),false);
+ assert.equal(await verify({reviews:[{...current[0],body:'I approve the code, no gate decision'}]}),false);
+ assert.equal(await verify({pull:{...pr,user:{login:'renansilva2002-tech'}}}),false);
+ assert.equal(await verify({pull:{...pr,state:'closed'}}),false);
+ assert.equal(await verify({prior:{...old,state:'COMMENTED'}}),false);
+ assert.equal(await verify({followup:{...follow,user:{login:'renanescola40-afk'}}}),false);
+ assert.equal(await verifyGitHubA18CurrentHead(claim,{expectedSha:expected,prNumber:2620,token:'synthetic-token',
+  request:async()=>({ok:false})}),false);
+});
+
+
+test('post-merge A-18 uses authenticated exact-merge attribution, not a missing PR event or editable proof',async()=>{
+ const mergedSha='f'.repeat(40),sourceHead='e'.repeat(40);
+ const historicalHead='1dc9b63f6f13ea9b090b2840610582a39d3ac90e';
+ const claim={gate_id:'A-18',accepted:true,reviewer_id:'renansilva2002-tech',
+  approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+  acceptance_evidence_ref:'docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json'};
+ const merged={number:2620,state:'closed',draft:false,merged_at:'2026-11-07T10:00:00Z',
+  merge_commit_sha:mergedSha,
+  head:{sha:sourceHead,repo:{full_name:'renanescola40-afk/eurocomply_saas'}},
+  base:{ref:'main',repo:{full_name:'renanescola40-afk/eurocomply_saas'}},
+  user:{login:'renanescola40-afk'}};
+ const prior={id:5784789887,state:'APPROVED',user:{login:'renansilva2002-tech'},
+  commit_id:historicalHead};
+ const followup={user:{login:'renansilva2002-tech'},body:'Reviewed A-18/OPS-01 independently'};
+ const current=[{state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:sourceHead,
+  body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED'}];
+ const verify=async({linked=[merged],reviews=current,token='synthetic-token',prNumber=undefined}={})=>{
+  const request=async(url)=>({ok:true,json:async()=>{
+   if(url.includes('/commits/'+mergedSha+'/pulls?per_page=100'))return linked;
+   if(url.includes('/pulls/2610/reviews/'))return prior;
+   if(url.includes('/issues/comments/'))return followup;
+   if(url.endsWith('/pulls/2620/reviews?per_page=100'))return reviews;
+   return merged;
+  }});
+  return verifyGitHubA18CurrentHead(claim,{expectedSha:mergedSha,prNumber,token,request});
+ };
+ assert.equal(await verify(),true,'exact merged commit and reviewed PR source permit provider proof');
+ assert.equal(await verify({linked:[]}),false,'direct push has no authenticated merged PR');
+ assert.equal(await verify({linked:[merged,merged]}),false,'ambiguous merge association must fail closed');
+ assert.equal(await verify({linked:[{...merged,merge_commit_sha:'a'.repeat(40)}]}),false,'another merge SHA is not proof');
+ assert.equal(await verify({linked:[{...merged,state:'open',merged_at:null}]}),false,'open PR cannot be a merged commit');
+ assert.equal(await verify({linked:[{...merged,base:{...merged.base,ref:'dev'}}]}),false,'merge to non-main is not sufficient');
+ assert.equal(await verify({linked:[{...merged,user:{login:'renansilva2002-tech'}}]}),false,'self-reviewed merge rejected');
+ assert.equal(await verify({reviews:[{...current[0],commit_id:'b'.repeat(40)}]}),false,'stale source review rejected');
+ assert.equal(await verify({reviews:[{...current[0],body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: NOT APPROVED'}]}),false,'explicit rejection is not acceptance');
+ assert.equal(await verify({token:''}),false,'missing provider authentication fails closed');
+ assert.equal(await verify({prNumber:2620}),false,'merged PR is not confused with active PR CI');
+});
+
+
+test('A-18 refuses mutable historical review URL before outbound network calls',async()=>{
+ const claim={
+  gate_id:'A-18',reviewer_id:'renansilva2002-tech',
+  approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/9999#pullrequestreview-123456',
+  acceptance_evidence_ref:'docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json'
+ };
+ let count=0;
+ const actual=await verifyGitHubA18CurrentHead(claim,{
+  expectedSha:'f'.repeat(40),prNumber:2620,token:'synthetic-token',
+  request:async()=>{count++;throw new Error('Untrusted URL must not be fetched');}
+ });
+ assert.equal(actual,false);
+ assert.equal(count,0);
+});
+
+test('A-18 provider uses immutable prior-review paths and forbids redirects',async()=>{
+ const exact='f'.repeat(40);
+ const claim={
+  gate_id:'A-18',reviewer_id:'renansilva2002-tech',
+  approval_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887',
+  acceptance_evidence_ref:'docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json'
+ };
+ const calls=[];
+ const request=async(url,options)=>{
+  calls.push(url);
+  assert.equal(options.redirect,'error');
+  let result;
+  if(url.endsWith('/pulls/2620')){
+   result={state:'open',draft:false,head:{sha:exact,repo:{full_name:'renanescola40-afk/eurocomply_saas'}},
+    base:{ref:'main',repo:{full_name:'renanescola40-afk/eurocomply_saas'}},user:{login:'renanescola40-afk'}};
+  }else if(url.endsWith('/pulls/2610/reviews/5784789887')){
+   result={id:5784789887,state:'APPROVED',user:{login:'renansilva2002-tech'},
+    commit_id:'1dc9b63f6f13ea9b090b2840610582a39d3ac90e'};
+  }else if(url.endsWith('/issues/comments/6659265179')){
+   result={user:{login:'renansilva2002-tech'},body:'A-18/OPS-01 review'};
+  }else if(url.endsWith('/pulls/2620/reviews?per_page=100')){
+   result=[{state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:exact,
+    body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED'}];
+  }else throw Error('Unexpected provider path: '+url);
+  return {ok:true,json:async()=>result};
+ };
+ assert.equal(await verifyGitHubA18CurrentHead(claim,{
+  expectedSha:exact,prNumber:2620,token:'synthetic-token',request
+ }),true);
+ assert.deepEqual(calls.sort(),[
+  'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/pulls/2620',
+  'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/pulls/2610/reviews/5784789887',
+  'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/issues/comments/6659265179',
+  'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/pulls/2620/reviews?per_page=100'
+ ].sort());
 });
