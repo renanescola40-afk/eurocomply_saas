@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 const OBSERVABILITY = new URL('../../src/app/[locale]/dashboard/observability/page.tsx', import.meta.url);
-const AUDIT_PACK = new URL('../../src/app/[locale]/dashboard/audit-pack/page.tsx', import.meta.url);
+const AUDIT_PACK = new URL('../../src/app/[locale]/dashboard/audit-pack/audit-pack-client.tsx', import.meta.url);
 
 describe('RISCK UI V2 operations surfaces', () => {
   it('uses cobalt for observability actions and operations chrome', async () => {
