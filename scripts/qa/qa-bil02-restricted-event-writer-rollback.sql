@@ -38,7 +38,8 @@ SET LOCAL ROLE risck_qa_stripe_event_writer;
 DO $test$
 DECLARE blocked_live boolean:=false; blocked_org boolean:=false;
         blocked_duplicate boolean:=false; blocked_delete boolean:=false;
-        blocked_status_update boolean:=false; blocked_status_insert boolean:=false; current_status text;
+        blocked_status_update boolean:=false; blocked_status_insert boolean:=false;
+        blocked_default_status_override boolean:=false; current_status text;
 BEGIN
   IF NOT row_security_active('public.stripe_events_processed'::regclass) OR
       (SELECT rolbypassrls FROM pg_roles WHERE rolname=current_user) THEN
@@ -65,6 +66,13 @@ BEGIN
       VALUES ('evt_qa_writer_forged_status_20261110','checkout.session.completed',now(),false,'processed','{"qa_intake_only":true}'::jsonb);
   EXCEPTION WHEN insufficient_privilege THEN blocked_status_insert:=true; END;
   IF NOT blocked_status_insert THEN RAISE EXCEPTION 'qa_intake_writer_can_insert_processed_state'; END IF;
+  -- A client cannot explicitly supply even the allowed 'processing' value:
+  -- the DB is the sole authority for the initial status default.
+  BEGIN
+    INSERT INTO public.stripe_events_processed (id,type,stripe_created_at,livemode,status,payload)
+      VALUES ('evt_qa_writer_explicit_processing_20261110','invoice.paid',now(),false,'processing','{"qa_intake_only":true}'::jsonb);
+  EXCEPTION WHEN insufficient_privilege THEN blocked_default_status_override:=true; END;
+  IF NOT blocked_default_status_override THEN RAISE EXCEPTION 'qa_intake_writer_can_override_default_processing'; END IF;
   BEGIN
     INSERT INTO public.stripe_events_processed (id,type,stripe_created_at,livemode,payload)
       VALUES ('evt_qa_writer_live_denied_20261110','invoice.paid',now(),true,'{"qa_intake_only":true}'::jsonb);
