@@ -92,6 +92,21 @@ describe('security-critical provider disclosure consistency', () => {
     expect(buyerSurfaces.join('\n')).toMatch(/historical/i);
   });
 
+  it('identifies current CircleCI and keeps GitHub Actions explicitly historical on buyer-facing surfaces', () => {
+    const sources = [
+      'src/lib/trust/procurement-pack.ts',
+      'src/components/trust/provider-runtime-disclosure.tsx',
+      'src/app/[locale]/transfers/page.tsx',
+    ];
+    for (const sourcePath of sources) {
+      const source = read(sourcePath);
+      expect(source, sourcePath).toContain('CircleCI');
+      expect(source, sourcePath).toContain('source-only');
+      expect(source, sourcePath).toMatch(/GitHub Actions[^\n]{0,180}budget-blocked/i);
+      expect(source, sourcePath).not.toMatch(/GitHub Actions: protected release\/recovery workflows can transiently/i);
+    }
+  });
+
   it('retains GitHub Actions transient Production-data processing disclosure', () => {
     const publicPack = read('src/lib/trust/procurement-pack.ts');
     const runtimeDisclosure = read('src/components/trust/provider-runtime-disclosure.tsx');
