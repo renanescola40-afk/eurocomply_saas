@@ -10,9 +10,17 @@ The existing `scripts/security/check-client-boundaries.mjs` only matched direct 
 
 Fail closed on any client-boundary `process.env` access that is not a direct, static `process.env.NEXT_PUBLIC_*` property. Do not rely on optional flags to make the scanner fail for findings. The check remains source-level defense-in-depth; no claim is made that all client bundles or runtime logs have been scanned.
 
-## Safety and compatibility
+## Risks and trade-offs
 
-No runtime application or database code is changed. False positives in client-source strings or comments may need targeted parser-level refinement; any adjustment must preserve the fail-closed guarantee. Run `node --test tests/security/client-env-access.test.mjs`, then the full source/security/CI suites on the accepted SHA before merge. Revert this isolated change if a validated false positive prevents a legitimate build, and correct the analysis rather than relaxing the gate.
+No runtime application or database code is changed. False positives in client-source strings or comments may need targeted parser-level refinement; any adjustment must preserve the fail-closed guarantee.
+
+## Validation
+
+Run `node --test tests/security/client-env-access.test.mjs`, then the full source/security/CI suites on the accepted SHA before merge.
+
+## Rollback
+
+Revert this isolated change if a validated false positive prevents a legitimate build, and correct the analysis rather than relaxing the gate.
 
 ## Gate and release boundary
 
