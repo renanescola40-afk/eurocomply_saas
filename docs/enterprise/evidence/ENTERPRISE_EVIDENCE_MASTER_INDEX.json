@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
-      "notes": "PR-only proposal: branch-local source frozen at 3f8d345 after authenticated merge-provenance validator change. Independent fresh exact-head approval, native CI and post-merge provider validation remain required. The source ancestor-to-current check must allow ONLY proof/index updates.",
+      "notes": "PR-only proposal: protected-main synchronization source anchor 86ec7fbfbb2a77ac9be37be8b800a99cff17b3ca. Re-confirm qualified independent review on the final post-sync HEAD; native exact-SHA CI and post-merge provider validation remain mandatory. Only the proof and index may differ from the anchored reviewed source.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "3f8d34520327c8845c5b843f1f6d25ae3c7e0873",
-      "acceptance_evidence_sha256": "baf22c0026c501da5bc8f660df3b43d26da713fdeef91edeb04655c983029d67"
+      "acceptance_sha": "86ec7fbfbb2a77ac9be37be8b800a99cff17b3ca",
+      "acceptance_evidence_sha256": "29658677322fffe93d738848359bbfd22a1b0cfe02cb6df5d88f0d12d35ac44f"
     },
     {
       "gate_id": "A-19",

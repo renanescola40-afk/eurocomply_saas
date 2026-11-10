@@ -44,6 +44,6 @@
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
   "governance_status": "PR_ONLY_PROPOSED_NOT_MERGED; NEW_EXACT_CURRENT_HEAD_NATIVE_GATE_APPROVAL_REQUIRED; CI_AND_POST_MERGE_PROVIDER_TESTS_NOT_RUN",
-  "acceptance_source_sha": "3f8d34520327c8845c5b843f1f6d25ae3c7e0873",
-  "acceptance_source_selection": "Branch-local validator/test source commit 3f8d345 includes authenticated exact-merge association and fail-closed negative coverage. PR-level and post-merge acceptance are both subject to a NEW independent current-head reviewer decision and the official exact-SHA CI. No gate PASS yet."
+  "acceptance_source_sha": "86ec7fbfbb2a77ac9be37be8b800a99cff17b3ca",
+  "acceptance_source_selection": "Rebased source anchor 86ec7fbfbb2a77ac9be37be8b800a99cff17b3ca merges the independently reviewed A-18 implementation with the protected main (4db111d7533a2cf34146eb4c283d85b50cead5ee) without overlapping changed paths. Only this proof and the canonical evidence index change after the anchor. Current-HEAD qualified independent review, exact-SHA official CI, and post-merge validation are still mandatory; no gate PASS is claimed yet."
 }
