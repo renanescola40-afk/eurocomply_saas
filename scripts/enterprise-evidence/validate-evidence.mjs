@@ -72,7 +72,7 @@ export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,toke
      pull.base?.ref!=='main'||pull.user?.login===gate.reviewer_id)return false;
   const [prior,followup,current]=await Promise.all([
    readProvider('/pulls/2610/reviews/5784789887'),
-   readProvider('/issues/comments/6659265179),
+   readProvider('/issues/comments/6659265179'),
    readProvider('/pulls/'+reviewPrNumber+'/reviews?per_page=100')
   ]);
   if(prior?.id!==oldId||prior.state!=='APPROVED'||
