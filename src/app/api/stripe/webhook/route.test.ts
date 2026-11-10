@@ -66,6 +66,16 @@ import { POST, STRIPE_WEBHOOK_TOLERANCE_SECONDS, getStripeWebhookContentLength, 
 
 const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
 
+function withQaEnv(run: () => Promise<void>) {
+  const keys = ['RISCK_QA_ENVIRONMENT','VERCEL_ENV','NEXT_PUBLIC_SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_SERVICE_KEY','SUPABASE_ADMIN_KEY','SUPABASE_SECRET_KEY'];
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  process.env.RISCK_QA_ENVIRONMENT = 'true';
+  process.env.VERCEL_ENV = 'preview';
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://zrxrrfbllsxtleyxjpsz.supabase.co';
+  for (const key of keys.slice(3)) delete process.env[key];
+  return run().finally(() => { for (const key of keys) { if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key]; } });
+}
+
 function makeWebhookRequest(body: string, headers: HeadersInit = {}) {
   return new Request('https://app.eurocomply.example/api/stripe/webhook', {
     method: 'POST',
@@ -264,6 +274,44 @@ describe('Stripe webhook route signature validation and dispatch', () => {
       duplicate: true,
     }));
     expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+  });
+
+  it('returns retryable 503 for signed TEST QA event while the scoped writer is unavailable', async () => {
+    await withQaEnv(async () => {
+      const event = makeStripeEvent();
+      mocks.constructEvent.mockReturnValue(event);
+      const response = await POST(makePostRequest('t=1800000000,v1=good'));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'webhook_writer_unavailable' });
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.syncStripeSubscriptionForInvoiceEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not persist a rejection audit for invalid QA webhook signatures', async () => {
+    await withQaEnv(async () => {
+      const response = await POST(makePostRequest());
+      expect(response.status).toBe(400);
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    });
+  });
+
+  it('never writes a rejection audit if QA is misbound to a production database', async () => {
+    await withQaEnv(async () => {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://tganhbbhfxcpblmgqprg.supabase.co';
+      process.env.SUPABASE_SERVICE_ROLE_KEY = 'unsafe_dummy_key_for_test_only';
+      const event = makeStripeEvent();
+      mocks.constructEvent.mockReturnValue(event);
+      const response = await POST(makePostRequest('t=1800000000,v1=good'));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'webhook_writer_unavailable' });
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    });
   });
 
   it('returns retryable 500 and does not fall through when Enterprise reconciliation fails', async () => {

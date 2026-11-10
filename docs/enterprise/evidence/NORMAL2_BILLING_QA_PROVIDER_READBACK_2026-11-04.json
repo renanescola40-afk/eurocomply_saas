@@ -1,0 +1,96 @@
+{
+  "schema": "risck-comply.normal-product-trust.billing-qa-provider-readback.v1",
+  "observed_on": "2026-11-04",
+  "evidence_status": "READ_ONLY_PROVIDER_DISCOVERY_NOT_GATE_ACCEPTANCE",
+  "source_repository": "renanescola40-afk/eurocomply_saas",
+  "source_pr": 2597,
+  "source_sha_at_observation": "da18d911cf6a3543f0987ccd2396b3395d646843",
+  "canonical_pr": 2598,
+  "canonical_sha_at_observation": "cc550884bb6acbb3fbca3d8b171afe5e14033bc6",
+  "provenance": {
+    "methods": [
+      "authenticated Stripe TEST read-only webhook endpoints",
+      "Supabase QA read-only aggregate SQL",
+      "Vercel QA deployment and source-file metadata readback",
+      "GitHub exact PR heads"
+    ],
+    "production_mutations": false,
+    "test_mode_mutations": false,
+    "customer_pii_collected": false,
+    "secret_values_collected": false
+  },
+  "stripe_test": {
+    "account": "acct_1U6IuJGt3cgjPOtq",
+    "webhook_endpoint_id": "we_1ULOe9Gt3cgjPOtqNFF0MPKi",
+    "endpoint_status": "disabled",
+    "endpoint_destination": "OLD_PREVIEW_NOT_VERIFIED_QA_ALIAS",
+    "endpoint_url_redacted": true,
+    "enabled_event_types": [
+      "checkout.session.completed",
+      "customer.subscription.created",
+      "customer.subscription.updated",
+      "customer.subscription.deleted",
+      "invoice.payment_failed",
+      "invoice.paid"
+    ],
+    "signed_delivery_verified": false,
+    "webhook_signature_negative_test_verified": false,
+    "provider_replay_or_duplicate_verified": false,
+    "checkout_test_payment_verified": false
+  },
+  "supabase_qa": {
+    "project_ref": "zrxrrfbllsxtleyxjpsz",
+    "observed_counts": {
+      "organizations": 2,
+      "subscriptions": 0,
+      "stripe_webhook_events": 0,
+      "billing_checkout_attempts": 0,
+      "billing_lifecycle_requests": 0
+    },
+    "read_only": true,
+    "note": "Aggregate counts only; no customer identifiers or rows inspected.",
+    "accepted_migration_replay_provenance": false,
+    "exact_sha_application_runtime_verified": false
+  },
+  "vercel_qa": {
+    "project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "custom_environment_slug": "qa",
+    "alias_hostname": "eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app",
+    "alias_deployment_id": "dpl_4JJYM8z8g4QRb9tDnFSeSLQBMbPV",
+    "deployment_state": "READY",
+    "deployed_git_source_sha": null,
+    "deployment_git_commit_metadata_present": false,
+    "deployment_source_tree_contains_uploaded_archive": true,
+    "deployed_exact_sha_provenance_verified": false,
+    "note": "A reachable READY deployment and uploaded source archive are not evidence that its code equals the release candidate."
+  },
+  "gate_readiness": {
+    "BIL-02": "NOT_VERIFIED",
+    "BIL-03": "NOT_VERIFIED",
+    "BIL-04": "NOT_VERIFIED",
+    "BIL-05": "NOT_VERIFIED",
+    "QAT-03": "NOT_VERIFIED",
+    "A-10": "NOT_ELIGIBLE",
+    "A-11": "NOT_ELIGIBLE",
+    "A-16": "NOT_ELIGIBLE"
+  },
+  "no_go_reasons": [
+    "Stripe TEST webhook disabled and points at superseded preview",
+    "No signed TEST webhook delivery, negative signature rejection or replay/duplicate proof",
+    "No Stripe TEST Checkout and zero persisted QA subscription/event/checkout attempts",
+    "Vercel QA alias deployment lacks verifiable source Git SHA",
+    "DAT-01 migration-source parity and isolated QA acceptance remain blocked",
+    "No qualified independent acceptance on current canonical release candidate"
+  ],
+  "required_safe_next_steps": [
+    "Reconcile exact candidate SHA and independently attest the deployed QA artifact",
+    "Verify isolated QA has the correct Stripe TEST secrets and durable webhook schema without disclosing secret values",
+    "Bind a dedicated correct TEST webhook destination only after the target and event signature handling are proven",
+    "Run authorized signed Stripe TEST events and negative signature/duplicate cases then verify durable QA event and entitlement state",
+    "Run authenticated tenant-isolated billing lifecycle and customer-access negatives",
+    "Submit exact-SHA evidence to independent reviewer and formal acceptance engine"
+  ],
+  "reviewer_approval": null,
+  "accepted_gate_ids": [],
+  "production_release_authorized": false
+}
