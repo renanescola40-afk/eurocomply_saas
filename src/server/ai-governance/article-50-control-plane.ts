@@ -51,7 +51,7 @@ export function evaluateArticle50Control(input: Article50ControlInput): Article5
   const blockers: string[] = [];
   const warnings: string[] = [];
   const evidenceRequirements = [
-    'Retain evidence of the provider system being placed on the market before 2026-08-02 when claiming the amended Article 111(4) transition.'
+    'Retain evidence of the provider system being placed on the market before 2026-08-02 when claiming the amended Article 111(4) transition.',
     'Retain the exact disclosure copy, language, channel and proof of display.',
     'Retain machine-readable marking validation where Article 50(2) applies.',
   ];
