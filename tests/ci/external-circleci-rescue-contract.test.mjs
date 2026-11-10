@@ -123,3 +123,8 @@ test('approved CI branches pass real bash guard; all other branches fail closed'
     assert.equal(check(branch).status, 1, 'Forbidden branch passed: ' + branch);
   }
 });
+
+
+test('automatic FAST_PR actually runs this deep-branch safety contract without a new job', () => {
+  assert.match(source, /name: Verify automatic CI and manual deep safety contracts\n\s+command: node --test tests\/ci\/circleci-pr-autopilot-contract\.test\.mjs tests\/ci\/external-circleci-rescue-contract\.test\.mjs/);
+});

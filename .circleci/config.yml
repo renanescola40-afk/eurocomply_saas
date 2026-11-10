@@ -933,8 +933,8 @@ jobs:
             npm run lint
             npm run typecheck
       - run:
-          name: Verify automatic CI safety contract
-          command: node --test tests/ci/circleci-pr-autopilot-contract.test.mjs
+          name: Verify automatic CI and manual deep safety contracts
+          command: node --test tests/ci/circleci-pr-autopilot-contract.test.mjs tests/ci/external-circleci-rescue-contract.test.mjs
       - run:
           name: Run unit tests
           command: npm run test
