@@ -1,0 +1,48 @@
+{
+  "schema": "risck-comply.a18-ops01.vercel-live-hostname-binding-readback.v1",
+  "observed_at": "2026-11-04T21:13:29.871Z",
+  "claim_scope": "LIVE_HOSTNAME_TO_DEPLOYMENT_IDENTITY_ONLY; NOT PRODUCTION RELEASE GO OR FORMAL ACCEPTANCE",
+  "gate_id": "A-18",
+  "control_id": "OPS-01",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "canonical_main_sha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+  "provider": "Vercel connected authenticated read-only API",
+  "method": "get_deployment(idOrUrl=hostname,withGitRepoInfo=true); get_project_domain",
+  "project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+  "hostname_proofs": [
+    {
+      "hostname": "www.risckcomply.com",
+      "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+      "state": "READY",
+      "target": "production",
+      "git_ref": "main",
+      "git_sha": "70d3545f414d063379d481fd238aed563e05edda",
+      "project_domain_verified": true
+    },
+    {
+      "hostname": "risckcomply.com",
+      "deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+      "state": "READY",
+      "target": "production",
+      "git_ref": "main",
+      "git_sha": "70d3545f414d063379d481fd238aed563e05edda",
+      "project_domain_verified": true,
+      "project_domain_redirect": "www.risckcomply.com",
+      "redirect_status_code": 308
+    }
+  ],
+  "both_hostnames_resolve_to_same_deployment": true,
+  "matched_archived_production_deployment_id": true,
+  "matched_frozen_g1_source_sha": true,
+  "current_main_not_deployed": true,
+  "qualified_independent_review": "PENDING",
+  "formal_gate_accepted": false,
+  "source_code_changed": false,
+  "production_writes": 0,
+  "external_costs": 0,
+  "limitations": [
+    "Provider hostname-to-deployment API readback; not an independent HTTP response/edge routing trace",
+    "Does not prove authenticated browser E2E, full CI, Stripe billing runtime or new main SHA deployment",
+    "Formal acceptance requires native gate-specific review by a qualified independent reviewer and governed verifier"
+  ]
+}
