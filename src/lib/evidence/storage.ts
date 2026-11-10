@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { uploadImmutableEvidenceObject } from './upload-recovery';
+import { collectEvidencePages } from './report-pagination';
 
 export type EvidenceStatus = 'draft' | 'valid' | 'needs_review' | 'expired' | 'archived';
 export type EvidenceType =
@@ -192,6 +193,56 @@ export async function listEvidenceItems(params: { organizationId: string; limit?
   const { data, error } = await query;
   if (error) throw error;
   return (data || []) as EvidenceItem[];
+}
+
+
+/**
+ * Complete, fail-closed evidence read for Audit Pack and Board Report.
+ * Unlike the paginated UI reader, this must not silently truncate at 100.
+ * The caller resolves the user's current organization before invoking it.
+ */
+export async function listEvidenceItemsForReport(params: { organizationId: string }): Promise<EvidenceItem[]> {
+  const pageSize = 250;
+  const maxItems = 10_000;
+  const countCurrent = async () => {
+    const { count, error } = await supabase
+      .from('evidence_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', params.organizationId)
+      .is('deleted_at', null);
+    if (error) throw error;
+    if (!Number.isSafeInteger(count) || count === null || count < 0) {
+      throw new Error('Evidence report cannot verify the complete register size.');
+    }
+    return count;
+  };
+
+  const beforeCount = await countCurrent();
+  if (beforeCount > maxItems) {
+    throw new Error('Evidence register exceeds the safe report limit; no partial report was generated.');
+  }
+
+  const items = await collectEvidencePages<EvidenceItem>(async (offset, size) => {
+    const { data, error } = await supabase
+      .from('evidence_items')
+      .select('*')
+      .eq('organization_id', params.organizationId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(offset, offset + size - 1);
+    if (error) throw error;
+    if (!Array.isArray(data)) {
+      throw new Error('Evidence report provider returned an invalid page.');
+    }
+    return data as EvidenceItem[];
+  }, { pageSize, maxItems });
+
+  const afterCount = await countCurrent();
+  if (beforeCount !== afterCount || beforeCount !== items.length) {
+    throw new Error('Evidence register changed during report generation; retry rather than using partial metrics.');
+  }
+  return items;
 }
 
 export async function tryListEvidenceItems(params: { organizationId: string; limit?: number; includeDeleted?: boolean }) {
