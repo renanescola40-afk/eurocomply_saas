@@ -33,7 +33,7 @@ export function getArticle50DeadlineView(input: {
         : `Data-base ${decision.appliesFrom}; transição verificada até ${decision.transitionEndsAt} apenas para sistemas elegíveis.`,
     warning:
       legalStatus === 'proposal_not_effective'
-        ? 'Existe uma proposta de transição, mas ela não é apresentada como lei vigente sem prova do ato final no Jornal Oficial.'
+        ? 'O Regulamento (UE) 2026/1744 está em vigor, mas esta avaliação ainda não contém prova do Jornal Oficial; a transição de 2 de dezembro de 2026 não foi aplicada.'
         : null,
   };
 }
