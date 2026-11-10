@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getArticle50DeadlineView } from './article-50-deadlines';
 
 describe('Article 50 deadline view', () => {
-  it('labels an unverified transition as a proposal, not binding law', () => {
+  it('does not present the in-force amendment as a mere proposal when case evidence is missing', () => {
     const view = getArticle50DeadlineView({
       obligation: 'article_50_2_machine_readable_marking',
       systemPlacedOnMarketBefore2026_08_02: true,
@@ -12,7 +12,9 @@ describe('Article 50 deadline view', () => {
     expect(view.bindingDate).toBe('2026-08-02');
     expect(view.transitionEnd).toBeNull();
     expect(view.legalStatus).toBe('proposal_not_effective');
-    expect(view.warning).toContain('não é apresentada como lei vigente');
+    expect(view.warning).toContain('2026/1744 está em vigor');
+    expect(view.warning).toContain('ainda não contém prova');
+    expect(view.warning).not.toContain('proposta de transição');
   });
 
   it('does not show a transition for deployer disclosure', () => {
