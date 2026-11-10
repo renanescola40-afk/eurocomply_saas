@@ -21,7 +21,7 @@ type FooterCopy = {
 const footerCopy: Record<Locale, FooterCopy> = {
   en: {
     tagline: 'AI governance, risk workflows and evidence preparation for European B2B teams.',
-    assuranceNote: 'Built for governance operations and evidence preparation. No certification, legal advice or compliance guarantee is claimed.',
+    assuranceNote: 'Built for governance operations and evidence preparation. We do not claim certification or provide legal advice. Regulatory compliance is not guaranteed.',
     featuresTitle: 'AI governance features',
     productTitle: 'Platform',
     trustTitle: 'Trust',

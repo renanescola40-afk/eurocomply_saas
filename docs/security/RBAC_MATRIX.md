@@ -10,7 +10,7 @@ This document defines the canonical enterprise authorization model for the SaaS.
 | `admin` | Full organization administration for enterprise operations. Same permission set as owner until ownership transfer is implemented as a separate privileged flow. |
 | `editor` | Can manage operational compliance records and create exports, but cannot manage billing, team, settings or audit access. |
 | `member` | Can contribute documents and read operational compliance records. Cannot perform privileged administration, exports or sensitive mutations outside document contribution. |
-| `viewer` | Read-only access to operational compliance records. Cannot mutate, export, manage billing/team/settings or read audit logs. |
+| `viewer` | Read-only access to operational compliance records with the explicit exception of submitting a privacy request. Cannot mutate product records, export, manage billing/team/settings or read audit logs. |
 
 ## Permission matrix
 
@@ -31,6 +31,18 @@ This document defines the canonical enterprise authorization model for the SaaS.
 | `read_audit` | yes | yes | no | no | no |
 | `export_data` | yes | yes | yes | no | no |
 | `manage_settings` | yes | yes | no | no | no |
+| `submit_privacy_request` | yes | yes | yes | yes | yes |
+
+## Fail-closed role parsing
+
+The five documented roles and their supported legacy aliases are the only recognized authorization roles.
+An unexpected, empty or null role grants **zero** permissions: no read access, no writes, no
+team management and no audit/export access. Unknown active membership rows are treated as
+unauthorized by the server. `normalizeOrganizationRole` retains a display-only viewer fallback;
+server checks use `parseOrganizationRole` and cannot rely on that fallback.
+
+This safeguard is source-level only until validated by authenticated QA API denials and
+reviewed exact-SHA evidence. It does not close SEC-02 on its own.
 
 ## Engineering rules
 

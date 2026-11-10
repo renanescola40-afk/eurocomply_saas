@@ -5,6 +5,7 @@ import {
   getRolePermissions,
   isActiveOrganizationMembership,
   normalizeOrganizationRole,
+  parseOrganizationRole,
   ORGANIZATION_ROLES,
   permissionDeniedResponse,
   roleHasPermission,
@@ -22,6 +23,17 @@ describe('organization RBAC', () => {
   it('falls back unknown roles to viewer', () => {
     expect(normalizeOrganizationRole('unexpected-role')).toBe('viewer');
     expect(normalizeOrganizationRole(null)).toBe('viewer');
+  });
+
+  it('never turns unknown, missing or malformed server-side roles into viewer read authority', () => {
+    for (const rawRole of ['unexpected-role', 'superuser', '', '  ', 'org:unknown', null, undefined]) {
+      expect(parseOrganizationRole(rawRole)).toBeNull();
+      expect(getRolePermissions(rawRole)).toEqual([]);
+      expect(roleHasPermission(rawRole, 'read_documents')).toBe(false);
+      expect(roleHasPermission(rawRole, 'manage_team')).toBe(false);
+    }
+    expect(parseOrganizationRole('Org:ADMIN')).toBe('admin');
+    expect(parseOrganizationRole('visualizador')).toBe('viewer');
   });
 
   it('treats only active canonical membership status as authorized after rollout', () => {

@@ -1,5 +1,5 @@
 import { noStoreJson } from '@/server/security/no-store';
-import { normalizeOrganizationRole, roleHasPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
+import { normalizeOrganizationRole, parseOrganizationRole, roleHasPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
 import type { SubscriptionPlan } from '@/server/queries/subscription';
 import { requireTenantMfaForOrganization, TenantMfaError } from '@/server/security/tenant-mfa';
 
@@ -7,6 +7,7 @@ export {
   getOrganizationPermissionMatrix,
   getRolePermissions,
   normalizeOrganizationRole,
+  parseOrganizationRole,
   ORGANIZATION_PERMISSIONS,
   ORGANIZATION_ROLES,
   roleHasPermission,
@@ -196,7 +197,8 @@ export async function getOrganizationMembership(userId: string, organizationId: 
     return { membership: null, error: membershipError };
   }
 
-  if (membership && !isActiveOrganizationMembership(membership.status)) {
+  if (membership && (!isActiveOrganizationMembership(membership.status) || !parseOrganizationRole(membership.role))) {
+    // Deny inactive or unrecognized roles before they reach tenant context guards.
     return { membership: null, error: null };
   }
 

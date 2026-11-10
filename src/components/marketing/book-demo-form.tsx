@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 
 import { analyticsEvents, captureAnalyticsEvent } from '@/lib/analytics/posthog-client';
 import { getMarketingAttributionProperties, persistMarketingAttribution } from '@/lib/analytics/marketing-attribution';
@@ -22,8 +22,15 @@ const complianceOptions = [
 
 const fieldClassName = 'h-12 w-full rounded-lg border border-slate-700 bg-slate-950/35 px-4 text-white outline-none transition placeholder:text-white/30 focus:border-blue-400/60 focus-visible:ring-2 focus-visible:ring-blue-400/50';
 
+// HTML forms render before client hydration. Keep native submissions disabled
+// until the enhanced JSON handler is attached; never POST lead PII to this page.
+const subscribeHydration = () => () => {};
+const clientHydrated = () => true;
+const serverHydrated = () => false;
+
 export function BookDemoForm({ locale }: BookDemoFormProps) {
   const [state, setState] = useState<SubmitState>('idle');
+  const hydrated = useSyncExternalStore(subscribeHydration, clientHydrated, serverHydrated);
   const [message, setMessage] = useState<string | null>(null);
   const demoStarted = useRef(false);
   const path = `/${locale}/book-demo`;
@@ -93,6 +100,13 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
 
   return (
     <form method="post" onSubmit={handleSubmit} onFocusCapture={handleDemoStarted} className="rounded-xl border border-slate-800/80 bg-[#0d1522] p-6 md:p-8">
+      <noscript>
+        <p className="mb-5 rounded-lg border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
+          JavaScript is required to submit this secure form. Please contact{' '}
+          <a className="underline" href="mailto:comercial@risckcomply.com">comercial@risckcomply.com</a>{' '}
+          instead.
+        </p>
+      </noscript>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm font-medium text-white/80">
           Full name *
@@ -169,10 +183,10 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
       <button
         type="submit"
         data-cta-id="book-demo-submit"
-        disabled={state === 'submitting'}
+        disabled={!hydrated || state === 'submitting'}
         className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-7 py-4 text-base font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {state === 'submitting' ? 'Submitting...' : 'Book demo'}
+        {!hydrated ? 'Preparing secure form...' : state === 'submitting' ? 'Submitting...' : 'Book demo'}
       </button>
 
       {message ? (

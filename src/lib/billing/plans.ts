@@ -1,4 +1,5 @@
 import type { CanonicalSubscriptionPlan, LegacySubscriptionPlan } from '@/server/queries/subscription';
+import { resolveUniqueStripePricePlan } from './price-plan-authority';
 
 export type BillingPlanId = CanonicalSubscriptionPlan | LegacySubscriptionPlan;
 type CatalogBillingPlanId = CanonicalSubscriptionPlan;
@@ -163,16 +164,18 @@ export function getBillingPlanIdForStripePriceId(priceId: string | null | undefi
   const normalizedPriceId = priceId?.trim();
   if (!normalizedPriceId) return undefined;
 
-  for (const plan of BILLING_PLANS) {
+  const configuredPlans = BILLING_PLANS.map((plan) => {
     const envKeys = [
       plan.stripePriceEnvKeyMonthly,
       plan.stripePriceEnvKeyAnnual,
       ...plan.legacyStripePriceEnvKeysMonthly,
       ...plan.legacyStripePriceEnvKeysAnnual,
     ].filter((key): key is string => Boolean(key));
-    const configuredPriceIds = envKeys.map((key) => process.env[key]).filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean);
-    if (configuredPriceIds.includes(normalizedPriceId)) return plan.id;
-  }
+    const priceIds = envKeys.map((key) => process.env[key]).filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean);
+    return { planId: plan.id, priceIds };
+  });
 
-  return undefined;
+  // A Price ID must never authorize multiple different subscription tiers.
+  // Duplicated canonical/legacy aliases for one tier are still unambiguous.
+  return resolveUniqueStripePricePlan(normalizedPriceId, configuredPlans);
 }

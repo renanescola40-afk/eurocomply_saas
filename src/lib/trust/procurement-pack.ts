@@ -1,4 +1,4 @@
-export const PROCUREMENT_PACK_VERSION = '2026-09-24';
+export const PROCUREMENT_PACK_VERSION = '2026-11-09';
 
 export type ProcurementControlStatus = 'implemented' | 'configured' | 'evidence-required' | 'not-claimed';
 
@@ -143,10 +143,16 @@ export const procurementProviders: ProcurementProvider[] = [
     regionDisclosure: 'Corporate risckcomply.com mail is in operational use. Earlier account-specific plan/EMEA evidence is retained, while current agreement/CDPA, data-region, retention and transfer facts remain evidence-required before contractual reliance.',
   },
   {
-    name: 'GitHub Actions',
-    purpose: 'Source delivery, CI/CD and protected recovery/security workflows',
+    name: 'GitHub',
+    purpose: 'Canonical private source repository, pull-request reviews and status aggregation',
+    status: 'core',
+    regionDisclosure: 'GitHub remains the source/review authority. GitHub Actions runner execution is currently budget-blocked. Historical GitHub-hosted runners could transiently process protected Production data; account DPA and transfer treatment for those former workflows remain OPEN.',
+  },
+  {
+    name: 'CircleCI',
+    purpose: 'External source-only GitHub commit/PR CI checks',
     status: 'conditional',
-    regionDisclosure: 'Protected release and recovery workflows are active and can transiently process Production database data on GitHub-hosted runners; only evidence-bound/redacted outputs are intended to be retained. Company-specific agreement/DPA applicability and final legal/transfer role remain under review.',
+    regionDisclosure: 'CircleCI currently performs real source-only CI checks for GitHub commits; these do not prove authenticated QA or Production controls. Its account-specific DPA, relevant personal-data flows, runner/support/storage regions, retention and transfer role remain OPEN.',
   },
   {
     name: 'Sentry',
