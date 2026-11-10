@@ -51,6 +51,11 @@ async function recordWebhookRouteAudit(input: {
   event?: Stripe.Event;
   reason?: string;
 }) {
+  // Until the scoped QA writer is verified, even a rejection audit could
+  // write through an inherited admin client to the wrong database.
+  // Preserve the HTTP rejection and sanitized observability, without DB writes.
+  if (!evaluateQaWebhookAdmission(process.env).allowed) return;
+
   try {
     const context = input.event ? getStripeEventAuditContext(input.event) : { organizationId: null, actorUserId: null };
 

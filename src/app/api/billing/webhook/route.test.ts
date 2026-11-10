@@ -142,6 +142,32 @@ describe('legacy billing webhook route hardening', () => {
       expect(await response.json()).toEqual({ error: 'webhook_writer_unavailable' });
       expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
       expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not persist a rejection audit for invalid legacy QA webhook signatures', async () => {
+    await withQaEnv(async () => {
+      mocks.constructEvent.mockImplementation(() => { throw new Error('Invalid Stripe signature'); });
+      const response = await POST(makeWebhookRequest('{}'));
+      expect(response.status).toBe(400);
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not write a legacy QA rejection audit with a production database binding', async () => {
+    await withQaEnv(async () => {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://tganhbbhfxcpblmgqprg.supabase.co';
+      process.env.SUPABASE_SERVICE_ROLE_KEY = 'unsafe_dummy_key_for_test_only';
+      const event = makeStripeEvent();
+      mocks.constructEvent.mockReturnValue(event);
+      const response = await POST(makeWebhookRequest(JSON.stringify(event)));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'webhook_writer_unavailable' });
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
     });
   });
 

@@ -286,6 +286,31 @@ describe('Stripe webhook route signature validation and dispatch', () => {
       expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
       expect(mocks.syncStripeSubscriptionForInvoiceEvent).not.toHaveBeenCalled();
       expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not persist a rejection audit for invalid QA webhook signatures', async () => {
+    await withQaEnv(async () => {
+      const response = await POST(makePostRequest());
+      expect(response.status).toBe(400);
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    });
+  });
+
+  it('never writes a rejection audit if QA is misbound to a production database', async () => {
+    await withQaEnv(async () => {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://tganhbbhfxcpblmgqprg.supabase.co';
+      process.env.SUPABASE_SERVICE_ROLE_KEY = 'unsafe_dummy_key_for_test_only';
+      const event = makeStripeEvent();
+      mocks.constructEvent.mockReturnValue(event);
+      const response = await POST(makePostRequest('t=1800000000,v1=good'));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'webhook_writer_unavailable' });
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
     });
   });
 
