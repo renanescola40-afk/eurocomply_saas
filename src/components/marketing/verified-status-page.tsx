@@ -33,7 +33,7 @@ const COPY: Record<string, Copy> = {
     operationsBody: 'Web application, authentication, database, storage, document generation, billing, email delivery and external-provider dependencies can be represented on the public authority.',
     incidents: 'Incident lifecycle',
     incidentsBody: 'Authorized operators can publish investigating, update/monitoring and resolved states without exposing customer or session data.',
-    boundary: 'This page does not promise a contractual uptime percentage or 24/7 staffed support. Contractual commitments require a signed agreement.',
+    boundary: 'This page does not promise a contractual uptime percentage or 24/7 staffed support. Contractual commitments require a signed agreement. The external Statuspage currently includes sample components labeled \'API (example)\' and \'Management Portal (example)\'. An Operational label does not prove continuous automated monitoring or live service health.',
   },
   pt: {
     eyebrow: 'Estado do sistema',
@@ -47,7 +47,7 @@ const COPY: Record<string, Copy> = {
     operationsBody: 'Aplicação web, autenticação, base de dados, armazenamento, geração de documentos, faturação, entrega de email e dependências externas podem ser representados na autoridade pública.',
     incidents: 'Ciclo de incidentes',
     incidentsBody: 'Operadores autorizados podem publicar estados de investigação, atualização/monitorização e resolução sem expor dados de clientes ou de sessão.',
-    boundary: 'Esta página não promete uma percentagem contratual de uptime nem suporte humano 24/7. Compromissos contratuais exigem acordo assinado.',
+    boundary: 'Esta página não promete uma percentagem contratual de uptime nem suporte humano 24/7. Compromissos contratuais exigem acordo assinado. A Statuspage externa inclui atualmente componentes de exemplo identificados como \'API (example)\' e \'Management Portal (example)\'. O estado Operacional não prova monitorização automática contínua nem a saúde real dos serviços.',
   },
   es: {
     eyebrow: 'Estado del sistema',
@@ -61,7 +61,7 @@ const COPY: Record<string, Copy> = {
     operationsBody: 'Aplicación web, autenticación, base de datos, almacenamiento, generación de documentos, facturación, entrega de correo y dependencias externas pueden representarse en la autoridad pública.',
     incidents: 'Ciclo de incidentes',
     incidentsBody: 'Los operadores autorizados pueden publicar estados de investigación, actualización/monitorización y resolución sin exponer datos de clientes o de sesión.',
-    boundary: 'Esta página no promete un porcentaje contractual de disponibilidad ni soporte humano 24/7. Los compromisos contractuales requieren un acuerdo firmado.',
+    boundary: 'Esta página no promete un porcentaje contractual de disponibilidad ni soporte humano 24/7. Los compromisos contractuales requieren un acuerdo firmado. La Statuspage externa incluye actualmente componentes de ejemplo llamados \'API (example)\' y \'Management Portal (example)\'. La etiqueta Operativo no demuestra supervisión automática continua ni la salud real del servicio.',
   },
   fr: {
     eyebrow: 'État du système',
@@ -75,7 +75,7 @@ const COPY: Record<string, Copy> = {
     operationsBody: 'Application web, authentification, base de données, stockage, génération de documents, facturation, livraison des e-mails et dépendances externes peuvent être représentés sur l’autorité publique.',
     incidents: 'Cycle des incidents',
     incidentsBody: 'Les opérateurs autorisés peuvent publier les états investigation, mise à jour/surveillance et résolu sans exposer de données client ou de session.',
-    boundary: 'Cette page ne promet pas de pourcentage contractuel de disponibilité ni de support humain 24/7. Les engagements contractuels exigent un accord signé.',
+    boundary: 'Cette page ne promet pas de pourcentage contractuel de disponibilité ni de support humain 24/7. Les engagements contractuels exigent un accord signé. La Statuspage externe comprend actuellement des composants d\'exemple nommés \'API (example)\' et \'Management Portal (example)\'. L\'état Opérationnel ne prouve pas une surveillance automatisée continue ni la santé réelle des services.',
   },
   it: {
     eyebrow: 'Stato del sistema',
@@ -89,7 +89,7 @@ const COPY: Record<string, Copy> = {
     operationsBody: 'Applicazione web, autenticazione, database, storage, generazione documenti, fatturazione, consegna email e dipendenze esterne possono essere rappresentati sull’autorità pubblica.',
     incidents: 'Ciclo degli incidenti',
     incidentsBody: 'Gli operatori autorizzati possono pubblicare stati di investigazione, aggiornamento/monitoraggio e risoluzione senza esporre dati dei clienti o di sessione.',
-    boundary: 'Questa pagina non promette una percentuale contrattuale di uptime né supporto umano 24/7. Gli impegni contrattuali richiedono un accordo firmato.',
+    boundary: 'Questa pagina non promette una percentuale contrattuale di uptime né supporto umano 24/7. Gli impegni contrattuali richiedono un accordo firmato. La Statuspage esterna include attualmente componenti dimostrativi denominati \'API (example)\' e \'Management Portal (example)\'. Lo stato Operativo non prova un monitoraggio automatico continuo né la reale salute del servizio.',
   },
   de: {
     eyebrow: 'Systemstatus',
@@ -103,7 +103,7 @@ const COPY: Record<string, Copy> = {
     operationsBody: 'Webanwendung, Authentifizierung, Datenbank, Speicherung, Dokumenterstellung, Abrechnung, E-Mail-Zustellung und externe Abhängigkeiten können auf der öffentlichen Instanz dargestellt werden.',
     incidents: 'Vorfall-Lebenszyklus',
     incidentsBody: 'Autorisierte Betreiber können Untersuchungs-, Update/Monitoring- und Gelöst-Status veröffentlichen, ohne Kunden- oder Sitzungsdaten offenzulegen.',
-    boundary: 'Diese Seite verspricht keine vertragliche Uptime-Prozentzahl und keinen menschlich besetzten 24/7-Support. Vertragliche Zusagen erfordern eine unterzeichnete Vereinbarung.',
+    boundary: 'Diese Seite verspricht keine vertragliche Uptime-Prozentzahl und keinen menschlich besetzten 24/7-Support. Vertragliche Zusagen erfordern eine unterzeichnete Vereinbarung. Die externe Statuspage enthält derzeit Beispielkomponenten namens \'API (example)\' und \'Management Portal (example)\'. Der Status Betriebsbereit ist kein Nachweis für eine kontinuierliche automatische Überwachung oder den tatsächlichen Dienstzustand.',
   },
 };
 
