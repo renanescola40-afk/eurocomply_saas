@@ -210,4 +210,32 @@ describe('customer-facing claims guard', () => {
     expect(result.stdout).toContain('Customer-facing claims: ok');
   });
 
+
+  it('does not let exclamation-delimited negation mask a new claim', () => {
+    const result = runCheckerForFixture(
+      "const copy = 'We are not certified!We are fully compliant.';",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible full or guaranteed compliance claim');
+  });
+
+  it('does not let colon-delimited negation mask a readiness claim', () => {
+    const result = runCheckerForFixture(
+      "const copy = 'We are not certified:we are enterprise-ready.';",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible enterprise or procurement readiness claim');
+  });
+
+  it('does not let a trailing question hide an earlier unsupported assertion', () => {
+    const result = runCheckerForFixture(
+      "const copy = 'We are fully compliant!Are lawyers needed?';",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible full or guaranteed compliance claim');
+  });
+
 });
