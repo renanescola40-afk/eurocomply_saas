@@ -71,6 +71,7 @@ test('genuine TEST event intake only, no entitlement or tenant assignment',async
   assert.equal(f.state.url,'https://zrxrrfbllsxtleyxjpsz.supabase.co');
   assert.equal(f.state.rows.length,1);
   assert.equal(f.state.rows[0].livemode,false);
+  assert.equal(Object.hasOwn(f.state.rows[0],'status'),false, 'restricted intake must rely on the DB processing default');
   assert.equal(Object.hasOwn(f.state.rows[0],'organization_id'),false);
   assert.equal(f.state.rows[0].payload.qa_intake_only,true);
   assert.equal(Object.hasOwn(f.state.rows[0],'entitlements'),false);
