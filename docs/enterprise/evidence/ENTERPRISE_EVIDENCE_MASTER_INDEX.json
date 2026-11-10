@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
-      "notes": "PR-only proposal on security-fixed A-18 source anchor 7fed20ddd26c25639a1bea79facd0fc8b43865a7. The two existing CodeQL inline findings were corrected in the source, not administratively waived; the exact-final-head qualified independent review, full GitHub and CircleCI required checks, post-merge validator, and official ledger admission remain necessary.",
+      "notes": "PR-only proposal: anchor 06bcff1128c414b04c3457f8c00f5c7cc00f2e09 contains the CodeQL fixes and official validator source. The fresh native qualified review on exact final HEAD and all required checks, governed human merge, post-merge validation and canonical ledger admission remain mandatory. No runtime production GO.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "7fed20ddd26c25639a1bea79facd0fc8b43865a7",
-      "acceptance_evidence_sha256": "09cab64c8997f12543540760db8950b07c940f4c2a3c89b186eac4e6109aaf31"
+      "acceptance_sha": "06bcff1128c414b04c3457f8c00f5c7cc00f2e09",
+      "acceptance_evidence_sha256": "f7934c8d16b6d897582a352ec0331e2f0bb20977042815af1b16ec3e82861460"
     },
     {
       "gate_id": "A-19",

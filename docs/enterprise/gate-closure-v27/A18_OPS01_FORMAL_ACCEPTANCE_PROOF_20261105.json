@@ -44,6 +44,6 @@
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
   "governance_status": "PR_ONLY_PROPOSED_NOT_MERGED; NEW_EXACT_CURRENT_HEAD_NATIVE_GATE_APPROVAL_REQUIRED; CI_AND_POST_MERGE_PROVIDER_TESTS_NOT_RUN",
-  "acceptance_source_sha": "7fed20ddd26c25639a1bea79facd0fc8b43865a7",
-  "acceptance_source_selection": "Immutable source baseline 7fed20ddd26c25639a1bea79facd0fc8b43865a7 includes the original qualified-source ancestry, current protected-main synchronization and the reviewed CodeQL security fixes in this same A-18 PR. Only this proof and the canonical evidence index change after the baseline. A newly qualified independent approval of the exact final HEAD, real official CI and governed post-merge provider validation remain mandatory; no deployment or PASS is inferred."
+  "acceptance_source_sha": "06bcff1128c414b04c3457f8c00f5c7cc00f2e09",
+  "acceptance_source_selection": "Security-fixed A-18 source anchor 06bcff1128c414b04c3457f8c00f5c7cc00f2e09 includes reviewed-source ancestry, exact protected-main synchronization, CodeQL remediation for file race and outbound path safety, and the corrected provider URL syntax. Only this proof and the canonical index are changed afterwards. Require fresh independent native review on the current HEAD, complete exact-SHA CI and post-merge provider validation; no automatic Enterprise PASS or production release."
 }
