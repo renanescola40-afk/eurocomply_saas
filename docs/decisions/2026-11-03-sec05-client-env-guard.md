@@ -1,6 +1,8 @@
 # SEC-05 client-side environment reference detection (2026-11-03)
 
-## Context and observed defect
+Status: Proposed
+
+## Context
 
 The existing `scripts/security/check-client-boundaries.mjs` only matched direct `process.env.SERVER_SECRET` accesses and ran in report-only mode unless an optional environment flag was set. As a result, bracket access, destructuring, computed access and optional chaining could avoid detection, and even detected findings could exit with code 0 in the default security CI invocation.
 
@@ -8,9 +10,17 @@ The existing `scripts/security/check-client-boundaries.mjs` only matched direct 
 
 Fail closed on any client-boundary `process.env` access that is not a direct, static `process.env.NEXT_PUBLIC_*` property. Do not rely on optional flags to make the scanner fail for findings. The check remains source-level defense-in-depth; no claim is made that all client bundles or runtime logs have been scanned.
 
-## Safety and compatibility
+## Risks and trade-offs
 
-No runtime application or database code is changed. False positives in client-source strings or comments may need targeted parser-level refinement; any adjustment must preserve the fail-closed guarantee. Run `node --test tests/security/client-env-access.test.mjs`, then the full source/security/CI suites on the accepted SHA before merge. Revert this isolated change if a validated false positive prevents a legitimate build, and correct the analysis rather than relaxing the gate.
+No runtime application or database code is changed. False positives in client-source strings or comments may need targeted parser-level refinement; any adjustment must preserve the fail-closed guarantee.
+
+## Validation
+
+Run `node --test tests/security/client-env-access.test.mjs`, then the full source/security/CI suites on the accepted SHA before merge.
+
+## Rollback
+
+Revert this isolated change if a validated false positive prevents a legitimate build, and correct the analysis rather than relaxing the gate.
 
 ## Gate and release boundary
 
@@ -31,3 +41,12 @@ The parser remains a conservative source guard, not a taint engine: arbitrarily 
 Canonical release candidate #2598 at observed SHA `c6ea11e6d0a314711780e444a10256745b6f8169` has five approved NEXT_PUBLIC_ analytics variables in both `scripts/security/check-public-secrets.mjs` and its older regex client scanner. PR #2600's new syntax-aware scanner initially omitted these names, risking an unnecessary fail-closed security CI failure on legitimate client analytics code. The production app already references `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT` in client-facing analytics modules.
 
 This follow-up adds only the five candidate-approved analytics names to both source allowlists, preserving denial for bracket access and any unapproved `NEXT_PUBLIC_*` names. Six additional isolated tests cover each approved name and a synthetic private analytics name with a public prefix denied; they do not authorize secrets with a public prefix. The local byte-identified Node 22.16.0 / TypeScript 5.8.3 isolated suite now passes **43/43** tests. Full-repo TypeScript 6/CI checks, client-bundle scanning, qualified review and formal acceptance remain NOT_EXECUTED / NOT_VERIFIED.
+
+## Rollback
+
+If a verified parser false positive blocks legitimate client code, revert the isolated scanner adjustment through a governed, reviewed PR. Restore an accurately scoped parser-level fix while preserving fail-closed handling of sensitive client environment accesses. Neither this decision record nor a rollback authorizes bypassing source-security checks or writing to production.
+
+## Risks and trade-offs
+
+The conservative parser may reject legitimate but unusual indirect accesses and therefore require additional regression fixtures. It also cannot establish that emitted client bundles, logs, provider encryption, and historical Git objects are free of exposures. These additional controls must be independently tested; current SEC-05 and A-04 acceptance remain NOT_VERIFIED.
+
