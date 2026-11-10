@@ -1,0 +1,182 @@
+{
+  "schema": "risck-comply.a09-stripe-live-price-provider-readback.v1",
+  "observed_at_utc": "2026-11-06T23:51:40.911Z",
+  "verification_source": "Stripe authenticated read-only GetPricesPrice (six independent GETs)",
+  "stripe_account_context": "acct_1U6IuJGt3cgjPOtq",
+  "stripe_mode": "LIVE",
+  "source": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "pr_number": 2625,
+    "source_commit_sha": "d5247b45ad1b682ce28429cc712637d3314818e5",
+    "source_catalog_path": "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json",
+    "source_catalog_blob_sha": "1f8fc82fa6710b0fea777d28cd811b016d744784"
+  },
+  "verification": {
+    "price_records_checked": 6,
+    "price_records_matched": 6,
+    "all_six_live_price_records_match": true,
+    "rows": [
+      {
+        "plan": "essential",
+        "interval": "month",
+        "sourcePriceId": "price_1U6wnYGt3cgjPOtqIATM8DeH",
+        "sourceProductId": "prod_V7B9TKop4XFVZD",
+        "expectedAmountCents": 4900,
+        "flags": {
+          "priceId": true,
+          "active": true,
+          "live": true,
+          "amountEURCents": true,
+          "currency": true,
+          "product": true,
+          "interval": true,
+          "intervalCount": true,
+          "lookupKey": true
+        },
+        "allMatched": true
+      },
+      {
+        "plan": "essential",
+        "interval": "year",
+        "sourcePriceId": "price_1U6wnjGt3cgjPOtqAgMbZdQa",
+        "sourceProductId": "prod_V7B9TKop4XFVZD",
+        "expectedAmountCents": 49000,
+        "flags": {
+          "priceId": true,
+          "active": true,
+          "live": true,
+          "amountEURCents": true,
+          "currency": true,
+          "product": true,
+          "interval": true,
+          "intervalCount": true,
+          "lookupKey": true
+        },
+        "allMatched": true
+      },
+      {
+        "plan": "professional",
+        "interval": "month",
+        "sourcePriceId": "price_1U6wnpGt3cgjPOtqmL7HoPDw",
+        "sourceProductId": "prod_V7B9MSMOjw6ScY",
+        "expectedAmountCents": 14900,
+        "flags": {
+          "priceId": true,
+          "active": true,
+          "live": true,
+          "amountEURCents": true,
+          "currency": true,
+          "product": true,
+          "interval": true,
+          "intervalCount": true,
+          "lookupKey": true
+        },
+        "allMatched": true
+      },
+      {
+        "plan": "professional",
+        "interval": "year",
+        "sourcePriceId": "price_1U6wnuGt3cgjPOtqdWopnIyX",
+        "sourceProductId": "prod_V7B9MSMOjw6ScY",
+        "expectedAmountCents": 149000,
+        "flags": {
+          "priceId": true,
+          "active": true,
+          "live": true,
+          "amountEURCents": true,
+          "currency": true,
+          "product": true,
+          "interval": true,
+          "intervalCount": true,
+          "lookupKey": true
+        },
+        "allMatched": true
+      },
+      {
+        "plan": "business",
+        "interval": "month",
+        "sourcePriceId": "price_1U6wo2Gt3cgjPOtqOr91hofs",
+        "sourceProductId": "prod_V7B9xkn8ud8f1d",
+        "expectedAmountCents": 39900,
+        "flags": {
+          "priceId": true,
+          "active": true,
+          "live": true,
+          "amountEURCents": true,
+          "currency": true,
+          "product": true,
+          "interval": true,
+          "intervalCount": true,
+          "lookupKey": true
+        },
+        "allMatched": true
+      },
+      {
+        "plan": "business",
+        "interval": "year",
+        "sourcePriceId": "price_1U6wo9Gt3cgjPOtqa8vSvgaM",
+        "sourceProductId": "prod_V7B9xkn8ud8f1d",
+        "expectedAmountCents": 399000,
+        "flags": {
+          "priceId": true,
+          "active": true,
+          "live": true,
+          "amountEURCents": true,
+          "currency": true,
+          "product": true,
+          "interval": true,
+          "intervalCount": true,
+          "lookupKey": true
+        },
+        "allMatched": true
+      }
+    ],
+    "products_checked": 3,
+    "products_active": 3,
+    "product_rows": [
+      {
+        "sourceProductId": "prod_V7B9TKop4XFVZD",
+        "providerIdMatch": true,
+        "active": true,
+        "livemode": true,
+        "verified": true
+      },
+      {
+        "sourceProductId": "prod_V7B9MSMOjw6ScY",
+        "providerIdMatch": true,
+        "active": true,
+        "livemode": true,
+        "verified": true
+      },
+      {
+        "sourceProductId": "prod_V7B9xkn8ud8f1d",
+        "providerIdMatch": true,
+        "active": true,
+        "livemode": true,
+        "verified": true
+      }
+    ]
+  },
+  "vercel_production_binding_check": {
+    "provider": "Vercel",
+    "projectId": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+    "verification": "NOT_VERIFIED",
+    "reason": "Unscoped environment-variable list is truncated; QA records cannot prove built-in Production bindings",
+    "listRowsReturned": 100,
+    "truncationSentinel": true,
+    "visibleMatchingBuiltInProductionVariables": 0
+  },
+  "boundaries": {
+    "production_stripe_price_status": "PASS_PROVIDER_READONLY",
+    "production_vercel_bindings": "NOT_VERIFIED",
+    "checkout_runtime": "NOT_VERIFIED",
+    "webhook_runtime": "NOT_VERIFIED",
+    "formal_gate_accepted": false,
+    "atomic_BIL01_status_unmodified": true,
+    "production_writes": 0,
+    "live_payments_created": 0,
+    "env_credentials_read_or_recorded": false
+  },
+  "reproduction": "Using the authorized Stripe LIVE account, retrieve each listed sourcePriceId using GET /v1/prices/{id}; compare id, active, livemode, unit_amount, currency, product, recurring.interval, recurring.interval_count and lookup_key with the immutable source catalog. Separately verify all six built-in Production-only Vercel environment bindings with complete, non-truncated authenticated GET metadata before A-09 acceptance. Retrieve the three sourceProductId objects with GET /v1/products/{id} and verify each exists, active and livemode=true.",
+  "observed_at_utc_verified_products": "2026-11-06T23:54:04.011Z"
+}
