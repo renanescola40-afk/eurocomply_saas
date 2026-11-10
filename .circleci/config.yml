@@ -933,8 +933,8 @@ jobs:
             npm run lint
             npm run typecheck
       - run:
-          name: Verify automatic CI safety contract
-          command: node --test tests/ci/circleci-pr-autopilot-contract.test.mjs
+          name: Verify automatic CI and manual deep safety contracts
+          command: node --test tests/ci/circleci-pr-autopilot-contract.test.mjs tests/ci/external-circleci-rescue-contract.test.mjs
       - run:
           name: Run unit tests
           command: npm run test
@@ -1008,7 +1008,10 @@ jobs:
             test -n "$CIRCLE_SHA1"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             test -n "$CIRCLE_BRANCH"
-            test "$CIRCLE_BRANCH" = "ci/rescue-external-pr-quality-20261109"
+            case "$CIRCLE_BRANCH" in
+              ci/rescue-external-pr-quality-20261109|ci/phase1-deep-release-20261110) ;;
+              *) echo "Unapproved external-pr-quality branch" >&2; exit 1 ;;
+            esac
             test "$(node --version)" = "v22.16.0"
             while IFS='=' read -r name _; do
               case "$name" in
@@ -1098,6 +1101,7 @@ workflows:
             branches:
               only:
                 - ci/rescue-external-pr-quality-20261109
+                - ci/phase1-deep-release-20261110
 
 
   # Explicit opt-in only: no source push, PR event, or default pipeline may run this job.
