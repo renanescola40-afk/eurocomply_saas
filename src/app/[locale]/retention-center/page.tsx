@@ -104,7 +104,7 @@ const copy: Record<SupportedLocale, {
   de: {
     title: 'Aufbewahrungsübersicht',
     subtitle: 'Operative Prüfung vorgeschlagener Aufbewahrungsziele für Nachweise, Governance-Datensätze und Prüfverläufe.',
-    notice: 'Nur Richtlinienentwurf. Diese Ziele sind keine endgültigen vertraglichen Zusagen und gelten erst nach qualifizierter Freigabe und nachweisbarer Durchsetzung als enterprise-ready.',
+    notice: 'Nur Richtlinienentwurf. Diese Ziele sind keine endgültigen vertraglichen Zusagen. Für den Unternehmenseinsatz sind eine qualifizierte Freigabe und ein Nachweis der Durchsetzung erforderlich.',
     score: 'Genehmigte Aufbewahrungsabdeckung',
     policies: 'Genehmigte + nachweislich durchgesetzte Kategorien',
     shortest: 'Kürzestes Entwurfsziel',
