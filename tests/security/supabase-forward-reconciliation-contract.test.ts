@@ -316,7 +316,7 @@ describe('bounded Supabase forward reconciliation contract', () => {
 
   it('uses one pinned Supabase CLI baseline across rehearsal and filtered dry-run', () => {
     for (const workflow of [rehearsal, dryRun]) {
-      expect(workflow).toContain('supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359');
+      expect(workflow).toContain('supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13');
       expect(workflow).toContain('version: 2.114.0');
       expect(workflow).not.toContain('version: latest');
     }
