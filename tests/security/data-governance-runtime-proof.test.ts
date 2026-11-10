@@ -58,6 +58,25 @@ describe('data governance privacy audit megapack', () => {
     expect(runtime).not.toContain('dsrDeadlineEnforced');
   });
 
+  it('requires the six hardened QA policy identities, operations and deny predicates', () => {
+    for (const policy of [
+      'retention policies organization members read',
+      'data subjects read own requests',
+      'audit checkpoints organization members read',
+      'restrict_data_subject_requests_insert_server_only',
+      'restrict_data_subject_requests_update_server_only',
+      'restrict_data_subject_requests_delete_server_only',
+    ]) expect(runtime).toContain(policy);
+    expect(runtime).toContain("p.roles = ARRAY['authenticated'::name]");
+    expect(runtime).toContain('policyBoundary.required !== 6');
+    expect(runtime).toContain('policyBoundary.matched !== 6');
+    expect(runtime).toContain('policyBoundary.actual !== 6');
+    expect(runtime).toContain('governance_policy_contract_incomplete');
+    expect(runtime).toContain("lower(coalesce(p.with_check,'')) = 'false'");
+    expect(runtime).toContain("lower(coalesce(p.qual,'')) = 'false'");
+    expect(runtime).not.toContain('if (policies < 7)');
+  });
+
   it('fails closed on unsafe or incomplete evidence', () => {
     for (const token of ['Complete','exact-SHA','postgresql://','personalDataStored','exportPayloadStored']) {
       expect(validator).toContain(token);
