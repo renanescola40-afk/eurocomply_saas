@@ -134,7 +134,10 @@ export function calculateSecurityQuestionnaireScore(items: SecurityQuestionnaire
 }
 
 export function getSecurityQuestionnaireStatus(score: number): SecurityQuestionnaireSummary['status'] {
-  if (score >= 88) return 'enterprise_ready';
+  // This score measures completeness of drafted answers, not independently
+  // validated security controls or legal/release acceptance. Never expose an
+  // enterprise-ready status from self-reported questionnaire scores alone.
+  // An evidence-backed status requires a separate official acceptance source.
   if (score >= 60) return 'review_ready';
   return 'foundation';
 }
