@@ -44,8 +44,8 @@
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
   "governance_status": "NOT_FORMALLY_ACCEPTED; NEW_NATIVE_INDEPENDENT_EXACT_HEAD_FORMAL_REVIEW_REQUIRED; POST_MERGE_PROVIDER_VALIDATOR_PASS_REQUIRED; PRODUCTION_NOT_AUTHORIZED",
-  "acceptance_source_sha": "a9202d0e5e419d82d485139b882c63f08924aa5d",
-  "acceptance_source_selection": "Exact GitHub main source a9202d0e5e419d82d485139b882c63f08924aa5d checked before constructing this one-purpose evidence-only A-18 candidate. The previous #2677 source was merged with an empty APPROVED review body, and #2678 integrated six Skills afterward; neither prior review is usable as a native A-18 formal acceptance on this new HEAD. Only this A-18 proof and the ENTERPRISE_EVIDENCE_MASTER_INDEX.json may change after the source anchor. The independent qualified reviewer must inspect this PR final HEAD and enter an APPROVED native review with the standalone line A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED only if genuinely satisfied; an empty review does not count. All required current-HEAD checks and an owner-governed merge must precede official post-merge provider-backed validation. No product/deployment GO is implied.",
+  "acceptance_source_sha": "eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b",
+  "acceptance_source_selection": "Fresh proof-only A-18/OPS-01 candidate anchored to authenticated merged main eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b, after #2676 and #2679. Historical Vercel deployment identity is unchanged. No unrelated source files may differ between this frozen source and final merge. Formal acceptance requires a fresh independent native APPROVED review with the exact standalone gate declaration on this PR's exact HEAD and a real post-merge validator PASS.",
   "post_merge_reconciliation": {
     "prior_merged_pr": 2675,
     "prior_pr_source_sha": "4dcf3764203675436fc21f029005c23e8c0bcde4",
@@ -58,10 +58,14 @@
     "post_merge_validator_run_id": 42838218433,
     "post_merge_validator_result": "FAIL",
     "post_merge_validator_error": "invalid_gate_acceptance:A-18:authenticated_current_head_review_required,acceptance_sha_mismatch",
-    "reconciliation_base_main_sha": "a9202d0e5e419d82d485139b882c63f08924aa5d",
-    "reconciliation_type": "EXACT_POST_SKILLS_MAIN_PROOF_ONLY_FRESH_INDEPENDENT_REVIEW_CANDIDATE",
-    "remaining_requirement": "QUALIFIED_NATIVE_CURRENT_HEAD_APPROVED_REVIEW_WITH_EXACT_A18_FORMAL_DECLARATION; GOVERNED_MERGE; POST_MERGE_OFFICIAL_VALID_TRUE_GATES_ACCEPTED_GE_1",
+    "reconciliation_base_main_sha": "eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b",
+    "reconciliation_type": "POST_2679_SHA_MISMATCH_REANCHOR_TO_LATEST_MAIN_PROOF_ONLY",
+    "remaining_requirement": "NEW_NATIVE_QUALIFIED_EXACT_HEAD_APPROVED_REVIEW_WITH_FORMAL_LINE; OFFICIAL_PRE_MERGE_PASS; OWNER_GOVERNED_MERGE; POST_MERGE_VALID_TRUE",
     "formal_gate_accepted": false,
-    "production_deploy_authorized": false
+    "production_deploy_authorized": false,
+    "latest_failed_pr": 2679,
+    "latest_failed_merge_sha": "eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b",
+    "latest_failed_validator_run_id": 42857332658,
+    "latest_failed_validator_error": "invalid_gate_acceptance:A-18:acceptance_sha_mismatch"
   }
 }
