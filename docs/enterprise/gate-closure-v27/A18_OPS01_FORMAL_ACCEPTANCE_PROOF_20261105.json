@@ -43,7 +43,25 @@
     "Provider READY/domain ID is not runtime health or customer E2E",
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
-  "governance_status": "PR_ONLY_PROPOSED_NOT_MERGED; NEW_EXACT_CURRENT_HEAD_NATIVE_GATE_APPROVAL_REQUIRED; CI_AND_POST_MERGE_PROVIDER_TESTS_NOT_RUN",
-  "acceptance_source_sha": "2ce7c90891d0fe8befd4a13dc442998ec2114199",
-  "acceptance_source_selection": "Verified-source anchor 2ce7c90891d0fe8befd4a13dc442998ec2114199 binds the reviewed A-18 source implementation to the CodeQL 822 remediation: external provider SHA now exclusively comes from trusted workflow EVIDENCE_EXACT_SHA, while committed historical index source SHA is used only for local reconciliation. The branch is otherwise unchanged. Only this proof and canonical index can change after the anchor; qualified native review on the final SHA, all required checks, governed merge and post-merge acceptance remain mandatory."
+  "governance_status": "FOLLOWUP_PROPOSAL_ONLY; PREVIOUS_PR_2620_MERGED_WITH_NATIVE_APPROVAL_BODY_EMPTY; POST_MERGE_VALIDATOR_FAIL; FRESH_QUALIFIED_REVIEW_AND_GOVERNED_INTEGRATION_REQUIRED",
+  "acceptance_source_sha": "e91b59a4ad88e32587db8b76decebd537f59c659",
+  "acceptance_source_selection": "New source anchor is exact authenticated main at reconciliation branch creation, superseding the former source anchor because later governed integrations added unrelated files. A fresh independent native gate-specific review of this candidate is mandatory before acceptance; previous approvals are not reused for the current head.",
+  "post_merge_reconciliation": {
+    "prior_merged_pr": 2620,
+    "prior_pr_source_sha": "f7568f097cbae720a4cdaf32b89793ba78263845",
+    "prior_merge_sha": "2f214ae17dd0c23df7d6bcc701d12ec0db146d60",
+    "prior_merge_time": "2026-11-10T12:01:32Z",
+    "prior_merge_actor": "renansilva2002-tech",
+    "prior_native_approval_review_id": 5841439865,
+    "prior_native_approval_review_body_empty": true,
+    "prior_source_required_contexts_success": 17,
+    "post_merge_validator_run_id": 42812262634,
+    "post_merge_validator_result": "FAIL",
+    "post_merge_validator_error": "invalid_gate_acceptance:A-18:authenticated_current_head_review_required",
+    "reconciliation_base_main_sha": "e91b59a4ad88e32587db8b76decebd537f59c659",
+    "reconciliation_type": "DOCUMENTED_EXACT_SOURCE_ANCHOR_AND_PROOF_REPIN_ONLY",
+    "remaining_requirement": "NEW_NATIVE_INDEPENDENT_A18_OPS01_FORMAL_GATE_APPROVAL_ON_FINAL_PR_HEAD",
+    "formal_gate_accepted": false,
+    "production_deploy_authorized": false
+  }
 }
