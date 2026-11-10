@@ -31,7 +31,7 @@ describe('canonical Trust Center publication integrity', () => {
     const publicPack = read('src/lib/trust/procurement-pack.ts');
     const providerRegister = read('docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md');
 
-    expect(publicPack).toContain("PROCUREMENT_PACK_VERSION = '2026-09-24'");
+    expect(publicPack).toContain("PROCUREMENT_PACK_VERSION = '2026-11-09'");
     expect(publicPack).toContain('Current V41 selected migrations are present live 13/13');
     expect(publicPack).toContain('Exact-current-main Production binding and protected runtime acceptance remain evidence-required');
     expect(publicPack).toContain('no legitimate LIVE subscription authority is currently credited');
