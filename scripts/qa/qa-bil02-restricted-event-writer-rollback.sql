@@ -30,7 +30,8 @@ CREATE POLICY risck_qa_stripe_event_writer_select ON public.stripe_events_proces
 CREATE POLICY risck_qa_stripe_event_writer_insert ON public.stripe_events_processed
   FOR INSERT TO risck_qa_stripe_event_writer
   WITH CHECK (livemode=false AND organization_id IS NULL
-    AND status = 'processing' AND id ~ '^evt_[A-Za-z0-9_]{4,200} ('checkout.session.completed','checkout.session.async_payment_succeeded',
+    AND status = 'processing' AND id ~ '^evt_[A-Za-z0-9_]{4,200}$'
+    AND payload @> '{"qa_intake_only":true}'::jsonb AND type IN ('checkout.session.completed','checkout.session.async_payment_succeeded',
       'customer.subscription.created','customer.subscription.updated','customer.subscription.deleted',
       'invoice.paid','invoice.payment_failed'));
 SET LOCAL ROLE risck_qa_stripe_event_writer;
