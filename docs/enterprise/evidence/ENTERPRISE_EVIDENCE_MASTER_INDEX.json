@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
-      "notes": "A-18 proof reconciliation CANDIDATE after PR #2620 merged with an empty final native review body. Official post-merge validator failed. Candidate source anchor repinned to exact main at branch creation after intervening governed integrations; fresh qualified independent formal gate review, all current required checks, explicit human merge authority and official post-merge PASS remain mandatory. Do not count as accepted before provider-verified success.",
+      "notes": "NOT FORMALLY ACCEPTED: A-18 exact-head source candidate anchored to authenticated main 2df99104b04023917f8ef9888445aaec82a00969 prior to this two-file evidence-only PR. The previous #2620 merge used an empty native final review body and fails provider attestation; require a fresh independent native APPROVED review with the standalone A-18 formal acceptance line on this final PR HEAD, exact-HEAD checks, governed merge and post-merge validator PASS. Historical provider READY identity is not runtime/Enterprise GO.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "e91b59a4ad88e32587db8b76decebd537f59c659",
-      "acceptance_evidence_sha256": "28dbffef5e0f634bea3577c32f3d57b73371fd61613fc4bfd1309ef5da8f231e"
+      "acceptance_sha": "2df99104b04023917f8ef9888445aaec82a00969",
+      "acceptance_evidence_sha256": "909249d45ce196f342fb4a3b27cb45e018186664cde2e744ef4d2e911ecdf6f1"
     },
     {
       "gate_id": "A-19",
