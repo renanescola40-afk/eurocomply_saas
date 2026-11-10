@@ -44,6 +44,6 @@
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
   "governance_status": "PR_ONLY_PROPOSED_NOT_MERGED; NEW_EXACT_CURRENT_HEAD_NATIVE_GATE_APPROVAL_REQUIRED; CI_AND_POST_MERGE_PROVIDER_TESTS_NOT_RUN",
-  "acceptance_source_sha": "7f2a6f836b1a02dea4c75ccb71a096547f288175",
-  "acceptance_source_selection": "Protected main a31778441b5fadead02262246b42345cb755120b has been merged into the existing A-18 PR without overlapping source paths. Reviewed-source ancestry is frozen at 7f2a6f836b1a02dea4c75ccb71a096547f288175. Only this proof and the canonical Evidence Factory index change after that anchor. The old qualified approval remains historical; an independent native review of the final current HEAD, exact-SHA official CI and human-governed post-merge provider validation remain required. NO formal gate PASS is claimed."
+  "acceptance_source_sha": "7fed20ddd26c25639a1bea79facd0fc8b43865a7",
+  "acceptance_source_selection": "Immutable source baseline 7fed20ddd26c25639a1bea79facd0fc8b43865a7 includes the original qualified-source ancestry, current protected-main synchronization and the reviewed CodeQL security fixes in this same A-18 PR. Only this proof and the canonical evidence index change after the baseline. A newly qualified independent approval of the exact final HEAD, real official CI and governed post-merge provider validation remain mandatory; no deployment or PASS is inferred."
 }

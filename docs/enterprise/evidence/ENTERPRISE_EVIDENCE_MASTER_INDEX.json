@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
-      "notes": "PR-only A-18 admission candidate after protected-main sync anchored at 7f2a6f836b1a02dea4c75ccb71a096547f288175. Native current-head qualified independent review, exact-SHA CI and post-merge provider validation are required. Only the proof and canonical index may change after the anchor; no production deployment authorized.",
+      "notes": "PR-only proposal on security-fixed A-18 source anchor 7fed20ddd26c25639a1bea79facd0fc8b43865a7. The two existing CodeQL inline findings were corrected in the source, not administratively waived; the exact-final-head qualified independent review, full GitHub and CircleCI required checks, post-merge validator, and official ledger admission remain necessary.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "7f2a6f836b1a02dea4c75ccb71a096547f288175",
-      "acceptance_evidence_sha256": "4a375a43a1960507f828a0695263e60479fdd84fd867206154a92c9ab6c91977"
+      "acceptance_sha": "7fed20ddd26c25639a1bea79facd0fc8b43865a7",
+      "acceptance_evidence_sha256": "09cab64c8997f12543540760db8950b07c940f4c2a3c89b186eac4e6109aaf31"
     },
     {
       "gate_id": "A-19",
