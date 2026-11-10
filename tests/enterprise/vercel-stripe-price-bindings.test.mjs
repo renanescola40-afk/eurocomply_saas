@@ -197,3 +197,46 @@ test('network target comes from strict runtime values and remains bound to revie
     /vercel_target_authority_mismatch:teamId/,
   );
 });
+
+
+test('A-09 rejects custom QA and missing targets even with canonical Price-looking values', async () => {
+  const keys = requiredStripePriceKeys(catalog);
+  const qa = keys.map((key, i) => ({
+    id: 'env_qa_' + i,
+    key,
+    value: 'price_fake' + i,
+    target: [],
+    customEnvironmentIds: ['env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj'],
+  }));
+  assert.throws(() => extractVercelStripePriceBindings(qa, keys), /vercel_price_binding_count/);
+  const missingTarget = qa.map(({ customEnvironmentIds, target, ...row }) => row);
+  assert.throws(() => extractVercelStripePriceBindings(missingTarget, keys), /vercel_price_binding_count/);
+  await assert.rejects(loadVercelStripePriceBindings({
+    token: 'synthetic-test-token', target, catalog,
+    fetchImpl: async () => jsonResponse({ envs: qa }),
+  }), /vercel_price_binding_count/);
+});
+
+test('A-09 source loader refuses paginated or connector-truncated env inventory', async () => {
+  const keys = requiredStripePriceKeys(catalog);
+  const production = keys.map((key, i) => ({
+    id: 'env_prod_' + i,
+    key,
+    value: 'price_fake' + i,
+    target: ['production'],
+  }));
+  for (const list of [
+    { envs: production, pagination: { count: 100, next: 1794000000000 } },
+    { envs: production, truncated: true },
+    { envs: production, truncation: { arrays: 1 } },
+  ]) {
+    await assert.rejects(loadVercelStripePriceBindings({
+      token: 'synthetic-test-token', target, catalog,
+      fetchImpl: async () => jsonResponse(list),
+    }), /vercel_environment_listing_incomplete/);
+  }
+  await assert.rejects(loadVercelStripePriceBindings({
+    token: 'synthetic-test-token', target, catalog,
+    fetchImpl: async () => jsonResponse({ wrongShape: [] }),
+  }), /vercel_environment_listing_invalid/);
+});
