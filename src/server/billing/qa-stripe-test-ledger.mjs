@@ -118,7 +118,7 @@ export async function recordSignedQaStripeTestEvent({ rawBody, signature }, {
   const { error } = await client.from('stripe_events_processed').insert({
     id: event.id,
     type: event.type,
-    status: 'processing',
+    // DB default status='processing': intake JWT has no INSERT(status) grant.
     stripe_created_at: new Date(event.created * 1000).toISOString(),
     livemode: false,
     api_version: event.api_version ?? null,
