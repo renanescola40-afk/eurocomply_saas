@@ -911,8 +911,8 @@ jobs:
     resource_class: large
     working_directory: ~/project
     environment:
-      TARGET_QAT15_BRANCH: ci/circleci-pr-validation-20261104
-      TARGET_QAT15_SHA: ef4fea2a56fcac762e14bf1d0ee2be1998aed591
+      TARGET_QAT15_BRANCH: << pipeline.parameters.qat15_source_branch >>
+      TARGET_QAT15_SHA: << pipeline.parameters.qat15_source_sha >>
       QAT15_GITLEAKS_ONLY: << pipeline.parameters.qat15_gitleaks_only >>
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
@@ -1386,17 +1386,6 @@ workflows:
 
   qat15-missing-checks-manual:
     when: << pipeline.parameters.run_qat15_missing_checks >>
-    jobs:
-      - qat15-missing-checks:
-          filters:
-            branches:
-              only:
-                - ci/qat15-exact-sha-quality-20261107
-
-  # Scoped, owner-authorized ONE-SHOT QAT-01 source-only validation on THIS coordinator branch only.
-  # Not part of the target PR; never merge this workflow to main; no provider contexts or deploy.
-  qat15-one-shot-exact-source-20261110:
-    when: pipeline.event.name == "push"
     jobs:
       - qat15-missing-checks:
           filters:
