@@ -39,6 +39,7 @@ test('real database rehearsal denies forged processed states and other mutations
   for (const assertion of [
     'qa_intake_writer_can_forge_processed_state',
     'qa_intake_writer_can_insert_processed_state',
+    'qa_intake_writer_can_override_default_processing',
     'qa_writer_live_insert_was_permitted',
     'qa_writer_tenant_insert_was_permitted',
     'qa_writer_duplicate_insert_was_permitted',
