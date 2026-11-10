@@ -10,6 +10,15 @@ function evaluatePhase2QaWebhookPreflight(input) {
   if(!/^dpl_[A-Za-z0-9]+$/.test(String(deployment.id??"")) || deployment.status!=="READY" || deployment.environment!=="qa" || deployment.qaAliasVerified!==true) fail("isolated_qa_deployment_unverified");
   if(!sha.test(String(deployment.gitSha??"")) || deployment.gitSha!==release.exactSha || deployment.gitRepository!==release.repository || deployment.gitProviderReadback!==true) fail("deployment_git_provenance_unverified");
   if(database.projectRef!=="zrxrrfbllsxtleyxjpsz" || deployment.runtimeDatabaseProjectRef!==database.projectRef || database.isProduction!==false || database.providerReadback!==true) fail("runtime_qa_database_unverified");
+  // A QA database hostname alone cannot prove safe event persistence.
+  // Require an independently verified RLS-scoped writer before endpoint admission.
+  // Claims here are structural; this function never grants or validates credentials.
+  const writer=database.webhookWriter??{};
+  if (writer.type!=="rls_scoped" || writer.qaProjectRef!=="zrxrrfbllsxtleyxjpsz" ||
+      writer.qaProjectRef!==database.projectRef || writer.bypassRls!==false ||
+      writer.providerReadback!==true || writer.applicationIntegrationVerified!==true ||
+      writer.canPersistEvents!==true || writer.canUpdateEntitlements!==true)
+    fail("qa_webhook_storage_writer_unverified");
   if(stripe.accountId!=="acct_1U6IuJGt3cgjPOtq" || stripe.livemode!==false || stripe.secretKeyMode!=="TEST" || stripe.providerReadback!==true) fail("stripe_test_account_unverified");
   if(stripe.qaSigningSecretConfigured!==true || stripe.qaSigningSecretBindingVerified!==true || stripe.signingSecretValueRead!==false) fail("stripe_qa_signing_binding_unverified");
   // Evidence claims are structural only; a provider must independently
