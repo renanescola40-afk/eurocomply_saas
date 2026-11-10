@@ -44,6 +44,6 @@
     "Approval is OPS-01 identity only, not Enterprise GO"
   ],
   "governance_status": "PR_ONLY_PROPOSED_NOT_MERGED; NEW_EXACT_CURRENT_HEAD_NATIVE_GATE_APPROVAL_REQUIRED; CI_AND_POST_MERGE_PROVIDER_TESTS_NOT_RUN",
-  "acceptance_source_sha": "6a037dc2683a4e871a1cd26f478d39a93d278ea7",
-  "acceptance_source_selection": "A-18 source anchor 6a037dc2683a4e871a1cd26f478d39a93d278ea7 merges latest protected main d1d5a91c705322d9c9cd19fa165a99cc1fe7676e with the existing security-fixed and correctly reviewed-source-aware A-18 validator. These historical code/CI/production identity facts are source evidence only, and the gate remains subject to independent current-final-HEAD review, exact-SHA required tests, governed integration and post-merge acceptance. Only this proof and canonical index can change after this source anchor; no Enterprise production GO."
+  "acceptance_source_sha": "2ce7c90891d0fe8befd4a13dc442998ec2114199",
+  "acceptance_source_selection": "Verified-source anchor 2ce7c90891d0fe8befd4a13dc442998ec2114199 binds the reviewed A-18 source implementation to the CodeQL 822 remediation: external provider SHA now exclusively comes from trusted workflow EVIDENCE_EXACT_SHA, while committed historical index source SHA is used only for local reconciliation. The branch is otherwise unchanged. Only this proof and canonical index can change after the anchor; qualified native review on the final SHA, all required checks, governed merge and post-merge acceptance remain mandatory."
 }
