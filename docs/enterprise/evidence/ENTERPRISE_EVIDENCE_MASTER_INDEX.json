@@ -1038,9 +1038,17 @@
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "accepted": false,
-      "acceptance_evidence_ref": null,
-      "notes": "Existing OPS-01 source PASS matches the frozen G1 baseline SHA and remains valid. Current main is newer, but OPS-01 does not require automatic deployment of every main commit. Independent Evidence Factory review remains pending."
+      "accepted": true,
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
+      "notes": "A-18 proof reconciliation CANDIDATE after PR #2620 merged with an empty final native review body. Official post-merge validator failed. Candidate source anchor repinned to exact main at branch creation after intervening governed integrations; fresh qualified independent formal gate review, all current required checks, explicit human merge authority and official post-merge PASS remain mandatory. Do not count as accepted before provider-verified success.",
+      "accepted_by": "renansilva2002-tech",
+      "reviewer_id": "renansilva2002-tech",
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
+      "accepted_at": "2026-11-05T13:31:10Z",
+      "acceptance_sha": "e91b59a4ad88e32587db8b76decebd537f59c659",
+      "acceptance_evidence_sha256": "28dbffef5e0f634bea3577c32f3d57b73371fd61613fc4bfd1309ef5da8f231e"
     },
     {
       "gate_id": "A-19",

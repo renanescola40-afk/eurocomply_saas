@@ -16,7 +16,7 @@ const item: SecurityQuestionnaireItem = {
 };
 
 describe('security questionnaire', () => {
-  it('returns enterprise-ready status when all answers are ready', () => {
+  it('returns review-ready status when all draft answers are complete', () => {
     const items: SecurityQuestionnaireItem[] = [
       { ...item, readiness: 'ready' },
       { ...item, id: 'access', category: 'access_control', readiness: 'ready' },
@@ -25,7 +25,7 @@ describe('security questionnaire', () => {
     const score = calculateSecurityQuestionnaireScore(items);
 
     expect(score).toBe(100);
-    expect(getSecurityQuestionnaireStatus(score)).toBe('enterprise_ready');
+    expect(getSecurityQuestionnaireStatus(score)).toBe('review_ready');
   });
 
   it('summarises partial and missing questionnaire inputs', () => {

@@ -151,7 +151,7 @@ const pageContent = {
   status: {
     eyebrow: 'Status',
     title: 'Operational status and readiness.',
-    summary: 'Status information remains public and localizable so buyers and workspace users can find the verified incident-communication authority. 24/7 staffed monitoring is not currently claimed.',
+    summary: 'Status information remains public and localizable so buyers and workspace users can find the verified incident-communication authority. Continuous staffed monitoring is not a service commitment.',
     primaryCta: 'Trust center',
     secondaryCta: 'Contact team',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
