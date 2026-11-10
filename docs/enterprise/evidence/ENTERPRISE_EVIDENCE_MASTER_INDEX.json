@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
-      "notes": "NOT FORMALLY ACCEPTED: A-18 exact-head source candidate anchored to authenticated main 2df99104b04023917f8ef9888445aaec82a00969 prior to this two-file evidence-only PR. The previous #2620 merge used an empty native final review body and fails provider attestation; require a fresh independent native APPROVED review with the standalone A-18 formal acceptance line on this final PR HEAD, exact-HEAD checks, governed merge and post-merge validator PASS. Historical provider READY identity is not runtime/Enterprise GO.",
+      "notes": "NOT FORMALLY ACCEPTED: owner-authorized evidence-only A-18 source candidate from exact current main b58712c940458d31019ae61ff6c7730fc1c48db7, following unrelated code drift since prior ec50a17c989859fcb4f10c1bc3e3e1573e2ffbb1. Source OPS-01 PASS is historical deployment-identity evidence, not gate acceptance. Prior #2675 code approval body was empty and post-merge valdiator failed. Requires independent native APPROVED review body with exact standalone A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED line on this candidate HEAD, all required checks, governed merge and official post-merge valid=true/gates_accepted>=1. No production release approval.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "2df99104b04023917f8ef9888445aaec82a00969",
-      "acceptance_evidence_sha256": "909249d45ce196f342fb4a3b27cb45e018186664cde2e744ef4d2e911ecdf6f1"
+      "acceptance_sha": "b58712c940458d31019ae61ff6c7730fc1c48db7",
+      "acceptance_evidence_sha256": "8cfabd286f51c59a4fcdcba9807fb059132e40557bf2385c4b26820b45c89227"
     },
     {
       "gate_id": "A-19",
