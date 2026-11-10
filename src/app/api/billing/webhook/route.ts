@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 
+import { evaluateQaWebhookAdmission } from '@/server/billing/qa-webhook-writer-admission.mjs';
+
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit, getClientIpFromRequest } from '@/lib/security/rate-limit';
@@ -49,6 +51,11 @@ async function recordBillingWebhookRouteAudit(input: {
   event?: Stripe.Event;
   reason?: string;
 }) {
+  // Until the scoped QA writer is verified, even a rejection audit could
+  // write through an inherited admin client to the wrong database.
+  // Preserve the HTTP rejection and sanitized observability, without DB writes.
+  if (!evaluateQaWebhookAdmission(process.env).allowed) return;
+
   try {
     const context = input.event ? getStripeEventAuditContext(input.event) : { organizationId: null, actorUserId: null };
 
@@ -130,6 +137,16 @@ export async function POST(request: Request) {
       { error: misconfigured ? 'webhook_mode_not_configured' : 'webhook_mode_mismatch' },
       { status: misconfigured ? 500 : 400 },
     );
+  }
+
+  const qaAdmission = evaluateQaWebhookAdmission(process.env);
+  if (!qaAdmission.allowed) {
+    await recordBillingWebhookRouteAudit({ action: 'webhook_rejected', event, reason: qaAdmission.reason });
+    reportError(new Error('QA Stripe webhook persistence writer is not ready'), {
+      area: 'stripe_webhook_qa_writer_admission',
+      reason: qaAdmission.reason,
+    });
+    return noStoreJson({ error: 'webhook_writer_unavailable' }, { status: 503 });
   }
 
   await recordBillingWebhookRouteAudit({ action: 'webhook_received', event });

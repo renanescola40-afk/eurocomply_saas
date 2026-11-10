@@ -51,6 +51,21 @@ BEGIN
   END;
 END
 $qa$;
+-- Critical: a false JSON proof must abort execution, not merely emit a field.
+-- PostgreSQL automatically rolls back this entire transaction on exception.
+DO $qa_assert$
+DECLARE
+  v_total bigint;
+  v_passed bigint;
+BEGIN
+  SELECT count(*), count(*) FILTER (WHERE passed)
+    INTO v_total, v_passed FROM pg_temp.qa_audit_rpc_results;
+  IF v_total <> 4 OR v_passed <> 4 THEN
+    RAISE EXCEPTION 'QA_AUDIT_CHAIN_ROLLBACK_GATE_FAILED'
+      USING ERRCODE = 'P0001';
+  END IF;
+END
+$qa_assert$;
 SELECT jsonb_build_object(
   'scope','QA_SYNTHETIC_ROLLBACK_ONLY',
   'tests',jsonb_agg(jsonb_build_object('test',test_name,'passed',passed) ORDER BY test_name),
