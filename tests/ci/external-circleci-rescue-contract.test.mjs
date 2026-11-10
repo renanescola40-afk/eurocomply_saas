@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 const source = readFileSync('.circleci/config.yml', 'utf8');
@@ -27,10 +28,13 @@ function circleWorkflow(name) {
 const job = circleJob('external-pr-quality');
 const workflow = circleWorkflow('external-pr-quality-manual');
 
-test('external rescue is strictly opt-in and scoped to approved CI branch', () => {
+test('deep source quality is opt-in and scoped to two explicit CI branches', () => {
   assert.match(source, /run_external_pr_quality:\n    type: boolean\n    default: false/);
   assert.match(workflow, /when: << pipeline\.parameters\.run_external_pr_quality >>/);
-  assert.match(workflow, /only:\n\s+- ci\/rescue-external-pr-quality-20261109/);
+  const allowedBranches = ['ci/rescue-external-pr-quality-20261109', 'ci/phase1-deep-release-20261110'];
+  const branchFilter = workflow.match(/filters:\n[ \t]+branches:\n[ \t]+only:\n((?:[ \t]+- [^\n]+\n?)+)/);
+  assert.ok(branchFilter, 'No explicit branch allowlist on deep manual workflow');
+  assert.deepEqual(branchFilter[1].trim().split('\n').map((line) => line.trim().slice(2)), allowedBranches);
   assert.doesNotMatch(workflow, /- main\b|- qa\/|- prod\/|schedule:|context:/);
 });
 
@@ -102,4 +106,20 @@ test('source Actionlint job uses a pinned real binary and fails closed', () => {
   assert.match(actionWorkflow, /when: pipeline\.event\.name == "pull_request"/);
   assert.doesNotMatch(actionWorkflow, /filters:|branches:|context:|schedule:/);
   assert.doesNotMatch(actionJob, /context:|npm run deploy|curl.*supabase|continue-on-error:\s*true|allow_failure:\s*true/);
+});
+
+
+test('approved CI branches pass real bash guard; all other branches fail closed', () => {
+  const guard = job.match(/case "\$CIRCLE_BRANCH" in[\s\S]*?esac/);
+  assert.ok(guard, 'Missing branch restriction in actual source executor');
+  const check = (branch) => spawnSync('bash', ['-c', 'set -euo pipefail\n' + guard[0]], {
+    env: { ...process.env, CIRCLE_BRANCH: branch },
+    encoding: 'utf8',
+  });
+  for (const branch of ['ci/rescue-external-pr-quality-20261109', 'ci/phase1-deep-release-20261110']) {
+    assert.equal(check(branch).status, 0, 'Approved branch was refused: ' + branch);
+  }
+  for (const branch of ['main', 'qa/isolated', 'production', 'ci/unapproved', 'ci/phase1-deep-release-20261110-extra', '']) {
+    assert.equal(check(branch).status, 1, 'Forbidden branch passed: ' + branch);
+  }
 });
