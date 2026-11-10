@@ -31,7 +31,7 @@ function summaryFor(status: BoardReportData['boardStatus']) {
   return 'The organization has material audit-readiness risk. Immediate attention is recommended for critical findings, overdue tasks and missing evidence.';
 }
 
-export async function buildBoardReportData(params: { userId: string; workspaceId?: string | null }): Promise<BoardReportData> {
+export async function buildBoardReportData(params: { userId: string; workspaceId?: string | null; organizationId?: string | null }): Promise<BoardReportData> {
   const auditPack = await buildAuditPackData(params);
   const status = boardStatusFor(auditPack);
 

@@ -77,9 +77,14 @@ export function requiredStripePriceKeys(catalog) {
 }
 
 function matchingProductionRows(rows, key) {
+  // A project-wide Vercel listing also contains custom QA env records with
+  // identical names and an empty target array. Never infer Production.
   return (Array.isArray(rows) ? rows : []).filter((row) => (
     row?.key === key
-    && (!Array.isArray(row?.target) || row.target.includes('production'))
+    && Array.isArray(row.target)
+    && row.target.includes('production')
+    && (!Array.isArray(row.customEnvironmentIds) || row.customEnvironmentIds.length === 0)
+    && !row.gitBranch
   ));
 }
 
@@ -143,7 +148,14 @@ export async function loadVercelStripePriceBindings({ fetchImpl = fetch, token, 
   });
   if (!response.ok) throw new Error(`vercel_env_read_failed:${response.status}`);
   const body = await boundedJson(response);
-  const rows = Array.isArray(body?.envs) ? body.envs : [];
+  if (!Array.isArray(body?.envs)) throw new Error('vercel_environment_listing_invalid');
+  // No gate proof may be produced from a paginated or connector-truncated
+  // listing. A subsequent pagination implementation must be separately tested.
+  if ((body.pagination?.next != null && body.pagination.next !== 0)
+    || body.truncated === true || body.truncation?.arrays > 0) {
+    throw new Error('vercel_environment_listing_incomplete');
+  }
+  const rows = body.envs;
 
   const bindings = {};
   for (const key of requiredKeys) {

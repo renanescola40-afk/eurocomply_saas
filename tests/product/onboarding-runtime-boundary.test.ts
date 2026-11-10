@@ -58,7 +58,11 @@ describe('onboarding runtime boundary', () => {
   it('catches both server mutations and exposes one assisted Enterprise path', () => {
     expect(pageSource).toContain("toOnboardingMutationFailure(error, safeLocale, 'save')");
     expect(pageSource).toContain("toOnboardingMutationFailure(error, safeLocale, 'complete')");
+    // Explicit invalid plans must fail closed before onboarding intent is derived.
+    expect(pageSource).toContain('normalizePublicCheckoutPlanId(resolvedSearchParams.plan)');
+    expect(pageSource).toContain('if (hasExplicitPlan && !normalizedPublicPlan)');
     expect(pageSource).toContain('getOnboardingPlanIntent(normalizedPublicPlan)');
+    expect(pageSource).not.toContain('getOnboardingPlanIntent(resolvedSearchParams.plan)');
 
     expect(boundarySource).toContain('if (!result.ok)');
     expect(boundarySource).toContain('throw new Error(result.message)');
