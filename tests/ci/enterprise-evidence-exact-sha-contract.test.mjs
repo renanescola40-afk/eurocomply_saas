@@ -36,3 +36,13 @@ test('A-18 exact-head provider attestation requires read-only GitHub API scope',
  assert.match(validator,/verifyGitHubA18CurrentHead/);
  assert.match(validator,/authenticated_current_head_review_required/);
 });
+
+
+test('A-18 provider request SHA is sourced solely from trusted workflow input, never committed evidence JSON',()=>{
+ assert.match(validator, /providerExpectedSha=process\.env\.EVIDENCE_EXACT_SHA/);
+ assert.match(validator, /SHA40\.test\(providerExpectedSha\|\|''\)/);
+ assert.match(validator, /verifyGitHubA18CurrentHead\(a18,\{expectedSha:providerExpectedSha,/);
+ assert.doesNotMatch(validator, /verifyGitHubA18CurrentHead\(a18,\{expectedSha,prNumber/);
+ // Historical source SHA remains usable for offline reconciliation, not provider requests.
+ assert.match(validator, /expectedSha=process\.env\.EVIDENCE_EXACT_SHA\|\|index\.source\.commit_sha/);
+});
