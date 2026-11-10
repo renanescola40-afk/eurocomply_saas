@@ -51,7 +51,7 @@ export function evaluateArticle50Control(input: Article50ControlInput): Article5
   const blockers: string[] = [];
   const warnings: string[] = [];
   const evidenceRequirements = [
-    'Retain evidence of when the system was placed on the market or put into service.',
+    'Retain evidence of the provider system being placed on the market before 2026-08-02 when claiming the amended Article 111(4) transition.'
     'Retain the exact disclosure copy, language, channel and proof of display.',
     'Retain machine-readable marking validation where Article 50(2) applies.',
   ];
@@ -72,7 +72,7 @@ export function evaluateArticle50Control(input: Article50ControlInput): Article5
     blockers.push('Official Journal verification is claimed without a retained evidence identifier.');
   }
   if (markingDecision.transitionStatus === 'proposal_not_effective') {
-    warnings.push('A proposed transition exists, but it is not treated as binding law.');
+    warnings.push('Regulation (EU) 2026/1744 is in force, but this assessment has no retained Official Journal verification for the provider-only Article 50(2) transition. The base date applies.');
   }
 
   return {
