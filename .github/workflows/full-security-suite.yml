@@ -37,7 +37,17 @@ jobs:
   core:
     name: Core CI, build and npm audit
     runs-on: ubuntu-24.04
+    # Same pinned official Chromium + dependencies as Enterprise Production E2E.
+    # Real browser tests remain required; no APT mirror dependency on the runner.
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 45
+    env:
+      PLAYWRIGHT_PREINSTALLED_IMAGE_VERSION: '1.61.1'
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
