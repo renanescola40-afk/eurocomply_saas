@@ -1,0 +1,86 @@
+{
+  "schema": "risck-comply.phase1-v22.clerk-tenant-qa-transactional-evidence.v1",
+  "observedAt": "2026-11-04",
+  "executor": "Executor 1 (source/QA security)",
+  "project": {
+    "id": "zrxrrfbllsxtleyxjpsz",
+    "role": "ISOLATED_QA",
+    "postgresVersion": "17.11",
+    "productionAccessMode": "NO_PRODUCTION_WRITES"
+  },
+  "source": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "candidateBranch": "integration/enterprise-unified-candidate-20261102",
+    "migration": "supabase/migrations/20261103080000_enterprise_clerk_text_subject_mfa_reconciliation.sql",
+    "migrationGitBlobSha1": "31073c868fa14e66ebf5b1df2c917fafefac9177",
+    "fixture": "tests/security/enterprise-clerk-qa-transactional-rehearsal.sql",
+    "fixtureGitBlobSha1": "36e48ddfd1e9db83287151dd77e90a5c1f45159c"
+  },
+  "preflight": {
+    "activeClerkMembershipFixtures": 5,
+    "distinctTenantFixtures": 2,
+    "enterpriseHelpersBefore": {
+      "enterprise_member_can_read": "d22463f096060aa22683ee61a74e5875",
+      "enterprise_member_can_manage": "4dcb3d1b3cd395ae9241bb6441336d9a"
+    },
+    "check": "Exact migration/test Git blob identity and SQL safety checked; rehearsal has temporary table and SET LOCAL ROLE authenticated, no permanent DML or explicit COMMIT"
+  },
+  "execution": {
+    "transaction": "BEGIN; SET LOCAL statement_timeout='30000ms'; <forward migration body WITHOUT outer BEGIN/COMMIT>; <official QA SQL rehearsal>; ROLLBACK;",
+    "completedWithoutError": true,
+    "providerReadback": {
+      "anon_read_exec": false,
+      "anon_manage_exec": false,
+      "verified_qa_cases": "32/32"
+    },
+    "simulatedSqlClaimsOnly": true,
+    "signedJwtE2EPerformed": false,
+    "scope": [
+      "5 active fixture identities across 2 synthetic tenants",
+      "Positive read and manage by role at AAL2",
+      "Negative insufficient MFA AAL1 / absent AAL",
+      "Cross-tenant read and manage denial",
+      "No-identity, unknown identity, unknown tenant denial",
+      "Malformed text Clerk and unknown UUID subjects denied without UUID exception",
+      "JWT role and app_metadata owner-claim escalation denied for member",
+      "Function EXECUTE denied to anon"
+    ],
+    "separatelyExecutedPreliminaryProbe": {
+      "outcome": "PASS",
+      "invalidClerkTextSubjectRead": false,
+      "invalidClerkTextSubjectManage": false,
+      "anonymousFunctionExecute": false,
+      "postRollbackVerified": true
+    }
+  },
+  "postflight": {
+    "rolledBack": true,
+    "enterpriseHelperDefinitionsEqualToPreflight": true,
+    "enterprise_member_can_read_definition_md5": "d22463f096060aa22683ee61a74e5875",
+    "enterprise_member_can_manage_definition_md5": "4dcb3d1b3cd395ae9241bb6441336d9a",
+    "anonymousExecuteRemainDenied": true,
+    "temporaryObjectsNotPersistedByTransaction": true,
+    "noProductionChanges": true
+  },
+  "acceptance": {
+    "scope": "QA_SQL_CLAIM_SIMULATION_ONLY",
+    "controlsEvidenceFor": [
+      "SEC-01",
+      "SEC-02",
+      "SEC-03",
+      "SEC-04"
+    ],
+    "sourceImplementation": "PROVEN_IN_REVERSIBLE_QA_TRANSACTION",
+    "hostedCircleCIExactSha": "NOT_VERIFIED",
+    "authenticatedBrowserApiSignedJwtE2E": "NOT_EXECUTED",
+    "realTenantA_B_StorageAndExportIsolation": "NOT_VERIFIED",
+    "MFARealAAL2SessionEndToEnd": "NOT_VERIFIED",
+    "qualifiedReviewer": "PENDING",
+    "formalControlPassesAdded": 0,
+    "formalGatesAcceptedAdded": 0,
+    "gateA01": "NOT_VERIFIED",
+    "gateA02": "NOT_VERIFIED",
+    "gateA03": "NOT_VERIFIED"
+  },
+  "policy": "Evidence output does not imply a production change, SQL replay, full tenant isolation or Enterprise GO. Do not self-approve."
+}

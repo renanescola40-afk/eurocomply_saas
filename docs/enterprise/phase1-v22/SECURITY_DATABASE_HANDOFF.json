@@ -1,0 +1,639 @@
+{
+  "schema": "risck-comply.enterprise.phase1-v22.security-database-handoff.v1",
+  "observed_date": "2026-11-04",
+  "ownership": "Executor 1 exclusively owns A-01,A-02,A-03,A-04,A-12,A-15; Executor 3 solely owns canonical branch integration.",
+  "restrictions": [
+    "READ_ONLY_PRODUCTION",
+    "NO_NEW_COST",
+    "NO_SHARED_QA_WRITES",
+    "NO_LIVE_STRIPE",
+    "NO_SELF_APPROVAL",
+    "NO_MAIN_MERGE",
+    "NO_CANONICAL_BRANCH_PUSH",
+    "NO_FABRICATED_PASS"
+  ],
+  "exact_sha_provenance": {
+    "focused_branch": "phase1/security-dat01-v22",
+    "focused_code_commit_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+    "canonical_base_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+    "pr_2599_head": "6487b53356612499b4d61fc84e1bde79ee222781",
+    "pr_2596_head": "21f92eb71679facb07d93a6e203ef56b63e25233",
+    "pr_2600_head": "09f34bc98b2eff8d2c41aff9633df6c949bd9628"
+  },
+  "source_overlap_review": {
+    "identity_sql_same_blob": true,
+    "audit_chain_impl_same_blob": true,
+    "audit_sql_structural_proof_same_blob": true,
+    "client_env_guard_same_blob": true,
+    "client_env_parser_same_blob": true,
+    "shared_scope_verifier_conflict": "PR #2600 scope verifier differs from candidate, Executor 3 must resolve by code comparison; no cherry-pick"
+  },
+  "provider_readback": {
+    "at": "2026-11-04",
+    "prod_project": "tganhbbhfxcpblmgqprg",
+    "qa_project": "zrxrrfbllsxtleyxjpsz",
+    "prod_postgres_major": 17,
+    "qa_postgres_major": 17,
+    "production_ledger_distinct": 137,
+    "qa_separate_ledger_count": 7,
+    "public_tables_rls_and_force_rls": {
+      "prod": "115/115",
+      "qa": "115/115"
+    },
+    "security_advisor": {
+      "prod": [
+        "auth_leaked_password_protection WARN 1",
+        "rls_enabled_no_policy INFO 33"
+      ],
+      "qa": [
+        "auth_leaked_password_protection WARN 1",
+        "rls_enabled_no_policy INFO 33"
+      ]
+    },
+    "note": "Provider read-only catalog checks do not establish signed-JWT E2E or user-visible runtime."
+  },
+  "dat01": {
+    "frozen_ledger_blob": "8705c36a875058d5fbe97bdd3033fe498426aa26",
+    "crosswalk_blob": "3c3d7c83549d08a2a106f70aff51efed71681769",
+    "manifest_blob": "a5c0b46c57c134f76da5f22a3f1858b7e1127287",
+    "manifest_source_snapshot_sha": "75fcb01585108a7af576580593605fcf8bec3e60",
+    "metadata_order_sha_bytes_statement_counts_matches": "137/137",
+    "mapped_unique_sources": 135,
+    "exact_version": 112,
+    "nonexact_version": 25,
+    "archived_source_byte_claims": 103,
+    "unresolved_byte_sources": 34,
+    "independently_recomputed_byte_claims_in_this_executor": 0,
+    "consolidation_groups": 2,
+    "independent_reviews_approved": 0,
+    "isolated_postgres_17_replay_count": 0,
+    "state": "DRAFT_NOT_EXECUTABLE_NOT_APPROVED",
+    "live_production_metadata_hash_comparison": "137/137 MATCH",
+    "live_production_metadata_comparison_columns": [
+      "version",
+      "name",
+      "statement_count",
+      "joined_bytes",
+      "joined_statement_sha256"
+    ],
+    "live_sql_source_bytes_returned": false,
+    "live_provider_query_mode": "READ_ONLY_SELECT",
+    "live_provider_mismatches": 0,
+    "note": "Live production ledger metadata checked against frozen 137-entry ledger on 2026-11-04; no differences. This does not prove migration source byte equality, review or replay.",
+    "gitlabRevisionRecovery": {
+      "artifact": "docs/enterprise/phase1-v22/DAT01_GITLAB_HISTORICAL_REVISION_MAP_20261104.json",
+      "unresolvedEntriesWithHistoryCandidate": 34,
+      "distinctSourcePathsWithHistory": 33,
+      "remainingEntriesWithoutApprovedWholeSourceByteEquality": 34,
+      "queries": "GitLab main/path-scoped commit list (omit all=true, which returned false-empty history)",
+      "historicalCandidateExactByteMatchesNewlyConfirmed": 0,
+      "caution": "Historical path commit references are evidence of revision candidates only, not accepted SQL source proof or runnable manifest."
+    },
+    "independent137rowMetadataStructuralAudit": "PASS 137/137 using current archived manifest and frozen ledger, 6/6 tampered-archive detections in isolated V8 comparison",
+    "localNodeUnitTests": {
+      "nodeVersion": "v22.16.0",
+      "tests": "6/6 PASS",
+      "fixtures": "137 synthetic rows representative of 112 exact/25 nonexact, 103 claimed/34 unresolved, 2 consolidation groups",
+      "preflight": "STRUCTURALLY_CONSISTENT_BLOCKED",
+      "requireReplayAuthorizationExit": 2,
+      "limitation": "Not hosted exact-SHA CircleCI nor a migration replay nor full repository npm suite."
+    },
+    "immutableHistoricalStatementSubspans": {
+      "evidence": "docs/enterprise/phase1-v22/DAT01_EXACT_PROVIDER_STATEMENT_SUBSPANS_20261104.json",
+      "matches": [
+        "20261004082501",
+        "20261004110936"
+      ],
+      "exactProviderStatementSubspansWithinHistoricalGitLabSource": 2,
+      "byteFullSourceProofsAdded": 0,
+      "sourceWholeFileClaimsStill": 103,
+      "missingWholeSourceClaimsStill": 34,
+      "reviewer": "PENDING",
+      "replay": "0/137",
+      "note": "Exactly matching contiguous historical source subspans do not imply identity-qualified whole-file migration replay."
+    },
+    "latestProviderGitlabPartialProof": {
+      "path": "docs/enterprise/phase1-v22/DAT01_34_MISSING_SOURCE_LIVE_STRING_TRIAGE_20261104.json",
+      "missingWholeSourceBytes": 34,
+      "sevenSingleStatementSubspanMatches": 7,
+      "partialMultiStatementOneRow": "11/15",
+      "fullFileByteClaimsRemain": "103/137",
+      "qualifiedReview": "PENDING",
+      "replayPerformed": "0/137"
+    },
+    "v25StatementLevelHistoricalProof": {
+      "artifact": "docs/enterprise/phase1-v22/DAT01_EXACT_COMMENT_WRAPPED_SQL_SOURCE_RECOVERY_20261104.json",
+      "verifiedExactSQLSubspanWithCommentOnlyWrapper": 3,
+      "newlyApprovedWholeSourceByteEvidence": 0,
+      "independentAcceptance": "PENDING",
+      "replay": "0/137"
+    }
+  },
+  "acceptance": {
+    "phase1_gate_accepted": 0,
+    "phase1_gate_total": 6,
+    "phase1_atomic_accepted": 0,
+    "phase1_atomic_total": 8,
+    "global_source_pass_gates": "2/24",
+    "global_source_pass_controls": "2/38",
+    "global_independent_gate_matrix_accepted": "0/24",
+    "note": "Source PASS for A-09 and A-18 is not synonymous with accepted=true in 2026-11-01 evidence-factory matrix. Reconcile independent acceptance before claiming formal PASS."
+  },
+  "commands_pending": [
+    "node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
+    "node scripts/diagnostics/dat01-ledger-bound-manifest-preflight.mjs",
+    "npm ci",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run test",
+    "npm run build",
+    "npm run security:ci"
+  ],
+  "controls": [
+    {
+      "control_id": "SEC-01",
+      "gate_id": "A-01",
+      "branch": "phase1/security-dat01-v22",
+      "code_source_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+      "integrator_branch": "integration/enterprise-unified-candidate-20261102",
+      "integrator_observed_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+      "independent_reviewer": "PENDING",
+      "provider_ci_exact_sha": "NOT_VERIFIED",
+      "formal_acceptance": "NOT_ACCEPTED",
+      "root_cause": "Clerk text JWT subject can cause invalid UUID cast in enterprise helper; MFA lifecycle and signed JWT E2E are not yet proven.",
+      "implementation": "PR #2599 migration already byte-identical in candidate; no duplicate patch.",
+      "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
+      "provider_readback": "QA and PROD app_private.enterprise_member_can_read MD5 d22463f096060aa22683ee61a74e5875; both security-definer with pg_catalog search_path.",
+      "negative_test_evidence": "SQL fixtures present in #2599; signed-JWT/session-expiry negative E2E still missing.; 2026-11-04 direct QA synthetic Clerk text claims reproducibly raise 22P02 in enterprise_member_can_read; is_org_member denies false.",
+      "remaining_blocker": "Signed JWT signup/login/revocation/MFA AAL2 E2E and qualified review",
+      "status": "NOT_VERIFIED",
+      "qa_transactional_evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json"
+    },
+    {
+      "control_id": "SEC-02",
+      "gate_id": "A-02",
+      "branch": "phase1/security-dat01-v22",
+      "code_source_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+      "integrator_branch": "integration/enterprise-unified-candidate-20261102",
+      "integrator_observed_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+      "independent_reviewer": "PENDING",
+      "provider_ci_exact_sha": "NOT_VERIFIED",
+      "formal_acceptance": "NOT_ACCEPTED",
+      "root_cause": "Tenant membership and role enforcement requires actual server/API negative proofs.",
+      "implementation": "PR #2599 integrated source; no duplicate change.",
+      "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
+      "provider_readback": "QA/PROD app_private.is_org_member definition hash e66823b6d1667a32f24e8dec7c90547e; has_org_role 364143ed2878ca970a59ae4987491cb2.; NEW 2026-11-04: real QA+PROD catalog 115/115 public RLS/FORCE RLS; all 128 public security-definers deny direct anon/auth EXECUTE; 31 public search_path definers are service-only; no anon/auth CREATE on public schema. Latest Vercel READY production SHA 70d3545... does not match newly merged main 6f7079...; exact-main hosted CI and TLS/client-bundle proof absent.",
+      "negative_test_evidence": "10/10 archived QA SQL claim-simulation probes reported in #2599; NOT signed JWT E2E.; QA synthetic Clerk text subject also reproduces 22P02 on enterprise_member_can_manage; delegated has_org_role correctly returns false.",
+      "remaining_blocker": "Authenticated role-escalation/removal/last-owner deny tests and independent review",
+      "status": "NOT_VERIFIED",
+      "qa_transactional_evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json"
+    },
+    {
+      "control_id": "SEC-04",
+      "gate_id": "A-02",
+      "branch": "phase1/security-dat01-v22",
+      "code_source_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+      "integrator_branch": "integration/enterprise-unified-candidate-20261102",
+      "integrator_observed_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+      "independent_reviewer": "PENDING",
+      "provider_ci_exact_sha": "NOT_VERIFIED",
+      "formal_acceptance": "NOT_ACCEPTED",
+      "root_cause": "Privileged function grants and definer principal invocation not fully tested.",
+      "implementation": "Existing security-definer source retained; no privileged grants changed.",
+      "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
+      "provider_readback": "Three app_private helpers share QA/PROD definition fingerprints and pg_catalog search_path.; four checked private helpers are SECURITY DEFINER pg_catalog, anon EXECUTE=false, authenticated/service_role=true in both QA and PROD. Does not prove all privileged functions.; NEW 2026-11-04: real QA+PROD catalog 115/115 public RLS/FORCE RLS; all 128 public security-definers deny direct anon/auth EXECUTE; 31 public search_path definers are service-only; no anon/auth CREATE on public schema. Latest Vercel READY production SHA 70d3545... does not match newly merged main 6f7079...; exact-main hosted CI and TLS/client-bundle proof absent.",
+      "negative_test_evidence": "Forbidden RPC and privilege invocation under signed JWT NOT_VERIFIED.",
+      "remaining_blocker": "Review all privileged functions/grants and unauthorized invocation",
+      "status": "NOT_VERIFIED",
+      "qa_transactional_evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json"
+    },
+    {
+      "control_id": "SEC-03",
+      "gate_id": "A-03",
+      "branch": "phase1/security-dat01-v22",
+      "code_source_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+      "integrator_branch": "integration/enterprise-unified-candidate-20261102",
+      "integrator_observed_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+      "independent_reviewer": "PENDING",
+      "provider_ci_exact_sha": "NOT_VERIFIED",
+      "formal_acceptance": "NOT_ACCEPTED",
+      "root_cause": "Full tenant A/B data/API/Storage/export signed URL isolation evidence remains incomplete.",
+      "implementation": "No RLS weakening; PR #2599 authorization hardening already in canonical candidate.",
+      "test_command": "node --test tests/security/enterprise-private-membership-mfa-contract.test.mjs",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NEW: isolated QA PostgreSQL 17 Clerk/UUID forward migration transactional rehearsal 32/32 SQL-claim simulation cases PASS; rollback and unchanged function definition confirmed; NOT signed JWT E2E.",
+      "provider_readback": "Both QA/PROD public tables: 115/115 RLS enabled and FORCE RLS; zero RLS-disabled public tables.",
+      "negative_test_evidence": "RLS coverage verified as metadata; authenticated API/Storage negative tests NOT_VERIFIED.",
+      "remaining_blocker": "Complete A/B runtime/browser/API/Storage/export deny matrix and independent review",
+      "status": "NOT_VERIFIED",
+      "qa_transactional_evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json"
+    },
+    {
+      "control_id": "SEC-06",
+      "gate_id": "A-03",
+      "branch": "phase1/security-dat01-v22",
+      "code_source_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+      "integrator_branch": "integration/enterprise-unified-candidate-20261102",
+      "integrator_observed_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+      "independent_reviewer": "PENDING",
+      "provider_ci_exact_sha": "NOT_VERIFIED",
+      "formal_acceptance": "NOT_ACCEPTED",
+      "root_cause": "Audit redaction/fallback behavior addressed in #2596 but transactional runtime integrity is not accepted.",
+      "implementation": "PR #2596 src/server/security/audit-chain.ts and SQL structural proof byte-identical in candidate.",
+      "test_command": "node --test tests/security/audit-chain.test.mjs",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
+      "provider_readback": "QA and PROD read-only catalog access only; no audit mutations performed.",
+      "negative_test_evidence": "Negative redaction tests present in #2596; transactional_append_unavailable live rollback semantics NOT_VERIFIED.",
+      "remaining_blocker": "Real isolated transactional rollback/duplicate-event/chain verify tests and independent review",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "control_id": "SEC-05",
+      "gate_id": "A-04",
+      "branch": "phase1/security-dat01-v22",
+      "code_source_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+      "integrator_branch": "integration/enterprise-unified-candidate-20261102",
+      "integrator_observed_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+      "independent_reviewer": "PENDING",
+      "provider_ci_exact_sha": "NOT_VERIFIED",
+      "formal_acceptance": "NOT_ACCEPTED",
+      "root_cause": "Client env secret-boundary blind spot and security transport acceptance incomplete.",
+      "implementation": "PR #2600 client-env scanner and access parser byte-identical in canonical candidate; no duplicate code.",
+      "test_command": "node --test tests/security/client-env-access.test.mjs",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA",
+      "provider_readback": "QA/PROD security advisor auth_leaked_password_protection WARN=1 each; backend-only 33 RLS-no-policy INFO each, not evidence of exposure.; NEW 2026-11-04: real QA+PROD catalog 115/115 public RLS/FORCE RLS; all 128 public security-definers deny direct anon/auth EXECUTE; 31 public search_path definers are service-only; no anon/auth CREATE on public schema. Latest Vercel READY production SHA 70d3545... does not match newly merged main 6f7079...; exact-main hosted CI and TLS/client-bundle proof absent.",
+      "negative_test_evidence": "Indirect env reference regression covered by #2600; full bundle/no-store/TLS negative provider validation NOT_VERIFIED.",
+      "remaining_blocker": "Exact-SHA CI, client bundle/TLS/log sanitization evidence, review password-protection warning; no PROD config changes",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "control_id": "DAT-01",
+      "gate_id": "A-12",
+      "branch": "phase1/security-dat01-v22",
+      "code_source_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+      "integrator_branch": "integration/enterprise-unified-candidate-20261102",
+      "integrator_observed_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+      "independent_reviewer": "PENDING",
+      "provider_ci_exact_sha": "NOT_VERIFIED",
+      "formal_acceptance": "NOT_ACCEPTED",
+      "root_cause": "137 production migration identities map to 135 sources; 34 missing byte proofs; 25 nonexact identities; two consolidation groups.",
+      "implementation": "New read-only metadata preflight script and six regression tests in focused branch; draft never made executable.",
+      "test_command": "node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
+      "test_results": "PASS LOCAL SYNTHETIC: node --test 6/6, Node v22.16.0; metadata-only 137/137 real archive checks and 6/6 independent V8 tamper detections. Hosted exact-SHA CircleCI NOT_VERIFIED; SQL replay NOT_EXECUTED.",
+      "provider_readback": "Live PROD SQL metadata matches frozen ledger 137/137 across version, name, statement_count, joined_bytes and SHA256, zero mismatches. QA ledger 7 separate records. 34 source bytes unresolved and replay 0/137. Historical SHA pointer correction: archive SHA ...8c94c53d 404; real source Git blob ...1ae57ae3 verified by direct Git blob fetch and live SQL exact-text with one LF. Two historical entries independently revalidated; unchanged 103/137.; GitLab path-scoped commit history located for all 34 unresolved identities (33 distinct source paths), none newly upgraded to source-byte proof; historical evidence artifact linked.; two exact immutable GitLab source subspan == live PROD SQL statement matches for ledger versions 20261004082501 and 20261004110936, not whole-file source byte proof.",
+      "negative_test_evidence": "Source proof claims 103/137 archived, 34 unresolved; 0 approved reviewer signatures; no SQL replay; wrong-order/hash/premature-replay tests added.",
+      "remaining_blocker": "Revalidate all 103 source bytes against provider, recover 34, independent identity review 25, two consolidation groups, approved manifest, PG17 137/137 isolated replay, validator PASS; qualified reviewer to reconcile incorrect historical source blob identity pointer.",
+      "status": "BLOCKED"
+    },
+    {
+      "control_id": "QAT-01",
+      "gate_id": "A-15",
+      "branch": "phase1/security-dat01-v22",
+      "code_source_sha": "ba12d5552dba4ef0721d78fdf409872a9e0cb8c9",
+      "integrator_branch": "integration/enterprise-unified-candidate-20261102",
+      "integrator_observed_sha": "55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab",
+      "independent_reviewer": "PENDING",
+      "provider_ci_exact_sha": "NOT_VERIFIED",
+      "formal_acceptance": "NOT_ACCEPTED",
+      "root_cause": "No complete exact-SHA source/security CI acceptance; GitHub runs show failure and CircleCI full source proof is pending.",
+      "implementation": "New fail-closed DAT manifest tests prepared; canonical CI files untouched.",
+      "test_command": "npm ci && npm run lint && npm run typecheck && npm run test && npm run build && npm run security:ci",
+      "test_results": "NOT_RUN_ON_THIS_EXACT_SHA; NO_REPO_CHECKOUT_AVAILABLE_IN_LOCAL_RUNTIME; Exact-SHA hosted quality NOT_VERIFIED; step-less runner failure is not a code-level regression proof.",
+      "provider_readback": "GitHub Actions canonical SHA 55a9ee5e2f4601c01fcbec26e08d4268bc67c9ab multiple failed workflows; not classified as code failures without logs.; GitHub canonical SHA 38aada9d29ce8ee93daa2a33f94038e9e484a3fc: 49 workflow runs reported failure, sampled CI/Full Security Suite/Evidence jobs had 0 steps and no start timestamps. Cannot attribute to application code. See QAT01_CANONICAL_CI_STEPLESS_READBACK_20261104.json.",
+      "negative_test_evidence": "Negative preflight fixtures prepared; production/auth/tenant test suite still incomplete.",
+      "remaining_blocker": "Executor 3 exact-SHA CircleCI source validation and quality:routes, approved independent test evidence",
+      "status": "NOT_VERIFIED"
+    }
+  ],
+  "revalidation_20261104": {
+    "supabase_qa_synthetic_clerk_text_claim": {
+      "subject": "user_phase1_clerk_text_synthetic",
+      "tenantFixture": "00000000-0000-4000-8000-000000000001",
+      "mode": "QA_READ_ONLY_SQL_CLAIM_SIMULATION_NOT_SIGNED_JWT",
+      "is_org_member": false,
+      "has_org_role": false,
+      "enterprise_member_can_read": "ERROR_SQLSTATE_22P02",
+      "productionHelperDefinitionEquivalent": true,
+      "risk": "CLIENT_AUTH_COMPATIBILITY_AVAILABILITY_NOT_VERIFIED_TENANT_EXPOSURE",
+      "fixAlreadyPresentInPr2599AndCanonicalCandidate": true,
+      "appliedInProduction": false,
+      "enterprise_member_can_manage": "ERROR_SQLSTATE_22P02"
+    },
+    "read_only_sql_function_acl": {
+      "prodAndQa": [
+        "enterprise_member_can_read",
+        "enterprise_member_can_manage",
+        "is_org_member",
+        "has_org_role"
+      ],
+      "anonExecuteAll": false,
+      "authenticatedExecuteAll": true,
+      "serviceRoleExecuteAll": true,
+      "securityDefinerAll": true,
+      "lockedSearchPathAll": "pg_catalog",
+      "enterpriseHelpersStillUseAuthUidCast": true,
+      "boundary": "CATALOG_ONLY_NO_SIGNED_JWT_TEST"
+    },
+    "historical_blob_correction": {
+      "version": "20260812160405",
+      "archiveRecordedSha": "1deb46599425646bf1d0ea4f919c24de8c94c53d",
+      "archiveBlobLookup": "404_NOT_FOUND",
+      "correctedGitSha": "1deb46599425646bf1d0ea4f919c24de1ae57ae3",
+      "immutableCommit": "8359b7a79f06babd93ef58d7ae7ff77380532fe2",
+      "sourceEqualToLiveProviderStatementWithOnePrefixLF": true,
+      "secondHistoricalSourceVersionRevalidated": "20260812225906",
+      "proofCountChanged": false,
+      "evidence": "docs/enterprise/phase1-v22/DAT01_HISTORICAL_BLOB_IDENTITY_CORRECTION_20261104.json",
+      "originalArchiveNotMutated": true
+    },
+    "clerkQA32CaseTransactional": {
+      "evidence": "docs/enterprise/phase1-v22/CLERK_UUID_MFA_QA_32_CASE_TRANSACTIONAL_PROOF_20261104.json",
+      "qaProject": "zrxrrfbllsxtleyxjpsz",
+      "postgres": "17.11",
+      "fixture": "5 active test identities / 2 isolated tenants",
+      "checks": "32/32 PASS",
+      "migrationSourceBlob": "31073c868fa14e66ebf5b1df2c917fafefac9177",
+      "testSourceBlob": "36e48ddfd1e9db83287151dd77e90a5c1f45159c",
+      "executedWithinSingleBeginRollback": true,
+      "anonExecuteReadAndManage": false,
+      "postRollbackCatalogDefinitionUnchanged": true,
+      "authenticatedSignedJwtBrowserE2E": "NOT_VERIFIED",
+      "independentReviewer": "PENDING",
+      "formalAcceptance": "NOT_ACCEPTED"
+    },
+    "QAT01_current_canonical_provider": {
+      "report": "docs/enterprise/phase1-v22/QAT01_CANONICAL_CI_STEPLESS_READBACK_20261104.json",
+      "canonicalHeadObserved": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+      "actionsRunsFailureAtExactSha": 49,
+      "inspectedCIQualityJobs": [
+        126626798107,
+        126626795792,
+        126626792922
+      ],
+      "observedSteps": 0,
+      "hostedCodeTestResult": "NOT_EXECUTED_OR_UNAVAILABLE",
+      "CircleCIExactSHA": "NOT_VERIFIED",
+      "reviewer": "PENDING"
+    },
+    "canonicalMerge20261104": {
+      "mergedPR": 2598,
+      "mergeCommit": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "sourcePR2608Merged": true,
+      "ownPR2603Base": "main",
+      "currentMainCircleCiExactSha": "NOT_VERIFIED",
+      "mainNoConfirmedGithubWorkflowRunsAtMergeSha": true,
+      "sourceQAT01": "NOT_VERIFIED",
+      "note": "Merged code does not imply formal control acceptance, exact main SHA CI or production deployment"
+    },
+    "SEC02_SEC04_providerReadback": {
+      "evidence": "docs/enterprise/phase1-v22/SEC02_SEC04_DEFINER_ACL_VERCEL_READBACK_20261104.json",
+      "productionAndQaPublicRlsAndForceRls": "115/115",
+      "directAnonPrivilegeOn128PublicSecurityDefiners": 0,
+      "directAuthenticatedPrivilegeOn128PublicSecurityDefiners": 0,
+      "serviceOnlyDefinersWithPublicSearchPath": 31,
+      "publicSchemaCreateByAnonOrAuthenticated": false,
+      "currentMainProductionDeployed": false,
+      "prodDeploymentSha": "70d3545f414d063379d481fd238aed563e05edda",
+      "mainMergeSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "boundary": "Provider metadata only, not signed-JWT E2E or direct TLS proof"
+    },
+    "sec03_sql_two_tenant_mfa_rehearsal": {
+      "date": "2026-11-04",
+      "qaProject": "zrxrrfbllsxtleyxjpsz",
+      "environment": "ISOLATED_QA",
+      "artifact": "tests/security/ve1-qa-two-tenant-rls-mfa-readonly.sql",
+      "githubHeadContainingArtifact": "2690470467b0df25dcd6c1677fbae1c706bb4d6f",
+      "artifactGitBlobSha1": "d5b841c73f2d729a5cf6d128b7558afac0516b0b",
+      "runMode": "SINGLE_POSTGRESQL_BEGIN_READ_ONLY_TRANSACTION_WITH_SET_LOCAL_ROLE_AUTHENTICATED_AND_ROLLBACK",
+      "assertionsPassed": 36,
+      "assertionsFailed": 0,
+      "securityResults": {
+        "twoRealQaOrganizations": true,
+        "fiveActiveQaClerkMemberships": true,
+        "bothTenantsRequireMfa": true,
+        "bidirectionalOrganizationIsolation": true,
+        "bidirectionalMembershipIsolation": true,
+        "unknownClerkSubjectDenied": true,
+        "aal1OwnOrganizationDenied": true,
+        "aal1OwnMembershipDenied": true,
+        "aal1PrivilegedMembershipDenied": true,
+        "aal2OwnOrganizationVisible": true,
+        "aal2OtherOrganizationDenied": true
+      },
+      "postRollback": {
+        "organizations": 2,
+        "memberships": 5,
+        "anyPersistentQaChanges": false,
+        "productionWrites": false
+      },
+      "scopeLimitations": [
+        "request.jwt.claim.sub and request.jwt.claims were simulated in a transaction, not produced by a cryptographically signed Clerk JWT.",
+        "PostgreSQL role impersonation validates SQL/RLS control behavior but not browser, API, export or Storage access paths.",
+        "QA ai_systems, documents, audit_logs and storage.objects tables had zero rows and therefore no seeded cross-tenant resource fixtures; no false-positive broad SEC-03 PASS.",
+        "No signed-JWT AAL2, expiry/revocation E2E was performed.",
+        "No independently accepted gate or atomic control; source main differs from the VE1 PR head and hosted CI exact-SHA is blocked."
+      ],
+      "formalAcceptance": "NOT_ACCEPTED",
+      "controls": [
+        "SEC-01",
+        "SEC-03"
+      ],
+      "gates": [
+        "A-01",
+        "A-03"
+      ],
+      "next": "Reproduce signed JWT browser/API session and MFA, then real tenant A/B seeded AI System/Document/Storage/export negative tests and independent review on exact CI SHA."
+    },
+    "e1_v25_evidence_and_deployment": {
+      "scope": "E1_ATOMIC_GATES_A01_A02_A03_A04_A12_A15",
+      "canonicalMainSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+      "sourceEvidenceCommit": "0d449e6b6f1efb7bcd50d7046dd6a812cd769c9b",
+      "sourceArtifact": "docs/enterprise/phase1-v22/DAT01_EXACT_COMMENT_WRAPPED_SQL_SOURCE_RECOVERY_20261104.json",
+      "sourceArtifactGitBlob": "2c5aacdf6bcc2468f3466b49298a577cc65c6989",
+      "dat01StatementLevelExactCommentWrappedCount": 3,
+      "dat01VerifiedStatementVersions": [
+        "20260922112907",
+        "20260929101638",
+        "20261004082501"
+      ],
+      "dat01StrictWholeFileBytesNewlyApproved": 0,
+      "dat01HistoricalWholeFileClaimsUnchanged": 103,
+      "dat01FullFileGapsUnresolved": 34,
+      "dat01NonexactIdentitiesUnreviewed": 25,
+      "dat01ConsolidationGroupsUnreviewed": 2,
+      "postgres17ExecutableReplay": "0/137",
+      "qaSqlDefectReproduced": {
+        "environment": "zrxrrfbllsxtleyxjpsz",
+        "function": "app_private.enterprise_member_can_read(uuid)",
+        "sqlState": "22P02",
+        "actualLiveRuntimeStillUnfixed": true,
+        "sourceFixAlreadyInMain": true,
+        "qaMigrationAppliedPermanently": false,
+        "authenticatedSignedJwtProof": "NOT_VERIFIED"
+      },
+      "qaPreviewBuild": {
+        "provider": "Vercel",
+        "deploymentId": "dpl_4wkcLLNxgYHW9wA1cHzkzCPTABUM",
+        "sourceMainSha": "6f7079a7e5d61d339e3de6154abd6b50ca0a8c6b",
+        "state": "ERROR",
+        "causeCode": "QA_ENVIRONMENT_GUARD",
+        "remainingVariableRequirements": [
+          "STRIPE_SECRET_KEY=TEST_ONLY",
+          "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=TEST_ONLY",
+          "STRIPE_WEBHOOK_SECRET=DEDICATED_QA",
+          "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=TEST_ONLY",
+          "CLERK_SECRET_KEY=TEST_ONLY",
+          "NEXT_PUBLIC_APP_URL=HTTPS_NONPRODUCTION_ORIGIN"
+        ],
+        "secretsViewedOrModified": false,
+        "ownerOfReleaseEnvCorrection": "E3",
+        "errorDoesNotProveSourceCompileFailure": true
+      },
+      "githubActionsScopedPrHead": {
+        "testedHeadBeforeHandoff": "b36a113f587e82e48082328d8d2ed9b781821aba",
+        "observedFailedJobRuns": 3,
+        "jobStepsObserved": 0,
+        "codeTestsActuallyRun": false,
+        "currentHeadCI": "NOT_VERIFIED"
+      },
+      "independentReview": {
+        "requestedLogin": "sastestezoer-commits",
+        "approval": "PENDING",
+        "selfApproval": false
+      },
+      "gateResults": {
+        "A01": "NOT_VERIFIED",
+        "A02": "NOT_VERIFIED",
+        "A03": "NOT_VERIFIED",
+        "A04": "NOT_VERIFIED",
+        "A12": "BLOCKED",
+        "A15": "NOT_VERIFIED"
+      },
+      "acceptedE1Gates": 0,
+      "acceptedE1Controls": 0,
+      "formalGateAccepted": false,
+      "e5Handoff": "Review the three provider-to-GitLab SQL statement-byte identity proofs without interpreting them as whole-file or version-qualified migration acceptance. E3 to resolve QA Preview config and run exact-SHA CI and authenticated QA. No new accepted control or gate."
+    }
+  },
+  "revalidation_20261105": {
+    "observedDate": "2026-11-05",
+    "qaPersistedClerkHelperFix": {
+      "provider": "Supabase PostgreSQL 17.11",
+      "projectId": "zrxrrfbllsxtleyxjpsz",
+      "migrationLedgerVersion": "20261105185729",
+      "migrationName": "enterprise_clerk_text_subject_mfa_reconciliation_20261103_ve1qa",
+      "canonicalGitHubMain": "313eb1e258b3a790ea2f8bd4b103079cb38dc5ce",
+      "canonicalMigrationPath": "supabase/migrations/20261103080000_enterprise_clerk_text_subject_mfa_reconciliation.sql",
+      "immutableSourceBlobSha1": "31073c868fa14e66ebf5b1df2c917fafefac9177",
+      "executedBody": "Same canonical migration body, stripped only explicit BEGIN and COMMIT because Supabase apply_migration owns the transaction.",
+      "providerApplyResult": "success:true; provider migration history verified",
+      "sourcePreChangeMd5": {
+        "enterprise_member_can_manage": "4dcb3d1b3cd395ae9241bb6441336d9a",
+        "enterprise_member_can_read": "d22463f096060aa22683ee61a74e5875"
+      },
+      "qaPostChangeMd5": {
+        "enterprise_member_can_manage": "a77dfb7c0c069e21e8354d277296daaa",
+        "enterprise_member_can_read": "7babe389c81b47dd260770d8f6541b79"
+      },
+      "verifiedProviderInvariants": {
+        "directAuthUidUUIDCastRemovedBoth": true,
+        "securityDefinerBoth": true,
+        "searchPathPgCatalogBoth": true,
+        "authenticatedExecuteBoth": true,
+        "serviceRoleExecuteBoth": true,
+        "anonExecuteDeniedBoth": true,
+        "readDelegatesToClerkUUIDSafeMembership": true,
+        "manageDelegatesToRoleAwareMembership": true
+      },
+      "prodLeftUnchanged": true,
+      "prodStillVulnerable": true,
+      "qaPersistentMigrationApplied": true,
+      "originalBug22P02ReproducedBeforeFix": true,
+      "exactShaVercelE2E": "NOT_VERIFIED",
+      "clerkSignedJwtMfa": "NOT_VERIFIED",
+      "qualifiedIndependentReview": "PENDING",
+      "formalGateAcceptance": "NOT_ACCEPTED"
+    },
+    "qaRegression": {
+      "postMigrationEnterpriseHelperScript": "tests/security/ve1-qa-persisted-clerk-safe-enterprise-helpers.sql",
+      "postMigrationEnterpriseHelperScriptGitBlob": "7d2f9853edeca288c0bd7598bdb235e7cece355c",
+      "qaEnterpriseHelperAssertionsPassed": 24,
+      "priorQaRlsAalScript": "tests/security/ve1-qa-two-tenant-rls-mfa-readonly.sql",
+      "priorQaRlsAalAssertionsReexecutedPassed": 36,
+      "totalQaSqlAssertionsReexecutedPassed": 60,
+      "testsFailed": 0,
+      "testConditions": "SQL SET LOCAL ROLE authenticated, transaction-local simulated Clerk sub/AAL1/AAL2 claims, both QA tenant fixtures and nonmember identity, BEGIN READ ONLY; ROLLBACK.",
+      "excludes": [
+        "Real signed Clerk JWT validation",
+        "HTTP API/export/browser",
+        "Storage object fixtures",
+        "CI exact SHA and independent acceptance"
+      ]
+    },
+    "requiredNextActions": [
+      "Source-review the tested existing migration and permanently QA-applied source with an independent qualified reviewer.",
+      "Execute real signed Clerk JWT AAL1/AAL2 and expired/revoked identity E2E against a verified protected QA deployment; never substitute simulated SQL claim settings.",
+      "Execute full A/B cross-tenant API, Document/Storage and export E2E with QA-only fixtures.",
+      "Verify exact-SHA CI and independent acceptance using the existing formal validator; do not edit ledger until accepted.",
+      "Production migration remains forbidden without separately reviewed production deployment authorization."
+    ],
+    "qaEphemeralCommercialResourceRls": {
+      "observedDate": "2026-11-05",
+      "qaProject": "zrxrrfbllsxtleyxjpsz",
+      "sourceBlobSha1": "3b98a539b8a94a59502efa503ae3d3129ffb77b4",
+      "sourceFile": "tests/security/ve1-qa-ephemeral-commercial-two-tenant-rls.sql",
+      "runStatus": "PASS",
+      "sqlAssertions": 20,
+      "assertionsFailed": 0,
+      "sqlBoundary": "PostgreSQL transient QA fixtures; BEGIN...ROLLBACK; SQL SET LOCAL ROLE authenticated; simulated Clerk subject + aal1/aal2",
+      "fixtures": "Two already-existing QA Clerk owner identities and two organizations, both requiring MFA; temporary inventory/document rows and temporary synthetic commercial source/snapshot.",
+      "commercialProofLimitation": "The test-only synthetic source_kind signed_contract is not a real contract, webhook or paid subscription, exists only inside the rolled-back transaction, and does not qualify real commercial lifecycle.",
+      "verifiedResults": [
+        "Two-way own tenant SELECT permitted when simulated aal2",
+        "Two-way cross tenant SELECT denied when simulated aal2",
+        "Own resources denied when simulated aal1",
+        "Nonmember subject cannot SELECT either table",
+        "Authenticated role lacks direct INSERT/UPDATE/DELETE SQL privileges on both ai_systems and documents; do not weaken GRANT/RLS to make a direct write test pass"
+      ],
+      "postRollback": {
+        "ai_systems": 0,
+        "documents": 0,
+        "commercialSources": 0,
+        "commercialSnapshots": 0
+      },
+      "nonClaims": [
+        "Not signed JWT",
+        "Not authenticated application BFF API",
+        "Not Storage binary upload/download",
+        "Not production code or payment lifecycle",
+        "Not a formal gate PASS"
+      ],
+      "next": "Validate supported server-side writes and API/export/Storage through verified signed Clerk JWT and QA-only billing, then independent formal review."
+    },
+    "qaStorageMetadataRls": {
+      "observedDate": "2026-11-05",
+      "qaProject": "zrxrrfbllsxtleyxjpsz",
+      "testPath": "tests/security/ve1-qa-ephemeral-storage-object-rls.sql",
+      "testBlobSha1": "5eaf2eea679797ab76da4d030f7aeacb7029414c",
+      "transaction": "BEGIN; QA-only synthetic entitlement sources/snapshots and temporary Storage objects metadata rows; SET LOCAL ROLE authenticated/anon; ROLLBACK",
+      "assertionsPassed": 12,
+      "failed": 0,
+      "providerVerifiedResults": [
+        "Both QA tenants have private compliance-documents and controlled-documents buckets",
+        "Simulated AAL2 sees own tenant compliance-documents metadata only",
+        "Simulated AAL2 cannot read other tenant metadata",
+        "Controlled-documents bucket blocks direct reads even with simulated AAL2",
+        "Simulated AAL1 denies own organization document metadata",
+        "Nonmember and anon roles see zero document metadata",
+        "Post-ROLLBACK storage.objects row count, transient entitlement sources and snapshots all returned to zero"
+      ],
+      "limitation": "Metadata-only SQL test; no file bytes, actual upload/download, application-layer exported documents, signed Clerk JWT, accepted independent review or commercial subscription was verified.",
+      "formalAcceptance": "NOT_ACCEPTED",
+      "realSignedContractUsed": false,
+      "realStorageBinaryTested": false,
+      "nextRequired": "QA TEST credentials and signed-JWT authenticated storage API file-upload/download tenant A/B matrix; qualified independent review and exact-SHA CI."
+    }
+  }
+}

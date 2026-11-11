@@ -1,0 +1,72 @@
+{
+  "schema": "risck-comply.dat01.local-node22-source-unit-validation.v1",
+  "observedDate": "2026-11-04",
+  "observedEnvironment": "isolated model container, Node.js v22.16.0, no repository clone/network, no Postgres or production credentials",
+  "source": {
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "branch": "phase1/security-dat01-v22",
+    "script": {
+      "path": "scripts/diagnostics/dat01-ledger-bound-manifest-preflight.mjs",
+      "gitBlobSha1": "8e2c96239a31c2e1cf78bc8a8e116acf172340cc",
+      "localGitHashObjectEqualToRemote": true,
+      "localSha256": "f65f8f0588f5dbb9e3e25f99f469578e977a50c32d79d112b7bd0793bc7d25c1"
+    },
+    "test": {
+      "path": "tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
+      "gitBlobSha1": "51b3c20d5a26cfe730727652a71168ba882b44a2",
+      "localGitHashObjectEqualToRemote": true,
+      "localSha256": "05d1be67ffcd1ff21e22363b51e45ee7904c012b721b30e964e6e0665ca7a7f6"
+    }
+  },
+  "syntheticFixtures": {
+    "status": "SYNTHETIC_NOT_REAL_PROVIDER_DATA",
+    "rows": 137,
+    "exactVersionMappings": 112,
+    "nonexactIdentities": 25,
+    "byteProofClaims": 103,
+    "unresolved": 34,
+    "sourcePaths": 135,
+    "consolidationGroups": 2,
+    "files": [
+      "docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json",
+      "docs/enterprise/closure-v20/DAT01_PROD_LEDGER_READONLY_HASHES_20261103.json",
+      "supabase/reconciliation/20261022_production_migration_source_crosswalk.json"
+    ],
+    "fixtureStorage": "disposable filesystem only, not committed or provider-derived"
+  },
+  "executions": [
+    {
+      "command": "node --check scripts/diagnostics/dat01-ledger-bound-manifest-preflight.mjs",
+      "exit": 0
+    },
+    {
+      "command": "node --check tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
+      "exit": 0
+    },
+    {
+      "command": "node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs",
+      "exit": 0,
+      "tests": 6,
+      "pass": 6,
+      "fail": 0
+    },
+    {
+      "command": "node scripts/diagnostics/dat01-ledger-bound-manifest-preflight.mjs",
+      "exit": 0,
+      "result": "STRUCTURALLY_CONSISTENT_BLOCKED",
+      "replayAuthorized": false
+    },
+    {
+      "command": "node scripts/diagnostics/dat01-ledger-bound-manifest-preflight.mjs --require-replay-authorization",
+      "exit": 2,
+      "result": "FAIL_CLOSED_REPLAY_NOT_AUTHORIZED"
+    }
+  ],
+  "independentlyComparedArchivedManifest": "137/137 metadata consistent in authenticated GitHub connector V8 in same conversation, 6/6 independent tampering detections, separate from this local test",
+  "exactSourceHostedCircleCI": "NOT_VERIFIED",
+  "fullRepositoryNodeSuite": "NOT_RUN",
+  "actualHistoricalSQLReplay": "NOT_EXECUTED",
+  "authoritativeGateAcceptance": "NOT_GRANTED",
+  "productionMutation": false,
+  "conclusion": "The two exact remote Git source blobs passed all six tests against synthetic fixtures and rejected replay authorization; this is unit evidence only. Do not count this as authenticated tenant E2E, actual DAT-01 SQL byte equivalence, PostgreSQL replay, CircleCI PASS or G1 gate acceptance."
+}
