@@ -23,7 +23,7 @@ import { createClient } from '@supabase/supabase-js';
 const QA_REF = 'zrxrrfbllsxtleyxjpsz';
 const QA_URL = 'https://' + QA_REF + '.supabase.co';
 const LOCAL_URL = 'http://127.0.0.1:3101';
-const EXPECTED_BRANCH = 'qa/a01-sec01-provider-proof-20261107';
+const EXPECTED_BRANCH = 'main';
 const SCHEMA = 'risck-sec01-next-app-qa-browser-proof-v1';
 const checks = [];
 let stage = 'preflight';

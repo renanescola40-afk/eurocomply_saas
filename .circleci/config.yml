@@ -82,7 +82,7 @@ jobs:
           name: Exact SHA and isolated QA preflight (no secrets printed)
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "qa/a01-sec01-provider-proof-20261107"
+            test "${CIRCLE_BRANCH:-}" = "main"
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing_pipeline_source_sha}"
             test "${SEC01_QA_PROJECT_REF:-}" = "zrxrrfbllsxtleyxjpsz"
             test "${NEXT_PUBLIC_SUPABASE_URL:-}" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
@@ -154,7 +154,7 @@ jobs:
           name: Exact-source isolated QA Auth preflight
           command: |
             set -euo pipefail
-            test "$CIRCLE_BRANCH" = "qa/a01-sec01-provider-proof-20261107"
+            test "$CIRCLE_BRANCH" = "main"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             test "$SEC01_QA_PROJECT_REF" = "zrxrrfbllsxtleyxjpsz"
             test "$NEXT_PUBLIC_SUPABASE_URL" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
@@ -1455,7 +1455,7 @@ workflows:
           filters:
             branches:
               only:
-                - qa/a01-sec01-provider-proof-20261107
+                - main
       - sec01-qa-provider-proof:
           requires:
             - hold-a01-sec01-qa-provider
@@ -1463,7 +1463,7 @@ workflows:
           filters:
             branches:
               only:
-                - qa/a01-sec01-provider-proof-20261107
+                - main
 
   # Disabled by default and held for explicit owner approval. No automatic CI run.
   a01-sec01-next-app-browser-qa-manual:
@@ -1474,7 +1474,7 @@ workflows:
           filters:
             branches:
               only:
-                - qa/a01-sec01-provider-proof-20261107
+                - main
       - sec01-next-app-browser-qa:
           requires:
             - hold-a01-sec01-browser-qa
@@ -1482,7 +1482,7 @@ workflows:
           filters:
             branches:
               only:
-                - qa/a01-sec01-provider-proof-20261107
+                - main
 
   dat01-ledger-preflight-manual:
     when: << pipeline.parameters.run_dat01_preflight >>
