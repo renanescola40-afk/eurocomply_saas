@@ -1247,7 +1247,7 @@ jobs:
           name: Verify DAT-01 branch, exact SHA and credential isolation
           command: |
             set -euo pipefail
-            test "${CIRCLE_BRANCH:-}" = "phase1/security-dat01-v22"
+            case "${CIRCLE_BRANCH:-}" in phase1/security-dat01-v22|fix/dat01-mainline-source-handoff-20261111) ;; *) echo "DAT01_PREFLIGHT_BRANCH_REJECTED" >&2; exit 1 ;; esac
             test -n "${CIRCLE_SHA1:-}"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             for key in DATABASE_URL DIRECT_URL SUPABASE_ACCESS_TOKEN SUPABASE_SERVICE_ROLE_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
@@ -1278,7 +1278,7 @@ jobs:
           name: Confirm DAT-01 one-shot exact checkout and reject provider credentials
           command: |
             set -euo pipefail
-            test "$CIRCLE_BRANCH" = "ci/dat01-provenance-failclosed-20261107"
+            case "$CIRCLE_BRANCH" in ci/dat01-provenance-failclosed-20261107|fix/dat01-mainline-source-handoff-20261111) ;; *) echo "DAT01_PROVENANCE_BRANCH_REJECTED" >&2; exit 1 ;; esac
             test -n "$CIRCLE_SHA1"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
@@ -1311,7 +1311,7 @@ jobs:
           name: Exact immutable recovery branch SHA; refuse privileged provider credentials
           command: |
             set -euo pipefail
-            test "$CIRCLE_BRANCH" = "recovery/dat01-provider-applied-20261107"
+            case "$CIRCLE_BRANCH" in recovery/dat01-provider-applied-20261107|fix/dat01-mainline-source-handoff-20261111) ;; *) echo "DAT01_SNAPSHOT_BRANCH_REJECTED" >&2; exit 1 ;; esac
             test -n "$CIRCLE_SHA1"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
@@ -1346,7 +1346,7 @@ jobs:
           name: Validate G5-02 local-only exact SHA and reject provider credentials
           command: |
             set -euo pipefail
-            test "$CIRCLE_BRANCH" = "ci/dat01-local-target-guard-20261107"
+            case "$CIRCLE_BRANCH" in ci/dat01-local-target-guard-20261107|fix/dat01-mainline-source-handoff-20261111) ;; *) echo "DAT01_PG17_BRANCH_REJECTED" >&2; exit 1 ;; esac
             test -n "$CIRCLE_SHA1"
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY VERCEL_TOKEN PGPASSWORD PGHOSTADDR PGSERVICE PGSERVICEFILE PGPASSFILE; do
@@ -1377,6 +1377,15 @@ workflows:
     jobs:
       - pr-source-autopilot
 
+  # Run the consolidated DAT-01 manifest guard with no provider credentials.
+  dat01-ledger-preflight-mainline-20261111:
+    jobs:
+      - dat01-ledger-preflight:
+          filters:
+            branches:
+              only:
+                - fix/dat01-mainline-source-handoff-20261111
+
   dat01-local-pg17-target-guard-one-shot-20261107:
     jobs:
       - dat01-local-pg17-target-source:
@@ -1384,6 +1393,7 @@ workflows:
             branches:
               only:
                 - ci/dat01-local-target-guard-20261107
+                - fix/dat01-mainline-source-handoff-20261111
 
 
   dat01-applied-provider-snapshot-one-shot-20261107:
@@ -1393,6 +1403,7 @@ workflows:
             branches:
               only:
                 - recovery/dat01-provider-applied-20261107
+                - fix/dat01-mainline-source-handoff-20261111
 
 
   dat01-provenance-source-one-shot-20261107:
@@ -1402,6 +1413,7 @@ workflows:
             branches:
               only:
                 - ci/dat01-provenance-failclosed-20261107
+                - fix/dat01-mainline-source-handoff-20261111
 
   dat01-pg17-smoke-manual:
     when: << pipeline.parameters.run_dat01_pg17_smoke >>
