@@ -1,0 +1,339 @@
+{
+  "schema": "risck-comply.dat01.provider-statement-immutable-git-source-subspan.v1",
+  "observedAt": "2026-11-04",
+  "evidenceBoundary": "READ_ONLY_PROD_SELECT_AND_GITLAB_HISTORICAL_FILE_FETCH",
+  "control": "DAT-01",
+  "gate": "A-12",
+  "methodology": "Compare each live provider-applied SQL statement as an exact UTF-8-decoded JS string with an immutable GitLab historical file and record full-file SHA256 and precise character offsets; no whitespace normalization, rewriting or synthetic statement substitution. An exact subspan is not whole-file source proof or approval to replay.",
+  "sourceArchive": "docs/enterprise/closure-v21/DAT01_137_LEDGER_BOUND_PROVENANCE_DRAFT_20261104.json",
+  "records": [
+    {
+      "order": 102,
+      "version": "20260922112907",
+      "providerName": "harden_transactional_email_delivery_log_policies_v1",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 1075,
+      "providerStatementSha256": "8bb11aa94e48620561cf74c4e47464b777beb35e7d6ec479368e522ab917c7bd",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "12ab9c5e20299045734a6789e6f948cdcd078cc6",
+        "file": "supabase/migrations/20260922112907_harden_transactional_email_delivery_log_policies_v1.sql",
+        "blobSha1": "1163ec79781783de19dba4bbf5c27d2e5f0eb076",
+        "sourceSha256": "ef303b3081b234e3fcaf84e13b03b5bf3d5284a9926d6f0e8efa1ba4b353bfe7",
+        "sourceCharacterLength": 1199,
+        "sourceByteLength": 1199
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 124,
+        "charEndExclusive": 1199,
+        "matchingCharacters": 1075,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 106,
+      "version": "20260924143358",
+      "providerName": "tenant_mfa_public_rpc_acl_hardening",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 1804,
+      "providerStatementSha256": "66fcbd24e9810398b1470ca22ec60f63462830fc1402a7bc8cbbc6fe7ea7d050",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "46f15c28e6aa5f41f663bb9637c0f5db3c387ef6",
+        "file": "supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+        "blobSha1": "d82a1946504bbb9dc3c5f5d6c3312331eeb64f51",
+        "sourceSha256": "584c9047885d8d9edd39251e6791eb321693ea904cc57ce58e7eb16e28b61cf7",
+        "sourceCharacterLength": 2104,
+        "sourceByteLength": 2104
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 290,
+        "charEndExclusive": 2094,
+        "matchingCharacters": 1804,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 108,
+      "version": "20260929101638",
+      "providerName": "add_critical_fk_indexes_terminal",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 2685,
+      "providerStatementSha256": "d329f40a847a60368b6068d65c668220968869b0561f5313403880155c872bd8",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "4d4830b622b0087153f6c71d146982fe3aa9625c",
+        "file": "supabase/migrations/20260929101638_add_critical_fk_indexes_terminal.sql",
+        "blobSha1": "7ea230bf05a2a70ee39038aa83baeb7e9a550cb8",
+        "sourceSha256": "97c4098ed3a503ea9c34821eabc27c74b936d13a683b222de518c583f0461d09",
+        "sourceCharacterLength": 2783,
+        "sourceByteLength": 2783
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 97,
+        "charEndExclusive": 2782,
+        "matchingCharacters": 2685,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 112,
+      "version": "20261003171225",
+      "providerName": "reconcile_risk_schema_contract",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 1786,
+      "providerStatementSha256": "1186770ebdef087aa24312c2544d19be5f3a1b24787ec6867b8f7667439901d9",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "026748a72728eb3ffa7c993224c9f121f79b5397",
+        "file": "supabase/migrations/20261003171225_reconcile_risk_schema_contract.sql",
+        "blobSha1": "7a3e170a4dae7ee929cfe9b29a04191fef6ff9dd",
+        "sourceSha256": "abd1d601b6d638261f5fcbab76847e7d214a4aca545fea2773be801523ba6575",
+        "sourceCharacterLength": 1804,
+        "sourceByteLength": 1804
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 8,
+        "charEndExclusive": 1794,
+        "matchingCharacters": 1786,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 117,
+      "version": "20261004082501",
+      "providerName": "validate_audit_logs_actor_user_fk",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 82,
+      "providerStatementSha256": "db12bfe5613df5425519632bd17fed43b3f3215c8917b1c2df58b6d55f31ee41",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "9b997b1f8eb14f4947d83eb856476c1cfc429055",
+        "file": "supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+        "blobSha1": "51853c8d20baded57d6da7c54d901dd67aa1727b",
+        "sourceSha256": "ef34adade10fd4879b1fcaa10c39f1205950811e706f41f8fb60d081e9f072d2",
+        "sourceCharacterLength": 288
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 205,
+        "charEndExclusive": 287,
+        "matchingCharacters": 82,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 119,
+      "version": "20261004110936",
+      "providerName": "add_sales_lead_email_templates",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 585,
+      "providerStatementSha256": "561206132e6a308b736564265583b4cc975a76738f80093225d43dc1d401785d",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "35e1f5aca770a00261c9456e8cf48c22b09c2caa",
+        "file": "supabase/migrations/20261004110936_add_sales_lead_email_templates.sql",
+        "blobSha1": "edda404e8787baf6b2e4af9a039b0890e0ef095d",
+        "sourceSha256": "c35fc19bcdcb7ec23d4ea53b7a31b5c630b556c98cedae73a6156ac1460d8c37",
+        "sourceCharacterLength": 931
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 131,
+        "charEndExclusive": 716,
+        "matchingCharacters": 585,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    },
+    {
+      "order": 130,
+      "version": "20261013133341",
+      "providerName": "fix_enterprise_provision_usage_update_ambiguity",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 9231,
+      "providerStatementSha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6",
+      "gitlab": {
+        "projectId": 88025157,
+        "commit": "6bb79daea8d6dc5bc443d185da0da7e57090bd37",
+        "file": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+        "blobSha1": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+        "sourceSha256": "3c7c75669da736b16f2a150f910881ad4babf59bac3e7f7ab9412970980cad07",
+        "sourceCharacterLength": 12091,
+        "sourceByteLength": 12091
+      },
+      "exactSourceSubspan": {
+        "charStartInclusive": 663,
+        "charEndExclusive": 9894,
+        "matchingCharacters": 9231,
+        "identicalToLiveProviderStatement": true,
+        "transformation": "NONE",
+        "wholeSourceFileEqualsProviderStatement": false
+      },
+      "identityQualified": "PENDING",
+      "approvedForExecutableReplay": false
+    }
+  ],
+  "guardrails": {
+    "wholeFileSourceProofClaimsBefore": 103,
+    "wholeFileSourceProofClaimsAfter": 103,
+    "unresolvedWholeFileSourcesBefore": 34,
+    "unresolvedWholeFileSourcesAfter": 34,
+    "newProviderStatementSubspanLinks": 7,
+    "independentReviewerApprovals": 0,
+    "postgres17Replays": 0,
+    "formalGateA12": "BLOCKED",
+    "productionWrites": 0,
+    "qaWrites": 0,
+    "statementPayloadsPublished": false
+  },
+  "nextActions": [
+    "Qualified review of wrapper/extra source content around matched applied statement and original version identity",
+    "Audit historical timestamps without inferring apply time",
+    "Do not count a subspan as a whole-file source match or independent replay authorization",
+    "Continue recovering other 32 historically unresolved sources",
+    "Obtain independent review of five additional immutable-source exact-statement links; four are single-source candidates and version 20261013133341 belongs to CONSOLIDATION_2, whose other linked version remains unproven.",
+    "Do not treat these seven exact subspans as 137/137 replay provenance or change the immutable draft manifest without independent qualification.",
+    "CONSOLIDATION_2: review exact immutable provider-record SQL captures of both historically applied versions, their +23-byte aliasing difference, and decide an authorized source-bound replay plan; archival provider records are not independent proof of the originally executed migration files."
+  ],
+  "addendum": {
+    "observedAt": "2026-11-04",
+    "verification": "Five new exact provider-statement subspans reverified against read-only production Supabase schema_migrations and immutable GitLab file refs; no production/QA writes.",
+    "priorExactSubspanRecords": 2,
+    "newExactSubspanRecords": 5,
+    "totalExactSubspanRecords": 7,
+    "qualifiedSourceIdentitiesNew": 0,
+    "wholeSourceProofsNew": 0,
+    "formalPassNew": 0
+  },
+  "providerBackfilledConsolidation2Verification": {
+    "classification": "PROVIDER_LEDGER_RECOVERY_CAPTURE_ONLY_NOT_ORIGINAL_MIGRATION",
+    "originalProviderVersionsSeparate": true,
+    "groupId": "CONSOLIDATION_2",
+    "observedAt": "2026-11-04",
+    "sourceForProviderReadback": "Supabase production project tganhbbhfxcpblmgqprg; SELECT version,statements[1],sha256 and octet_length from supabase_migrations.schema_migrations (READ ONLY).",
+    "sourceForArchive": "GitLab project 88025157 original provider-record archival commits; also present on canonical GitHub main.",
+    "method": "Compare live applied provider statement verbatim to a UTF-8-decoded immutably committed provider-capture file, excluding only its clearly marked metadata comment header by using exact character substring offset. Verify archive SHA256 and provider statement SHA256. Independently compare the two distinct provider-applied statements using common prefix/suffix.",
+    "records": [
+      {
+        "version": "20261013133323",
+        "providerName": "fix_enterprise_provision_usage_conflict_ambiguity",
+        "providerSqlBytes": 9208,
+        "providerSqlSha256": "6eb4f7dfe9291502bc07fb2404af0bceeba5c9426e95ed7ef7c9f17f55c5d89e",
+        "sourceFile": "supabase/reconciliation/20261013133323_fix_enterprise_provision_usage_conflict_ambiguity_provider_record.sql",
+        "archiveCommit": "5eb2085acec2beb8143ac6951c0ec994a88d37c1",
+        "sourceGitBlobSha1": "b2aee3672567912ff9816e627b5f1786bbfdc466",
+        "fileSha256": "03d44a618fd96c29344e7dbef2186b2c59b9daf808c08aafc61d9796ab9ebfd2",
+        "sourceFileBytes": 9739,
+        "exactProviderSqlSubspanOffset": 531,
+        "endsAtEOF": true
+      },
+      {
+        "version": "20261013133341",
+        "providerName": "fix_enterprise_provision_usage_update_ambiguity",
+        "providerSqlBytes": 9231,
+        "providerSqlSha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6",
+        "sourceFile": "supabase/reconciliation/20261013133341_fix_enterprise_provision_usage_update_ambiguity_provider_record.sql",
+        "archiveCommit": "16dee2d756ff6f6668adf98efc0f5c1fc861435f",
+        "sourceGitBlobSha1": "a8998b99f2534b4e9a752d860ebee18279fb8c7d",
+        "fileSha256": "01d2dd0773ab85d8143c495571836c53fcf026b6e1ac4a496a995efd72acc25e",
+        "sourceFileBytes": 9760,
+        "exactProviderSqlSubspanOffset": 529,
+        "endsAtEOF": true
+      }
+    ],
+    "directComparison": {
+      "distinctProviderSqlSha256": true,
+      "oldProviderStatementBytes": 9208,
+      "newProviderStatementBytes": 9231,
+      "oldAndNewDeltaBytes": 23,
+      "commonPrefixCharacters": 8306,
+      "commonSuffixCharacters": 669,
+      "firstChangeLine": 171,
+      "semanticChange": "The second applied SQL explicitly aliases the usage-row UPDATE (AS usage_row) and qualifies WHERE via usage_row, resolving ambiguity. Do not treat these as duplicate identical SQL source bytes."
+    },
+    "restrictions": {
+      "originalAppliedMigrationSourceAuthenticated": false,
+      "archivedRecordsWereBackfilledAfterProviderApplication": true,
+      "wholeFileEqualityWithOriginalMigration": false,
+      "sourceBytesProofClaimsUpdated": false,
+      "nonexactMappingQualified": false,
+      "manifestAuthorizedForReplay": false,
+      "independentReviewerApproval": false,
+      "productionWrites": false,
+      "qaWrites": false,
+      "acceptedGateA12": false
+    },
+    "nextReviewerAction": "Determine and sign independent provenance/replay disposition for each of the two original provider versions versus the forward-only canonical reconciliation; keep migration order and do not perform an unreviewed two-to-one collapsing replay."
+  },
+  "newStatementLevelRecovery20261106": {
+    "observedAt": "2026-11-06",
+    "classification": "IMMUTABLE_HISTORICAL_GITLAB_SOURCE_CONTAINS_EXACT_PROVIDER_APPLIED_SQL_STATEMENT_WITH_COMMENT_ONLY_PREFIX; NOT_WHOLE_FILE_SOURCE_EQUALITY",
+    "productionProject": "tganhbbhfxcpblmgqprg",
+    "providerReadback": "READ_ONLY Supabase supabase_migrations.schema_migrations SELECT version, name, statements, SHA256(digest(array_to_string(statements,''))), octet_length",
+    "sourceReadback": "GitLab repository file at immutable historical commit; Base64 decoded and compared verbatim to provider statement in memory",
+    "newRecord": {
+      "order": 101,
+      "version": "20260922112154",
+      "migrationName": "reconcile_transactional_email_delivery_logs_v1",
+      "providerStatementCount": 1,
+      "providerStatementUtf8Bytes": 2850,
+      "providerStatementSha256": "3a4af676fb07d8f1565a22d657a888fb1d59f19f74b92a08057e71209ea33ae9",
+      "originalSourcePath": "supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql",
+      "gitlabProjectId": 88025157,
+      "immutableHistoricalCommit": "ececf502cd9272d1379b1bdd5e51d1ed29a9ce7d",
+      "commitTimestamp": "2026-09-22T12:22:29+01:00",
+      "sourceURL": "https://gitlab.com/risck-comply-group/eurocomply_saas/-/blob/ececf502cd9272d1379b1bdd5e51d1ed29a9ce7d/supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql",
+      "blobSha1": "22171ecefdf0f0d29494869d64bef9cf1ee68ae7",
+      "fullFileSha256": "9fee42b08dd0c87058382e9e36ac90772b26737e3653a420efdddaedadd2d353",
+      "sourceFileBytes": 3002,
+      "providerStatementExactContiguousSubspan": true,
+      "sourceStartOffsetCharacters": 152,
+      "sourceEndOffsetCharacters": 3002,
+      "commentOrWhitespaceOnlyPrefix": true,
+      "commentOrWhitespaceOnlySuffix": true,
+      "originalWholeFileEqualsProviderStatement": false,
+      "versionDuplicateInStructuralManifest": false,
+      "orderedPostgres17ReplayPerformed": false,
+      "independentlyQualifiedSourceProvenance": false,
+      "originalApplyTimeIndependentlyEstablished": false,
+      "authorizedForReplay": false
+    },
+    "existingVerifiedSubspanRecordsBefore": 7,
+    "verifiedSubspanRecordsAfterAtThisEvidenceLevel": 8,
+    "existingArchivedWholeFileSourceProofClaimsUnchanged": 103,
+    "unresolvedWholeFileSourceClaimsUnchanged": 34,
+    "nonexactVersionIdentityReviewsPending": 25,
+    "independentReplayApprovals": 0,
+    "formalGateA12": "BLOCKED",
+    "safety": {
+      "productionWrites": false,
+      "sharedQaWrites": false,
+      "newCost": false,
+      "newManifest": false,
+      "replayPerformed": false
+    },
+    "note": "This is one new direct exact source-subspan verification; it must NOT be promoted to original applied whole-migration-file byte proof or formal DAT-01 acceptance. Source timestamp is commit time, not verified production apply time."
+  }
+}

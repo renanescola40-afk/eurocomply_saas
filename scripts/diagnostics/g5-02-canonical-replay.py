@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """G5-02 canonical migration replay; synthetic PostgreSQL only, fail closed."""
 import hashlib, json, os, pathlib, re, subprocess, sys, time
+from dat01_pg17_target_boundary import TargetRefused, validate_local_connection, read_only_target_preflight
 out=pathlib.Path("artifacts/g5-02-pg17")
 out.mkdir(parents=True,exist_ok=True)
 report={"status":"FAIL","kind":"G5_02_PG17_CANONICAL_REPLAY","source_sha":os.getenv("CIRCLE_SHA1"),"completed":0,"expected":137,"production_writes":False,"synthetic_only":True}
@@ -12,6 +13,10 @@ for k in ("DATABASE_URL","DIRECT_URL","SUPABASE_SERVICE_ROLE_KEY","SUPABASE_ACCE
     if os.getenv(k): fail("PROVIDER_CREDENTIAL_PRESENT",f"forbidden variable: {k}")
 if os.getenv("PGHOST") not in ("localhost","127.0.0.1"): fail("INVALID_PGHOST","local PostgreSQL only")
 if os.getenv("PGDATABASE")!="risck_synthetic":fail("INVALID_PGDATABASE","synthetic database only")
+try:
+    validate_local_connection(os.environ)
+except TargetRefused as exc:
+    fail("DAT01_TARGET_CONNECTION_REFUSED",exc.code)
 if os.getenv("CIRCLE_SHA1") and subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()!=os.getenv("CIRCLE_SHA1"):fail("SHA_MISMATCH","checkout mismatch")
 manifest=json.loads(pathlib.Path("scripts/diagnostics/g5-02-prod-ledger-versions.json").read_text())
 versions=manifest.get("versions",[])
@@ -55,6 +60,13 @@ if (preflight_result.get("migration_execution_authorized") is not True
     fail("DAT01_REPLAY_REVIEW_MISSING","successful source preflight is not an approved replay manifest")
 report["provider_provenance"]="REVIEWED_SOURCE_REPLAY_AUTHORIZATION_REQUIRED"
 subprocess.run(["pg_isready","-h","127.0.0.1","-U","risck_synthetic","-d","risck_synthetic"],check=True,stdout=subprocess.DEVNULL)
+# Require an actually empty local synthetic target; a zero-row migration table
+# alone does not mean an empty schema. No migration is executed by this probe.
+try:
+    report["target_preflight"] = read_only_target_preflight()
+except TargetRefused as exc:
+    report["target_preflight"] = {"status": "BLOCKED", "errorCode": exc.code}
+    fail("DAT01_TARGET_NOT_CLEAN",exc.code)
 for i,v in enumerate(versions,1):
     f=by_version[v][0]
     dig=hashlib.sha256(f.read_bytes()).hexdigest()
