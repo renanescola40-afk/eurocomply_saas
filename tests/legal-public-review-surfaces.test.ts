@@ -303,4 +303,23 @@ describe('public legal review surfaces', () => {
     expect(source).not.toContain('qualified legal review before final publication');
     expect(source).not.toContain('revisão jurídica qualificada antes da publicação final');
   });
+
+  it('uses current provider readback without misrepresenting connected analytics as Production', async () => {
+    const [transfers, provider] = await Promise.all([
+      readFile(TRANSFERS_PAGE, 'utf8'),
+      readFile(PROVIDER_DISCLOSURE, 'utf8'),
+    ]);
+
+    for (const source of [transfers, provider]) {
+      expect(source).toContain('11 November 2026');
+      expect(source).toContain('ingested_event=true');
+      expect(source).toContain('Production');
+      expect(source).not.toContain('no ingested event');
+      expect(source).not.toContain('sem eventos ingeridos');
+      expect(source).not.toContain('currently budget-blocked');
+      expect(source).not.toContain('estão bloqueados por orçamento');
+    }
+    expect(transfers).toContain('retention/deletion');
+    expect(provider).toContain('DPA');
+  });
 });
