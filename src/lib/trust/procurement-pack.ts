@@ -146,7 +146,7 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'GitHub',
     purpose: 'Canonical private source repository, pull-request reviews and status aggregation',
     status: 'core',
-    regionDisclosure: 'GitHub remains the source/review authority. GitHub Actions runner execution is currently budget-blocked. Historical GitHub-hosted runners could transiently process protected Production data; account DPA and transfer treatment for those former workflows remain OPEN.',
+    regionDisclosure: 'GitHub remains the source/review authority. GitHub Actions executed real workflows on 11 November 2026; old budget limits are historical and do not establish continuous availability. GitHub-hosted runners may have processed protected Production data; account DPA, retention, transfer mechanisms and the processing scope of those workflows remain OPEN.',
   },
   {
     name: 'CircleCI',
