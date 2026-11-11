@@ -82,6 +82,11 @@ jobs:
           set -o pipefail
           npm run test 2>&1 | tee test.log
 
+      # Run the dedicated fail-closed Stripe QA/Production DB boundary tests.
+      # Vitest does not discover this Node.js native test suite.
+      - name: Stripe Preview-to-Production DB isolation regression
+        run: node --test tests/billing/qa-webhook-writer-admission.test.mjs
+
       # Vitest (npm test) does not discover node:test .mjs suites.
       # Keep this independent evidence-integrity gate mandatory and fail-closed.
       - name: ISO 27001 and SOC 2 Annex A integrity tests
