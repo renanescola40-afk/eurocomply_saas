@@ -31,14 +31,18 @@ describe('public procurement pack', () => {
     expect(assessment?.summary).toContain('clean independent retest/terminal assurance remains open');
   });
 
-  it('separates active CI provider from historical GitHub Actions runner evidence', () => {
+  it('separates current source CI activity from unverified provider and data-transfer assurances', () => {
     const github = procurementProviders.find((provider) => provider.name === 'GitHub');
     const circleci = procurementProviders.find((provider) => provider.name === 'CircleCI');
 
-    expect(github?.regionDisclosure).toContain('budget-blocked');
+    expect(github?.regionDisclosure).toContain('GitHub Actions executed real workflows on 11 November 2026');
+    expect(github?.regionDisclosure).toContain('old budget limits are historical');
+    expect(github?.regionDisclosure).not.toContain('currently budget-blocked');
     expect(github?.regionDisclosure).toMatch(/GitHub-hosted runners[^\n]{0,260}(DPA|transfer)/i);
+    expect(github?.regionDisclosure).toContain('processing scope of those workflows remain OPEN');
     expect(circleci?.purpose).toContain('source-only');
     expect(circleci?.regionDisclosure).toContain('account-specific DPA');
+    expect(circleci?.regionDisclosure).toContain('remain OPEN');
     expect(procurementProviders.some((provider) => provider.name === 'GitHub Actions')).toBe(false);
   });
 
