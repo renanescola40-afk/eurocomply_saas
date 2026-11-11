@@ -78,8 +78,17 @@ jobs:
     name: E2E production-like gate
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
+    # Official Playwright 1.61.1 Noble image, digest pinned from MCR.
+    # Includes browser + signed OS dependencies without external Ubuntu apt.
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 25
     env:
+      PLAYWRIGHT_PREINSTALLED_IMAGE_VERSION: '1.61.1'
       CI: 'true'
       PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
