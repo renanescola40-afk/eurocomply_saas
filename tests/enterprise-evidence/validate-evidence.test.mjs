@@ -373,7 +373,8 @@ test('post-merge A-18 uses authenticated exact-merge attribution, not a missing 
   commit_id:historicalHead};
  const followup={user:{login:'renansilva2002-tech'},body:'Reviewed A-18/OPS-01 independently'};
  const current=[{state:'APPROVED',user:{login:'renansilva2002-tech'},commit_id:sourceHead,
-  body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED'}];
+  body:'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED',
+  submitted_at:'2026-11-07T09:59:59Z'}];
  const verify=async({linked=[merged],reviews=current,token='synthetic-token',prNumber=undefined}={})=>{
   const request=async(url)=>({ok:true,json:async()=>{
    if(url.includes('/commits/'+mergedSha+'/pulls?per_page=100'))return linked;
@@ -385,6 +386,14 @@ test('post-merge A-18 uses authenticated exact-merge attribution, not a missing 
   return verifyGitHubA18CurrentHead(claim,{expectedSha:mergedSha,prNumber,token,request});
  };
  assert.equal(await verify(),true,'exact merged commit and reviewed PR source permit provider proof');
+ assert.equal(await verify({reviews:[{...current[0],submitted_at:'2026-11-07T10:00:01Z'}]}),false,
+  'post-merge formal review must not retroactively authorize acceptance');
+ assert.equal(await verify({reviews:[{...current[0],submitted_at:'not-a-date'}]}),false,
+  'invalid review submission time must fail closed for merged gates');
+ assert.equal(await verify({reviews:[{...current[0],submitted_at:undefined}]}),false,
+  'missing review submission time must fail closed for merged gates');
+ assert.equal(await verify({linked:[{...merged,merged_at:'bad-time'}]}),false,
+  'invalid provider merge time must fail closed');
  assert.equal(await verify({linked:[]}),false,'direct push has no authenticated merged PR');
  assert.equal(await verify({linked:[merged,merged]}),false,'ambiguous merge association must fail closed');
  assert.equal(await verify({linked:[{...merged,merge_commit_sha:'a'.repeat(40)}]}),false,'another merge SHA is not proof');
