@@ -36,7 +36,7 @@ test('protected workflow binds evidence to exact current main through a disposab
   assert.match(workflow, /git rev-parse origin\/main/);
   assert.match(workflow, /GITHUB_SHA/);
   assert.match(workflow, /GITHUB_REF_NAME/);
-  assert.match(workflow, /supabase\/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359/);
+  assert.match(workflow, /supabase\/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13/);
   assert.match(workflow, /version: 2\.101\.0/);
   assert.match(workflow, /run-ephemeral-project-schema-replay\.mjs/);
   assert.doesNotMatch(workflow, /manage-ephemeral-recovery-database\.mjs start-project/);
