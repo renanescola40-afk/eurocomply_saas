@@ -3,6 +3,7 @@
 // Provider signature validation remains in the route, before this decision.
 // This is not a credential check, an event writer or an acceptance proof.
 const QA_SUPABASE_HOST = 'zrxrrfbllsxtleyxjpsz.supabase.co';
+const PRODUCTION_SUPABASE_HOST = 'tganhbbhfxcpblmgqprg.supabase.co';
 
 function getQaSupabaseEndpoint(input) {
   try {
@@ -10,11 +11,12 @@ function getQaSupabaseEndpoint(input) {
     const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
     return {
       matchesQaHost: hostname === QA_SUPABASE_HOST,
+      matchesProductionHost: hostname === PRODUCTION_SUPABASE_HOST,
       validBaseUrl: url.protocol === 'https:' && !url.username && !url.password &&
         !url.port && (url.pathname === '/' || url.pathname === '') && !url.search && !url.hash,
     };
   } catch {
-    return { matchesQaHost: false, validBaseUrl: false };
+    return { matchesQaHost: false, matchesProductionHost: false, validBaseUrl: false };
   }
 }
 const PRIVILEGED_KEYS = [
@@ -32,6 +34,12 @@ export function evaluateQaWebhookAdmission(env) {
   const qaFlag = env.RISCK_QA_ENVIRONMENT === 'true';
   const qaTarget = env.VERCEL_TARGET_ENV === 'qa' || env.VERCEL_ENV === 'qa';
   const qaDatabase = getQaSupabaseEndpoint(env.NEXT_PUBLIC_SUPABASE_URL);
+  // Vercel Preview must never persist Stripe events to the actual Production DB,
+  // even if a missing QA flag would otherwise classify the webhook as non-QA.
+  // This is an isolation boundary, not a new writer permission or LIVE change.
+  if ((env.VERCEL_ENV === 'preview' || qaTarget) && qaDatabase.matchesProductionHost) {
+    return { allowed: false, reason: 'qa_environment_mismatch' };
+  }
   if (!qaFlag && !qaTarget && !qaDatabase.matchesQaHost) return { allowed: true, reason: 'not_qa' };
 
   if (!qaFlag || !qaDatabase.matchesQaHost || !qaDatabase.validBaseUrl || env.VERCEL_ENV !== 'preview') {
