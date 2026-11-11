@@ -9,6 +9,12 @@ parameters:
   run_pr2590_workflow_validation:
     type: boolean
     default: false
+  run_dat01_preflight:
+    type: boolean
+    default: false
+  run_dat01_pg17_smoke:
+    type: boolean
+    default: false
   run_main_source:
     type: boolean
     default: false
@@ -1173,6 +1179,196 @@ jobs:
           path: artifacts/external-pr-ci
           destination: external-pr-ci-exact-sha
 
+
+  # NON-AUTHORITATIVE disposable PG17 infrastructure smoke only; never replays migrations.
+  dat01-pg17-infrastructure-smoke:
+    docker:
+      - image: cimg/node:22.16.0
+      - image: postgres:17.6
+        environment:
+          POSTGRES_DB: risck_synthetic
+          POSTGRES_USER: risck_synthetic
+          POSTGRES_PASSWORD: synthetic-local-only
+    resource_class: small
+    working_directory: ~/project
+    environment:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: risck_synthetic
+      PGUSER: risck_synthetic
+      PGPASSWORD: synthetic-local-only
+    steps:
+      - checkout
+      - run:
+          name: Verify exact branch/SHA and reject provider credentials
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "phase1/security-dat01-v22"
+            test -n "${CIRCLE_SHA1:-}"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_ACCESS_TOKEN SUPABASE_SERVICE_ROLE_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "Forbidden provider credential present in disposable smoke job: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Start disposable PG 17.6 and verify readiness
+          command: |
+            set -euo pipefail
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if pg_isready -h 127.0.0.1 -p 5432 -U risck_synthetic -d risck_synthetic; then break; fi
+              sleep 2
+            done
+            pg_isready -h 127.0.0.1 -p 5432 -U risck_synthetic -d risck_synthetic
+            version_num="$(psql -X -Atq -h 127.0.0.1 -p 5432 -U risck_synthetic -d risck_synthetic -c 'SHOW server_version_num')"
+            test "$version_num" = "170006"
+            export DAT01_PG17_SERVER_VERSION_NUM="$version_num"
+            mkdir -p artifacts/dat01-pg17-smoke
+            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U risck_synthetic -d risck_synthetic \
+              -c "BEGIN; CREATE TEMP TABLE dat01_synthetic_smoke(id integer PRIMARY KEY, label text NOT NULL) ON COMMIT DROP; INSERT INTO dat01_synthetic_smoke VALUES (1,'synthetic-a'),(2,'synthetic-b'); DO \$dat01_smoke\$ BEGIN IF (SELECT count(*) FROM dat01_synthetic_smoke) <> 2 THEN RAISE EXCEPTION 'synthetic smoke assertion failed'; END IF; END \$dat01_smoke\$; SELECT 'NON_AUTHORITATIVE_SYNTHETIC_ROLLBACK_SMOKE_PASS'; ROLLBACK;" \
+              | tee artifacts/dat01-pg17-smoke/transaction.log
+            node -e 'const fs=require("node:fs"); fs.writeFileSync("artifacts/dat01-pg17-smoke/result.json",JSON.stringify({classification:"NON_AUTHORITATIVE_SYNTHETIC_INFRASTRUCTURE_SMOKE",providerVersion:"postgres:17.6",serverVersionNum:process.env.DAT01_PG17_SERVER_VERSION_NUM,sourceSha:process.env.CIRCLE_SHA1,branch:process.env.CIRCLE_BRANCH,syntheticTransaction:"BEGIN/CREATE TEMP/INSERT/ASSERT/ROLLBACK",formalMigrationReplay:"NOT_RUN",sharedQaTouched:false,productionTouched:false,externalProviderCredentialsPresent:false},null,2)+"\n")'
+      - store_artifacts:
+          path: artifacts/dat01-pg17-smoke
+          destination: dat01-pg17-non-authoritative-smoke
+
+  # Source-only structural guard. It does not execute SQL or authorize the 137-row replay.
+  dat01-ledger-preflight:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Verify DAT-01 branch, exact SHA and credential isolation
+          command: |
+            set -euo pipefail
+            case "${CIRCLE_BRANCH:-}" in phase1/security-dat01-v22|fix/dat01-mainline-source-handoff-20261111) ;; *) echo "DAT01_PREFLIGHT_BRANCH_REJECTED" >&2; exit 1 ;; esac
+            test -n "${CIRCLE_SHA1:-}"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_ACCESS_TOKEN SUPABASE_SERVICE_ROLE_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if [ -n "${!key:-}" ]; then
+                echo "Forbidden provider credential present in source-only DAT-01 job: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Run DAT-01 structural regression and preflight
+          command: |
+            set -euo pipefail
+            mkdir -p artifacts/dat01-preflight
+            node --test tests/diagnostics/dat01-ledger-bound-manifest-preflight.test.mjs 2>&1 | tee artifacts/dat01-preflight/tests.tap
+            node scripts/diagnostics/dat01-ledger-bound-manifest-preflight.mjs 2>&1 | tee artifacts/dat01-preflight/preflight.json
+      - store_artifacts:
+          path: artifacts/dat01-preflight
+          destination: dat01-structural-preflight-exact-sha
+
+  dat01-provenance-review-only:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Confirm DAT-01 one-shot exact checkout and reject provider credentials
+          command: |
+            set -euo pipefail
+            case "$CIRCLE_BRANCH" in ci/dat01-provenance-failclosed-20261107|fix/dat01-mainline-source-handoff-20261111) ;; *) echo "DAT01_PROVENANCE_BRANCH_REJECTED" >&2; exit 1 ;; esac
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "DAT01_SOURCE_ONLY_REFUSES_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Node 22 original provenance queue and fail-closed negative regressions
+          command: |
+            set -euo pipefail
+            test "$(node --version)" = "v22.16.0"
+            node --test tests/diagnostics/dat01-provenance-decision-queue.test.mjs
+            mkdir -p artifacts/dat01-review-provenance
+            printf '{"kind":"RISCK_DAT01_REVIEW_SOURCE_ONLY","sha":"%s","branch":"%s","sourceRecords":137,"expectedReviewCases":48,"postgresqlReplayExecuted":false,"databaseAccess":false,"productionWrites":0,"independentAcceptance":false,"gateA12":"BLOCKED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/dat01-review-provenance/identity.json
+      - store_artifacts:
+          path: artifacts/dat01-review-provenance
+          destination: dat01-provenance-source-exact-sha
+
+
+  dat01-applied-provider-snapshot-review:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Exact immutable recovery branch SHA; refuse privileged provider credentials
+          command: |
+            set -euo pipefail
+            case "$CIRCLE_BRANCH" in recovery/dat01-provider-applied-20261107|fix/dat01-mainline-source-handoff-20261111) ;; *) echo "DAT01_SNAPSHOT_BRANCH_REJECTED" >&2; exit 1 ;; esac
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET VERCEL_TOKEN RESEND_API_KEY SENTRY_AUTH_TOKEN QA_DB_PASSWORD PGPASSWORD; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "DAT01_PROVIDER_RECOVERY_SOURCE_ONLY_REJECTS_CREDENTIAL: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Verify original decision queue and all 34 SQL recovery SHA256 and 25 mapping contracts
+          command: |
+            set -euo pipefail
+            test "$(node --version)" = "v22.16.0"
+            node --test tests/diagnostics/dat01-provenance-decision-queue.test.mjs tests/diagnostics/dat01-provider-applied-snapshot.test.mjs tests/diagnostics/dat01-case-review-triage.test.mjs tests/diagnostics/dat01-review-submission-preflight.test.mjs
+            mkdir -p artifacts/dat01-provider-recovery
+            node scripts/diagnostics/dat01-provider-applied-snapshot.mjs > artifacts/dat01-provider-recovery/summary-no-sql.json
+            node scripts/diagnostics/dat01-case-review-triage.mjs > artifacts/dat01-provider-recovery/triage-48-no-sql.json
+            printf '{"kind":"RISCK_DAT01_PROVIDER_SQL_RECOVERY_SOURCE_ONLY","sha":"%s","branch":"%s","frozenLedgerRecords":137,"recoveredAppliedSQL":34,"nonexactMappings":25,"productionWrites":0,"postgres17ReplayExecuted":false,"originalWholeSourceFilesNewlyApproved":0,"qualifiedHumanAcceptance":false,"gateA12":"BLOCKED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/dat01-provider-recovery/identity.json
+      - store_artifacts:
+          path: artifacts/dat01-provider-recovery
+          destination: dat01-provider-applied-34-crosswalk-25-exact-sha
+
+
+  dat01-local-pg17-target-source:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Validate G5-02 local-only exact SHA and reject provider credentials
+          command: |
+            set -euo pipefail
+            case "$CIRCLE_BRANCH" in ci/dat01-local-target-guard-20261107|fix/dat01-mainline-source-handoff-20261111) ;; *) echo "DAT01_PG17_BRANCH_REJECTED" >&2; exit 1 ;; esac
+            test -n "$CIRCLE_SHA1"
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            for key in DATABASE_URL DIRECT_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ACCESS_TOKEN STRIPE_SECRET_KEY VERCEL_TOKEN PGPASSWORD PGHOSTADDR PGSERVICE PGSERVICEFILE PGPASSFILE; do
+              if printenv "$key" >/dev/null 2>&1; then
+                echo "DAT01_TARGET_SOURCE_REFUSES_PROVIDER_ENV: $key" >&2
+                exit 1
+              fi
+            done
+      - run:
+          name: Run source-only PG17 pristine target and G5-02 replay-refusal tests
+          command: |
+            set -euo pipefail
+            python3 --version
+            python3 -B tests/diagnostics/test_dat01_pg17_target_boundary.py
+            python3 -B tests/diagnostics/test_dat01_replay_guard.py
+            mkdir -p artifacts/dat01-local-target
+            printf '{"kind":"DAT01_LOCAL_PG17_TARGET_GUARD","sha":"%s","branch":"%s","remoteDatabaseReads":false,"providerCredentialsPresent":false,"sqlExecuted":false,"replayAuthorized":false,"productionWrites":0,"A12":"BLOCKED"}\n' "$CIRCLE_SHA1" "$CIRCLE_BRANCH" > artifacts/dat01-local-target/identity.json
+      - store_artifacts:
+          path: artifacts/dat01-local-target
+          destination: dat01-local-pg17-clean-target-guard
+
+
 workflows:
   # Auto-runs on GitHub VCS events only; API/manual/schedule executions remain opt-in.
   # Trigger selection lives in CircleCI Project Settings; no privileged contexts attached.
@@ -1180,6 +1376,53 @@ workflows:
     when: pipeline.event.name == "push" or pipeline.event.name == "pull_request"
     jobs:
       - pr-source-autopilot
+
+  # Run the consolidated DAT-01 manifest guard with no provider credentials.
+  dat01-ledger-preflight-mainline-20261111:
+    jobs:
+      - dat01-ledger-preflight:
+          filters:
+            branches:
+              only:
+                - fix/dat01-mainline-source-handoff-20261111
+
+  dat01-local-pg17-target-guard-one-shot-20261107:
+    jobs:
+      - dat01-local-pg17-target-source:
+          filters:
+            branches:
+              only:
+                - ci/dat01-local-target-guard-20261107
+                - fix/dat01-mainline-source-handoff-20261111
+
+
+  dat01-applied-provider-snapshot-one-shot-20261107:
+    jobs:
+      - dat01-applied-provider-snapshot-review:
+          filters:
+            branches:
+              only:
+                - recovery/dat01-provider-applied-20261107
+                - fix/dat01-mainline-source-handoff-20261111
+
+
+  dat01-provenance-source-one-shot-20261107:
+    jobs:
+      - dat01-provenance-review-only:
+          filters:
+            branches:
+              only:
+                - ci/dat01-provenance-failclosed-20261107
+                - fix/dat01-mainline-source-handoff-20261111
+
+  dat01-pg17-smoke-manual:
+    when: << pipeline.parameters.run_dat01_pg17_smoke >>
+    jobs:
+      - dat01-pg17-infrastructure-smoke:
+          filters:
+            branches:
+              only:
+                - phase1/security-dat01-v22
 
 
 
@@ -1240,6 +1483,16 @@ workflows:
             branches:
               only:
                 - qa/a01-sec01-provider-proof-20261107
+
+  dat01-ledger-preflight-manual:
+    when: << pipeline.parameters.run_dat01_preflight >>
+    jobs:
+      - dat01-ledger-preflight:
+          filters:
+            branches:
+              only:
+                - phase1/security-dat01-v22
+
 
   github-actions-recovery-manual:
     # No jobs run unless an operator supplies run_actions_recovery=true.

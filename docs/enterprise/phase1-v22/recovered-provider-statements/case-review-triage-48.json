@@ -1,0 +1,1729 @@
+{
+  "schema": "risck-comply.dat01.48-case-technical-triage.v1",
+  "sourceSnapshotSha": "75fcb01585108a7af576580593605fcf8bec3e60",
+  "classification": "TECHNICAL_REVIEW_TRIAGE_NOT_A_HUMAN_DECISION",
+  "scope": "SOURCE_ONLY_NON_EXECUTABLE",
+  "signalNotice": "Static regex indicators do not establish a vulnerability, policy intent, or function-scoped security property.",
+  "counts": {
+    "frozenLedger": 137,
+    "uniqueCaseReviews": 48,
+    "originalSourceReviews": 34,
+    "nonexactVersionReviews": 25,
+    "overlap": 11,
+    "recoveredAppliedSqlRecords": 34,
+    "qualifiedHumanDecisions": 0,
+    "authorizationToReplay": 0,
+    "priorities": {
+      "P0_POLICY_SEMANTICS_REVIEW": 2,
+      "P1_SECURITY_AND_PROVENANCE_REVIEW": 23,
+      "P2_SOURCE_PROVENANCE_REVIEW": 23
+    }
+  },
+  "productionWrites": 0,
+  "sqlReplayExecuted": false,
+  "fullOriginalFileProvenanceNewlyApproved": 0,
+  "formalGateA12": "BLOCKED",
+  "cases": [
+    {
+      "caseId": "DAT01-017",
+      "providerLedgerOrder": 17,
+      "providerVersion": "20260726070000",
+      "providerName": "permissions_catalog_rls_hotfix",
+      "appliedSqlSha256": "51165bd874a1d55bc1d6d1f955ebd40c629f0b0a039c81cc331f93580351f23e",
+      "mappedSourcePath": "supabase/migrations/20260726070000_permissions_catalog_rls_hotfix.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "a287eb03c2af908e796a3a788c4f45d973d77b1f",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "POSSIBLE_BROAD_POLICY_USING_TRUE_REVIEW",
+        "ACL_CHANGE_PRESENT",
+        "DROP_DDL_PRESENT",
+        "HISTORICAL_RLS_DRIFT_REVIEW_REQUIRED"
+      ],
+      "priority": "P0_POLICY_SEMANTICS_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "RLS_HISTORICAL_POLICY_SEMANTICS",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-018",
+      "providerLedgerOrder": 18,
+      "providerVersion": "20260804224915",
+      "providerName": "live_security_definer_acl_hardening",
+      "appliedSqlSha256": "db0054e387bdc8657317a4fa3b0870b3563c2e01144db9afceedb8735024af58",
+      "mappedSourcePath": "supabase/migrations/20260804224915_live_security_definer_acl_hardening.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "f4933361d3d1d768614aa31b503b60a60db60d71",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "ACL_CHANGE_PRESENT"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-019",
+      "providerLedgerOrder": 19,
+      "providerVersion": "20260804230433",
+      "providerName": "move_rls_helpers_to_private_schema",
+      "appliedSqlSha256": "31426eb2a17a61a62a9ab760a03ea0885dc31763ecb48445cbbb8fb852c61c0e",
+      "mappedSourcePath": "supabase/migrations/20260804230433_move_rls_helpers_to_private_schema.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "f4933361d3d1d768614aa31b503b60a60db60d71",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "ACL_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-020",
+      "providerLedgerOrder": 20,
+      "providerVersion": "20260805223500",
+      "providerName": "remove_permissive_tenant_rls_bypasses",
+      "appliedSqlSha256": "5461708cb3e8f110f007a50d9c39c02c319a8735f48a1644c1f4b8a640ddb05b",
+      "mappedSourcePath": "supabase/migrations/20260805223500_remove_permissive_tenant_rls_bypasses.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "aee8b07a6365296d959fa38cf0cb91f17922a90d",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-021",
+      "providerLedgerOrder": 21,
+      "providerVersion": "20260807091341",
+      "providerName": "reconcile_membership_rls_and_remove_permissive_bypasses",
+      "appliedSqlSha256": "8130b5fc8c8424a544160c51d87f71e5f77e8c22647561379412ad4b68954261",
+      "mappedSourcePath": "supabase/migrations/20260807091341_reconcile_membership_rls_and_remove_permissive_bypasses.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "b8e5009e4a933017c10867f15446d2fdf5689fa4",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "RLS_POLICY_DDL_PRESENT",
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT",
+        "NO_SEARCH_PATH_SEEN_IN_BATCH_REVIEW_FUNCTION_SCOPE"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-028",
+      "providerLedgerOrder": 28,
+      "providerVersion": "20260812230229",
+      "providerName": "optimize_ai_incidents_rls_and_deduplicate_ai_systems_index",
+      "appliedSqlSha256": "d541750f96365fc6463c5a273ed0f07e01d9192ae5e8ce1fd8396b2efb0252d4",
+      "mappedSourcePath": "supabase/migrations/20260812230229_optimize_ai_incidents_rls_and_deduplicate_ai_systems_index.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "4dacc62027831221132a23ea4358ded1b8c9fd6c",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "ACL_CHANGE_PRESENT",
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-033",
+      "providerLedgerOrder": 33,
+      "providerVersion": "20260813124224",
+      "providerName": "reconcile_organization_add_ons",
+      "appliedSqlSha256": "195d4560e2b9cab3f628135ecd974b1f111187a58f47c1f12aa083c225155aff",
+      "mappedSourcePath": "supabase/migrations/20260813124224_reconcile_organization_add_ons.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "7a7f904d9391968b61802ab83df13058f6e15c36",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "ACL_CHANGE_PRESENT",
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-034",
+      "providerLedgerOrder": 34,
+      "providerVersion": "20260822120617",
+      "providerName": "atomic_vendor_risk_quota_mutations",
+      "appliedSqlSha256": "0c72e61ac821d9ad99347a0466550f1f327e1c30e5061f035a7495e2c8eaa506",
+      "mappedSourcePath": "supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "353e4c6d96284ecba3f2be158936fef8b20a76f7",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "ACL_CHANGE_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-068",
+      "providerLedgerOrder": 68,
+      "providerVersion": "20260831115851",
+      "providerName": "deterministic_commercial_contract_source_precedence",
+      "appliedSqlSha256": "821d15c0ae6c0a5bbb544153012bd7d6056ebbe1ef20a0e2fabdd77338238b80",
+      "mappedSourcePath": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "ALTERNATIVE_SOURCE_FILE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": "CONSOLIDATION_1",
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE",
+        "CONSOLIDATION_VERSION_DISTINCTION_REQUIRED"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "PRESERVE_DISTINCT_CONSOLIDATED_VERSION_ORDER",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-069",
+      "providerLedgerOrder": 69,
+      "providerVersion": "20260902193810",
+      "providerName": "reconcile_deterministic_commercial_contract_source_precedence",
+      "appliedSqlSha256": "894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac",
+      "mappedSourcePath": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": "CONSOLIDATION_1",
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE",
+        "CONSOLIDATION_VERSION_DISTINCTION_REQUIRED"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "PRESERVE_DISTINCT_CONSOLIDATED_VERSION_ORDER",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-070",
+      "providerLedgerOrder": 70,
+      "providerVersion": "20260902193849",
+      "providerName": "reconcile_enterprise_sso_production_runtime",
+      "appliedSqlSha256": "494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb",
+      "mappedSourcePath": "supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-071",
+      "providerLedgerOrder": 71,
+      "providerVersion": "20260902202558",
+      "providerName": "reconcile_linkedin_marketing_queue_runtime",
+      "appliedSqlSha256": "88ad165648dcaf47a5984aedcd59b9f2bb30f8316c10e64163b4c10669e29252",
+      "mappedSourcePath": "supabase/migrations/20260902162000_linkedin_marketing_queue.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "071258a285f61dd355366330bc98e25c15c439c6",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "ACL_CHANGE_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-077",
+      "providerLedgerOrder": 77,
+      "providerVersion": "20260905075429",
+      "providerName": "fail_fast_audit_chain_advisory_contention",
+      "appliedSqlSha256": "0b32cd5b0ebd5c51bfe4aa30db0ba9ba6448a5dfd4aefe5233f44ac70c6eb8df",
+      "mappedSourcePath": "supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "40ffc779e2bc0e4963754022a41c3388c66bfb32",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_71_84_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "ACL_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-078",
+      "providerLedgerOrder": 78,
+      "providerVersion": "20260907142133",
+      "providerName": "p0_audit_chain_fail_closed_nonretryable_conflicts_20260907",
+      "appliedSqlSha256": "3bd65011f7b2824d9bb5da539dee659c75646d5bcce8218e0bbfec636fecaeb0",
+      "mappedSourcePath": "supabase/migrations/20260907142133_p0_audit_chain_fail_closed_nonretryable_conflicts_20260907.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "77dd86615c1116e2941b947c5508673292eee114",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_71_84_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "ACL_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-091",
+      "providerLedgerOrder": 91,
+      "providerVersion": "20260909006900",
+      "providerName": "harden_security_advisor_rpc_surface",
+      "appliedSqlSha256": "d476e7bccc26e35ee42f1a542b7367bbed14106861c204c1741da7589615eeee",
+      "mappedSourcePath": "supabase/migrations/20260909006900_harden_security_advisor_rpc_surface.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "2463df98c666529f73c29d119357bf653bb21e62",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "ACL_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-092",
+      "providerLedgerOrder": 92,
+      "providerVersion": "20260909230946",
+      "providerName": "reconcile_data_governance_enterprise_foundation",
+      "appliedSqlSha256": "0b27879c8931dd9d70f25202c91c258182bad613d3373c49e904949e1dd4435e",
+      "mappedSourcePath": "supabase/migrations/20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "95dcfa9864a78743a457689505d09de67e028411",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "ACL_CHANGE_PRESENT",
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-093",
+      "providerLedgerOrder": 93,
+      "providerVersion": "20260909231011",
+      "providerName": "harden_data_subject_request_lifecycle",
+      "appliedSqlSha256": "de6ce60712a80565113b7bc106c6639d7f1bec188d381ec1a9efb157c42d26ed",
+      "mappedSourcePath": "supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "f17c23dfac681dc4127b8421e55c10b5b86ac823",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "ACL_CHANGE_PRESENT",
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-094",
+      "providerLedgerOrder": 94,
+      "providerVersion": "20260909232229",
+      "providerName": "finalize_backend_only_force_rls_and_trigger_acl",
+      "appliedSqlSha256": "1bc1f8f133c138d72d948ee6b1eccc9243fe51780a4b925b6dba9b731b5b6788",
+      "mappedSourcePath": "supabase/migrations/20260909144000_finalize_backend_only_force_rls_and_trigger_acl.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "0736379c52aad82568fb3a7773ff745aa64ffb8f",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "ACL_CHANGE_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-101",
+      "providerLedgerOrder": 101,
+      "providerVersion": "20260922112154",
+      "providerName": "reconcile_transactional_email_delivery_logs_v1",
+      "appliedSqlSha256": "3a4af676fb07d8f1565a22d657a888fb1d59f19f74b92a08057e71209ea33ae9",
+      "mappedSourcePath": "supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "400fe61fc6a42ab538b55e12122d694f8d161f30",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "POSSIBLE_BROAD_POLICY_USING_TRUE_REVIEW",
+        "ACL_CHANGE_PRESENT",
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P0_POLICY_SEMANTICS_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-102",
+      "providerLedgerOrder": 102,
+      "providerVersion": "20260922112907",
+      "providerName": "harden_transactional_email_delivery_log_policies_v1",
+      "appliedSqlSha256": "8bb11aa94e48620561cf74c4e47464b777beb35e7d6ec479368e522ab917c7bd",
+      "mappedSourcePath": "supabase/migrations/20260922112907_harden_transactional_email_delivery_log_policies_v1.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "12ab9c5e20299045734a6789e6f948cdcd078cc6",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-103",
+      "providerLedgerOrder": 103,
+      "providerVersion": "20260922203500",
+      "providerName": "reconcile_team_membership_runtime_rpcs",
+      "appliedSqlSha256": "ec8b6213e5a1b73ec6d0b49dfccf5bdabff0fac6dadf1c14a1ccb9c9727e0420",
+      "mappedSourcePath": "supabase/migrations/20260922203500_reconcile_team_membership_runtime_rpcs.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "e8681d025dd06e899c91a0da0decce3481e110ee",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "ACL_CHANGE_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-104",
+      "providerLedgerOrder": 104,
+      "providerVersion": "20260924141739",
+      "providerName": "tenant_wide_mfa_terminal",
+      "appliedSqlSha256": "023fc0af949877edfc43fd10a12d0b4aa60b8bd884f82330fa07ff0625e1a3fb",
+      "mappedSourcePath": "supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-105",
+      "providerLedgerOrder": 105,
+      "providerVersion": "20260924142553",
+      "providerName": "tenant_mfa_app_private_rls_authority",
+      "appliedSqlSha256": "47c93b26e13524655ea1905b06d11fc6904f773619389727cc519d655cbac762",
+      "mappedSourcePath": "supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-106",
+      "providerLedgerOrder": 106,
+      "providerVersion": "20260924143358",
+      "providerName": "tenant_mfa_public_rpc_acl_hardening",
+      "appliedSqlSha256": "66fcbd24e9810398b1470ca22ec60f63462830fc1402a7bc8cbbc6fe7ea7d050",
+      "mappedSourcePath": "supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "46f15c28e6aa5f41f663bb9637c0f5db3c387ef6",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "ACL_CHANGE_PRESENT"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-107",
+      "providerLedgerOrder": 107,
+      "providerVersion": "20260929101551",
+      "providerName": "optimize_rls_auth_initplan_terminal",
+      "appliedSqlSha256": "bb40fccf46f8dcf72c8f92197d12fba06b4fd9fe89685e134387d883f22aa847",
+      "mappedSourcePath": "supabase/migrations/20260929101551_optimize_rls_auth_initplan_terminal.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "d3829c5d0e0b41a4b617eb520eb35b18a2960915",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-108",
+      "providerLedgerOrder": 108,
+      "providerVersion": "20260929101638",
+      "providerName": "add_critical_fk_indexes_terminal",
+      "appliedSqlSha256": "d329f40a847a60368b6068d65c668220968869b0561f5313403880155c872bd8",
+      "mappedSourcePath": "supabase/migrations/20260929101638_add_critical_fk_indexes_terminal.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "4d4830b622b0087153f6c71d146982fe3aa9625c",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-109",
+      "providerLedgerOrder": 109,
+      "providerVersion": "20260929102134",
+      "providerName": "consolidate_compliance_tasks_select_policies_terminal",
+      "appliedSqlSha256": "626cabba53ffb1424f309b95df904605bed21f4fb827ac3d93228610ca9cba8f",
+      "mappedSourcePath": "supabase/migrations/20260929102134_consolidate_compliance_tasks_select_policies_terminal.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "62179bcfa06c3aa0f98b6829aa59029144e13ba6",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT",
+        "DROP_DDL_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-111",
+      "providerLedgerOrder": 111,
+      "providerVersion": "20261003134528",
+      "providerName": "fix_ai_system_text_array_rpc_contract",
+      "appliedSqlSha256": "dea017549e2569cfa5d4d8f5298a1a435ead801ac7f5bb77cb879d0a34313704",
+      "mappedSourcePath": "supabase/migrations/20261003134528_fix_ai_system_text_array_rpc_contract.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "cc53b5df3b1d2be9686e1bddda0d62dd41633238",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-112",
+      "providerLedgerOrder": 112,
+      "providerVersion": "20261003171225",
+      "providerName": "reconcile_risk_schema_contract",
+      "appliedSqlSha256": "1186770ebdef087aa24312c2544d19be5f3a1b24787ec6867b8f7667439901d9",
+      "mappedSourcePath": "supabase/migrations/20261003171225_reconcile_risk_schema_contract.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "026748a72728eb3ffa7c993224c9f121f79b5397",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "DROP_DDL_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-113",
+      "providerLedgerOrder": 113,
+      "providerVersion": "20261003173930",
+      "providerName": "reconcile_ai_incident_atomic_rpc",
+      "appliedSqlSha256": "1112bfa0b431e99ab473871d1f2e41ce0163c235a3b2535be44ba28b672dc3cf",
+      "mappedSourcePath": "supabase/migrations/20261003173930_reconcile_ai_incident_atomic_rpc.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "2c1aa2d020166c98ec537b620c8903472630273d",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "ACL_CHANGE_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-114",
+      "providerLedgerOrder": 114,
+      "providerVersion": "20261003205557",
+      "providerName": "fix_team_invitation_persistence_42702",
+      "appliedSqlSha256": "5371aab27e28dfb4e3ad38397cc897fb20f6dcbac255a2e3371acf9675e30332",
+      "mappedSourcePath": "supabase/migrations/20261003205557_fix_team_invitation_persistence_42702.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "21b23a46d328a560520d949ba06c6bdaf44b849c",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-115",
+      "providerLedgerOrder": 115,
+      "providerVersion": "20261003220421",
+      "providerName": "fix_team_invitation_acceptance_42702",
+      "appliedSqlSha256": "33937e182c16a8cc3d483561214605eee9f5376a7cead13da65f7568cd21f9e1",
+      "mappedSourcePath": "supabase/migrations/20261003221000_fix_team_invitation_acceptance_42702.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-116",
+      "providerLedgerOrder": 116,
+      "providerVersion": "20261003220519",
+      "providerName": "fix_team_invitation_membership_conflict_42702",
+      "appliedSqlSha256": "2cdf4141ab8bec955a5838243cd64f5142b670dcc01a7113576596df68a2c9cd",
+      "mappedSourcePath": "supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "60c7284639d2bda4eb300304bfaa42955d3b620a",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-117",
+      "providerLedgerOrder": 117,
+      "providerVersion": "20261004082501",
+      "providerName": "validate_audit_logs_actor_user_fk",
+      "appliedSqlSha256": "db12bfe5613df5425519632bd17fed43b3f3215c8917b1c2df58b6d55f31ee41",
+      "mappedSourcePath": "supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "9b997b1f8eb14f4947d83eb856476c1cfc429055",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-118",
+      "providerLedgerOrder": 118,
+      "providerVersion": "20261004103137",
+      "providerName": "force_rls_sales_console_backend_only",
+      "appliedSqlSha256": "85db3506d8a55a24d20be470e0735c4f6227de5624bf1e7b083942e243d8417b",
+      "mappedSourcePath": "supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "35ed8ccf2f332a3f92ecdf809091e1b8e077e1c5",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "ACL_CHANGE_PRESENT",
+        "DML_CHANGE_PRESENT"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-119",
+      "providerLedgerOrder": 119,
+      "providerVersion": "20261004110936",
+      "providerName": "add_sales_lead_email_templates",
+      "appliedSqlSha256": "561206132e6a308b736564265583b4cc975a76738f80093225d43dc1d401785d",
+      "mappedSourcePath": "supabase/migrations/20261004110936_add_sales_lead_email_templates.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "35e1f5aca770a00261c9456e8cf48c22b09c2caa",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-120",
+      "providerLedgerOrder": 120,
+      "providerVersion": "20261005001641",
+      "providerName": "harden_sync_legacy_risk_score_trigger_acl",
+      "appliedSqlSha256": "83df4db3bbb83926e6de111c1d3b11166c3750594c10b41bb55047e98aa7642e",
+      "mappedSourcePath": "supabase/migrations/20261005001641_harden_sync_legacy_risk_score_trigger_acl.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "9f9acc2df86bff12a8eb471494c5c599bee0e528",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "ACL_CHANGE_PRESENT"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "NOT_APPLICABLE",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-121",
+      "providerLedgerOrder": 121,
+      "providerVersion": "20261006125506",
+      "providerName": "20260721180000_annex_iv_technical_documentation_governance",
+      "appliedSqlSha256": "652786fda5b8b9e78ca40bb02272693987afa2a711eacc32e395d38726fa2c4b",
+      "mappedSourcePath": "supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-122",
+      "providerLedgerOrder": 122,
+      "providerVersion": "20261006125509",
+      "providerName": "20260721180100_annex_iv_package_section_integrity",
+      "appliedSqlSha256": "a984d66947fe8c0a913907f1460100e612ebcbd68f551f5efa85bf5eb8896100",
+      "mappedSourcePath": "supabase/migrations/20260721180100_annex_iv_package_section_integrity.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-123",
+      "providerLedgerOrder": 123,
+      "providerVersion": "20261006125511",
+      "providerName": "20260722200000_annex_iv_operational_workflow",
+      "appliedSqlSha256": "ea03f251ec326c93c2d48778b813fe3531d4db94aa65db9677e2db0408009952",
+      "mappedSourcePath": "supabase/migrations/20260722200000_annex_iv_operational_workflow.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-124",
+      "providerLedgerOrder": 124,
+      "providerVersion": "20261006125514",
+      "providerName": "20260803133000_article_50_product_integration",
+      "appliedSqlSha256": "d56475e7132fb8f0a5d7131763ab44a2d7bed6922e63b80637994bd7239bc9e7",
+      "mappedSourcePath": "supabase/migrations/20260803133000_article_50_product_integration.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-125",
+      "providerLedgerOrder": 125,
+      "providerVersion": "20261006125518",
+      "providerName": "20260803133100_article_50_claim_evidence_constraints",
+      "appliedSqlSha256": "3608522681bf77f7f0c2380cd18e5d50b84ff4409976493a5ed513b945d839f9",
+      "mappedSourcePath": "supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-126",
+      "providerLedgerOrder": 126,
+      "providerVersion": "20261006125623",
+      "providerName": "20261006140000_harden_annex_iv_trigger_function_acl",
+      "appliedSqlSha256": "d5465b63bbce5dadb4636ccd739231947832e90197b399ea356fbc4af0f094be",
+      "mappedSourcePath": "supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-127",
+      "providerLedgerOrder": 127,
+      "providerVersion": "20261006130430",
+      "providerName": "20261006140500_reconcile_gap_task_reference_integrity",
+      "appliedSqlSha256": "a6e961666eacd8c3b2bf1418097863b213e8bbec5bf2129a133e80d7d29174d2",
+      "mappedSourcePath": "supabase/migrations/20261006140500_reconcile_gap_task_reference_integrity.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-128",
+      "providerLedgerOrder": 128,
+      "providerVersion": "20261010075142",
+      "providerName": "harden_active_membership_governance_read",
+      "appliedSqlSha256": "29bad3ef3fbb77aafc5ef789829f1f41acdcc0d1b4cd91fb2019e81c4b7430c6",
+      "mappedSourcePath": "supabase/migrations/20261009210000_harden_active_membership_governance_read.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "c505c26eb8afb94ea357dba05755141102901b15",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "RLS_POLICY_DDL_PRESENT"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-129",
+      "providerLedgerOrder": 129,
+      "providerVersion": "20261013133323",
+      "providerName": "fix_enterprise_provision_usage_conflict_ambiguity",
+      "appliedSqlSha256": "6eb4f7dfe9291502bc07fb2404af0bceeba5c9426e95ed7ef7c9f17f55c5d89e",
+      "mappedSourcePath": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "6bb79daea8d6dc5bc443d185da0da7e57090bd37",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": "CONSOLIDATION_2",
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "DML_CHANGE_PRESENT",
+        "CONSOLIDATION_VERSION_DISTINCTION_REQUIRED"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "PRESERVE_DISTINCT_CONSOLIDATED_VERSION_ORDER",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-130",
+      "providerLedgerOrder": 130,
+      "providerVersion": "20261013133341",
+      "providerName": "fix_enterprise_provision_usage_update_ambiguity",
+      "appliedSqlSha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6",
+      "mappedSourcePath": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+      "caseTypes": [
+        "UNPROVEN_ORIGINAL_WHOLE_SOURCE",
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "NO_PROVEN_WHOLE_SOURCE_BYTES",
+      "recoveredAppliedSqlPresent": true,
+      "historicalCandidateCommit": "6bb79daea8d6dc5bc443d185da0da7e57090bd37",
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": "CONSOLIDATION_2",
+      "riskSignals": [
+        "SECURITY_DEFINER_PRESENT",
+        "DML_CHANGE_PRESENT",
+        "CONSOLIDATION_VERSION_DISTINCTION_REQUIRED"
+      ],
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "PRESERVE_DISTINCT_CONSOLIDATED_VERSION_ORDER",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-131",
+      "providerLedgerOrder": 131,
+      "providerVersion": "20261015205458",
+      "providerName": "enterprise_entitlement_v3_compatibility",
+      "appliedSqlSha256": "e9c82b1680d17240bb84a103784706ab7c4c36e6ac3c3eeb8d523090624e519d",
+      "mappedSourcePath": "supabase/migrations/20261015090000_enterprise_entitlement_v3_compatibility.sql",
+      "caseTypes": [
+        "NONEXACT_VERSION_MAPPING"
+      ],
+      "sourceProofStatus": "CURRENT_MAPPED_SOURCE_BYTES_VERIFIED_IDENTITY_PENDING",
+      "recoveredAppliedSqlPresent": false,
+      "historicalCandidateCommit": null,
+      "immutableSourceEvidence": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+      "consolidationGroup": null,
+      "riskSignals": [
+        "APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE"
+      ],
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "humanReview": {
+        "sourceProvenanceDisposition": "EXISTING_BYTE_PROOF_RECHECK_PENDING",
+        "versionMappingDisposition": "PENDING",
+        "securitySemanticsDisposition": "PENDING",
+        "reviewerIdentity": null,
+        "reviewerEvidenceReference": null,
+        "reviewerRationale": null,
+        "independentlyAccepted": false
+      },
+      "replayAuthorized": false
+    }
+  ]
+}

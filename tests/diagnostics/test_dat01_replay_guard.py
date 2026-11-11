@@ -24,6 +24,8 @@ class Dat01ReplayGuardTest(unittest.TestCase):
         (self.root / "scripts/diagnostics/g5-02-prod-ledger-versions.json").write_text(
             json.dumps({"versions": versions}))
         shutil.copyfile(SCRIPT, self.root / "scripts/diagnostics/g5-02-canonical-replay.py")
+        shutil.copyfile(REPO / "scripts/diagnostics/dat01_pg17_target_boundary.py",
+                        self.root / "scripts/diagnostics/dat01_pg17_target_boundary.py")
 
     def execute(self, report, code=0):
         preflight = self.root / "scripts/diagnostics/dat01-provider-provenance-preflight.py"
@@ -31,7 +33,9 @@ class Dat01ReplayGuardTest(unittest.TestCase):
                              ")\nsys.exit(" + str(code) + ")\n")
         env = dict(os.environ)
         for name in ["CIRCLE_SHA1", "DATABASE_URL", "DIRECT_URL", "SUPABASE_SERVICE_ROLE_KEY",
-                     "SUPABASE_ACCESS_TOKEN", "PGSERVICEFILE", "PGPASSFILE"]:
+                     "SUPABASE_ACCESS_TOKEN", "PGSERVICEFILE", "PGPASSFILE",
+                     "PGHOSTADDR", "PGSERVICE", "PGSYSCONFDIR", "PGOPTIONS",
+                     "PGTARGETSESSIONATTRS", "PGLOADBALANCEHOSTS", "PGPORT", "PGUSER"]:
             env.pop(name, None)
         env["PGHOST"] = "127.0.0.1"
         env["PGDATABASE"] = "risck_synthetic"
@@ -71,6 +75,25 @@ class Dat01ReplayGuardTest(unittest.TestCase):
         _, evidence = self.execute({"status": "PREFLIGHT_OK"}, code=2)
         self.assertEqual(evidence["failure_code"], "DAT01_PROVIDER_PROVENANCE_BLOCKED")
         self.assertEqual(evidence["completed"], 0)
+
+    def test_libpq_hostaddr_override_fails_before_any_source_or_sql_replay(self):
+        old = os.environ.get("PGHOSTADDR")
+        os.environ["PGHOSTADDR"] = "198.51.100.10"
+        try:
+            # execute() cleans hostaddr for its standard fixture; preserve the
+            # explicit override in a direct copy of its setup instead.
+            bad = dict(os.environ)
+            bad["PGHOST"] = "127.0.0.1"
+            bad["PGDATABASE"] = "risck_synthetic"
+            from importlib.util import spec_from_file_location, module_from_spec
+            spec = spec_from_file_location("scope", REPO / "scripts/diagnostics/dat01_pg17_target_boundary.py")
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
+            with self.assertRaisesRegex(module.TargetRefused, "PGHOSTADDR"):
+                module.validate_local_connection(bad)
+        finally:
+            if old is None: os.environ.pop("PGHOSTADDR", None)
+            else: os.environ["PGHOSTADDR"] = old
 
 if __name__ == "__main__":
     unittest.main()

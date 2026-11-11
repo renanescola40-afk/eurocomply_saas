@@ -1,0 +1,104 @@
+{
+  "schema": "risck-comply.phase1-v22.qat01-github-hosted-ci-readback.v1",
+  "observedDate": "2026-11-04",
+  "control": "QAT-01",
+  "gate": "A-15",
+  "canonical": {
+    "branch": "integration/enterprise-unified-candidate-20261102",
+    "headSha": "38aada9d29ce8ee93daa2a33f94038e9e484a3fc",
+    "pr": 2598
+  },
+  "githubActions": {
+    "workflowRunsAtExactHead": 49,
+    "reportedConclusion": "49/49 failure",
+    "inspectedRuns": [
+      {
+        "runId": 41845204965,
+        "name": "CI",
+        "jobs": [
+          {
+            "name": "quality",
+            "id": 126626798107,
+            "conclusion": "failure",
+            "steps": 0,
+            "startedAt": null,
+            "completedAt": null
+          }
+        ]
+      },
+      {
+        "runId": 41845204109,
+        "name": "Full Security Suite",
+        "jobs": [
+          {
+            "name": "Secret scanning (Gitleaks)",
+            "steps": 0
+          },
+          {
+            "name": "Actionlint",
+            "steps": 0
+          },
+          {
+            "name": "OSSF Scorecard",
+            "steps": 0
+          },
+          {
+            "name": "Semgrep SAST",
+            "steps": 0
+          },
+          {
+            "name": "CodeQL",
+            "steps": 0
+          },
+          {
+            "name": "Core CI, build and npm audit",
+            "steps": 0
+          },
+          {
+            "name": "Dependency Review",
+            "steps": 0
+          },
+          {
+            "name": "Enterprise merge/deploy gate",
+            "steps": 0
+          }
+        ]
+      },
+      {
+        "runId": 41845204681,
+        "name": "Enterprise Evidence Tests",
+        "jobs": [
+          {
+            "name": "Validate enterprise evidence contracts",
+            "id": 126626795792,
+            "steps": 0,
+            "conclusion": "failure",
+            "startedAt": null,
+            "completedAt": null
+          }
+        ]
+      }
+    ],
+    "observedJobSteps": 0,
+    "classification": "HOSTED_EXECUTION_NOT_OBSERVED; cause requires provider admission/runner/billing evidence",
+    "codeFailureConfirmed": false,
+    "codePassConfirmed": false,
+    "githubLogsClassification": "NOT_RETRIEVED_FOR_THIS_SHA",
+    "noCIBypass": true
+  },
+  "circleCI": {
+    "provider": "PRIMARY_PER_OWNER",
+    "exactShaEvidence": "NOT_VERIFIED_IN_THIS_EXECUTOR",
+    "dependencies": "Executor 3 controls canonical CI integration and provider evidence"
+  },
+  "acceptance": {
+    "actualSourceTestSuitesComplete": false,
+    "actualBuildVerified": false,
+    "signedQualityAcceptance": false,
+    "qualifiedReviewer": "PENDING",
+    "QAT01": "NOT_VERIFIED",
+    "A15": "NOT_ACCEPTED",
+    "formalPassesAdded": 0
+  },
+  "nextAction": "Executor 3 must inspect provider job admission, confirm source tests at one exact canonical SHA on permitted CircleCI runner, preserve logs, request qualified review; do not treat step-less failures as tested application failures or green jobs."
+}
