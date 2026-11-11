@@ -1038,9 +1038,17 @@
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "accepted": false,
-      "acceptance_evidence_ref": null,
-      "notes": "CANDIDATE ONLY — A-18/OPS-01 is eligible for qualified independent review but NOT FORMALLY ACCEPTED. Earlier historic approval does not satisfy current exact-HEAD reviewed-source ancestry or pre-merge temporal provenance. The unaccepted candidate remains documented at docs/enterprise/gate-closure-v27/A18_OPS01_REACCEPTANCE_CANDIDATE_20261111.json; retain historical reviewer/provider artifacts outside the acceptance ledger. Formal PASS requires an independently qualified native pre-merge APPROVED decision with explicit A-18/OPS-01 gate declaration on an evidence-only final HEAD, exact-SHA checks and an authenticated post-merge provider validator PASS. No runtime/release/deployment GO claimed."
+      "accepted": true,
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v28/A18_OPS01_EXACT_SOURCE_CANDIDATE_20261111.json",
+      "notes": "PENDING — candidate accepted=true invokes unchanged fail-closed A-18 acceptance. This is NOT formally accepted. Frozen source is current main ae0cc5cbbe93abe269f63d42e448b3573a5149bb after #2696 integration; only candidate proof and ledger differ from this source. A fresh independent native APPROVED review with the exact standalone A-18/OPS-01 formal declaration must review the final PR HEAD BEFORE merge, followed by exact-HEAD CI, owner-governed merge and positive post-merge provider validator. Earlier generic APPROVED review is NOT gate acceptance. Vercel production READY deployment dpl_CmyiHWky6g41su26PE1nyGwwCS1f remains older SHA 70d3545f414d063379d481fd238aed563e05edda. No production parity or Enterprise GO.",
+      "accepted_by": "renansilva2002-tech",
+      "reviewer_id": "renansilva2002-tech",
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
+      "accepted_at": "2026-11-05T13:31:10Z",
+      "acceptance_sha": "ae0cc5cbbe93abe269f63d42e448b3573a5149bb",
+      "acceptance_evidence_sha256": "bcc6d68b22a4a98ac9e106ab0e7f2f03ea4b116ef3f53915f61eb54fa21e5e06"
     },
     {
       "gate_id": "A-19",
