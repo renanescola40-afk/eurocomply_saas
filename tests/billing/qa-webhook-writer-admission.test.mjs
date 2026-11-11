@@ -21,6 +21,26 @@ test('QA preview rejects signed delivery while no authorized writer implementati
   });
 });
 
+test('non-QA Vercel Preview cannot silently write Stripe events to Production Supabase', () => {
+  for (const env of [
+    { VERCEL_ENV: 'preview', NEXT_PUBLIC_SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co' },
+    { VERCEL_ENV: 'preview', RISCK_QA_ENVIRONMENT: 'false', NEXT_PUBLIC_SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co/' },
+    { VERCEL_ENV: 'preview', NEXT_PUBLIC_SUPABASE_URL: 'https://TGANHBBHFXCPBLMGQPRG.SUPABASE.CO:443' },
+  ]) {
+    assert.deepEqual(evaluateQaWebhookAdmission(env), {
+      allowed: false, reason: 'qa_environment_mismatch',
+    });
+  }
+});
+
+test('custom QA target with missing QA flag cannot route Stripe writes to Production Supabase', () => {
+  assert.deepEqual(evaluateQaWebhookAdmission({
+    VERCEL_TARGET_ENV: 'qa',
+    VERCEL_ENV: 'preview',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co',
+  }), { allowed: false, reason: 'qa_environment_mismatch' });
+});
+
 test('explicit QA flag with production database is denied', () => {
   assert.deepEqual(evaluateQaWebhookAdmission({
     ...qa, NEXT_PUBLIC_SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co',
