@@ -1038,8 +1038,8 @@
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "accepted": false,
-      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
+      "accepted": true,
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_REACCEPTANCE_CANDIDATE_20261111.json",
       "notes": "CANDIDATE ONLY; not formally accepted. Reanchored to authenticated merged main eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b following the #2676 cross-scope merge that caused #2679 post-merge acceptance_sha_mismatch. Vercel production deployed identity is historical and intentionally distinct from current main. Require a NEW native independent APPROVED review of the exact final HEAD with standalone line A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED, exact-head required checks, owner-governed merge, strictly evidence-only source ancestry, and post-merge official valid=true/gates_accepted>=1. No product/runtime/release GO.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
@@ -1047,8 +1047,8 @@
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b",
-      "acceptance_evidence_sha256": "71b08ce1396dfc5ee8088148d5101fdd6e1aa35d0679bdf461533b8f42abc963"
+      "acceptance_sha": "0dee93a2e0b009988b6c9c729a0843130be35cf2",
+      "acceptance_evidence_sha256": "0f08028a6c05a32a2272792b82820417146a103c3ad5ab4d73b2c3bfb7e86a47"
     },
     {
       "gate_id": "A-19",

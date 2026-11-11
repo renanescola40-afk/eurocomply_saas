@@ -1,0 +1,31 @@
+{
+  "schema": "risck-comply.g1.a18-ops01-gate-acceptance-proof.v1",
+  "gate_id": "A-18",
+  "control_id": "OPS-01",
+  "claim_scope": "ONLY_CURRENT_PRODUCTION_DEPLOYMENT_IDENTITY_NOT_FULL_RELEASE_GO",
+  "acceptance_source_sha": "0dee93a2e0b009988b6c9c729a0843130be35cf2",
+  "acceptance_source_selection": "Exact post-QAT-01 merged main. Only this proof and the canonical evidence index may change between frozen source and proposed acceptance HEAD.",
+  "provider": "Vercel authenticated read-only list_deployments",
+  "provider_project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+  "provider_team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+  "provider_target": "production",
+  "provider_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+  "provider_state": "READY",
+  "deployed_production_git_sha": "70d3545f414d063379d481fd238aed563e05edda",
+  "provider_observed_date_utc": "2026-11-11",
+  "historical_proof_path": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
+  "historical_proof_blob_sha": "17d553a7b35586497b219c28214f58e39bd14ced",
+  "qualified_review": {
+    "reviewer_login": "renansilva2002-tech",
+    "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
+    "reviewed_head_sha": "1dc9b63f6f13ea9b090b2840610582a39d3ac90e",
+    "reviewer_followup_comment_id": 6659265179
+  },
+  "candidate_status": "PENDING_NEW_NATIVE_APPROVED_EXACT_PR_HEAD_REVIEW_WITH_FORMAL_LINE",
+  "required_native_approval_line": "A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED",
+  "scope_limitations": [
+    "This historical qualified review is not approval of the proposed current PR",
+    "A new independent native GitHub APPROVED review on the final exact PR HEAD with the standalone formal gate decision is required",
+    "No production writes, deployment, customer E2E, release authorization or Enterprise GO"
+  ]
+}
