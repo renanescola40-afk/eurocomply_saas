@@ -94,7 +94,7 @@ test('failed initial attempt permits safe retry of the same immutable bytes', as
 test('real upload wiring delegates to fail-closed recovery without overwrite', () => {
   const source = readFileSync('src/lib/evidence/storage.ts', 'utf8');
   assert.match(source, /uploadImmutableEvidenceObject\(\{/);
-  assert.match(source, /\.download\(\s*objectPath/);
+  assert.match(source, /\.download\s*\(\s*objectPath/);
   assert.match(source, /expectedSize: fileSizeBytes/);
   assert.match(source, /upsert: false/);
 });
