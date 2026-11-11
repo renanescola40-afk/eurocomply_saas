@@ -55,6 +55,19 @@ jobs:
           fetch-depth: 2
           persist-credentials: false
 
+      # The official browser container runs with a different UID from the
+      # checked-out workspace. Trust this one ephemeral path, never all repos.
+      - name: Trust only the checked-out GitHub Actions workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_ACTIONS:-}" = "true"
+          test -n "${GITHUB_WORKSPACE:-}"
+          test -d "$GITHUB_WORKSPACE/.git"
+          case "$GITHUB_WORKSPACE" in /__w/*/*) ;; *) echo "Unexpected CI workspace path" >&2; exit 1 ;; esac
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse --show-toplevel)" = "$GITHUB_WORKSPACE"
+
       - name: Detect dependency manifest changes
         id: manifests
         shell: bash
