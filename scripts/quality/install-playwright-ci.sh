@@ -11,6 +11,32 @@ set -euo pipefail
 # Playwright install Chromium and all required system dependencies normally.
 # Any Playwright/browser/dependency failure still exits non-zero.
 
+# E2E-only jobs use the official version-pinned Playwright image, which
+# already provides Chromium plus all OS packages. Validate the exact package
+# version, preinstalled executable and a real browser launch; never treat an
+# environment variable alone as proof that the required E2E is runnable.
+# Other hosts keep the apt --with-deps installation path below (fail closed).
+if [[ -n "${PLAYWRIGHT_PREINSTALLED_IMAGE_VERSION:-}" ]]; then
+  test "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright"
+  node --input-type=module <<'NODE'
+import fs from 'node:fs';
+import { chromium } from '@playwright/test';
+const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+const pinned = lock.packages?.['node_modules/@playwright/test']?.version;
+if (pinned !== process.env.PLAYWRIGHT_PREINSTALLED_IMAGE_VERSION) {
+  throw new Error('playwright_image_version_mismatch');
+}
+const executable = chromium.executablePath();
+if (!executable.startsWith('/ms-playwright/') || !fs.existsSync(executable)) {
+  throw new Error('pinned_playwright_browser_missing');
+}
+const browser = await chromium.launch({ headless: true });
+await browser.close();
+console.log('Preinstalled exact-version Chromium launched successfully; mandatory E2E stays enabled');
+NODE
+  exit 0
+fi
+
 if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
   disabled_any=false
   for source in \
