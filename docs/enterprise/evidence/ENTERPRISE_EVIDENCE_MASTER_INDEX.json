@@ -1039,16 +1039,16 @@
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
-      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v29/A18_OPS01_EXACT_SOURCE_REACCEPTANCE_20261111.json",
-      "notes": "PENDING (NOT FORMALLY ACCEPTED): exact-source A-18 candidate on frozen current main fe6a36ee23deb93be04c576c1ca3a01638d26e15 after merged security PR #2699; only canonical index plus new gate proof differ from source. Previous native acceptance valid at older merged SHA c1074d86fc631ce412259d490ead7a11f7ab7cdf does NOT transfer across unrelated code. Fresh independent native GitHub APPROVED review on the current new PR HEAD with standalone A-18/OPS-01 formal declaration BEFORE merge is mandatory; require official exact-HEAD Enterprise Evidence Tests PASS, human-governed merge and provider-authenticated post-merge PASS. Vercel production remains READY on older SHA 70d3545f414d063379d481fd238aed563e05edda; no production parity/Enterprise GO. Governance issue #1340 tracks missing required evidence status check and code-freeze sequencing.",
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v30/A18_OPS01_POST_SEC01_MAIN_REACCEPTANCE_20261111.json",
+      "notes": "PENDING (NOT YET FORMALLY RE-ACCEPTED): frozen post-#2701 main 50ce3ebf4219573e2ea2cf976b53dea20e65425b with Vercel production deployment identity observed read-only on 2026-11-11; only this canonical index and proof v30 are changed. Prior #2700 A-18 native approval is non-transferable after SEC-01 QA source edit. Require fresh independent pre-merge native APPROVED review on exact current PR head explicitly containing 'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED', official validator PASS and post-merge validator PASS. No source or production deployment parity, customer E2E, Enterprise GO or release authorization. Gate check not required by ruleset; issue #1340 remains.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "fe6a36ee23deb93be04c576c1ca3a01638d26e15",
-      "acceptance_evidence_sha256": "0914d8d6be99c21a13a61effb179e720d4f95cdca9bc3f0693162537203a5404"
+      "acceptance_sha": "50ce3ebf4219573e2ea2cf976b53dea20e65425b",
+      "acceptance_evidence_sha256": "7256e8cdcba186ee6ef031ea295af5155f84518d1bb180a605f11774ccea117b"
     },
     {
       "gate_id": "A-19",
