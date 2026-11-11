@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v28/A18_OPS01_EXACT_SOURCE_CANDIDATE_20261111.json",
-      "notes": "PENDING — candidate accepted=true only to invoke the unchanged fail-closed official A-18 acceptance validator. This is NOT formal acceptance until fresh authenticated independent native APPROVED review on this exact PR HEAD with the standalone formal declaration, exact-HEAD checks, human-governed merge, and successful provider post-merge validation. Frozen source main e2a65090bbfd800229dffd21759da5fa3fbdba32. Historical proof remains immutable. Vercel production identity dpl_CmyiHWky6g41su26PE1nyGwwCS1f is READY on older SHA 70d3545f414d063379d481fd238aed563e05edda, NOT exact current-main parity. No deployment or Enterprise GO.",
+      "notes": "PENDING — candidate accepted=true invokes unchanged fail-closed A-18 acceptance. This is NOT formally accepted. Frozen source is current main ae0cc5cbbe93abe269f63d42e448b3573a5149bb after #2696 integration; only candidate proof and ledger differ from this source. A fresh independent native APPROVED review with the exact standalone A-18/OPS-01 formal declaration must review the final PR HEAD BEFORE merge, followed by exact-HEAD CI, owner-governed merge and positive post-merge provider validator. Earlier generic APPROVED review is NOT gate acceptance. Vercel production READY deployment dpl_CmyiHWky6g41su26PE1nyGwwCS1f remains older SHA 70d3545f414d063379d481fd238aed563e05edda. No production parity or Enterprise GO.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "e2a65090bbfd800229dffd21759da5fa3fbdba32",
-      "acceptance_evidence_sha256": "76c721778bf6271392a578e8b4edc7158df561a5c5b59d0f8dc4e7c691a8fdb8"
+      "acceptance_sha": "ae0cc5cbbe93abe269f63d42e448b3573a5149bb",
+      "acceptance_evidence_sha256": "bcc6d68b22a4a98ac9e106ab0e7f2f03ea4b116ef3f53915f61eb54fa21e5e06"
     },
     {
       "gate_id": "A-19",
