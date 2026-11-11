@@ -37,13 +37,36 @@ jobs:
   core:
     name: Core CI, build and npm audit
     runs-on: ubuntu-24.04
+    # Same pinned official Chromium + dependencies as Enterprise Production E2E.
+    # Real browser tests remain required; no APT mirror dependency on the runner.
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 45
+    env:
+      PLAYWRIGHT_PREINSTALLED_IMAGE_VERSION: '1.61.1'
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 2
           persist-credentials: false
+
+      # The official browser container runs with a different UID from the
+      # checked-out workspace. Trust this one ephemeral path, never all repos.
+      - name: Trust only the checked-out GitHub Actions workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_ACTIONS:-}" = "true"
+          test -n "${GITHUB_WORKSPACE:-}"
+          test -d "$GITHUB_WORKSPACE/.git"
+          case "$GITHUB_WORKSPACE" in /__w/*/*) ;; *) echo "Unexpected CI workspace path" >&2; exit 1 ;; esac
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse --show-toplevel)" = "$GITHUB_WORKSPACE"
 
       - name: Detect dependency manifest changes
         id: manifests
@@ -141,13 +164,10 @@ jobs:
           if [ -z "${E2E_BASE_URL:-}" ]; then
             unset E2E_BASE_URL
           fi
-          # GitHub-hosted Ubuntu images include an unrelated Google Chrome APT
-          # source. If that CDN index is transiently inconsistent, apt fails
-          # before Playwright can install its own Chromium dependencies. Remove
-          # only that optional runner source; Chromium + E2E remain fail-closed.
-          sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources
-          sudo rm -f /var/lib/apt/lists/dl.google.com_linux_chrome_deb_dists_stable_*
-          npx playwright install --with-deps chromium
+          # Use the same fail-closed Chromium dependency installer as the
+          # Enterprise E2E gate, with signed Ubuntu mirror resilience on runners.
+          # Never skip Playwright, browser dependencies or required E2E checks.
+          bash scripts/quality/install-playwright-ci.sh
           if ! npm run test:e2e -- --reporter=line,json > playwright-e2e.log 2>&1; then
             echo "::error title=Playwright E2E failed::The production-like E2E suite failed. Merge and release remain blocked."
             tail -n 250 playwright-e2e.log

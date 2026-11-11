@@ -89,7 +89,12 @@ export async function verifyGitHubA18CurrentHead(gate,{expectedSha,prNumber,toke
    // A native APPROVED code review may explicitly withhold formal gate acceptance.
    typeof r.body==='string'&&
    r.body.split(/\r?\n/).some(line=>line.trim()==='A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED')&&
-   !/(?:FORMAL GATE ACCEPTANCE|A-18\s*\/\s*OPS-01).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i.test(r.body));
+   !/(?:FORMAL GATE ACCEPTANCE|A-18\s*\/\s*OPS-01).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i.test(r.body)&&
+   // Native gate approval after a merge cannot retroactively authorize that merge.
+   // Preserve the exact reviewed HEAD and require pre-merge approval provenance.
+   (!pull.merged_at || (Number.isFinite(Date.parse(pull.merged_at))&&
+     Number.isFinite(Date.parse(r.submitted_at))&&
+     Date.parse(r.submitted_at)<=Date.parse(pull.merged_at))));
  }catch{return false;}
 }
 
