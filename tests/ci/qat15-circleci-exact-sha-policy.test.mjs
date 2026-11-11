@@ -1,0 +1,78 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import test from 'node:test';
+
+const configPath = process.env.QAT15_CIRCLECI_CONFIG ?? new URL('../../.circleci/config.yml', import.meta.url);
+const config = fs.readFileSync(configPath, 'utf8');
+
+test('QAT-01 exact-SHA quality job is opt-in and exact-source guarded', () => {
+  assert.match(config, /^  run_qat15_missing_checks:\n    type: boolean\n    default: false/m);
+  assert.match(config, /^  qat15_source_branch:\n    type: string\n    default: "none"/m);
+  assert.match(config, /^  qat15_source_sha:\n    type: string\n    default: "none"/m);
+  assert.match(config, /^  qat15_gitleaks_only:\n    type: boolean\n    default: false/m);
+  assert.match(config, /qat15-missing-checks-manual:[\s\S]*?when: << pipeline\.parameters\.run_qat15_missing_checks >>[\s\S]*?only:[\s\S]*?ci\/qat15-exact-sha-quality-20261107/);
+  assert.match(config, /qat15-missing-checks:\n[\s\S]*?test "\$\(git rev-parse HEAD\)" = "\$\{CIRCLE_SHA1/);
+  assert.match(config, /TARGET_QAT15_SHA/);
+  assert.match(config, /\^\[0-9a-f\]\{40\}\$/);
+  assert.match(config, /git ls-remote --exit-code origin "refs\/heads\/\$TARGET_QAT15_BRANCH"/);
+  assert.match(config, /test "\$remote_sha" = "\$TARGET_QAT15_SHA"/);
+  assert.match(config, /test "\$\(git rev-parse HEAD\)" = "\$TARGET_QAT15_SHA"/);
+  assert.match(config, /provider credential/i);
+  assert.match(config, /productionWrites.*0/);
+});
+
+test('QAT-01 job runs only missing checks and does not repeat Vitest', () => {
+  const job = config.match(/  qat15-missing-checks:\n([\s\S]*?)(?=\n  [a-z0-9-]+:\n|\nworkflows:)/)?.[0] ?? '';
+  assert.ok(job.length > 0, 'QAT-01 job exists');
+  assert.match(job, /scripts\/security\/run-security-ci-without-audit\.mjs/);
+  assert.match(job, /security:npm-audit:all/);
+  assert.match(job, /npm run build/);
+  assert.match(job, /npm run quality:routes/);
+  assert.match(job, /CIRCLE_OIDC_TOKEN_V2/);
+  assert.match(job, /\*_TOKEN/);
+  assert.match(job, /"circleOidcTokenUsed":false/);
+  assert.match(job, /"privilegedProviderCredentialsPresent":false/);
+  assert.doesNotMatch(job, /\$CIRCLE_OIDC_TOKEN|printenv CIRCLE_OIDC_TOKEN/);
+  assert.match(job, /gitleaks/);
+  assert.match(job, /store_artifacts/);
+  assert.doesNotMatch(job, /npm run test|vitest/i);
+  const environment = job.match(/    environment:\n((?:      .*\n)+)/)?.[0] ?? '';
+  assert.ok(environment.length > 0, 'must parse the actual CircleCI job environment before checking for forbidden credentials');
+  assert.doesNotMatch(environment, /DATABASE_URL|DIRECT_URL|SUPABASE_ACCESS_TOKEN|STRIPE_SECRET_KEY|VERCEL_TOKEN|RESEND_API_KEY|SENTRY_AUTH_TOKEN/i);
+  assert.doesNotMatch(job, /npm run deploy|vercel .*deploy|stripe (?:live|charges?)/i);
+});
+
+
+test('QAT-01 Gitleaks failure is captured and the results artifact is completed', () => {
+  const job = config.match(/  qat15-missing-checks:\n([\s\S]*?)(?=\n  [a-z0-9-]+:\n|\nworkflows:)/)?.[0] ?? '';
+  const scan = job.match(/            run_gitleaks\(\) \{([\s\S]*?)\n            \}/)?.[1] ?? '';
+  assert.match(scan, /set -uo pipefail/);
+  assert.doesNotMatch(scan, /set -euo pipefail/);
+  assert.ok(scan.includes('|| return $?'));
+  assert.match(job, /run_check gitleaks-findings run_gitleaks/);
+  assert.match(job, /overall/);
+});
+
+test('QAT-01 can rerun only the previously unproven Gitleaks gate', () => {
+  assert.ok(config.includes("QAT15_GITLEAKS_ONLY: << pipeline.parameters.qat15_gitleaks_only >>"));
+  assert.ok(config.includes('if [ "$QAT15_GITLEAKS_ONLY" != "true" ]; then'));
+  assert.ok(config.includes('run_check gitleaks-findings run_gitleaks'));
+  assert.ok(config.includes('overall'));
+});
+
+
+test('QAT-01 stores only SHA-bound redacted Gitleaks metadata', () => {
+  assert.ok(config.includes('QAT15_GITLEAKS_SANITIZED'));
+  assert.ok(config.includes('sourceSha:process.env.TARGET_QAT15_SHA'));
+  assert.ok(config.includes('gitleaks-findings.json'));
+  assert.ok(config.includes('file:String(x.File||"")'));
+  assert.ok(config.includes('line:Number(x.StartLine||0)'));
+  assert.ok(config.includes('ruleId:String(x.RuleID||"")'));
+  assert.ok(config.includes('process.exit(rows.length===0?0:3)'));
+});
+
+test('QAT-01 policy regexes actually match forbidden literal OIDC reads and job environment lines', () => {
+  assert.match('echo "$CIRCLE_OIDC_TOKEN"', /\$CIRCLE_OIDC_TOKEN|printenv CIRCLE_OIDC_TOKEN/);
+  assert.match('  *_TOKEN)', /\*_TOKEN/);
+  assert.match('    environment:\n      STRIPE_SECRET_KEY: forbidden\n', /    environment:\n((?:      .*\n)+)/);
+});

@@ -28,6 +28,19 @@ parameters:
     type: boolean
     default: false
 
+  run_qat15_missing_checks:
+    type: boolean
+    default: false
+  qat15_source_branch:
+    type: string
+    default: "none"
+  qat15_source_sha:
+    type: string
+    default: "none"
+  qat15_gitleaks_only:
+    type: boolean
+    default: false
+
   run_actions_recovery:
     type: boolean
     default: false
@@ -892,6 +905,92 @@ jobs:
 
   # Automatic, read-only CI for GitHub PR/push events. Never uses any QA or PROD context.
   # This is deliberately narrower than a provider-backed Enterprise acceptance job.
+  qat15-missing-checks:
+    docker:
+      - image: cimg/node:22.16.0
+    resource_class: large
+    working_directory: ~/project
+    environment:
+      TARGET_QAT15_BRANCH: << pipeline.parameters.qat15_source_branch >>
+      TARGET_QAT15_SHA: << pipeline.parameters.qat15_source_sha >>
+      QAT15_GITLEAKS_ONLY: << pipeline.parameters.qat15_gitleaks_only >>
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+      NODE_OPTIONS: --max-old-space-size=5120
+    steps:
+      - checkout
+      - run:
+          name: Verify coordinator, exact source and credential-free scope
+          command: |
+            set -euo pipefail
+            test "${CIRCLE_BRANCH:-}" = "ci/qat15-exact-sha-quality-20261107"
+            config_sha="$(git rev-parse HEAD)"
+            test -n "${CIRCLE_SHA1:-}" && test "$config_sha" = "$CIRCLE_SHA1"
+            test "$(node --version)" = "v22.16.0"
+            test "$TARGET_QAT15_BRANCH" = "ci/circleci-pr-validation-20261104"
+            [[ "$TARGET_QAT15_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "QAT-01 target SHA must be a full lowercase Git SHA" >&2; exit 1; }
+            while IFS='=' read -r name _; do
+              case "$name" in
+                CIRCLE_OIDC_TOKEN|CIRCLE_OIDC_TOKEN_V2|CIRCLE_OIDC_TOKEN_V3) ;;
+                DATABASE_URL|DIRECT_URL|SUPABASE_*|STRIPE_*|VERCEL_*|RESEND_*|SENTRY_*|QA_DB_*|PGPASSWORD|AWS_*|*_TOKEN|*_SECRET|*_API_KEY|*_PASSWORD|*_PRIVATE_KEY)
+                  echo "Unexpected provider credential name is present; refusing source-only execution" >&2
+                  exit 1
+                  ;;
+              esac
+            done < <(env)
+            node --test tests/ci/qat15-circleci-exact-sha-policy.test.mjs
+            remote_sha="$(git ls-remote --exit-code origin "refs/heads/$TARGET_QAT15_BRANCH" | awk '{print $1}')"
+            test "$remote_sha" = "$TARGET_QAT15_SHA" || { echo "QAT-01 target SHA is stale or incorrect" >&2; exit 1; }
+            git fetch --depth=1 origin "refs/heads/$TARGET_QAT15_BRANCH"
+            git checkout --detach "$TARGET_QAT15_SHA"
+            test "$(git rev-parse HEAD)" = "$TARGET_QAT15_SHA"
+            mkdir -p artifacts/qat15
+            printf '{"kind":"RISCK_QAT01_MISSING_CHECKS","configBranch":"%s","configSha":"%s","sourceBranch":"%s","sourceSha":"%s","nodeVersion":"%s","privilegedProviderCredentialsPresent":false,"circleOidcTokenUsed":false,"productionWrites":0,"scope":"source-only; CircleCI OIDC identity token unused; no provider credentials or mutation commands"}\n' "$CIRCLE_BRANCH" "$CIRCLE_SHA1" "$TARGET_QAT15_BRANCH" "$TARGET_QAT15_SHA" "$(node --version)" > artifacts/qat15/identity.json
+      - run:
+          name: Execute only missing source quality checks and record exit codes
+          command: |
+            set -uo pipefail
+            mkdir -p artifacts/qat15
+            printf '{"sourceSha":"%s","checks":[' "$TARGET_QAT15_SHA" > artifacts/qat15/results.json
+            separator=""
+            failed=0
+            run_check() {
+              name="$1"
+              shift
+              set +e
+              "$@" >/tmp/qat15-check.log 2>&1
+              code=$?
+              set -e
+              printf '%s{"name":"%s","exitCode":%s}' "$separator" "$name" "$code" >> artifacts/qat15/results.json
+              separator=","
+              if [ "$code" -ne 0 ]; then failed=1; tail -n 100 /tmp/qat15-check.log; fi
+              printf 'QAT15_CHECK=%s EXIT_CODE=%s\n' "$name" "$code"
+            }
+            if [ "$QAT15_GITLEAKS_ONLY" != "true" ]; then
+              run_check deterministic-install npm ci --ignore-scripts --no-audit --no-fund
+              run_check offline-security node scripts/security/run-security-ci-without-audit.mjs
+              run_check dependency-audit npm run security:npm-audit:all
+              run_check next-build npm run build
+              run_check built-routes npm run quality:routes
+            fi
+            run_gitleaks() {
+              set -uo pipefail
+              version=8.30.1
+              archive="gitleaks_${version}_linux_x64.tar.gz"
+              curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" -o "/tmp/${archive}" || return $?
+              echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check - || return $?
+              tar -xzf "/tmp/${archive}" -C /tmp gitleaks || return $?
+              chmod 0755 /tmp/gitleaks || return $?
+              /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path /tmp/qat15-gitleaks.json . || return $?
+              node -e 'const fs=require("fs");const rows=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const groups={ci:rows.filter(x=>/^(\.github|\.circleci)\//.test(String(x.File||""))),app:rows.filter(x=>/^(src|scripts)\//.test(String(x.File||""))),assurance:rows.filter(x=>/^(docs|supabase|tests)\//.test(String(x.File||""))),other:rows.filter(x=>!/^(\.github|\.circleci|src|scripts|docs|supabase|tests)\//.test(String(x.File||"")))};const counts=Object.fromEntries(Object.entries(groups).map(([k,v])=>[k,v.length]));const summary={kind:"QAT15_GITLEAKS_SANITIZED",sourceSha:process.env.TARGET_QAT15_SHA,findingCount:rows.length,findings:rows.map(x=>({file:String(x.File||""),line:Number(x.StartLine||0),ruleId:String(x.RuleID||"")}))};fs.writeFileSync("artifacts/qat15/gitleaks-findings.json",JSON.stringify(summary));console.log(JSON.stringify({groups:counts,findingCount:rows.length,detailsArtifact:"artifacts/qat15/gitleaks-findings.json"}));process.exit(rows.length===0?0:3)' /tmp/qat15-gitleaks.json || return $?
+            }
+            run_check gitleaks-findings run_gitleaks
+            printf '],"overall":"%s"}\n' "$([ "$failed" -eq 0 ] && echo PASS || echo FAIL)" >> artifacts/qat15/results.json
+            test "$failed" -eq 0
+      - store_artifacts:
+          path: artifacts/qat15
+          destination: qat15-exact-sha-source-quality
+
   pr-source-autopilot:
     docker:
       - image: cimg/node:22.23.4
@@ -1284,3 +1383,12 @@ workflows:
 # it is not called from this isolated DB replay branch because CircleCI rejected
 # that unrelated workflow during pipeline compilation.
 
+
+  qat15-missing-checks-manual:
+    when: << pipeline.parameters.run_qat15_missing_checks >>
+    jobs:
+      - qat15-missing-checks:
+          filters:
+            branches:
+              only:
+                - ci/qat15-exact-sha-quality-20261107
