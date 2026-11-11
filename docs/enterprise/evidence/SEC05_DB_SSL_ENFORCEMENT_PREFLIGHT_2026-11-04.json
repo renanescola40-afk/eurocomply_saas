@@ -1,0 +1,47 @@
+{
+  "schema": "risck-comply.sec05-db-ssl-preflight.v1",
+  "subject": "SEC-05",
+  "gateId": "A-04",
+  "observedDate": "2026-11-04",
+  "evidenceSources": {
+    "screenshotProduction": "Owner-supplied in-chat screenshot at 09:29 Europe/Lisbon, project eurocomply_saas, enforce SSL toggle off",
+    "screenshotQA": "Owner-supplied in-chat screenshot at 09:40 Europe/Lisbon, project risck-comply-v15c-isolated-qa-20261022, enforce SSL toggle off",
+    "officialDocs": "https://supabase.com/docs/guides/platform/ssl-enforcement",
+    "sqlScript": "scripts/security/sec05-db-ssl-enforcement-preflight.sql",
+    "projectIdentity": "Direct connected Supabase list_projects/get_project readback for both project refs"
+  },
+  "production": {
+    "projectRef": "tganhbbhfxcpblmgqprg",
+    "projectName": "eurocomply_saas",
+    "sslEnforcementFromOwnerScreenshot": false,
+    "activeSslClientsLastObserved": 5,
+    "activeNonSslTcpClientsLastObserved": 1,
+    "activeInternalLoopbackPostgresExporterLastObserved": 1,
+    "activeNonSslNonLoopbackTcpLastObserved": 0,
+    "changesAuthorized": false,
+    "changesApplied": false
+  },
+  "qa": {
+    "projectRef": "zrxrrfbllsxtleyxjpsz",
+    "projectName": "risck-comply-v15c-isolated-qa-20261022",
+    "sslEnforcementFromOwnerScreenshot": false,
+    "activeSslClientsLastObserved": 4,
+    "activeNonSslTcpClientsLastObserved": 1,
+    "activeInternalLoopbackPostgresExporterLastObserved": 1,
+    "activeNonSslNonLoopbackTcpLastObserved": 0,
+    "changesAuthorized": false,
+    "changesApplied": false
+  },
+  "assessment": "Neither project currently enforces SSL according to owner-visible dashboard; current connected SQL sessions used TLS. Non-TLS loopback postgres_exporter telemetry is present. Whether SSL enforcement exempts loopback exporter and whether inactive clients would break is not established.",
+  "remainingActions": [
+    "Confirm active QA jobs can tolerate brief Supabase database reboot",
+    "Owner explicitly authorizes and applies SSL enforcement in isolated QA using dashboard",
+    "Retest authorized encrypted connections and test a genuinely non-TLS remote connection rejection",
+    "Confirm dependent app/CI/backup/connection-pooler compatibility",
+    "Prepare production maintenance change, backup/rollback, monitoring, owner approval",
+    "Complete independent acceptance, exact-SHA source tests, bundle and secrets review"
+  ],
+  "status": "NOT_VERIFIED",
+  "gateAccepted": false,
+  "notes": "Screenshot fact is not independent management API attestation. Client inventory is an instantaneous SQL snapshot only. No credentials, client addresses, user/customer identities, or secrets recorded. The preflight itself does not change database settings."
+}

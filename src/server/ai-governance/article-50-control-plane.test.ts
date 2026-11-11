@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { evaluateArticle50Control, evaluateArticle50Portfolio } from './article-50-control-plane';
 
 describe('Article 50 operational control plane', () => {
-  it('fails closed when a proposed transition has no Official Journal proof', () => {
+  it('fails closed without case evidence while correctly identifying the already adopted Article 50 transition', () => {
     const result = evaluateArticle50Control({
       systemId: 'sys-1',
       systemName: 'Legacy generator',
@@ -16,6 +16,10 @@ describe('Article 50 operational control plane', () => {
     expect(result.status).toBe('BLOCKED');
     expect(result.decisions[0].transitionStatus).toBe('proposal_not_effective');
     expect(result.decisions[0].transitionEndsAt).toBeNull();
+    expect(result.warnings.join(' ')).toContain('2026/1744 is in force');
+    expect(result.warnings.join(' ')).not.toContain('proposed transition');
+    expect(result.evidenceRequirements.join(' ')).toContain('placed on the market');
+    expect(result.evidenceRequirements.join(' ')).not.toContain('or put into service');
   });
 
   it('requires retained evidence when an Official Journal transition is claimed', () => {

@@ -86,7 +86,7 @@ jobs:
           grep -Fq 'REPRESENTATIVE_ROWSET_LINEAGE_REVALIDATED_2026_10_04=PASS_4_OF_4' "$RECOVERY_EVIDENCE_FILE"
           grep -Fq 'BACKUP_MECHANISM_SOURCE=NOT_INDEPENDENTLY_ATTESTED' "$RECOVERY_EVIDENCE_FILE"
 
-      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
         with:
           version: 2.114.0
 

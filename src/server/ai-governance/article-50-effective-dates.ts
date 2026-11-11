@@ -19,13 +19,11 @@ export type Article50EffectiveDateDecision = {
 };
 
 const ARTICLE_50_BASE_DATE = '2026-08-02';
-const PROPOSED_PRE_EXISTING_SYSTEM_TRANSITION_END = '2026-12-02';
+const VERIFIED_PRE_EXISTING_SYSTEM_TRANSITION_END = '2026-12-02';
 
-const EUR_LEX_AI_ACT = 'https://eur-lex.europa.eu/eli/reg/2024/1689/oj?locale=en';
+const EUR_LEX_2026_AMENDMENT = 'https://eur-lex.europa.eu/eli/reg/2026/1744/oj?locale=en';
 const COMMISSION_ARTICLE_50_GUIDANCE =
   'https://digital-strategy.ec.europa.eu/en/library/guidelines-transparency-obligations-providers-and-deployers-ai-systems';
-const COMMISSION_CODE_FAQ =
-  'https://digital-strategy.ec.europa.eu/en/faqs/signing-code-practice-transparency-ai-generated-content';
 
 /**
  * Resolves Article 50 dates without treating a political agreement or proposal
@@ -68,13 +66,13 @@ export function resolveArticle50EffectiveDate(input: {
     return {
       obligation: input.obligation,
       appliesFrom: ARTICLE_50_BASE_DATE,
-      transitionEndsAt: PROPOSED_PRE_EXISTING_SYSTEM_TRANSITION_END,
+      transitionEndsAt: VERIFIED_PRE_EXISTING_SYSTEM_TRANSITION_END,
       transitionStatus: 'officially_adopted',
-      qualifyingCondition: 'System placed on the market or put into service before 2026-08-02.',
+      qualifyingCondition: 'Provider of a synthetic-content-generating AI system placed on the market before 2026-08-02.',
       source: {
         authority: 'eur_lex',
-        title: 'Final AI Act amending regulation verified in the Official Journal',
-        url: EUR_LEX_AI_ACT,
+        title: 'Regulation (EU) 2026/1744 — amended Article 111(4)',
+        url: EUR_LEX_2026_AMENDMENT,
         verifiedAt,
       },
       limitations: [
@@ -89,18 +87,18 @@ export function resolveArticle50EffectiveDate(input: {
     appliesFrom: ARTICLE_50_BASE_DATE,
     transitionEndsAt: null,
     transitionStatus: input.systemPlacedOnMarketBefore2026_08_02
-      ? 'proposal_not_effective'
+      ? 'proposal_not_effective' // Legacy status name: per-assessment proof missing, not an unadopted law.
       : 'base_rule',
     qualifyingCondition: null,
     source: {
-      authority: 'european_commission',
-      title: 'Signing the Code of Practice on Transparency of AI-generated Content — transition proposal notice',
-      url: COMMISSION_CODE_FAQ,
+      authority: 'eur_lex',
+      title: 'Regulation (EU) 2026/1744 — Article 111(4) (assessment evidence missing)',
+      url: EUR_LEX_2026_AMENDMENT,
       verifiedAt,
     },
     limitations: [
-      'A proposal, political agreement, FAQ or code of practice does not by itself amend the Regulation.',
-      'Until the final amending act is verified in the Official Journal, the product must fail closed to 2026-08-02.',
+      'Regulation (EU) 2026/1744 is in force; this individual assessment has not recorded Official Journal verification evidence for the transition.',
+      'Do not apply the 2 December 2026 transition without evidence of the applicable provider, synthetic-content system and pre-2-August-2026 placement on the market.',
     ],
   };
 }

@@ -12,6 +12,8 @@ describe('Article 50 effective-date resolver', () => {
     expect(decision.appliesFrom).toBe('2026-08-02');
     expect(decision.transitionEndsAt).toBeNull();
     expect(decision.transitionStatus).toBe('proposal_not_effective');
+    expect(decision.source.url).toContain('/eli/reg/2026/1744/oj');
+    expect(decision.limitations.join(' ')).toContain('is in force');
   });
 
   it('allows the limited transition only after Official Journal verification', () => {
@@ -24,6 +26,9 @@ describe('Article 50 effective-date resolver', () => {
     expect(decision.transitionEndsAt).toBe('2026-12-02');
     expect(decision.transitionStatus).toBe('officially_adopted');
     expect(decision.qualifyingCondition).toContain('before 2026-08-02');
+    expect(decision.qualifyingCondition).toContain('Provider');
+    expect(decision.qualifyingCondition).not.toContain('put into service');
+    expect(decision.source.url).toContain('/eli/reg/2026/1744/oj');
   });
 
   it('does not extend the transition to new systems', () => {

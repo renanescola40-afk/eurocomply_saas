@@ -1038,7 +1038,7 @@
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "accepted": true,
+      "accepted": false,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
       "notes": "CANDIDATE ONLY; not formally accepted. Reanchored to authenticated merged main eb26b7e9ef3d2797a94e6e3f576f812dbe0fed5b following the #2676 cross-scope merge that caused #2679 post-merge acceptance_sha_mismatch. Vercel production deployed identity is historical and intentionally distinct from current main. Require a NEW native independent APPROVED review of the exact final HEAD with standalone line A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED, exact-head required checks, owner-governed merge, strictly evidence-only source ancestry, and post-merge official valid=true/gates_accepted>=1. No product/runtime/release GO.",
       "accepted_by": "renansilva2002-tech",
