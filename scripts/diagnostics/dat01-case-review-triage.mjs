@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const PREFIX = 'docs/enterprise/phase1-v22/recovered-provider-statements/';
-const VERSION = /^\d{14}$/;
 
 function riskSignals(statements) {
   if (!statements) return ['APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE'];
