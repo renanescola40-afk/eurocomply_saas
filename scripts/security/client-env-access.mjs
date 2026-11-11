@@ -56,6 +56,28 @@ function isGlobalProcessProperty(node) {
   return true;
 }
 
+// Resolve only compile-time string literals. This includes simple concatenation
+// and template spans, but never evaluates arbitrary code or variables.
+function staticStringValue(node) {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (ts.isParenthesizedExpression(node)) return staticStringValue(node.expression);
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    const left = staticStringValue(node.left);
+    const right = staticStringValue(node.right);
+    return left !== null && right !== null ? left + right : null;
+  }
+  if (ts.isTemplateExpression(node)) {
+    let value = node.head.text;
+    for (const span of node.templateSpans) {
+      const segment = staticStringValue(span.expression);
+      if (segment === null) return null;
+      value += segment + span.literal.text;
+    }
+    return value;
+  }
+  return null;
+}
+
 export function findUnsafeClientEnvReferences(source) {
   const syntaxTree = ts.createSourceFile('client-boundary.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const findings = [];
@@ -68,8 +90,7 @@ export function findUnsafeClientEnvReferences(source) {
     // bypass direct identifier references, so explicitly reject them.
     if (ts.isElementAccessExpression(node) &&
         ['globalThis', 'window', 'self'].some((name) => isIdentifier(node.expression, name)) &&
-        (ts.isStringLiteral(node.argumentExpression) || ts.isNoSubstitutionTemplateLiteral(node.argumentExpression)) &&
-        node.argumentExpression.text === 'process') {
+        staticStringValue(node.argumentExpression) === 'process') {
       findings.push(node.getStart(syntaxTree));
     }
     ts.forEachChild(node, visit);
