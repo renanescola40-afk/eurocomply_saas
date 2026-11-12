@@ -46,3 +46,24 @@ test('A-18 provider request SHA is sourced solely from trusted workflow input, n
  // Historical source SHA remains usable for offline reconciliation, not provider requests.
  assert.match(validator, /expectedSha=process\.env\.EVIDENCE_EXACT_SHA\|\|index\.source\.commit_sha/);
 });
+
+test('the required enterprise merge check verifies acceptance changes on the exact PR head', () => {
+ const suite = readFileSync('.github/workflows/full-security-suite.yml', 'utf8');
+ const gate = suite.split('  enterprise-gate:\n', 2)[1] ?? '';
+ const guard = gate.split('      - name: Enforce formal evidence before merge\n', 2)[1] ?? '';
+ assert.match(gate, /name: Enterprise merge\/deploy gate/);
+ assert.match(gate, /name: Enforce all security jobs passed/);
+ assert.match(gate, /contents: read\n      pull-requests: read/);
+ assert.match(gate, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+ assert.match(gate, /fetch-depth: 0/);
+ assert.match(guard, /if: github\.event_name == 'pull_request'/);
+ assert.match(guard, /EVIDENCE_BASE_SHA: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+ assert.match(guard, /EVIDENCE_EXACT_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+ assert.match(guard, /EVIDENCE_PR_NUMBER: \$\{\{ github\.event\.pull_request\.number \}\}/);
+ assert.match(guard, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+ assert.match(guard, /test "\$\(git rev-parse HEAD\)" = "\$EVIDENCE_EXACT_SHA"/);
+ assert.match(guard, /git diff --name-only "\$EVIDENCE_BASE_SHA\.\.\.\$EVIDENCE_EXACT_SHA"/);
+ assert.match(guard, /ENTERPRISE_EVIDENCE_MASTER_INDEX\.json/);
+ assert.match(guard, /gate-closure-v\*\/A18\*\.json/);
+ assert.match(guard, /node scripts\/enterprise-evidence\/validate-evidence\.mjs --report/);
+});

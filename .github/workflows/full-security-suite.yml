@@ -492,6 +492,9 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [core, actionlint, gitleaks, semgrep, codeql, dependency-review, scorecard]
     if: always()
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Enforce all security jobs passed
         run: |
@@ -502,3 +505,29 @@ jobs:
           test '${{ needs.codeql.result }}' = 'success'
           test '${{ needs.dependency-review.result }}' = 'success'
           test '${{ needs.scorecard.result }}' = 'success'
+
+      - name: Checkout exact PR head for evidence admission
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Enforce formal evidence before merge
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          EVIDENCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EVIDENCE_EXACT_SHA: ${{ github.event.pull_request.head.sha }}
+          EVIDENCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EVIDENCE_EXACT_SHA"
+          changed="$(git diff --name-only "$EVIDENCE_BASE_SHA...$EVIDENCE_EXACT_SHA" -- \
+            docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json \
+            ':(glob)docs/enterprise/gate-closure-v*/A18*.json')"
+          if [[ -n "$changed" ]]; then
+            node scripts/enterprise-evidence/validate-evidence.mjs --report
+          fi
