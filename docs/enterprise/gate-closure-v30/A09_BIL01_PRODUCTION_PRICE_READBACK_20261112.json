@@ -1,0 +1,101 @@
+{
+  "schema": "risck-comply.a09-bil01-production-price-readback.v1",
+  "gate_id": "A-09",
+  "control_id": "BIL-01",
+  "observed_at_utc": "2026-11-12T10:41:13.921182+00:00",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "baseline_main_sha": "75e005eff599008bf9c3e107d99c116759c07a75",
+  "vercel_project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+  "vercel_team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+  "vercel_environment": "Production (built-in)",
+  "vercel_access": "authenticated settings UI, email verification completed; read-only Reveal Value",
+  "stripe_context": "acct_1U6IuJGt3cgjPOtq",
+  "stripe_access": "Stripe LIVE read-only GET /v1/prices/{id} on each of six existing IDs",
+  "historical_catalog_reference": "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json",
+  "rows": [
+    {
+      "environment_variable": "STRIPE_PRICE_ESSENTIAL_MONTHLY",
+      "vercel_production_value": "price_1U6wnYGt3cgjPOtqIATM8DeH",
+      "stripe_live_price_id": "price_1U6wnYGt3cgjPOtqIATM8DeH",
+      "exact_match": true,
+      "stripe_active": true,
+      "stripe_livemode": true,
+      "stripe_currency": "eur",
+      "stripe_unit_amount": 4900,
+      "stripe_recurring_interval": "month",
+      "stripe_product_id": "prod_V7B9TKop4XFVZD"
+    },
+    {
+      "environment_variable": "STRIPE_PRICE_ESSENTIAL_ANNUAL",
+      "vercel_production_value": "price_1U6wnjGt3cgjPOtqAgMbZdQa",
+      "stripe_live_price_id": "price_1U6wnjGt3cgjPOtqAgMbZdQa",
+      "exact_match": true,
+      "stripe_active": true,
+      "stripe_livemode": true,
+      "stripe_currency": "eur",
+      "stripe_unit_amount": 49000,
+      "stripe_recurring_interval": "year",
+      "stripe_product_id": "prod_V7B9TKop4XFVZD"
+    },
+    {
+      "environment_variable": "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
+      "vercel_production_value": "price_1U6wnpGt3cgjPOtqmL7HoPDw",
+      "stripe_live_price_id": "price_1U6wnpGt3cgjPOtqmL7HoPDw",
+      "exact_match": true,
+      "stripe_active": true,
+      "stripe_livemode": true,
+      "stripe_currency": "eur",
+      "stripe_unit_amount": 14900,
+      "stripe_recurring_interval": "month",
+      "stripe_product_id": "prod_V7B9MSMOjw6ScY"
+    },
+    {
+      "environment_variable": "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
+      "vercel_production_value": "price_1U6wnuGt3cgjPOtqdWopnIyX",
+      "stripe_live_price_id": "price_1U6wnuGt3cgjPOtqdWopnIyX",
+      "exact_match": true,
+      "stripe_active": true,
+      "stripe_livemode": true,
+      "stripe_currency": "eur",
+      "stripe_unit_amount": 149000,
+      "stripe_recurring_interval": "year",
+      "stripe_product_id": "prod_V7B9MSMOjw6ScY"
+    },
+    {
+      "environment_variable": "STRIPE_PRICE_BUSINESS_MONTHLY",
+      "vercel_production_value": "price_1U6wo2Gt3cgjPOtqOr91hofs",
+      "stripe_live_price_id": "price_1U6wo2Gt3cgjPOtqOr91hofs",
+      "exact_match": true,
+      "stripe_active": true,
+      "stripe_livemode": true,
+      "stripe_currency": "eur",
+      "stripe_unit_amount": 39900,
+      "stripe_recurring_interval": "month",
+      "stripe_product_id": "prod_V7B9xkn8ud8f1d"
+    },
+    {
+      "environment_variable": "STRIPE_PRICE_BUSINESS_ANNUAL",
+      "vercel_production_value": "price_1U6wo9Gt3cgjPOtqa8vSvgaM",
+      "stripe_live_price_id": "price_1U6wo9Gt3cgjPOtqa8vSvgaM",
+      "exact_match": true,
+      "stripe_active": true,
+      "stripe_livemode": true,
+      "stripe_currency": "eur",
+      "stripe_unit_amount": 399000,
+      "stripe_recurring_interval": "year",
+      "stripe_product_id": "prod_V7B9xkn8ud8f1d"
+    }
+  ],
+  "all_six_exact_matches": true,
+  "live_price_count": 6,
+  "production_writes": 0,
+  "stripe_writes": 0,
+  "secret_keys_copied": 0,
+  "independent_review": "PENDING",
+  "formal_acceptance": "NOT_ACCEPTED",
+  "limitations": [
+    "No LIVE payment, Checkout, webhook or entitlement lifecycle exercised",
+    "Provider dashboard readback is operator evidence pending independent qualified review",
+    "A-18 exact-head acceptance must be reanchored and independently reapproved before integration"
+  ]
+}
