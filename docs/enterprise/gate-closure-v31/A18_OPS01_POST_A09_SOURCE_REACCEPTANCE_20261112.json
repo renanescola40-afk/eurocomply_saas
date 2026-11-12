@@ -3,8 +3,8 @@
   "gate_id": "A-18",
   "control_id": "OPS-01",
   "claim_scope": "ONLY_CURRENT_PRODUCTION_DEPLOYMENT_IDENTITY_NOT_FULL_RELEASE_GO",
-  "acceptance_source_sha": "ba37c4358a4e88fe515791a56f2352eea9e74912",
-  "acceptance_source_selection": "Frozen source includes the required merge-check integration. Only this proof and the canonical index differ after the frozen source. The required check must pass with a qualified native review of the final PR head before merge.",
+  "acceptance_source_sha": "fd503ef538f7fc29a771ddac838d6efa37d3e3bc",
+  "acceptance_source_selection": "Frozen main after the SEC-01 #2706 and #2707 source batch. Only this proof and the canonical index may differ. A fresh independent native A-18 approval must cover the exact acceptance PR head before merge.",
   "provider": "Vercel authenticated read-only get_alias and get_deployment",
   "provider_project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
   "provider_team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
@@ -32,11 +32,13 @@
   ],
   "provider_production_alias": "www.risckcomply.com",
   "previous_native_review_disposition": {
-    "pull_request": 2708,
-    "tested_main_sha": "722ba20e99a6c26d7d9b5cfa797449b885ec1aca",
-    "validator_run_id": 43234811536,
-    "error": "authenticated_current_head_review_required",
-    "merged_at_utc": "2026-11-12T14:12:31Z",
-    "formal_review_submitted_at_utc": "2026-11-12T14:12:58Z"
+    "pull_request": 2705,
+    "observation": "The historical native approval remains attributable to its reviewed head. The later #2706 and #2707 source changes require fresh approval.",
+    "tested_main_sha": "fd503ef538f7fc29a771ddac838d6efa37d3e3bc",
+    "validator_run_id": 43230178622,
+    "errors": [
+      "authenticated_current_head_review_required",
+      "acceptance_sha_mismatch"
+    ]
   }
 }
