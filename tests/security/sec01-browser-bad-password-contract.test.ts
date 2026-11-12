@@ -42,4 +42,25 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(runner).not.toMatch(/console\.log\(password\)|console\.log\(email\)/);
     expect(runner).toContain("qa_cleanup_verified: cleaned");
   });
+
+  it('scopes both browser login attempts to the password form, not the separate SSO form', () => {
+    const sso = readFileSync('src/components/auth/enterprise-sso-login.tsx', 'utf8');
+    expect(login).toContain('<EnterpriseSsoLogin');
+    expect(login).toContain('onSubmit={handleSubmit}');
+    expect(login).toContain('type="password"');
+    expect(sso).toContain('onSubmit={startSso}');
+    expect(sso).toContain('type="email"');
+    // Two forms each contain email + submit; the old generic locator is ambiguous.
+    expect(runner).toContain('const passwordForm = page.locator(\'form:has(input[type="password"])\');');
+    expect(runner).toContain('passwordForm.locator(\'input[type="email"]\').fill(email)');
+    expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password + \'wrong\')');
+    expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password)');
+    expect(runner.match(/passwordForm\.locator\(/g)).toHaveLength(5);
+    expect(runner).not.toContain("page.locator('form input[type=");
+    expect(runner).not.toContain("page.locator('form button[type=");
+    expect(runner).toContain("failureDetail = 'password_form_email_input_unavailable'");
+    expect(runner).toContain("failureDetail = 'password_form_password_input_unavailable'");
+    expect(runner).toContain("failureDetail = 'valid_password_input_unavailable'");
+    expect(runner).toContain("failureDetail = 'valid_password_submit_unavailable'");
+  });
 });
