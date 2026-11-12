@@ -1,0 +1,51 @@
+{
+  "schema": "risck-comply.g1.a18-ops01-gate-acceptance-proof.v1",
+  "gate_id": "A-18",
+  "control_id": "OPS-01",
+  "claim_scope": "ONLY_CURRENT_PRODUCTION_DEPLOYMENT_IDENTITY_NOT_FULL_RELEASE_GO",
+  "acceptance_source_sha": "507f6221bc71bf1c355f834a56749b48ff794286",
+  "acceptance_source_selection": "Frozen PR #2713 source commit 507f6221bc71bf1c355f834a56749b48ff794286 contains BIL-02 QA-only signed intake code and tests. Only this new A-18 proof and the canonical index may change thereafter before qualified native exact-HEAD formal review and protected merge. No later source push may inherit an older approval.",
+  "provider": "Vercel authenticated read-only get_alias and get_deployment",
+  "provider_project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+  "provider_team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+  "provider_target": "production",
+  "provider_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+  "provider_state": "READY",
+  "deployed_production_git_sha": "70d3545f414d063379d481fd238aed563e05edda",
+  "provider_observed_date_utc": "2026-11-12",
+  "previous_candidate_path": "docs/enterprise/gate-closure-v31/A18_OPS01_POST_A09_SOURCE_REACCEPTANCE_20261112.json",
+  "historical_proof_path": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
+  "historical_proof_blob_sha": "17d553a7b35586497b219c28214f58e39bd14ced",
+  "qualified_review": {
+    "reviewer_login": "renansilva2002-tech",
+    "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
+    "reviewed_head_sha": "1dc9b63f6f13ea9b090b2840610582a39d3ac90e",
+    "reviewer_followup_comment_id": 6659265179
+  },
+  "candidate_status": "PENDING_QUALIFIED_NATIVE_PREMERGE_APPROVAL_ON_EXACT_PR_2713_HEAD",
+  "required_native_approval_line": "A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED",
+  "scope_limitations": [
+    "A-18 verifies only the current Vercel Production alias deployment identity; this remains an older deployed source, not the proposed QA code release.",
+    "Source changes in PR #2713 are security-sensitive and not covered by the historical A-18 current-HEAD approval; an independent qualified native APPROVED review with the standalone formal gate line is required on the final head before merge.",
+    "BIL-02 remains NOT_ACCEPTED: restricted JWT issuer and role are missing from QA; Stripe TEST endpoint disabled; no signed durable QA replay or entitlement processing evidence.",
+    "Only the new A-18 proof and canonical index may differ from the reviewed-source freeze."
+  ],
+  "provider_production_alias": "www.risckcomply.com",
+  "previous_native_review_disposition": {
+    "pull_request": 2708,
+    "tested_main_sha": "722ba20e99a6c26d7d9b5cfa797449b885ec1aca",
+    "validator_run_id": 43234811536,
+    "error": "authenticated_current_head_review_required",
+    "merged_at_utc": "2026-11-12T14:12:31Z",
+    "formal_review_submitted_at_utc": "2026-11-12T14:12:58Z"
+  },
+  "current_candidate": {
+    "pull_request": 2713,
+    "frozen_source_sha": "507f6221bc71bf1c355f834a56749b48ff794286",
+    "source_scope": "QA-only signed Stripe TEST restricted event intake, no Production writes",
+    "production_deployment_id_verified": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+    "production_git_sha_verified": "70d3545f414d063379d481fd238aed563e05edda",
+    "expected_native_review_decision": "A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED",
+    "independent_review_pending": true
+  }
+}

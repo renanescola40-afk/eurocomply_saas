@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 
 import { evaluateQaWebhookAdmission } from '@/server/billing/qa-webhook-writer-admission.mjs';
+import { recordSignedQaStripeTestEvent } from '@/server/billing/qa-stripe-test-ledger.mjs';
 
 import { getStripeClient } from '@/lib/billing/stripe';
 import { reportError } from '@/lib/observability/report-error';
@@ -141,6 +142,35 @@ export async function POST(request: Request) {
       { error: misconfigured ? 'webhook_mode_not_configured' : 'webhook_mode_mismatch' },
       { status: misconfigured ? 500 : 400 },
     );
+  }
+
+  // QA billing proof is an intake-only lane, not a second entitlement authority.
+  // Stripe's signature and TEST-mode boundary have already been verified above.
+  // The restricted writer independently validates the signature again and
+  // requires a short-lived QA-only JWT authenticated by Supabase/PostgREST.
+  // Never execute the production service-role subscription/enterprise paths in QA.
+  if (process.env.RISCK_QA_ENVIRONMENT === 'true') {
+    try {
+      const intake = await recordSignedQaStripeTestEvent({ rawBody: body, signature });
+      // A failed or unknown stored state must stay retryable, not masquerade
+      // as a completed payment/entitlement or successful intake delivery.
+      if (intake.status !== 'processing' && intake.status !== 'processed') {
+        return noStoreJson({ error: 'webhook_writer_unavailable' }, { status: 503 });
+      }
+      return noStoreJson({
+        received: true,
+        intakeOnly: true,
+        processed: false,
+        duplicate: intake.duplicate,
+      }, { status: 202 });
+    } catch {
+      // The provider signature was checked before reaching this QA branch.
+      // Do not expose JWT, database, or verifier details through responses/logs.
+      reportError(new Error('QA Stripe TEST intake unavailable'), {
+        area: 'stripe_webhook_qa_restricted_intake',
+      });
+      return noStoreJson({ error: 'webhook_writer_unavailable' }, { status: 503 });
+    }
   }
 
   const qaAdmission = evaluateQaWebhookAdmission(process.env);
