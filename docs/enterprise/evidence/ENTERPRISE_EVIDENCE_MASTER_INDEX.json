@@ -1039,16 +1039,16 @@
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
-      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v31/A18_OPS01_POST_A09_SOURCE_REACCEPTANCE_20261112.json",
-      "notes": "Candidate rebased in content on main after PR #2710. Require a qualified native exact-head formal approval and PASS of the required Enterprise merge/deploy gate before merge. The acceptance must then pass independently on resulting main.",
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v33/A18_OPS01_POST_BIL02_SOURCE_REACCEPTANCE_20261112.json",
+      "notes": "PR #2713 source frozen at 507f6221bc71bf1c355f834a56749b48ff794286. Current Production alias verified by Vercel read-only remains on dpl_CmyiHWky6g41su26PE1nyGwwCS1f SHA 70d3545f414d063379d481fd238aed563e05edda. This A-18 proof and index alone may change after source freeze. Qualified independent native exact-current-HEAD APPROVED review with standalone A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED line is REQUIRED before merge; do not inherit an older approval. BIL-02/A-10 remains blocked separately.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "bd8c35ad8cd9d79116afe99df3a1cdf40dcf0af9",
-      "acceptance_evidence_sha256": "1011615d604a91a8a9bcc25e0cc54eb67179e3573a299c11da028b6738062169"
+      "acceptance_sha": "507f6221bc71bf1c355f834a56749b48ff794286",
+      "acceptance_evidence_sha256": "1a2303da7ea14825bf8eceff5cb3fd7e6e11579c1799d06661f970b941876094"
     },
     {
       "gate_id": "A-19",
