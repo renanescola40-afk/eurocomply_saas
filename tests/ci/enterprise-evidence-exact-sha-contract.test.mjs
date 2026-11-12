@@ -63,7 +63,7 @@ test('the required enterprise merge check verifies ALL PR heads, not just eviden
  assert.match(guard, /test "\$\(git rev-parse HEAD\)" = "\$EVIDENCE_EXACT_SHA"/);
  assert.doesNotMatch(guard, /EVIDENCE_BASE_SHA:/);
  assert.doesNotMatch(guard, /git diff --name-only/);
- assert.doesNotMatch(guard, /if \\[\\[ -n \\"\\$changed\\"/);
+ assert.doesNotMatch(guard, /if \[\[ -n/);
  // The merged release source remains exact-SHA guarded even if the PR
  // touched only SQL, docs unrelated to A-18, code or workflow files.
  assert.match(guard, /node scripts\/enterprise-evidence\/validate-evidence\.mjs --report/);
