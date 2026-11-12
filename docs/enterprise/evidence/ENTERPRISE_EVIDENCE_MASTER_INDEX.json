@@ -37,7 +37,7 @@
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
-    "gate_eligibility_note": "A-09 (BIL-01) and A-18 (OPS-01) remain eligible for provider-validated independent final formal review only. The source candidate shares a frozen SHA-256-bound proof. Neither gate is credited as formally accepted until exact-final-head native decisions and post-merge CI validation. Existing current-production deployment identity proof is preserved."
+    "gate_eligibility_note": "A-09 (BIL-01) and A-18 (OPS-01) are eligible for independent review on the canonical source scope. The newer main SHA does not invalidate OPS-01: its accepted criterion is exact identification of the deployed production release, which matches the frozen G1 baseline. Runtime smoke/E2E remains separately unverified."
   },
   "controls": [
     {
@@ -1057,7 +1057,17 @@
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
       "acceptance_sha": "9f683dcb72246ebc688a43cca891294b52693585",
-      "acceptance_evidence_sha256": "9daec7d6aefe8295861d9f1e1f9e67adfb63a37b7a571f80764c76cc772e7f70"
+      "acceptance_evidence_sha256": "9daec7d6aefe8295861d9f1e1f9e67adfb63a37b7a571f80764c76cc772e7f70",
+      "historical_acceptance": {
+        "prior_accepted_by": "renansilva2002-tech",
+        "prior_reviewer_id": "renansilva2002-tech",
+        "prior_approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
+        "prior_accepted_at": "2026-11-05T13:31:10Z",
+        "prior_acceptance_sha": "bd8c35ad8cd9d79116afe99df3a1cdf40dcf0af9",
+        "prior_proof_ref": "docs/enterprise/gate-closure-v31/A18_OPS01_POST_A09_SOURCE_REACCEPTANCE_20261112.json",
+        "prior_proof_sha256": "1011615d604a91a8a9bcc25e0cc54eb67179e3573a299c11da028b6738062169",
+        "status": "HISTORICAL_EVIDENCE_RETAINED_NOT_CURRENT_SHA_ACCEPTANCE"
+      }
     },
     {
       "gate_id": "A-19",
