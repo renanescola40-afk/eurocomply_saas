@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   constructEvent: vi.fn(),
+  recordSignedQaStripeTestEvent: vi.fn(),
   handleStripeWebhookEventWithRecovery: vi.fn(),
   syncStripeSubscriptionForInvoiceEvent: vi.fn(),
   syncEnterpriseContractBillingEvent: vi.fn(),
@@ -21,6 +22,10 @@ vi.mock('@/lib/billing/stripe', () => ({
       constructEvent: mocks.constructEvent,
     },
   }),
+}));
+
+vi.mock('@/server/billing/qa-stripe-test-ledger.mjs', () => ({
+  recordSignedQaStripeTestEvent: mocks.recordSignedQaStripeTestEvent,
 }));
 
 vi.mock('@/server/billing/stripe-webhook-recovery', () => ({
@@ -139,6 +144,7 @@ describe('Stripe webhook body hardening', () => {
 describe('Stripe webhook route signature validation and dispatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.recordSignedQaStripeTestEvent.mockRejectedValue(new Error('qa_stripe_writer_unavailable'));
     process.env.STRIPE_WEBHOOK_SECRET = TEST_STRIPE_WEBHOOK_SECRET;
     process.env.STRIPE_SECRET_KEY = 'sk_test_unit';
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
@@ -274,6 +280,70 @@ describe('Stripe webhook route signature validation and dispatch', () => {
       duplicate: true,
     }));
     expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+  });
+
+  it('accepts only restricted QA signed TEST intake without processing entitlements', async () => {
+    await withQaEnv(async () => {
+      mocks.constructEvent.mockReturnValue(makeStripeEvent());
+      mocks.recordSignedQaStripeTestEvent.mockResolvedValue({
+        recorded: true,
+        duplicate: false,
+        status: 'processing',
+      });
+
+      const response = await POST(makePostRequest('t=1800000000,v1=good'));
+      expect(response.status).toBe(202);
+      expect(await response.json()).toEqual({
+        received: true,
+        intakeOnly: true,
+        processed: false,
+        duplicate: false,
+      });
+      expect(mocks.recordSignedQaStripeTestEvent).toHaveBeenCalledWith({
+        rawBody: expect.any(String),
+        signature: 't=1800000000,v1=good',
+      });
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.syncStripeSubscriptionForInvoiceEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it('acknowledges a duplicate QA intake claim without claiming fulfillment', async () => {
+    await withQaEnv(async () => {
+      mocks.constructEvent.mockReturnValue(makeStripeEvent());
+      mocks.recordSignedQaStripeTestEvent.mockResolvedValue({
+        recorded: false,
+        duplicate: true,
+        status: 'processed',
+      });
+      const response = await POST(makePostRequest('t=1800000000,v1=good'));
+      expect(response.status).toBe(202);
+      expect(await response.json()).toEqual({
+        received: true,
+        intakeOnly: true,
+        processed: false,
+        duplicate: true,
+      });
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    });
+  });
+
+  it('keeps failed QA event intake retryable and never grants access', async () => {
+    await withQaEnv(async () => {
+      mocks.constructEvent.mockReturnValue(makeStripeEvent());
+      mocks.recordSignedQaStripeTestEvent.mockResolvedValue({
+        recorded: false,
+        duplicate: true,
+        status: 'failed',
+      });
+      const response = await POST(makePostRequest('t=1800000000,v1=good'));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'webhook_writer_unavailable' });
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    });
   });
 
   it('returns retryable 503 for signed TEST QA event while the scoped writer is unavailable', async () => {
