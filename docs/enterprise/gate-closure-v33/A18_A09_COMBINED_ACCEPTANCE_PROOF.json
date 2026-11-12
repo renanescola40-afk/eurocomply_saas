@@ -1,0 +1,18 @@
+{
+  "schema": "risck-comply.g1.a09-a18-combined-acceptance-proof.v1",
+  "state": "PENDING_INDEPENDENT_SOURCE_REVIEW",
+  "gates": {
+    "A-09": {
+      "gate_id": "A-09",
+      "control_id": "BIL-01",
+      "review_packet": "docs/enterprise/gate-closure-v32/A09_BIL01_INDEPENDENT_REVIEW_PACKET_20261112.json",
+      "operator_readback": "docs/enterprise/gate-closure-v30/A09_BIL01_PRODUCTION_PRICE_READBACK_20261112.json"
+    },
+    "A-18": {
+      "gate_id": "A-18",
+      "control_id": "OPS-01",
+      "accepted_main_before_this_candidate": "e4c0a8634cf61a5f6d48ea1d095c6eb6e0b42506",
+      "prior_proof": "docs/enterprise/gate-closure-v31/A18_OPS01_POST_A09_SOURCE_REACCEPTANCE_20261112.json"
+    }
+  }
+}

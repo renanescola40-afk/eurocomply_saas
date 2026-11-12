@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import { execFileSync } from 'node:child_process';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile,evidenceExpectedSha,verifyGitHubA18CurrentHead} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import { execFileSync } from 'node:child_process';import crypto from 'node:crypto';import {validateEvidenceRecord,validateGateAcceptance,reconcile,evidenceExpectedSha,verifyGitHubA18CurrentHead,verifyGitHubA09CurrentHead} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 const sha='a'.repeat(40),hash='b'.repeat(64),base={evidence_id:'EV-SEC-01-001',control_id:'SEC-01',gate_id:'A-01',evidence_type:'runtime-test',status:'NOT_VERIFIED',repository:'renanescola40-afk/eurocomply_saas',branch:'enterprise/evidence-factory-v1-20261101',commit_sha:sha,workflow_run_id:null,environment:'isolated-qa',generated_at:'2026-11-01T10:00:00Z',source_system:'GitHub Actions',test_command_or_provider_query:'npm run test:auth',result_summary:'Recorded, not accepted.',artifact_path:'artifacts/evidence/sec-01.json',artifact_sha256:hash,reproducibility_instructions:'Run against exact commit SHA.',limitations:[],reviewer_status:'NOT_REVIEWED',acceptance_status:'NOT_ACCEPTED'};
 test('rejects evidence bound to another SHA',()=>assert.ok(validateEvidenceRecord(base,{expectedSha:'c'.repeat(40)}).includes('commit_sha_mismatch')));
 test('PASS requires independent acceptance and an existing digest-matched artifact',()=>{const e=validateEvidenceRecord({...base,status:'PASS'},{expectedSha:sha});assert.ok(e.includes('pass_requires_independent_acceptance'));assert.ok(e.includes('artifact_missing'));});
@@ -457,4 +457,84 @@ test('A-18 provider uses immutable prior-review paths and forbids redirects',asy
   'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/issues/comments/6659265179',
   'https://api.github.com/repos/renanescola40-afk/eurocomply_saas/pulls/2620/reviews?per_page=100'
  ].sort());
+});
+
+test('A-09 and A-18 can share one immutable proof without allowing unrelated evidence changes',()=>{
+ const temp=fs.mkdtempSync(path.join(fs.realpathSync('/tmp'),'risck-a09-a18-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:temp,encoding:'utf8'}).trim();
+ try{
+  git('init','-q');git('config','user.email','ci-fixture@example.invalid');git('config','user.name','CI fixture');
+  fs.writeFileSync(path.join(temp,'README.md'),'source\n');git('add','.');git('commit','-qm','source');
+  const source=git('rev-parse','HEAD');
+  const ref='docs/enterprise/gate-closure-v33/A18_A09_COMBINED_ACCEPTANCE_PROOF.json';
+  const ids=['A-09','A-18'];
+  const url='https://github.com/renanescola40-afk/eurocomply_saas/pull/2709#pullrequestreview-5878078723';
+  const document={schema:'risck-comply.g1.a09-a18-combined-acceptance-proof.v1',gates:
+   Object.fromEntries(ids.map(id=>[id,{gate_id:id,acceptance_source_sha:source,
+    qualified_review:{reviewer_login:'renansilva2002-tech',review_url:url}}]))};
+  const file=path.join(temp,ref);
+  fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(document));
+  const digest=crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  git('add','.');git('commit','-qm','shared proof');
+  const options={root:temp,expectedSha:git('rev-parse','HEAD'),eligible:true,providerApproved:true};
+  for(const id of ids){
+   const gate={gate_id:id,accepted:true,acceptance_sha:source,acceptance_evidence_ref:ref,
+    acceptance_evidence_sha256:digest,reviewer_id:'renansilva2002-tech',accepted_by:'renansilva2002-tech',
+    approval_url:url,accepted_at:'2026-11-12T12:00:00Z',reviewer_status:'ACCEPTED',acceptance_status:'ACCEPTED'};
+   assert.deepEqual(validateGateAcceptance(gate,options),[]);
+   assert.ok(validateGateAcceptance(gate,{...options,providerApproved:false})
+    .includes('authenticated_current_head_review_required'));
+   assert.ok(validateGateAcceptance({...gate,acceptance_evidence_sha256:'0'.repeat(64)},options)
+    .includes('acceptance_artifact_sha256_mismatch'));
+   fs.writeFileSync(path.join(temp,'unrelated.json'),'{}');
+   git('add','.');git('commit','-qm','unrelated evidence');
+   assert.ok(validateGateAcceptance(gate,{...options,expectedSha:git('rev-parse','HEAD')})
+    .includes('acceptance_sha_mismatch'));
+   git('reset','--hard',options.expectedSha);
+  }
+ }finally{fs.rmSync(temp,{recursive:true,force:true});}
+});
+
+test('A-09 needs an independent observation of the frozen source and a later exact-head approval before merge',async()=>{
+ const source='a'.repeat(40),head='b'.repeat(40),merge='c'.repeat(40),repo='renanescola40-afk/eurocomply_saas';
+ const login='renansilva2002-tech';
+ const claim={gate_id:'A-09',reviewer_id:login,acceptance_sha:source,
+  approval_url:'https://github.com/'+repo+'/pull/2711#pullrequestreview-111',
+  acceptance_evidence_ref:'docs/enterprise/gate-closure-v33/A18_A09_COMBINED_ACCEPTANCE_PROOF.json'};
+ const pull={number:2711,state:'open',draft:false,user:{login:'renanescola40-afk'},
+  head:{sha:head,repo:{full_name:repo}},base:{ref:'main',repo:{full_name:repo}}};
+ const observation={id:111,state:'COMMENTED',user:{login},commit_id:source,
+  body:'A-09/BIL-01 INDEPENDENT VERCEL PRODUCTION READBACK: 6/6 MATCH\n'+
+   'A-09/BIL-01 INDEPENDENT EVIDENCE ACCEPTANCE: APPROVED',submitted_at:'2026-11-12T16:00:00Z'};
+ const approval={id:112,state:'APPROVED',user:{login},commit_id:head,
+  body:'A-09/BIL-01 FORMAL GATE ACCEPTANCE: APPROVED',submitted_at:'2026-11-12T16:20:00Z'};
+ const merged={...pull,state:'closed',merge_commit_sha:merge,merged_at:'2026-11-12T16:30:00Z'};
+ const verify=({record=pull,reviews=[observation,approval],postMerge=false,gate=claim}={})=>{
+  const request=async(url,options)=>{
+   assert.equal(options.redirect,'error');
+   const prefix='https://api.github.com/repos/'+repo;
+   const responses={
+    [prefix+'/pulls/2711']:record,
+    [prefix+'/pulls/2711/reviews?per_page=100']:reviews,
+    [prefix+'/commits/'+merge+'/pulls?per_page=100']:[record],
+   };
+   assert.ok(Object.hasOwn(responses,url));
+   return {ok:true,json:async()=>responses[url]};
+  };
+  return verifyGitHubA09CurrentHead(gate,{expectedSha:postMerge?merge:head,
+   prNumber:postMerge?undefined:2711,token:'synthetic-token',request});
+ };
+ assert.equal(await verify(),true);
+ assert.equal(await verify({record:merged,postMerge:true}),true);
+ assert.equal(await verify({reviews:[approval]}),false);
+ assert.equal(await verify({reviews:[{...observation,commit_id:head},approval]}),false);
+ assert.equal(await verify({reviews:[{...observation,body:observation.body.split('\n')[0]},approval]}),false);
+ assert.equal(await verify({reviews:[{...observation,body:observation.body+'\nA-09/BIL-01 WITHHELD'},approval]}),false);
+ assert.equal(await verify({reviews:[observation,{...approval,commit_id:source}]}),false);
+ assert.equal(await verify({reviews:[observation,{...approval,body:''}]}),false);
+ assert.equal(await verify({reviews:[observation,{...approval,submitted_at:'2026-11-12T15:59:00Z'}]}),false);
+ assert.equal(await verify({record:merged,postMerge:true,
+  reviews:[observation,{...approval,submitted_at:'2026-11-12T16:31:00Z'}]}),false);
+ assert.equal(await verify({record:{...pull,user:{login}}}),false);
+ assert.equal(await verify({gate:{...claim,approval_url:claim.approval_url.replace('2711','2710')}}),false);
 });
