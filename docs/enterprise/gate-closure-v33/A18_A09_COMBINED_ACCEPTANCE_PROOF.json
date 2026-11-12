@@ -1,0 +1,89 @@
+{
+  "schema": "risck-comply.g1.a09-a18-combined-acceptance-proof.v1",
+  "state": "PENDING_FINAL_EXACT_HEAD_NATIVE_APPROVAL",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "pull_request": 2712,
+  "reviewed_source_sha": "e62a87e1108e763374644a9362d2b991bd28de4b",
+  "base_main_sha": "a4f7e0d76a8213b6c63122f3e948f17f0a8e43f6",
+  "source_review_id": 5882174238,
+  "gates": {
+    "A-09": {
+      "gate_id": "A-09",
+      "control_id": "BIL-01",
+      "acceptance_source_sha": "e62a87e1108e763374644a9362d2b991bd28de4b",
+      "claim_scope": "SIX_VERCEL_BUILT_IN_PRODUCTION_STRIPE_LIVE_PRICE_BINDINGS",
+      "review_packet": "docs/enterprise/gate-closure-v32/A09_BIL01_INDEPENDENT_REVIEW_PACKET_20261112.json",
+      "operator_readback": "docs/enterprise/gate-closure-v30/A09_BIL01_PRODUCTION_PRICE_READBACK_20261112.json",
+      "historical_stripe_catalog": "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json",
+      "production_verification": {
+        "provider": "Vercel built-in Production read-only settings",
+        "stripe_context": "Stripe LIVE read-only price verification",
+        "distinct_environment": "Production (not QA or Preview)",
+        "price_bindings_checked": 6,
+        "exact_matches_claimed": 6,
+        "readback_review_type": "COMMENTED",
+        "provider_mutations": 0
+      },
+      "qualified_review": {
+        "reviewer_login": "renansilva2002-tech",
+        "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2712#pullrequestreview-5882174238",
+        "review_id": 5882174238,
+        "review_type": "COMMENTED",
+        "reviewed_head_sha": "e62a87e1108e763374644a9362d2b991bd28de4b",
+        "submitted_at_utc": "2026-11-12T21:18:57Z",
+        "required_readback_line": "A-09/BIL-01 INDEPENDENT VERCEL PRODUCTION READBACK: 6/6 MATCH",
+        "required_evidence_approval_line": "A-09/BIL-01 INDEPENDENT EVIDENCE ACCEPTANCE: APPROVED"
+      },
+      "candidate_status": "PENDING_QUALIFIED_NATIVE_FINAL_HEAD_FORMAL_APPROVAL_NOT_FORMALLY_ACCEPTED",
+      "required_native_approval_line": "A-09/BIL-01 FORMAL GATE ACCEPTANCE: APPROVED",
+      "scope_limitations": [
+        "Independent verification was attested by the native reviewer on the exact frozen source; not a runtime Checkout or signed Stripe TEST webhook test.",
+        "Final formal acceptance is forbidden until new native pre-merge APPROVED review on final exact SHA, required checks pass, and post-merge provider review succeeds.",
+        "No Production or Stripe LIVE writes executed."
+      ]
+    },
+    "A-18": {
+      "schema": "risck-comply.g1.a18-ops01-gate-acceptance-proof.v1",
+      "gate_id": "A-18",
+      "control_id": "OPS-01",
+      "claim_scope": "ONLY_CURRENT_PRODUCTION_DEPLOYMENT_IDENTITY_NOT_FULL_RELEASE_GO",
+      "acceptance_source_sha": "e62a87e1108e763374644a9362d2b991bd28de4b",
+      "acceptance_source_selection": "Qualified A-09 source COMMENTED observation #5882174238 on PR #2712 reviewed exact source e62a87e1108e763374644a9362d2b991bd28de4b after protected-main reconciliation at a4f7e0d76a8213b6c63122f3e948f17f0a8e43f6; only the combined proof and canonical index may change in the new evidence-only final commit. Independent native formal approval of both gates on final exact head plus required CI and post-merge provider validation remain mandatory.",
+      "provider": "Vercel authenticated read-only get_alias and get_deployment",
+      "provider_project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
+      "provider_team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
+      "provider_target": "production",
+      "provider_deployment_id": "dpl_CmyiHWky6g41su26PE1nyGwwCS1f",
+      "provider_state": "READY",
+      "deployed_production_git_sha": "70d3545f414d063379d481fd238aed563e05edda",
+      "provider_observed_date_utc": "2026-11-12",
+      "previous_candidate_path": "docs/enterprise/gate-closure-v30/A18_OPS01_POST_SEC01_MAIN_REACCEPTANCE_20261111.json",
+      "historical_proof_path": "docs/enterprise/gate-closure-v27/A18_OPS01_FORMAL_ACCEPTANCE_PROOF_20261105.json",
+      "historical_proof_blob_sha": "17d553a7b35586497b219c28214f58e39bd14ced",
+      "qualified_review": {
+        "reviewer_login": "renansilva2002-tech",
+        "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
+        "reviewed_head_sha": "1dc9b63f6f13ea9b090b2840610582a39d3ac90e",
+        "reviewer_followup_comment_id": 6659265179
+      },
+      "candidate_status": "PENDING_QUALIFIED_NATIVE_FINAL_HEAD_REVIEW_NOT_FORMALLY_ACCEPTED",
+      "required_native_approval_line": "A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED",
+      "scope_limitations": [
+        "Only Vercel Production exact deployment identity is in A-18 scope; not production deployment permission or global release readiness.",
+        "Fresh independent exact-final-HEAD native APPROVED review with standalone A-18/OPS-01 declaration must precede merge.",
+        "Both A-09 and A-18 use the same immutable combined proof with one frozen source SHA and matching digest.",
+        "Only the combined proof and canonical evidence index may change after frozen source.",
+        "Post-merge provider revalidation is necessary before reporting both gates as formally accepted."
+      ],
+      "provider_production_alias": "www.risckcomply.com",
+      "previous_native_review_disposition": {
+        "pull_request": 2708,
+        "tested_main_sha": "722ba20e99a6c26d7d9b5cfa797449b885ec1aca",
+        "validator_run_id": 43234811536,
+        "error": "authenticated_current_head_review_required",
+        "merged_at_utc": "2026-11-12T14:12:31Z",
+        "formal_review_submitted_at_utc": "2026-11-12T14:12:58Z"
+      }
+    }
+  }
+}
