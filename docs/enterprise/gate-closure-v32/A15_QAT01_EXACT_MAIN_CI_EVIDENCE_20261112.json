@@ -1,0 +1,137 @@
+{
+  "schema": "risck-comply.a15-qat01-exact-main-source-suite.v1",
+  "gate_id": "A-15",
+  "atomic_control_id": "QAT-01",
+  "criterion": "Mandatory application/unit/integration and security regression suites complete without failing checks",
+  "classification": "VERIFIED_SOURCE_SUITE_PROVIDER_RUNS_AWAITING_INDEPENDENT_GATE_ACCEPTANCE",
+  "source_repository": "renanescola40-afk/eurocomply_saas",
+  "source_branch": "main",
+  "tested_source_sha": "e4c0a8634cf61a5f6d48ea1d095c6eb6e0b42506",
+  "source_freeze": "No application or workflow changes are made by this proof; evidence-only branch based on the tested main SHA.",
+  "observed_on": "2026-11-12",
+  "github_native_observation": {
+    "vitest": {
+      "test_files_passed": 872,
+      "tests_passed": 4290,
+      "job_id": 131324091238,
+      "source": "Core CI, build and npm audit"
+    },
+    "playwright": {
+      "tests_passed": 453,
+      "job_id": 131324091238,
+      "source": "Core CI, build and npm audit; production-like browser tests are not authenticated external QA"
+    },
+    "npm_audit": {
+      "audit_level": "moderate",
+      "vulnerabilities_moderate_or_higher": 0,
+      "job_id": 131324091238
+    },
+    "application_security": {
+      "audit_free_gates_passed": 36,
+      "job_id": 131324091238
+    },
+    "checks": [
+      {
+        "name": "Core CI, build and npm audit",
+        "job_id": 131324091238,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778498/job/131324091238"
+      },
+      {
+        "name": "Run security gates, typecheck and tests",
+        "job_id": 131324088789,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778255/job/131324088789"
+      },
+      {
+        "name": "CI / quality",
+        "job_id": 131324091392,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778875/job/131324091392"
+      },
+      {
+        "name": "CodeQL",
+        "job_id": 131324091206,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778498/job/131324091206"
+      },
+      {
+        "name": "Semgrep SAST",
+        "job_id": 131324091362,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778498/job/131324091362"
+      },
+      {
+        "name": "Secret scanning (Gitleaks)",
+        "job_id": 131324091862,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778498/job/131324091862"
+      },
+      {
+        "name": "OSSF Scorecard",
+        "job_id": 131324091322,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778498/job/131324091322"
+      },
+      {
+        "name": "Actionlint",
+        "job_id": 131324090590,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778498/job/131324090590"
+      },
+      {
+        "name": "Dependency Review",
+        "job_id": 131324091099,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778498/job/131324091099"
+      },
+      {
+        "name": "Quality, security, build",
+        "job_id": 131324090873,
+        "status": "completed",
+        "conclusion": "success",
+        "run_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43258778557/job/131324090873"
+      }
+    ],
+    "circleci": "ci/circleci: pr-source-autopilot success on tested_sha per native combined status"
+  },
+  "review_contract": {
+    "qualified_independent_qa_security_reviewer_required": true,
+    "native_review_target": "final PR HEAD after all source checks have completed",
+    "source_exact_sha_reverify_after_any_code_change": true,
+    "source_proof_can_count_only_when_consistent_with_reviewed_final_sha": true,
+    "gate_acceptance_marker": "A-15/QAT-01 FORMAL GATE ACCEPTANCE: APPROVED",
+    "review_status": "PENDING",
+    "formal_gate_acceptance": "NOT_ACCEPTED",
+    "formal_atomic_control": "NOT_ACCEPTED"
+  },
+  "scope_exclusions": [
+    "QAT-02 real authenticated isolated QA browser and two-tenant negative tests are NOT proven",
+    "QAT-03 genuine TEST Stripe QA runtime tests are NOT proven",
+    "QAT-04 exact QA deployment artifact identity is NOT proven",
+    "DAT-01 historical 137 migration replay and 48-case qualified review remain BLOCKED",
+    "Enterprise Production Closure remains NO_GO and is not overriden by QAT-01 source-suite evidence",
+    "Source-only unit test mocks and production-like Playwright are NOT actual Production runtime evidence"
+  ],
+  "risk_notes": [
+    "The data above reflects completed native GitHub Actions check runs with a matching tested source SHA. It does not claim all unrelated Enterprise Production runtime checks pass.",
+    "Do not weaken a required check, promote an unrelated SHA's result or merge without protected checks and fresh qualified review."
+  ],
+  "side_effects": {
+    "production_writes": 0,
+    "qa_writes": 0,
+    "stripe_writes": 0,
+    "emails_sent": 0,
+    "paid_resources_created": 0,
+    "protected_merges": 0
+  }
+}
