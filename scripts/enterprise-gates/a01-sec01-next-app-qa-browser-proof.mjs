@@ -153,6 +153,7 @@ let context = null;
 let userId = null;
 let cleaned = false;
 let failedStage = null;
+let failureDetail = null;
 let outcome = 'FAIL';
 
 const email = 'sec01-app-qa-' + randomBytes(12).toString('hex') + '@example.invalid';
@@ -193,9 +194,35 @@ try {
   stage = 'bad_password_denied_in_real_browser';
   await page.locator('form input[type="email"]').fill(email);
   await page.locator('form input[type="password"]').fill(password + 'wrong');
-  await page.locator('form button[type="submit"]').click();
+  // Observe the actual QA provider denial before judging the browser UI.
+  // Never retain request bodies, user identities or provider response text.
+  failureDetail = 'invalid_password_provider_response_missing';
+  const [deniedResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) => response.url().startsWith(QA_URL + '/auth/v1/token') &&
+        response.url().includes('grant_type=password') &&
+        response.request().method() === 'POST',
+      { timeout: 30000 },
+    ),
+    page.locator('form button[type="submit"]').click(),
+  ]);
+  failureDetail = 'invalid_password_provider_denial_unexpected';
+  requireTrue([400, 401, 403].includes(deniedResponse.status()), 'unexpected_invalid_password_status');
+  let denialCode = null;
+  try {
+    const payload = await deniedResponse.json();
+    denialCode = payload?.code ?? payload?.error_code ?? null;
+  } catch {
+    // Missing or unparseable denial proof must fail closed.
+  }
+  requireTrue(denialCode === 'invalid_credentials', 'unexpected_invalid_password_error_code');
+  failureDetail = 'invalid_password_ui_alert_missing';
   await page.getByRole('alert').waitFor({ state: 'visible', timeout: 30000 });
-  check(stage, isLoginPath(page.url()));
+  failureDetail = 'invalid_password_session_or_route_not_denied';
+  const invalidPasswordCookies = (await context.cookies(LOCAL_URL))
+    .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
+  check(stage, isLoginPath(page.url()) && invalidPasswordCookies.length === 0);
+  failureDetail = null;
 
   stage = 'real_browser_password_login';
   await page.locator('form input[type="password"]').fill(password);
@@ -292,6 +319,9 @@ console.log(JSON.stringify({
   passed_checks: checks.length,
   checks,
   failure_stage: failedStage,
+  // A fixed, non-sensitive step code improves failure diagnosis without
+  // recording auth credentials, token material, raw errors or network payloads.
+  failure_detail: failedStage ? failureDetail : null,
   qa_cleanup_verified: cleaned,
   emails_sent: 0,
   required_but_not_proven: [
