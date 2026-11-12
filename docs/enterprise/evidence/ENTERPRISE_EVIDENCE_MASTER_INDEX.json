@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v31/A18_OPS01_POST_A09_SOURCE_REACCEPTANCE_20261112.json",
-      "notes": "A-18 reacceptance candidate for the merged #2703 source. Run 43206637194 rejected its previous acceptance because the qualified native reviews omitted the standalone formal decision. Require fresh exact-head native APPROVED review with the formal A-18 line and a passing official validator before merge. Verify again on the resulting main SHA.",
+      "notes": "A-18 reacceptance candidate for the frozen source after #2706 and #2707. Keep source unchanged through qualified native exact-head review, official PR validation, governed human merge and post-merge validation. Reject and reassess if main or PR head moves before integration.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "62193c2f8beacfa93bc869a53c7d73850bdaae88",
-      "acceptance_evidence_sha256": "8d4141c3f6de7b924cf0e6f9a5860afc1df96c1de71bf46d0b0c1e1ec4ae3b98"
+      "acceptance_sha": "fd503ef538f7fc29a771ddac838d6efa37d3e3bc",
+      "acceptance_evidence_sha256": "a4bc10bde57ade1e3b78a120927b6984bb4e295520e392ac3da88c974445a5e2"
     },
     {
       "gate_id": "A-19",
