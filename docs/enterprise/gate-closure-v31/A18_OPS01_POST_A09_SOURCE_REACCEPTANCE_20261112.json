@@ -3,9 +3,9 @@
   "gate_id": "A-18",
   "control_id": "OPS-01",
   "claim_scope": "ONLY_CURRENT_PRODUCTION_DEPLOYMENT_IDENTITY_NOT_FULL_RELEASE_GO",
-  "acceptance_source_sha": "b914962e7566f03101d8d6df8437a4e7ea69faf0",
-  "acceptance_source_selection": "Frozen A-09 provider readback source commit b914962e7566f03101d8d6df8437a4e7ea69faf0. Only this A-18 proof and canonical evidence index may differ from that source. Fresh native exact-head A-18 approval required before acceptance.",
-  "provider": "Vercel authenticated read-only list_deployments",
+  "acceptance_source_sha": "62193c2f8beacfa93bc869a53c7d73850bdaae88",
+  "acceptance_source_selection": "The merged #2703 source is the frozen baseline. Changes since that baseline are limited to this proof and the canonical evidence index. The official validator requires fresh qualified approval on this PR head before merge.",
+  "provider": "Vercel authenticated read-only get_alias and get_deployment",
   "provider_project_id": "prj_APpXAyQFy1Gie50xfbO45zjkyUSm",
   "provider_team_id": "team_wu3LZI6ReFxO16xipv73GLwG",
   "provider_target": "production",
@@ -25,9 +25,17 @@
   "candidate_status": "PENDING_FRESH_NATIVE_PREMERGE_APPROVAL_OF_EXACT_PR_HEAD_WITH_FORMAL_LINE",
   "required_native_approval_line": "A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED",
   "scope_limitations": [
-    "New A-09 readback does not itself constitute qualified A-09 acceptance",
-    "Fresh independent native APPROVED review on exact PR head with standalone A-18 formal line must precede merge",
-    "Only this exact proof and canonical index may differ from frozen A-09 source",
-    "No production writes, deployment parity, customer E2E, release authorization or Enterprise GO"
-  ]
+    "The integrated A-09 evidence awaits its own qualified decision and formal acceptance.",
+    "Fresh independent native APPROVED review on the exact PR head with the standalone A-18 formal line must precede merge.",
+    "Only this proof and the canonical index may differ from the frozen source.",
+    "Scope is the identity of the deployment assigned to the Production alias."
+  ],
+  "provider_production_alias": "www.risckcomply.com",
+  "previous_native_review_disposition": {
+    "pull_request": 2703,
+    "tested_main_sha": "62193c2f8beacfa93bc869a53c7d73850bdaae88",
+    "validator_run_id": 43206637194,
+    "error": "authenticated_current_head_review_required",
+    "observation": "Both exact-head APPROVED reviews had empty bodies. They did not record a formal A-18 decision."
+  }
 }
