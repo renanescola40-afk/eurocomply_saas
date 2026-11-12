@@ -94,13 +94,20 @@ function LoginContent() {
 
     setBusy(true);
     setError(null);
-    const result = await signInWithEmail(email.trim().toLowerCase(), secret);
-    if (result.error) {
+    try {
+      const result = await signInWithEmail(email.trim().toLowerCase(), secret);
+      if (result.error) {
+        setError(text.failed);
+        return;
+      }
+      router.replace(afterSignInUrl);
+    } catch {
+      // A rejected transport/auth request must not leave the login form stuck.
+      // Keep the public failure message generic; never surface provider details.
       setError(text.failed);
+    } finally {
       setBusy(false);
-      return;
     }
-    router.replace(afterSignInUrl);
   }
 
   const inputClass = 'mt-2 h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-3 text-white outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/30';
