@@ -192,8 +192,14 @@ try {
   check(stage, isLoginPath(page.url()));
 
   stage = 'bad_password_denied_in_real_browser';
-  await page.locator('form input[type="email"]').fill(email);
-  await page.locator('form input[type="password"]').fill(password + 'wrong');
+  // Login renders two independent forms (SSO and password). Scope all password
+  // QA interactions to the only form with a password input: a generic "form
+  // input[type=email]" selector resolves to both forms and fails Playwright strict mode.
+  const passwordForm = page.locator('form:has(input[type="password"])');
+  failureDetail = 'password_form_email_input_unavailable';
+  await passwordForm.locator('input[type="email"]').fill(email);
+  failureDetail = 'password_form_password_input_unavailable';
+  await passwordForm.locator('input[type="password"]').fill(password + 'wrong');
   // Observe the actual QA provider denial before judging the browser UI.
   // Never retain request bodies, user identities or provider response text.
   failureDetail = 'invalid_password_provider_response_missing';
@@ -204,7 +210,7 @@ try {
         response.request().method() === 'POST',
       { timeout: 30000 },
     ),
-    page.locator('form button[type="submit"]').click(),
+    passwordForm.locator('button[type="submit"]').click(),
   ]);
   failureDetail = 'invalid_password_provider_denial_unexpected';
   requireTrue([400, 401, 403].includes(deniedResponse.status()), 'unexpected_invalid_password_status');
@@ -225,8 +231,10 @@ try {
   failureDetail = null;
 
   stage = 'real_browser_password_login';
-  await page.locator('form input[type="password"]').fill(password);
-  await page.locator('form button[type="submit"]').click();
+  failureDetail = 'valid_password_input_unavailable';
+  await passwordForm.locator('input[type="password"]').fill(password);
+  failureDetail = 'valid_password_submit_unavailable';
+  await passwordForm.locator('button[type="submit"]').click();
   // The onboarding screen may immediately redirect (e.g. payment-first).
   // Prove that navigation left login and that SSR session cookies exist;
   // actual authority is separately verified on the protected profile + API.
@@ -238,6 +246,7 @@ try {
   const loginSessionCookies = (await context.cookies(LOCAL_URL))
     .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
   check(stage, loginSessionCookies.length > 0);
+  failureDetail = null;
 
   stage = 'authenticated_private_profile_available';
   await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
