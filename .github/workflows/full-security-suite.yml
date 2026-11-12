@@ -496,6 +496,10 @@ jobs:
       contents: read
       pull-requests: read
     steps:
+      - name: Refuse branch dispatch as merge evidence
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: exit 1
+
       - name: Enforce all security jobs passed
         run: |
           test '${{ needs.core.result }}' = 'success'

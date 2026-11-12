@@ -67,3 +67,9 @@ test('the required enterprise merge check verifies acceptance changes on the exa
  assert.match(guard, /gate-closure-v\*\/A18\*\.json/);
  assert.match(guard, /node scripts\/enterprise-evidence\/validate-evidence\.mjs --report/);
 });
+
+test('a branch workflow dispatch cannot publish a passing PR merge check', () => {
+ const suite = readFileSync('.github/workflows/full-security-suite.yml', 'utf8');
+ const gate = suite.split('  enterprise-gate:\n', 2)[1] ?? '';
+ assert.match(gate, /name: Refuse branch dispatch as merge evidence\n\s+if: github\.event_name == 'workflow_dispatch' && github\.ref != 'refs\/heads\/main'\n\s+run: exit 1/);
+});
