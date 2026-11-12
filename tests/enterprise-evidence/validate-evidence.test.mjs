@@ -535,6 +535,14 @@ test('A-09 needs an independent observation of the frozen source and a later exa
  assert.equal(await verify({reviews:[observation,{...approval,submitted_at:'2026-11-12T15:59:00Z'}]}),false);
  assert.equal(await verify({record:merged,postMerge:true,
   reviews:[observation,{...approval,submitted_at:'2026-11-12T16:31:00Z'}]}),false);
+ const withdrawal={...approval,id:113,state:'COMMENTED',body:'A-09/BIL-01 FORMAL GATE ACCEPTANCE: WITHHELD',
+  submitted_at:'2026-11-12T16:25:00Z'};
+ assert.equal(await verify({reviews:[withdrawal,observation,approval]}),false);
+ assert.equal(await verify({reviews:[observation,approval,withdrawal,
+  {...approval,id:114,submitted_at:'2026-11-12T16:27:00Z'}]}),true);
+ assert.equal(await verify({reviews:[observation,approval,{...withdrawal,commit_id:source}]}),false);
+ assert.equal(await verify({record:merged,postMerge:true,
+  reviews:[observation,approval,{...withdrawal,submitted_at:'2026-11-12T16:31:00Z'}]}),true);
  assert.equal(await verify({record:{...pull,user:{login}}}),false);
  assert.equal(await verify({gate:{...claim,approval_url:claim.approval_url.replace('2711','2710')}}),false);
 });

@@ -64,11 +64,27 @@ function includesReviewLine(body,line){
  return typeof body==='string'&&body.split(/\r?\n/).some(part=>part.trim()===line);
 }
 
+function decisionWithdrawn(reviews,decision,pull,rejection){
+ const decidedAt=Date.parse(decision.submitted_at);
+ return reviews.some(review=>{
+  if(!review||review===decision||review.user?.login!==decision.user.login||
+     review.commit_id!==decision.commit_id||review.state==='PENDING')return false;
+  if(!['CHANGES_REQUESTED','DISMISSED'].includes(review.state)&&
+     !rejection.test(review.body||''))return false;
+  const withdrawnAt=Date.parse(review.submitted_at);
+  if(pull.mergedAt&&withdrawnAt>Date.parse(pull.mergedAt))return false;
+  if(!Number.isFinite(withdrawnAt)||!Number.isFinite(decidedAt))return true;
+  if(withdrawnAt!==decidedAt)return withdrawnAt>decidedAt;
+  if(!Number.isSafeInteger(review.id)||!Number.isSafeInteger(decision.id))return true;
+  return review.id>decision.id;
+ });
+}
+
 function hasFormalReview(reviews,pull,reviewer,gateLabel,rejection,earliest){
  return Array.isArray(reviews)&&reviews.some(review=>
   review?.state==='APPROVED'&&review.user?.login===reviewer&&review.commit_id===pull.sha&&
   includesReviewLine(review.body,gateLabel+' FORMAL GATE ACCEPTANCE: APPROVED')&&
-  !rejection.test(review.body)&&
+  !rejection.test(review.body)&&!decisionWithdrawn(reviews,review,pull,rejection)&&
   (earliest===undefined||Date.parse(review.submitted_at)>=earliest)&&
   (!pull.mergedAt||Date.parse(review.submitted_at)<=Date.parse(pull.mergedAt)));
 }
@@ -138,7 +154,7 @@ export async function verifyGitHubA09CurrentHead(gate,{expectedSha,prNumber,toke
    includesReviewLine(review.body,A09_READBACK)&&
    includesReviewLine(review.body,A09_EVIDENCE_APPROVAL)&&!A09_REJECTION.test(review.body));
   const observedAt=Date.parse(observation?.submitted_at);
-  if(!Number.isFinite(observedAt))return false;
+  if(!Number.isFinite(observedAt)||decisionWithdrawn(reviews,observation,pull,A09_REJECTION))return false;
   return hasFormalReview(reviews,pull,gate.reviewer_id,'A-09/BIL-01',A09_REJECTION,observedAt);
  }catch{return false;}
 }
