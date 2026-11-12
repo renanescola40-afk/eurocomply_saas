@@ -37,7 +37,7 @@
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
-    "gate_eligibility_note": "A-09 (BIL-01) and A-18 (OPS-01) are eligible for independent review on the canonical source scope. The newer main SHA does not invalidate OPS-01: its accepted criterion is exact identification of the deployed production release, which matches the frozen G1 baseline. Runtime smoke/E2E remains separately unverified."
+    "gate_eligibility_note": "A-09 (BIL-01) and A-18 (OPS-01) remain eligible for provider-validated independent final formal review only. The source candidate shares a frozen SHA-256-bound proof. Neither gate is credited as formally accepted until exact-final-head native decisions and post-merge CI validation. Existing current-production deployment identity proof is preserved."
   },
   "controls": [
     {
@@ -925,8 +925,17 @@
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "accepted": false,
-      "acceptance_evidence_ref": null
+      "accepted": true,
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v33/A18_A09_COMBINED_ACCEPTANCE_PROOF.json",
+      "accepted_by": "renansilva2002-tech",
+      "reviewer_id": "renansilva2002-tech",
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2712#pullrequestreview-5879450737",
+      "accepted_at": "2026-11-12T17:57:53Z",
+      "acceptance_sha": "9f683dcb72246ebc688a43cca891294b52693585",
+      "acceptance_evidence_sha256": "9daec7d6aefe8295861d9f1e1f9e67adfb63a37b7a571f80764c76cc772e7f70",
+      "notes": "PROVISIONAL provider-gated candidate only: 6/6 readback independently COMMENTED on frozen source, but the formal A-09 gate is NOT ACCEPTED until independent native final HEAD FORMAL APPROVED and required CI/merge provider revalidation. Stripe/Vercel writes: none."
     },
     {
       "gate_id": "A-10",
@@ -1039,16 +1048,16 @@
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
-      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v31/A18_OPS01_POST_A09_SOURCE_REACCEPTANCE_20261112.json",
-      "notes": "Candidate rebased in content on main after PR #2710. Require a qualified native exact-head formal approval and PASS of the required Enterprise merge/deploy gate before merge. The acceptance must then pass independently on resulting main.",
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v33/A18_A09_COMBINED_ACCEPTANCE_PROOF.json",
+      "notes": "PROVISIONAL combined candidate preserves historical A-18 provider facts and native #2610 review; new final-HEAD formal independent A-18 APPROVED plus exact-SHA checks and post-merge provider verification are REQUIRED. Not a new acceptance declaration or production GO.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "bd8c35ad8cd9d79116afe99df3a1cdf40dcf0af9",
-      "acceptance_evidence_sha256": "1011615d604a91a8a9bcc25e0cc54eb67179e3573a299c11da028b6738062169"
+      "acceptance_sha": "9f683dcb72246ebc688a43cca891294b52693585",
+      "acceptance_evidence_sha256": "9daec7d6aefe8295861d9f1e1f9e67adfb63a37b7a571f80764c76cc772e7f70"
     },
     {
       "gate_id": "A-19",
