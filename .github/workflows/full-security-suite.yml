@@ -522,16 +522,13 @@ jobs:
         if: github.event_name == 'pull_request'
         shell: bash
         env:
-          EVIDENCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EVIDENCE_EXACT_SHA: ${{ github.event.pull_request.head.sha }}
           EVIDENCE_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EVIDENCE_EXACT_SHA"
-          changed="$(git diff --name-only "$EVIDENCE_BASE_SHA...$EVIDENCE_EXACT_SHA" -- \
-            docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json \
-            ':(glob)docs/enterprise/gate-closure-v*/A18*.json')"
-          if [[ -n "$changed" ]]; then
-            node scripts/enterprise-evidence/validate-evidence.mjs --report
-          fi
+          # Every PR can change the candidate SHA. Verify formal acceptance
+          # even for code-only PRs; otherwise A-09/A-18 can silently become
+          # invalid while this *required* merge check still reports SUCCESS.
+          node scripts/enterprise-evidence/validate-evidence.mjs --report
