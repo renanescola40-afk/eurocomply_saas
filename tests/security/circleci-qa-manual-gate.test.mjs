@@ -137,3 +137,20 @@ test('current main source validation remains opt-in and source only', () => {
   assert.match(mainOnly, /only:\n\s+- main/);
   assert.doesNotMatch(mainOnly, /- p0-postgres-synthetic:/);
 });
+
+
+test('SEC-01 provider verifier heredoc is valid Bash and remains manual QA-only', () => {
+  const job = config.split('  sec01-qa-provider-proof:\n')[1]?.split('  # SEC-01 application proof:')[0] ?? '';
+  const workflow = config.split('  a01-sec01-qa-provider-manual:\n')[1]?.split('  # Disabled by default and held for explicit owner approval.')[0] ?? '';
+  const match = job.match(/name: Execute real QA Auth lifecycle and verify sanitized partial evidence\s+command: \|\n([\s\S]*?)(?=\n      # Store artifacts automatically)/);
+  assert.ok(match, 'SEC-01 provider proof shell script must exist');
+  const command = match[1].split('\n').map(line => line.replace(/^ {12}/, '')).join('\n');
+  assert.match(command, /node --input-type=module - "\$provider_status" <<'NODE'/);
+  assert.doesNotMatch(command, /\\<<['"]?NODE/);
+  const syntax = spawnSync('bash', ['-n'], { input: command, encoding: 'utf8' });
+  assert.equal(syntax.status, 0, syntax.stderr);
+  assert.match(config, /run_sec01_qa_provider:\n    type: boolean\n    default: false/);
+  assert.match(workflow, /type: approval/);
+  assert.match(workflow, /context: risck-sec01-qa-only/);
+  assert.match(workflow, /only:\n\s+- main/);
+});
