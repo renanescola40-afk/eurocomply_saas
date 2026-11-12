@@ -163,7 +163,7 @@ export async function POST(request: Request) {
         processed: false,
         duplicate: intake.duplicate,
       }, { status: 202 });
-    } catch (intakeError) {
+    } catch {
       // The provider signature was checked before reaching this QA branch.
       // Do not expose JWT, database, or verifier details through responses/logs.
       reportError(new Error('QA Stripe TEST intake unavailable'), {
