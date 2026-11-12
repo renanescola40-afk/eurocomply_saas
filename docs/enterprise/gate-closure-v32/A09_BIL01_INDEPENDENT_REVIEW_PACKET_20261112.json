@@ -1,0 +1,106 @@
+{
+  "schema": "risck-comply.a09-bil01-independent-gate-review-packet.v1",
+  "gate_id": "A-09",
+  "atomic_control_id": "BIL-01",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "candidate_source_main_sha": "722ba20e99a6c26d7d9b5cfa797449b885ec1aca",
+  "evidence_scope": "EXISTING_STRIPE_LIVE_CANONICAL_PRICE_BINDINGS_TO_BUILT_IN_VERCEL_PRODUCTION_ONLY",
+  "review_state": "PENDING_QUALIFIED_INDEPENDENT_DECISION",
+  "acceptance_status": "NOT_ACCEPTED",
+  "formal_gate_credit_claimed": false,
+  "source_documents": {
+    "production_binding_operator_observation": "docs/enterprise/gate-closure-v30/A09_BIL01_PRODUCTION_PRICE_READBACK_20261112.json",
+    "historical_stripe_catalog": "docs/enterprise/evidence/G1_BIL01_LIVE_PRICES_AND_PRODUCTION_ENV_2026-10-22.json",
+    "source_commercial_contract": "config/billing-commercial-catalog.json"
+  },
+  "existing_operator_observation_at_utc": "2026-11-12T10:41:13.921182+00:00",
+  "independent_source_reconciliation": {
+    "method": "compare existing repository operator-attested six-production-price rows with archived Stripe live catalog and canonical source commercial amounts",
+    "row_count": 6,
+    "catalog_id_amount_interval_matches": true,
+    "not_a_second_authenticated_production_provider_readback": true,
+    "reviewer_must_independently_confirm_production_provider_values": true
+  },
+  "rows": [
+    {
+      "plan": "essential",
+      "interval": "month",
+      "variable": "STRIPE_PRICE_ESSENTIAL_MONTHLY",
+      "catalog_amount_cents": 4900,
+      "currency": "eur",
+      "stripe_live_price_id": "price_1U6wnYGt3cgjPOtqIATM8DeH",
+      "independent_documents_agree": true,
+      "prior_operator_reported_production_binding_match": true
+    },
+    {
+      "plan": "essential",
+      "interval": "year",
+      "variable": "STRIPE_PRICE_ESSENTIAL_ANNUAL",
+      "catalog_amount_cents": 49000,
+      "currency": "eur",
+      "stripe_live_price_id": "price_1U6wnjGt3cgjPOtqAgMbZdQa",
+      "independent_documents_agree": true,
+      "prior_operator_reported_production_binding_match": true
+    },
+    {
+      "plan": "professional",
+      "interval": "month",
+      "variable": "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
+      "catalog_amount_cents": 14900,
+      "currency": "eur",
+      "stripe_live_price_id": "price_1U6wnpGt3cgjPOtqmL7HoPDw",
+      "independent_documents_agree": true,
+      "prior_operator_reported_production_binding_match": true
+    },
+    {
+      "plan": "professional",
+      "interval": "year",
+      "variable": "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
+      "catalog_amount_cents": 149000,
+      "currency": "eur",
+      "stripe_live_price_id": "price_1U6wnuGt3cgjPOtqdWopnIyX",
+      "independent_documents_agree": true,
+      "prior_operator_reported_production_binding_match": true
+    },
+    {
+      "plan": "business",
+      "interval": "month",
+      "variable": "STRIPE_PRICE_BUSINESS_MONTHLY",
+      "catalog_amount_cents": 39900,
+      "currency": "eur",
+      "stripe_live_price_id": "price_1U6wo2Gt3cgjPOtqOr91hofs",
+      "independent_documents_agree": true,
+      "prior_operator_reported_production_binding_match": true
+    },
+    {
+      "plan": "business",
+      "interval": "year",
+      "variable": "STRIPE_PRICE_BUSINESS_ANNUAL",
+      "catalog_amount_cents": 399000,
+      "currency": "eur",
+      "stripe_live_price_id": "price_1U6wo9Gt3cgjPOtqa8vSvgaM",
+      "independent_documents_agree": true,
+      "prior_operator_reported_production_binding_match": true
+    }
+  ],
+  "review_requirements": [
+    "Using independent qualified access, verify each named key is targeted at Vercel built-in Production, NOT preview, QA custom environment or masked/truncated inventory.",
+    "Confirm each actual Production key value equals the LIVE Stripe price ID; check active, livemode=true, eur and recurring/amount in the source rows.",
+    "Verify project/team/provider account identity and available historical provider observation without exposing API keys, Vercel secrets, user data or passwords.",
+    "Confirm the commercial catalog explicitly distinguishes sales-led Business and Enterprise pricing from self-serve checkout.",
+    "Submit a qualified native GitHub review on the exact final review-packet HEAD before merge, with standalone line 'A-09/BIL-01 FORMAL GATE ACCEPTANCE: APPROVED' only if the evidence is independently sufficient.",
+    "Do not assert A-09 accepted from this packet alone; later formal gate promotion must bind authentic review URL, reviewed source SHA, source proof digest and pass official Enterprise validator.",
+    "Preserve the distinct Work-owned A-18 review/reacceptance branch and do not merge this evidence packet in a way that silently invalidates the current A-18 source lineage."
+  ],
+  "current_provider_tool_limitation": "Authenticated Vercel environment listing is returned truncated at 100 records; visible six price variables on the first page belong to isolated QA custom environment env_NwUiDnnbo3AJ5eswTtoUXSIBTmTj and cannot be used to verify Production. The separate 2026-11-12 operator-readback document is retained without substituting QA evidence.",
+  "out_of_scope": [
+    "Stripe LIVE charge or subscription",
+    "Stripe TEST signed webhooks, replay, idempotency",
+    "Production deployment or environment write",
+    "any Production data mutation",
+    "A-18/OPS-01 or formal Enterprise release GO"
+  ],
+  "production_writes": 0,
+  "stripe_writes": 0,
+  "costs_committed": 0
+}
