@@ -1040,15 +1040,15 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
       "acceptance_evidence_ref": "docs/enterprise/gate-closure-v31/A18_OPS01_POST_A09_SOURCE_REACCEPTANCE_20261112.json",
-      "notes": "A-18 reacceptance candidate for the frozen source after #2706 and #2707. Keep source unchanged through qualified native exact-head review, official PR validation, governed human merge and post-merge validation. Reject and reassess if main or PR head moves before integration.",
+      "notes": "Candidate after #2708 merged before formal review. Require a qualified native exact-head formal approval and PASS of the required Enterprise merge/deploy gate before merge. The acceptance must then pass independently on resulting main.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "fd503ef538f7fc29a771ddac838d6efa37d3e3bc",
-      "acceptance_evidence_sha256": "a4bc10bde57ade1e3b78a120927b6984bb4e295520e392ac3da88c974445a5e2"
+      "acceptance_sha": "ba37c4358a4e88fe515791a56f2352eea9e74912",
+      "acceptance_evidence_sha256": "7eaeaf8e920490a8a1b04f348b905866cf15a206ffa80e464486454433c8e46a"
     },
     {
       "gate_id": "A-19",
