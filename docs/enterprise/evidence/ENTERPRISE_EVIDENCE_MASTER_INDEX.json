@@ -1039,16 +1039,16 @@
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": true,
-      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v30/A18_OPS01_POST_SEC01_MAIN_REACCEPTANCE_20261111.json",
-      "notes": "PENDING (NOT YET FORMALLY RE-ACCEPTED): frozen post-#2701 main 50ce3ebf4219573e2ea2cf976b53dea20e65425b with Vercel production deployment identity observed read-only on 2026-11-11; only this canonical index and proof v30 are changed. Prior #2700 A-18 native approval is non-transferable after SEC-01 QA source edit. Require fresh independent pre-merge native APPROVED review on exact current PR head explicitly containing 'A-18/OPS-01 FORMAL GATE ACCEPTANCE: APPROVED', official validator PASS and post-merge validator PASS. No source or production deployment parity, customer E2E, Enterprise GO or release authorization. Gate check not required by ruleset; issue #1340 remains.",
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v31/A18_OPS01_POST_A09_SOURCE_REACCEPTANCE_20261112.json",
+      "notes": "PENDING fresh independent exact-head native A-18 approval after A-09 provider proof; current main A-18 acceptance remains intact. The provider production identity was read back on 2026-11-12. A-09 is awaiting its own qualified decision and formal validator; no release GO.",
       "accepted_by": "renansilva2002-tech",
       "reviewer_id": "renansilva2002-tech",
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2610#pullrequestreview-5784789887",
       "accepted_at": "2026-11-05T13:31:10Z",
-      "acceptance_sha": "50ce3ebf4219573e2ea2cf976b53dea20e65425b",
-      "acceptance_evidence_sha256": "7256e8cdcba186ee6ef031ea295af5155f84518d1bb180a605f11774ccea117b"
+      "acceptance_sha": "b914962e7566f03101d8d6df8437a4e7ea69faf0",
+      "acceptance_evidence_sha256": "b20a06a0f41e37dbe4951884cfad1d52ce71a915754c3b0008e42ac705bdb9f6"
     },
     {
       "gate_id": "A-19",
