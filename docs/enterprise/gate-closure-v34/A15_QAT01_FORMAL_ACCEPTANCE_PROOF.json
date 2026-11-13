@@ -1,0 +1,106 @@
+{
+  "schema": "risck-comply.g1.a15-qat01-formal-acceptance-proof.v1",
+  "gate_id": "A-15",
+  "atomic_control_id": "QAT-01",
+  "acceptance_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+  "tested_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+  "release_candidate_main_sha": "2989cd8a1c627b08126f7411defbe2c5d1392283",
+  "qualified_review": {
+    "reviewer_login": "renansilva2002-tech",
+    "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
+    "scope": "Historical technical review #2721 preserved as separate provenance; native COMMENTED source verification #5897516363 on exact HEAD after all 11 current provider checks; final independent FORMAL APPROVED on post-evidence HEAD remains mandatory.",
+    "source_ci_verification": {
+      "reviewer_login": "renansilva2002-tech",
+      "review_id": 5897516363,
+      "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2724#pullrequestreview-5897516363",
+      "review_type": "COMMENTED",
+      "reviewed_head_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+      "submitted_at_utc": "2026-11-13T20:22:48Z",
+      "required_statement": "A-15/QAT-01 INDEPENDENT SOURCE CI VERIFICATION: 11/11 PASS"
+    }
+  },
+  "source_ci": {
+    "required_checks": [
+      {
+        "name": "Core CI, build and npm audit",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523058"
+      },
+      {
+        "name": "Run security gates, typecheck and tests",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877353/job/132052523343"
+      },
+      {
+        "name": "CI / quality",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877700/job/132052526432"
+      },
+      {
+        "name": "CodeQL",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523124"
+      },
+      {
+        "name": "Semgrep SAST",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523036"
+      },
+      {
+        "name": "Secret scanning (Gitleaks)",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523451"
+      },
+      {
+        "name": "Actionlint",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523278"
+      },
+      {
+        "name": "OSSF Scorecard",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052522576"
+      },
+      {
+        "name": "Dependency Review",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523240"
+      },
+      {
+        "name": "Quality, security, build",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877569/job/132052523666"
+      },
+      {
+        "name": "E2E production-like gate",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877569/job/132052523873"
+      }
+    ],
+    "circleci": {
+      "context": "ci/circleci: pr-source-autopilot",
+      "state": "success",
+      "url": "https://app.circleci.com/workflow/5aaa0c31-0b32-4d01-873c-224e04b3f3fe/job/455c4a1a-58aa-4fc4-a82d-813d50f62516"
+    },
+    "decision": "SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE",
+    "verified_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+    "provider_last_required_job_completed_at": "2026-11-13T17:43:22.000Z",
+    "independent_source_verification_review_id": 5897516363
+  },
+  "limitations": [
+    "Source CI only: 11/11 current exact-source native GitHub Actions checks and CircleCI verified; no authenticated external QA, Production runtime, Vercel deployment or release approval claimed.",
+    "The independent COMMENTED source observation was published after all required source checks; native formal APPROVED review of the final proof-and-index-only HEAD remains mandatory.",
+    "Only the proof and canonical index may change between the independently verified source and final acceptance candidate. Any unrelated main integration requires new source evidence."
+  ]
+}
