@@ -22,6 +22,20 @@ describe('SEC-06 audit coverage source boundaries', () => {
     ))).toContain('team.member_role_changed');
   });
 
+  it('requires the signer to interpolate resource and operation in that exact order', () => {
+    const original = 'action: `${input.resource}.${input.operation}`';
+    for (const invalid of [
+      'action: `${input.operation}.${input.resource}`',
+      'action: `${input.resource}:${input.operation}`',
+      'action: `${input.resource}.${input.resource}`',
+      "action: 'risk.create'",
+    ]) {
+      expect(edit(writer, source => source.replace(original, invalid))).toEqual([
+        'risk.create', 'risk.delete', 'vendor.create', 'vendor.delete',
+      ]);
+    }
+  });
+
   it('requires the matching executable risk caller, signer and both SQL streams', () => {
     expect(edit('src/server/actions/risks.ts', source => source.replace("operation: 'delete'", "operation: 'create'"))).toContain('risk.delete');
     expect(edit(writer, source => source.replace('${input.resource}.${input.operation}', '${input.resource}.${input.resource}'))).toContain('risk.delete');

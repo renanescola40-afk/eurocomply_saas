@@ -217,9 +217,24 @@ export function checkMappedAuditCoverage(readSource) {
     String.raw`\binsert\s+into\s+public\.${table}\s*\([^)]*\baction\b[^)]*\)\s*values\s*\(\s*p_audit_id,\s*p_organization_id,\s*p_actor_user_id,\s*p_resource_type\s*\|\|\s*'\.'\s*\|\|\s*p_operation`,
   ).test(commercialBody);
 
+  // The signer derives the event name from the resource and operation at
+  // runtime. Inspect the actual TypeScript template AST: interpolating the
+  // TypeScript *node* here would compare "undefined.undefined" and falsely
+  // report all four critical commercial events as absent.
+  function commercialActionTemplate(expression) {
+    if (!expression || !ts.isTemplateExpression(expression)
+      || expression.head.text !== '' || expression.templateSpans.length !== 2) return false;
+
+    const [resource, operation] = expression.templateSpans;
+    return expressionIs(resource.expression, 'input.resource')
+      && resource.literal.text === '.'
+      && expressionIs(operation.expression, 'input.operation')
+      && operation.literal.text === '';
+  }
+
   const commercialWriterMatches = literal(variableInitializer(commercialWriter, 'ATOMIC_COMMERCIAL_RESOURCE_RPC'), commercialRpc)
     && hasCall(commercialWriter, 'buildAuditChainRecord', ([input]) =>
-      expressionIs(property(input, 'action'), `${input.resource}.${input.operation}`), 'mutateCommercialResourceAtomic')
+      commercialActionTemplate(property(input, 'action')), 'mutateCommercialResourceAtomic')
     && hasCall(commercialWriter, 'rpc', ([name, input]) =>
       expressionIs(name, 'ATOMIC_COMMERCIAL_RESOURCE_RPC')
       && expressionIs(property(input, 'p_resource_type'), 'input.resource')
