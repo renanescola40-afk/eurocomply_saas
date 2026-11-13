@@ -18,7 +18,7 @@ const PERSONAS: Record<Persona, PersonaConfig> = {
   },
   admin: {
     storageStateEnv: 'E2E_ADMIN_STORAGE_STATE',
-    canManageBilling: true,
+    canManageBilling: false,
     canManageTeam: true,
     canWriteProductData: true,
   },
@@ -26,7 +26,7 @@ const PERSONAS: Record<Persona, PersonaConfig> = {
     storageStateEnv: 'E2E_MEMBER_STORAGE_STATE',
     canManageBilling: false,
     canManageTeam: false,
-    canWriteProductData: true,
+    canWriteProductData: false,
   },
   viewer: {
     storageStateEnv: 'E2E_VIEWER_STORAGE_STATE',
@@ -37,16 +37,16 @@ const PERSONAS: Record<Persona, PersonaConfig> = {
 };
 
 const protectedRoutes = [
-  '/pt/dashboard/organizations',
-  '/pt/dashboard/organizations/team',
-  '/pt/dashboard/organizations/billing',
-  '/pt/dashboard/organizations/documents',
-  '/pt/dashboard/organizations/risks',
-  '/pt/vendor-assurance',
-  '/pt/ai-systems',
-  '/pt/aprovacoes',
-  '/pt/auditoria',
-  '/pt/settings',
+  '/en/dashboard/organizations',
+  '/en/dashboard/organizations/team',
+  '/en/dashboard/organizations/billing',
+  '/en/dashboard/organizations/documents',
+  '/en/dashboard/organizations/risks',
+  '/en/vendor-assurance',
+  '/en/ai-systems',
+  '/en/aprovacoes',
+  '/en/auditoria',
+  '/en/settings',
 ] as const;
 
 async function expectHealthyAuthenticatedPage(page: Page, label: string) {
@@ -54,23 +54,59 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
   await expect(page.locator('body'), `${label} should not expose runtime errors`).not.toContainText(
     /Unhandled Runtime Error|Application error|ReferenceError:|TypeError:|SyntaxError:|Stack trace/i,
   );
-  expect(page.url(), `${label} should not fall back to login`).not.toMatch(/\/pt\/login\?next=/);
+  const pathname = new URL(page.url()).pathname;
+  expect(pathname, `${label} should remain in the authenticated application`).toMatch(
+    /^\/en\/(?:dashboard|ai-systems|vendor-assurance|aprovacoes|auditoria|settings)(?:\/|$)/,
+  );
+  expect(pathname, `${label} should not be a public or authentication page`).not.toMatch(
+    /\/(?:login|signup|pricing|checkout)(?:\/|$)/,
+  );
+  // EnterpriseDashboardShell and nested feature pages each render a main element.
+  // Assert the outermost rendered application area, without Playwright strict-mode collisions.
+  await expect(page.locator('main').first(), `${label} must render the application main area`).toBeVisible();
   expect(page.url(), `${label} should never navigate to /undefined`).not.toContain('/undefined');
 }
 
-async function countVisibleControls(page: Page, pattern: RegExp) {
-  return page.getByRole('button', { name: pattern }).or(page.getByRole('link', { name: pattern })).count();
+const seededPermissionsEnabled = process.env.E2E_ENABLE_SEEDED_PERSONA_PERMISSIONS === 'true';
+
+// A missing or cross-environment fixture must be a failed opt-in QA run, not 40+ skipped green tests.
+if (seededPermissionsEnabled) {
+  const missing = (['E2E_OWNER_STORAGE_STATE', 'E2E_ADMIN_STORAGE_STATE', 'E2E_MEMBER_STORAGE_STATE'] as const)
+    .filter((name) => !process.env[name]?.trim());
+  if (missing.length > 0) throw new Error(`qat02_missing_required_qa_persona_states:${missing.join(',')}`);
+
+  const qaApp = process.env.E2E_BASE_URL;
+  const qaData = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const approvedRef = process.env.E2E_QA_APPROVED_SUPABASE_REF;
+  let app: URL;
+  let database: URL;
+  try {
+    app = new URL(qaApp ?? '');
+    database = new URL(qaData ?? '');
+  } catch {
+    throw new Error('qat02_requires_exact_isolated_qa_origins');
+  }
+  if (
+    app.protocol !== 'https:' ||
+    app.host !== 'eurocomply-saas-env-qa-renanescola40-afks-projects.vercel.app' ||
+    app.pathname !== '/' || app.search || app.hash ||
+    database.origin !== 'https://zrxrrfbllsxtleyxjpsz.supabase.co' ||
+    database.pathname !== '/' || database.search || database.hash ||
+    approvedRef !== 'zrxrrfbllsxtleyxjpsz'
+  ) {
+    throw new Error('qat02_requires_exact_isolated_qa_origins');
+  }
 }
 
 test.describe('seeded persona permission smoke', () => {
   test.skip(
-    process.env.E2E_ENABLE_SEEDED_PERSONA_PERMISSIONS !== 'true',
-    'Enable only in disposable QA environments with synthetic owner/admin/member/viewer storageState files.',
+    !seededPermissionsEnabled,
+    'Enable only for exact isolated QA with owner/admin/member synthetic storageState files.',
   );
 
   for (const [persona, config] of Object.entries(PERSONAS) as [Persona, PersonaConfig][]) {
     test.describe(`${persona} seeded persona`, () => {
-      test.skip(!process.env[config.storageStateEnv], `Missing ${config.storageStateEnv} for ${persona} persona.`);
+      test.skip(persona === 'viewer' && !process.env[config.storageStateEnv], 'Viewer fixture is optional.');
       test.use({ storageState: process.env[config.storageStateEnv] || undefined });
 
       for (const route of protectedRoutes) {
@@ -81,38 +117,45 @@ test.describe('seeded persona permission smoke', () => {
       }
 
       test(`${persona} sees the expected billing permission surface`, async ({ page }) => {
-        await page.goto('/pt/dashboard/organizations/billing', { waitUntil: 'domcontentloaded' });
+        await page.goto('/en/dashboard/organizations/billing', { waitUntil: 'domcontentloaded' });
         await expectHealthyAuthenticatedPage(page, `${persona} billing permission surface`);
 
-        const billingControls = await countVisibleControls(page, /billing|checkout|portal|manage subscription|secure checkout|upgrade|manage billing/i);
+        const readOnly = page.getByText(/billing is read-only for your role/i);
         if (config.canManageBilling) {
-          expect(billingControls, `${persona} should expose at least one billing-management control`).toBeGreaterThan(0);
+          await expect(readOnly).toHaveCount(0);
+          await expect(page.getByRole('heading', { name: /manage your RISCK COMPLY plan/i })).toBeVisible();
         } else {
-          expect(billingControls, `${persona} should not expose billing-management controls`).toBe(0);
+          await expect(readOnly).toBeVisible();
+          await expect(page.getByRole('button', { name: /owner access required/i })).toBeDisabled();
+          await expect(page.getByRole('button', { name: /owner action required/i }).first()).toBeDisabled();
         }
       });
 
       test(`${persona} sees the expected team permission surface`, async ({ page }) => {
-        await page.goto('/pt/dashboard/organizations/team', { waitUntil: 'domcontentloaded' });
+        await page.goto('/en/dashboard/organizations/team', { waitUntil: 'domcontentloaded' });
         await expectHealthyAuthenticatedPage(page, `${persona} team permission surface`);
 
-        const teamControls = await countVisibleControls(page, /invite|add member|remove|change role|role|admin|owner/i);
+        const restricted = page.getByText(/team access is restricted/i);
         if (config.canManageTeam) {
-          expect(teamControls, `${persona} should expose team-management controls`).toBeGreaterThan(0);
+          await expect(restricted).toHaveCount(0);
+          await expect(page.getByText(/pending invites/i).first()).toBeVisible();
         } else {
-          expect(teamControls, `${persona} should not expose team-management controls`).toBe(0);
+          await expect(restricted).toBeVisible();
+          await expect(page.getByRole('button', { name: /send invitation/i })).toHaveCount(0);
         }
       });
 
       test(`${persona} sees the expected product write permission surface`, async ({ page }) => {
-        await page.goto('/pt/ai-systems', { waitUntil: 'domcontentloaded' });
+        await page.goto('/en/ai-systems', { waitUntil: 'domcontentloaded' });
         await expectHealthyAuthenticatedPage(page, `${persona} product write permission surface`);
 
-        const writeControls = await countVisibleControls(page, /create|new|add|novo|criar|save|guardar|submit|enviar/i);
+        const readonly = page.getByText(/your role can review AI systems, risk classification and governance readiness/i);
         if (config.canWriteProductData) {
-          expect(writeControls, `${persona} should expose product write controls`).toBeGreaterThan(0);
+          await expect(readonly).toHaveCount(0);
+          await expect(page.getByRole('button', { name: /classify and save/i })).toBeVisible();
         } else {
-          expect(writeControls, `${persona} should not expose product write controls`).toBe(0);
+          await expect(readonly).toBeVisible();
+          await expect(page.getByRole('button', { name: /classify and save/i })).toHaveCount(0);
         }
       });
     });
