@@ -2,13 +2,22 @@
   "schema": "risck-comply.g1.a15-qat01-formal-acceptance-proof.v1",
   "gate_id": "A-15",
   "atomic_control_id": "QAT-01",
-  "acceptance_source_sha": "5b5958c37857b4c3bda66becfb2925a31d848fe1",
-  "tested_source_sha": "5b5958c37857b4c3bda66becfb2925a31d848fe1",
-  "release_candidate_main_sha": "e297a65cc5cc0f4abbe3d62411805ee7f6af5347",
+  "acceptance_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+  "tested_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+  "release_candidate_main_sha": "2989cd8a1c627b08126f7411defbe2c5d1392283",
   "qualified_review": {
     "reviewer_login": "renansilva2002-tech",
     "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
-    "scope": "Historical independent QAT-01 technical decision on 086450d...; new final-HEAD formal decision is separately required and authenticated."
+    "scope": "Historical technical review #2721 preserved as separate provenance; native COMMENTED source verification #5897516363 on exact HEAD after all 11 current provider checks; final independent FORMAL APPROVED on post-evidence HEAD remains mandatory.",
+    "source_ci_verification": {
+      "reviewer_login": "renansilva2002-tech",
+      "review_id": 5897516363,
+      "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2724#pullrequestreview-5897516363",
+      "review_type": "COMMENTED",
+      "reviewed_head_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+      "submitted_at_utc": "2026-11-13T20:22:48Z",
+      "required_statement": "A-15/QAT-01 INDEPENDENT SOURCE CI VERIFICATION: 11/11 PASS"
+    }
   },
   "source_ci": {
     "required_checks": [
@@ -16,80 +25,82 @@
         "name": "Core CI, build and npm audit",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824301/job/131961825283"
-      },
-      {
-        "name": "CodeQL",
-        "status": "completed",
-        "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824301/job/131961824885"
-      },
-      {
-        "name": "Semgrep SAST",
-        "status": "completed",
-        "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824301/job/131961825279"
-      },
-      {
-        "name": "Secret scanning (Gitleaks)",
-        "status": "completed",
-        "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824301/job/131961825400"
-      },
-      {
-        "name": "OSSF Scorecard",
-        "status": "completed",
-        "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824301/job/131961825465"
-      },
-      {
-        "name": "Actionlint",
-        "status": "completed",
-        "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824301/job/131961825367"
-      },
-      {
-        "name": "Dependency Review",
-        "status": "completed",
-        "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824301/job/131961825391"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523058"
       },
       {
         "name": "Run security gates, typecheck and tests",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824471/job/131961824049"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877353/job/132052523343"
       },
       {
         "name": "CI / quality",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824440/job/131961824220"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877700/job/132052526432"
+      },
+      {
+        "name": "CodeQL",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523124"
+      },
+      {
+        "name": "Semgrep SAST",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523036"
+      },
+      {
+        "name": "Secret scanning (Gitleaks)",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523451"
+      },
+      {
+        "name": "Actionlint",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523278"
+      },
+      {
+        "name": "OSSF Scorecard",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052522576"
+      },
+      {
+        "name": "Dependency Review",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523240"
       },
       {
         "name": "Quality, security, build",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824551/job/131961825244"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877569/job/132052523666"
       },
       {
         "name": "E2E production-like gate",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43447824551/job/131961824357"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877569/job/132052523873"
       }
     ],
     "circleci": {
       "context": "ci/circleci: pr-source-autopilot",
       "state": "success",
-      "url": "https://app.circleci.com/workflow/842a914e-0f1b-42ea-9583-2ec69cf720fd/job/065030fd-87f5-4358-a7c1-cc6c5c002364"
+      "url": "https://app.circleci.com/workflow/5aaa0c31-0b32-4d01-873c-224e04b3f3fe/job/455c4a1a-58aa-4fc4-a82d-813d50f62516"
     },
-    "decision": "SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE"
+    "decision": "SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE",
+    "verified_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+    "provider_last_required_job_completed_at": "2026-11-13T17:43:22.000Z",
+    "independent_source_verification_review_id": 5897516363
   },
   "limitations": [
-    "Source CI only; no authenticated external QA, Production runtime, Vercel deployment or release approval is claimed.",
-    "The previous A-15 formal review was on this tested source HEAD, but the amended final proof/ledger HEAD requires a fresh independent approval.",
-    "The current source HEAD incorporates the later legal/trust integration from main; all eleven QAT-01 check jobs and CircleCI succeeded on this exact source.",
-    "Only the proof and canonical index may change between this source and final acceptance candidate. Any further unrelated main merge requires another source freeze."
+    "Source CI only: 11/11 current exact-source native GitHub Actions checks and CircleCI verified; no authenticated external QA, Production runtime, Vercel deployment or release approval claimed.",
+    "The independent COMMENTED source observation was published after all required source checks; native formal APPROVED review of the final proof-and-index-only HEAD remains mandatory.",
+    "Only the proof and canonical index may change between the independently verified source and final acceptance candidate. Any unrelated main integration requires new source evidence."
   ]
 }

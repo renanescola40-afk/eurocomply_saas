@@ -33,7 +33,7 @@
     "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
     "gates_accepted": 0,
-    "evidence_records_validation": "PENDING_FINAL_EXACT_HEAD_PROVIDER_APPROVAL_AND_CI",
+    "evidence_records_validation": "PENDING_FINAL_EXACT_HEAD_QUALIFIED_FORMAL_REVIEW_AND_PROVIDER_CI",
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
@@ -505,9 +505,9 @@
       "accepted_by": null,
       "accepted_at": null,
       "evidence_ids": [
-        "EV-QAT-01-EXACT-SOURCE-CI-5B5958C3-20261113"
+        "EV-QAT-01-EXACT-SOURCE-CI-3494D2B5-20261113"
       ],
-      "notes": "Candidate source-CI record bound to the tested post-integration source; effective only after authenticated final exact-HEAD approval and official validator success."
+      "notes": "Current-source 11/11 CI PASS and qualified independent review timestamp postdate provider checks; effective as control PASS only after authenticated final-HEAD A-15 approval and provider-backed validation."
     },
     {
       "control_id": "QAT-02",
@@ -1035,10 +1035,10 @@
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
-      "accepted_at": "2026-11-13T15:24:29.156Z",
-      "acceptance_sha": "5b5958c37857b4c3bda66becfb2925a31d848fe1",
-      "acceptance_evidence_sha256": "d8efe1b80c4ccfd92a8945a142860ceb6f32fb45ca89d3c258dd24e7cab53da8",
-      "notes": "Candidate only: exact post-integration source verified; fresh native formal approval on this final PR HEAD and official provider-backed validation required."
+      "accepted_at": "2026-11-13T20:22:48Z",
+      "acceptance_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+      "acceptance_evidence_sha256": "326e5db0f305854f38ad80573febc7879b6e352d345c2f732e2ac8cb104f84aa",
+      "notes": "Conditional source-only admission at 3494d2b58bff24d5e1430191923c5b426258cfdc: 11/11 native required checks and CircleCI success; authenticated independent COMMENTED observation 5897516363 after checks, prior technical review preserved. Formal A-15 acceptance requires fresh independent native APPROVED on the later evidence-only PR head, required CI and post-merge validator."
     },
     {
       "gate_id": "A-16",
@@ -1298,32 +1298,32 @@
       "acceptance_status": "NOT_ACCEPTED"
     },
     {
-      "evidence_id": "EV-QAT-01-EXACT-SOURCE-CI-5B5958C3-20261113",
+      "evidence_id": "EV-QAT-01-EXACT-SOURCE-CI-3494D2B5-20261113",
       "control_id": "QAT-01",
       "gate_id": "A-15",
       "evidence_type": "source-ci",
       "status": "PASS",
       "repository": "renanescola40-afk/eurocomply_saas",
-      "branch": "evidence/a15-qat01-canonical-acceptance-20261113",
-      "commit_sha": "5b5958c37857b4c3bda66becfb2925a31d848fe1",
-      "workflow_run_id": 43447824301,
+      "branch": "evidence/a15-qat01-final-freeze-20261113",
+      "commit_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+      "workflow_run_id": 117719604774,
       "environment": "source-ci",
-      "generated_at": "2026-11-13T15:24:07.224Z",
-      "source_system": "GitHub Actions + CircleCI",
-      "test_command_or_provider_query": "Authenticated GitHub check-runs and combined status for 5b5958c37857b4c3bda66becfb2925a31d848fe1; scripts/enterprise-evidence/verify-qat01-native-checks.mjs",
-      "result_summary": "11/11 required source, regression and security jobs and CircleCI pr-source-autopilot succeeded on the exact post-integration source SHA. Formal acceptance remains conditional on independent native review of final HEAD and official post-merge validation.",
+      "generated_at": "2026-11-13T17:43:22.000Z",
+      "source_system": "GitHub Actions + CircleCI (authenticated exact-source provider checks)",
+      "test_command_or_provider_query": "Authenticated GitHub check-runs and combined CircleCI status for 3494d2b58bff24d5e1430191923c5b426258cfdc; scripts/enterprise-evidence/verify-qat01-native-checks.mjs; independent COMMENTED review 5897516363",
+      "result_summary": "11/11 required GitHub Actions source/regression/security jobs and CircleCI passed for 3494d2b58bff24d5e1430191923c5b426258cfdc; independently reviewed AFTER latest provider check; only source CI, not runtime release.",
       "artifact_path": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
-      "artifact_sha256": "d8efe1b80c4ccfd92a8945a142860ceb6f32fb45ca89d3c258dd24e7cab53da8",
-      "reproducibility_instructions": "Read authenticated check-runs and commit status for 5b5958c37857b4c3bda66becfb2925a31d848fe1, verify all 11 required jobs and CircleCI, inspect this digest-bound proof and approve the exact final PR HEAD, then execute official validator post-merge.",
+      "artifact_sha256": "326e5db0f305854f38ad80573febc7879b6e352d345c2f732e2ac8cb104f84aa",
+      "reproducibility_instructions": "Verify 11 exact SHA authenticated GitHub Actions jobs and latest ci/circleci: pr-source-autopilot success for 3494d2b58bff24d5e1430191923c5b426258cfdc, review https://github.com/renanescola40-afk/eurocomply_saas/pull/2724#pullrequestreview-5897516363 timestamp 2026-11-13T20:22:48Z, compare SHA256 of proof, obtain final-HEAD independent formal APPROVED and post-merge official validator.",
       "limitations": [
-        "Source CI does not establish QAT-02/03/04, external QA authentication, Production runtime or deployment.",
-        "A new exact-HEAD formal approval is necessary after this proof and ledger update.",
-        "Vercel deployment is outside QAT-01."
+        "QAT-01 source CI only; QAT-02/03/04, external QA auth, Production runtime and deployment not established.",
+        "Formal A-15 acceptance pending independent native exact-final-HEAD APPROVED and official post-merge verification.",
+        "generated_at is the provider completion timestamp of the last required job, not the JSON commit timestamp."
       ],
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "accepted_by": "renansilva2002-tech",
-      "accepted_at": "2026-11-13T15:24:29.156Z"
+      "accepted_at": "2026-11-13T20:22:48Z"
     }
   ],
   "limitations": [
