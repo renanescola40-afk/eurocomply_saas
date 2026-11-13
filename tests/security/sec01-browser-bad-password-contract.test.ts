@@ -23,9 +23,13 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
       ?.split("stage = 'real_browser_password_login';")[0];
     expect(negative).toBeTruthy();
     expect(negative).toContain('page.waitForResponse(');
-    expect(negative).toContain("QA_URL + '/auth/v1/token'");
-    expect(negative).toContain("response.request().method() === 'POST'");
-    expect(negative).toContain("response.url().includes('grant_type=password')");
+    expect(negative).toContain("url.origin === QA_URL && url.pathname === '/auth/v1/token'");
+    expect(negative).toContain("request.method() === 'POST'");
+    expect(negative).toContain("url.searchParams.get('grant_type') === 'password'");
+    expect(negative).toContain("page.on('requestfailed', observeRequestFailure)");
+    expect(negative).toContain("page.off('requestfailed', observeRequestFailure)");
+    expect(negative).toContain("'invalid_password_request_not_sent'");
+    expect(negative).toContain("'invalid_password_request_failed'");
     expect(negative).toContain("denialCode === 'invalid_credentials'");
     expect(negative).toContain("getByRole('alert').waitFor");
     expect(negative).toContain('invalidPasswordCookies.length === 0');
