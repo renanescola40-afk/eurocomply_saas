@@ -194,3 +194,11 @@ QUALIFIED_EXTERNAL_REVIEW=ONLY_IF_CURRENT_SCOPE_TRIGGER_REQUIRES
 ```
 
 This register is evidence-bound and is not itself a certification, regulator approval, legal opinion or customer acceptance.
+
+## 2026-11-13 — Connected PostHog configuration boundary (TRU-03)
+
+A direct, read-only PostHog connector readback confirmed the **active connected Default project ID 209928**, with \`ingested_event=true\`, \`anonymize_ips=true\`, \`session_recording_opt_in=true\`, and \`capture_console_log_opt_in=true\`. The configured session-recording period is \`30d\`. The events-retention endpoint for the same active project returned project- and organization-level retention overrides \`null\`, with a default period of **12 months** and plan limit of **12 months**; it did **not** return a completed deletion event or next per-cutoff deletion date. This is one attributable project configuration observation, **not** a tenant-wide or Production-provider retention warranty.
+
+The connected Vercel project's read-only env metadata returned 100 visible records, with no \`POSTHOG\`-named key in that returned set and \`hiddenProductionEnvCount=0\`; this response is not sufficient to conclude that the canonical production runtime uses or does not use project 209928. The earlier dated project 255188 observation in \`docs/trust/PROVIDER_FACTUAL_EVIDENCE_REGISTER.md\` remains historical and is not silently rewritten.
+
+**Open legal/privacy decisions:** Production project/SDK binding; actual analytics, session-replay and console-payload data categories; consent and recording masking; country/access/onward transfer mechanisms, provider backup lifecycle; final subprocessor allocation and qualified contractual wording where required. Do not publish a blanket no-analytics assertion or a 30-day **all-data** deletion promise from these settings. No Production mutation, data access, new contract or legal PASS was performed. \`TRU-03=NOT_ACCEPTED\`.
