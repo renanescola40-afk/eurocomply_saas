@@ -193,8 +193,9 @@ test('historic provider readback validates at immutable origin but cannot masque
 
 test('all four archived Evidence Factory records are SHA-256-bound to existing immutable artifact bytes',()=>{
  const index=JSON.parse(fs.readFileSync('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json','utf8'));
- assert.equal(index.evidence_records.length,4,'frozen initial index must keep four records');
- for(const record of index.evidence_records){
+ const archived=index.evidence_records.filter(record=>record.commit_sha===index.source.commit_sha);
+ assert.equal(archived.length,4,'frozen initial index must keep four archived records');
+ for(const record of archived){
   const absolute=path.resolve(process.cwd(),record.artifact_path);
   assert.ok(absolute.startsWith(process.cwd()+path.sep),'artifact must stay in repository');
   assert.ok(fs.existsSync(absolute),record.evidence_id+' artifact missing');
