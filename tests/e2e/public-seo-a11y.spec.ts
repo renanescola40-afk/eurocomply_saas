@@ -58,12 +58,20 @@ test.describe('public SEO and accessibility smoke', () => {
   test('localized feature page exposes FAQ, software and breadcrumb structured data', async ({ page }) => {
     await page.goto('/en/features/ai-inventory');
 
-    const structuredData = page.locator('script[type="application/ld+json"]');
-    await expect(structuredData).toHaveCount(1);
-    const payload = await structuredData.textContent();
-    expect(payload).toContain('FAQPage');
-    expect(payload).toContain('SoftwareApplication');
-    expect(payload).toContain('BreadcrumbList');
+    // Scope the check to the active landmark while Next.js streams hidden segments.
+    const structuredData = page.getByRole('main').locator(':scope > script[type="application/ld+json"]');
+    await expect.poll(async () => {
+      const scripts = await structuredData.allTextContents();
+      return scripts.map((script) => JSON.parse(script));
+    }).toEqual([
+      expect.objectContaining({
+        '@graph': expect.arrayContaining([
+          expect.objectContaining({ '@type': 'FAQPage' }),
+          expect.objectContaining({ '@type': 'SoftwareApplication' }),
+          expect.objectContaining({ '@type': 'BreadcrumbList' }),
+        ]),
+      }),
+    ]);
   });
 
   test('mobile landing keeps content within viewport and keyboard focus visible', async ({ page }) => {

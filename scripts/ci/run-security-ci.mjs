@@ -14,6 +14,20 @@ function appendSummary(markdown) {
   appendFileSync(summaryPath, `${markdown}\n`, 'utf8');
 }
 
+// QAT-01 provenance negatives run inside the existing required security CI.
+// No live provider call or acceptance claim occurs during the normal PR job.
+console.log('::group::QAT01_NATIVE_PROVIDER_CONTRACT');
+const qat01Result = spawnSync(process.execPath, ['--test', 'tests/ci/qat01-native-provider-contract.test.mjs'], {
+  cwd: process.cwd(),
+  env: process.env,
+  shell: false,
+  stdio: 'inherit',
+});
+console.log('::endgroup::');
+if (qat01Result.error || qat01Result.status !== 0) {
+  console.error('::error title=QAT01_NATIVE_PROVIDER_CONTRACT_FAILED::Authenticated source-CI contract test failed');
+  process.exit(1);
+}
 appendSummary('## SECURITY_CI diagnostic gate');
 appendSummary('');
 appendSummary('| # | Subcheck | Status |');
