@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { evaluateG1Scope } from '../../scripts/release/verify-g1-enterprise-scope.mjs';
 import { verifySEC05Evidence } from '../../scripts/release/verify-g1-sec05-evidence.mjs';
 
 // Synthetic in-memory fixtures test the verifier only. They are NOT a provider
@@ -65,4 +68,47 @@ test('actual partial SEC-05 provider readback cannot be accepted as full gate pr
   assert.ok(failures.some(x => x.includes('browser bundle')));
   assert.ok(failures.some(x => x.includes('TLS enforcement')));
   assert.ok(failures.some(x => x.includes('independent exact-SHA review')));
+});
+
+test('the scope evaluator rejects SEC-05 evidence for a different Production commit', () => {
+  const root = mkdtempSync(join(tmpdir(), 'sec05-evidence-test-'));
+  try {
+    const registry = JSON.parse(readFileSync('config/g1-enterprise-scope-v1.json', 'utf8'));
+    const control = registry.mandatory.find(item => item.id === 'SEC-05');
+    for (const item of registry.mandatory.filter(item => item.status === 'PASS')) {
+      for (const ref of item.evidenceRefs) {
+        const target = join(root, ref);
+        mkdirSync(dirname(target), { recursive: true });
+        copyFileSync(ref, target);
+      }
+    }
+
+    const path = 'docs/enterprise/evidence/sec05-synthetic-test-only.json';
+    const observedAt = '2026-11-04T00:00:00Z';
+    Object.assign(control, {
+      status: 'PASS',
+      acceptedAt: observedAt,
+      acceptedBy: 'SYNTHETIC TEST - NOT REAL REVIEW',
+      evidenceRefs: [path],
+    });
+    const proof = {
+      ...example(),
+      observedAt,
+      sourceBaselineSha: registry.sourceBaselineSha,
+    };
+    const target = join(root, path);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, JSON.stringify(proof));
+    assert.deepEqual(evaluateG1Scope(registry, root).errors, []);
+
+    proof.vercel.deployedGitSha = 'e'.repeat(40);
+    writeFileSync(target, JSON.stringify(proof));
+    const result = evaluateG1Scope(registry, root);
+    assert.equal(result.valid, false);
+    assert.deepEqual(result.errors, [
+      'PASS evidence content invalid: SEC-05 (production deployment/TLS/secret configuration incomplete or wrong SHA)',
+    ]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
