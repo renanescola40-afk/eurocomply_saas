@@ -27,13 +27,13 @@
     "controls_pass_source": 2,
     "controls_blocked_source": 1,
     "controls_not_verified_source": 35,
-    "evidence_records_generated": 4,
+    "evidence_records_generated": 5,
     "evidence_records_valid": 0,
     "gates_total": 24,
     "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
     "gates_accepted": 0,
-    "evidence_records_validation": "PENDING_EXACT_SHA_CI_VALIDATION",
+    "evidence_records_validation": "PENDING_FINAL_EXACT_HEAD_PROVIDER_APPROVAL_AND_CI",
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
@@ -504,8 +504,10 @@
       "blocker_evidence_refs": [],
       "accepted_by": null,
       "accepted_at": null,
-      "evidence_ids": [],
-      "notes": null
+      "evidence_ids": [
+        "EV-QAT-01-EXACT-SOURCE-CI-E76F6291-20261113"
+      ],
+      "notes": "Candidate provider-backed source-CI claim; only the authenticated final exact-HEAD formal approval and official validation may make it effective. Frozen G1 source status is unchanged."
     },
     {
       "control_id": "QAT-02",
@@ -1025,9 +1027,18 @@
         "QAT-01"
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
-      "status": "NOT_ELIGIBLE",
-      "accepted": false,
-      "acceptance_evidence_ref": null
+      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "accepted": true,
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
+      "accepted_by": "renansilva2002-tech",
+      "reviewer_id": "renansilva2002-tech",
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
+      "accepted_at": "2026-11-13T14:09:14.176Z",
+      "acceptance_sha": "e76f62915a725c935f802c263a7b6d26f1df0a5e",
+      "acceptance_evidence_sha256": "1615c95371831a98e64407458172972eed4fdc5fc11757035005ebe48df6e348",
+      "notes": "Candidate only; not effective before authenticated native formal approval of the exact final PR HEAD and official validator success. Earlier #2721 review is historical technical context."
     },
     {
       "gate_id": "A-16",
@@ -1285,6 +1296,34 @@
       ],
       "reviewer_status": "NOT_REVIEWED",
       "acceptance_status": "NOT_ACCEPTED"
+    },
+    {
+      "evidence_id": "EV-QAT-01-EXACT-SOURCE-CI-E76F6291-20261113",
+      "control_id": "QAT-01",
+      "gate_id": "A-15",
+      "evidence_type": "source-ci",
+      "status": "PASS",
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "branch": "evidence/a15-qat01-canonical-acceptance-20261113",
+      "commit_sha": "e76f62915a725c935f802c263a7b6d26f1df0a5e",
+      "workflow_run_id": 43436281895,
+      "environment": "source-ci",
+      "generated_at": "2026-11-13T14:08:39.063Z",
+      "source_system": "GitHub Actions + CircleCI",
+      "test_command_or_provider_query": "Authenticated GitHub check-runs and combined status for e76f62915a725c935f802c263a7b6d26f1df0a5e; scripts/enterprise-evidence/verify-qat01-native-checks.mjs",
+      "result_summary": "11/11 required source, regression and security checks and CircleCI pr-source-autopilot succeeded on exact tested SHA. Governed merge b9ac6d2... has zero changed files against it. Formal acceptance is conditional on final exact-HEAD independent review and official validator.",
+      "artifact_path": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
+      "artifact_sha256": "1615c95371831a98e64407458172972eed4fdc5fc11757035005ebe48df6e348",
+      "reproducibility_instructions": "Use authenticated GitHub check-runs (all pages) and commit status on e76f629...; run verify-qat01-native-checks.mjs with provider token; compare source to b9ac6d2... for zero changed files; verify native formal review on final acceptance PR HEAD, then rerun official validator post-merge.",
+      "limitations": [
+        "Source CI does not prove QAT-02/03/04, QA authentication, Production runtime or deployment.",
+        "The #2721 review is historical; final exact-HEAD approval is separately required.",
+        "Vercel deployment block is outside this source-CI criterion."
+      ],
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "accepted_by": "renansilva2002-tech",
+      "accepted_at": "2026-11-13T14:09:14.176Z"
     }
   ],
   "limitations": [
