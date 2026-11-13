@@ -505,9 +505,9 @@
       "accepted_by": null,
       "accepted_at": null,
       "evidence_ids": [
-        "EV-QAT-01-EXACT-SOURCE-CI-E76F6291-20261113"
+        "EV-QAT-01-EXACT-SOURCE-CI-5B5958C3-20261113"
       ],
-      "notes": "Candidate provider-backed source-CI claim; only the authenticated final exact-HEAD formal approval and official validation may make it effective. Frozen G1 source status is unchanged."
+      "notes": "Candidate source-CI record bound to the tested post-integration source; effective only after authenticated final exact-HEAD approval and official validator success."
     },
     {
       "control_id": "QAT-02",
@@ -1035,10 +1035,10 @@
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
-      "accepted_at": "2026-11-13T14:09:14.176Z",
-      "acceptance_sha": "e76f62915a725c935f802c263a7b6d26f1df0a5e",
-      "acceptance_evidence_sha256": "1615c95371831a98e64407458172972eed4fdc5fc11757035005ebe48df6e348",
-      "notes": "Candidate only; not effective before authenticated native formal approval of the exact final PR HEAD and official validator success. Earlier #2721 review is historical technical context."
+      "accepted_at": "2026-11-13T15:24:29.156Z",
+      "acceptance_sha": "5b5958c37857b4c3bda66becfb2925a31d848fe1",
+      "acceptance_evidence_sha256": "d8efe1b80c4ccfd92a8945a142860ceb6f32fb45ca89d3c258dd24e7cab53da8",
+      "notes": "Candidate only: exact post-integration source verified; fresh native formal approval on this final PR HEAD and official provider-backed validation required."
     },
     {
       "gate_id": "A-16",
@@ -1298,32 +1298,32 @@
       "acceptance_status": "NOT_ACCEPTED"
     },
     {
-      "evidence_id": "EV-QAT-01-EXACT-SOURCE-CI-E76F6291-20261113",
+      "evidence_id": "EV-QAT-01-EXACT-SOURCE-CI-5B5958C3-20261113",
       "control_id": "QAT-01",
       "gate_id": "A-15",
       "evidence_type": "source-ci",
       "status": "PASS",
       "repository": "renanescola40-afk/eurocomply_saas",
       "branch": "evidence/a15-qat01-canonical-acceptance-20261113",
-      "commit_sha": "e76f62915a725c935f802c263a7b6d26f1df0a5e",
-      "workflow_run_id": 43436281895,
+      "commit_sha": "5b5958c37857b4c3bda66becfb2925a31d848fe1",
+      "workflow_run_id": 43447824301,
       "environment": "source-ci",
-      "generated_at": "2026-11-13T14:08:39.063Z",
+      "generated_at": "2026-11-13T15:24:07.224Z",
       "source_system": "GitHub Actions + CircleCI",
-      "test_command_or_provider_query": "Authenticated GitHub check-runs and combined status for e76f62915a725c935f802c263a7b6d26f1df0a5e; scripts/enterprise-evidence/verify-qat01-native-checks.mjs",
-      "result_summary": "11/11 required source, regression and security checks and CircleCI pr-source-autopilot succeeded on exact tested SHA. Governed merge b9ac6d2... has zero changed files against it. Formal acceptance is conditional on final exact-HEAD independent review and official validator.",
+      "test_command_or_provider_query": "Authenticated GitHub check-runs and combined status for 5b5958c37857b4c3bda66becfb2925a31d848fe1; scripts/enterprise-evidence/verify-qat01-native-checks.mjs",
+      "result_summary": "11/11 required source, regression and security jobs and CircleCI pr-source-autopilot succeeded on the exact post-integration source SHA. Formal acceptance remains conditional on independent native review of final HEAD and official post-merge validation.",
       "artifact_path": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
-      "artifact_sha256": "1615c95371831a98e64407458172972eed4fdc5fc11757035005ebe48df6e348",
-      "reproducibility_instructions": "Use authenticated GitHub check-runs (all pages) and commit status on e76f629...; run verify-qat01-native-checks.mjs with provider token; compare source to b9ac6d2... for zero changed files; verify native formal review on final acceptance PR HEAD, then rerun official validator post-merge.",
+      "artifact_sha256": "d8efe1b80c4ccfd92a8945a142860ceb6f32fb45ca89d3c258dd24e7cab53da8",
+      "reproducibility_instructions": "Read authenticated check-runs and commit status for 5b5958c37857b4c3bda66becfb2925a31d848fe1, verify all 11 required jobs and CircleCI, inspect this digest-bound proof and approve the exact final PR HEAD, then execute official validator post-merge.",
       "limitations": [
-        "Source CI does not prove QAT-02/03/04, QA authentication, Production runtime or deployment.",
-        "The #2721 review is historical; final exact-HEAD approval is separately required.",
-        "Vercel deployment block is outside this source-CI criterion."
+        "Source CI does not establish QAT-02/03/04, external QA authentication, Production runtime or deployment.",
+        "A new exact-HEAD formal approval is necessary after this proof and ledger update.",
+        "Vercel deployment is outside QAT-01."
       ],
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
       "accepted_by": "renansilva2002-tech",
-      "accepted_at": "2026-11-13T14:09:14.176Z"
+      "accepted_at": "2026-11-13T15:24:29.156Z"
     }
   ],
   "limitations": [
