@@ -1,0 +1,96 @@
+{
+  "schema": "risck-comply.g1.a15-qat01-formal-acceptance-proof.v1",
+  "gate_id": "A-15",
+  "atomic_control_id": "QAT-01",
+  "acceptance_source_sha": "e76f62915a725c935f802c263a7b6d26f1df0a5e",
+  "tested_source_sha": "e76f62915a725c935f802c263a7b6d26f1df0a5e",
+  "release_candidate_main_sha": "b9ac6d2b8fff69ea3e5084b3324ab99a0f39b66e",
+  "source_tree_equivalence_url": "https://github.com/renanescola40-afk/eurocomply_saas/compare/e76f62915a725c935f802c263a7b6d26f1df0a5e...b9ac6d2b8fff69ea3e5084b3324ab99a0f39b66e",
+  "qualified_review": {
+    "reviewer_login": "renansilva2002-tech",
+    "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
+    "scope": "Historical independent QAT-01 technical decision on 086450d...; new final-HEAD formal decision is separately required and authenticated."
+  },
+  "source_ci": {
+    "required_checks": [
+      {
+        "name": "Core CI, build and npm audit",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281895/job/131922194303"
+      },
+      {
+        "name": "CodeQL",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281895/job/131922194564"
+      },
+      {
+        "name": "Semgrep SAST",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281895/job/131922194359"
+      },
+      {
+        "name": "Secret scanning (Gitleaks)",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281895/job/131922194367"
+      },
+      {
+        "name": "OSSF Scorecard",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281895/job/131922193910"
+      },
+      {
+        "name": "Actionlint",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281895/job/131922194630"
+      },
+      {
+        "name": "Dependency Review",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281895/job/131922194604"
+      },
+      {
+        "name": "Run security gates, typecheck and tests",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281574/job/131922131567"
+      },
+      {
+        "name": "CI / quality",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281761/job/131922190435"
+      },
+      {
+        "name": "Quality, security, build",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281872/job/131922127845"
+      },
+      {
+        "name": "E2E production-like gate",
+        "status": "completed",
+        "conclusion": "success",
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43436281872/job/131922127600"
+      }
+    ],
+    "circleci": {
+      "context": "ci/circleci: pr-source-autopilot",
+      "state": "success",
+      "url": "https://app.circleci.com/workflow/0ad99513-7f54-4100-8c39-e5026ba5c238/job/0ebb1942-2602-437e-a98f-f63415f10e2f"
+    },
+    "decision": "SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE"
+  },
+  "limitations": [
+    "Source CI only; no authenticated external QA, Production runtime, Vercel deployment or release approval is claimed.",
+    "The #2721 technical review is historical and does not itself authorize this final gate claim.",
+    "Exact-source provider readback and independent native formal review on the final PR HEAD are mandatory.",
+    "The merge b9ac6d2... has zero file changes relative to tested e76f629...; subsequent source changes invalidate the claim."
+  ]
+}
