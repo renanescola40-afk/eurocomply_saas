@@ -495,6 +495,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      checks: read
+      statuses: read
     steps:
       - name: Refuse branch dispatch as merge evidence
         if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'

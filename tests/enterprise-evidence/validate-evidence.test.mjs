@@ -546,3 +546,8 @@ test('A-09 needs an independent observation of the frozen source and a later exa
  assert.equal(await verify({record:{...pull,user:{login}}}),false);
  assert.equal(await verify({gate:{...claim,approval_url:claim.approval_url.replace('2711','2710')}}),false);
 });
+
+test('A-15 cannot accept without an authenticated formal review', () => {
+ const errors = validateGateAcceptance({gate_id:'A-15',accepted:true},{eligible:true});
+ assert.ok(errors.includes('authenticated_current_head_review_required'));
+});
