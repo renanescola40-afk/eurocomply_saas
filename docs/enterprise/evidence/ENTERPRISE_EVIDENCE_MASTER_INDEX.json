@@ -27,13 +27,13 @@
     "controls_pass_source": 2,
     "controls_blocked_source": 1,
     "controls_not_verified_source": 35,
-    "evidence_records_generated": 5,
+    "evidence_records_generated": 4,
     "evidence_records_valid": 0,
     "gates_total": 24,
     "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
     "gates_accepted": 0,
-    "evidence_records_validation": "PENDING_FINAL_EXACT_HEAD_QUALIFIED_FORMAL_REVIEW_AND_PROVIDER_CI",
+    "evidence_records_validation": "SOURCE_ONLY_QAT01_HISTORICAL_PROOF_NOT_CURRENT_HEAD_ACCEPTANCE",
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
@@ -504,10 +504,8 @@
       "blocker_evidence_refs": [],
       "accepted_by": null,
       "accepted_at": null,
-      "evidence_ids": [
-        "EV-QAT-01-EXACT-SOURCE-CI-3494D2B5-20261113"
-      ],
-      "notes": "Current-source 11/11 CI PASS and qualified independent review timestamp postdate provider checks; effective as control PASS only after authenticated final-HEAD A-15 approval and provider-backed validation."
+      "evidence_ids": [],
+      "notes": "Current branch source validation remains NOT_VERIFIED. Historical independently reviewed QAT-01 11/11 candidate (record EV-QAT-01-EXACT-SOURCE-CI-3494D2B5-20261113, source 3494d2b5) is preserved in the immutable A-15 proof and merged PR #2724 (main 6c244a4342380528ae5763f49498b3f69b10708c); it is not a current-SHA accepted record for unrelated TRU-05 PR #2728."
     },
     {
       "control_id": "QAT-02",
@@ -1030,7 +1028,7 @@
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
       "accepted": false,
       "acceptance_evidence_ref": null,
-      "notes": "SOURCE-CI CANDIDATE ONLY: 11/11 checks on frozen QAT-01 source 3494d2b5 and qualified COMMENTED review #5897516363 are preserved in the separate proof/evidence record; A-15 has not passed authenticated final-HEAD FORMAL APPROVED and post-merge validation on PR #2724. No formal gate acceptance claim on this current mainline branch. Historical review: https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962."
+      "notes": "SOURCE-CI CANDIDATE ONLY: 11/11 checks on frozen QAT-01 source 3494d2b5 and qualified COMMENTED review #5897516363 are preserved in the separate proof/evidence record; A-15 has not passed authenticated final-HEAD FORMAL APPROVED and post-merge validation on PR #2724. No formal gate acceptance claim on this current mainline branch. Historical review: https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962. Historical QAT-01 source candidate is retained in docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json (merged PR #2724); it is intentionally excluded from this unrelated PR's active per-SHA evidence_records list pending post-merge/current-release provider verification."
     },
     {
       "gate_id": "A-16",
@@ -1288,35 +1286,6 @@
       ],
       "reviewer_status": "NOT_REVIEWED",
       "acceptance_status": "NOT_ACCEPTED"
-    },
-    {
-      "evidence_id": "EV-QAT-01-EXACT-SOURCE-CI-3494D2B5-20261113",
-      "control_id": "QAT-01",
-      "gate_id": "A-15",
-      "evidence_type": "source-ci",
-      "status": "PASS",
-      "repository": "renanescola40-afk/eurocomply_saas",
-      "branch": "evidence/a15-qat01-final-freeze-20261113",
-      "commit_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
-      "workflow_run_id": 43473877569,
-      "environment": "source-ci",
-      "generated_at": "2026-11-13T17:43:22.000Z",
-      "source_system": "GitHub Actions + CircleCI (authenticated exact-source provider checks)",
-      "test_command_or_provider_query": "Authenticated GitHub check-runs and combined CircleCI status for 3494d2b58bff24d5e1430191923c5b426258cfdc; scripts/enterprise-evidence/verify-qat01-native-checks.mjs; independent COMMENTED review 5897516363",
-      "result_summary": "11/11 required GitHub Actions source/regression/security jobs and CircleCI passed for 3494d2b58bff24d5e1430191923c5b426258cfdc; independently reviewed AFTER latest provider check; only source CI, not runtime release.",
-      "artifact_path": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
-      "artifact_sha256": "326e5db0f305854f38ad80573febc7879b6e352d345c2f732e2ac8cb104f84aa",
-      "reproducibility_instructions": "Verify 11 exact SHA authenticated GitHub Actions jobs and latest ci/circleci: pr-source-autopilot success for 3494d2b58bff24d5e1430191923c5b426258cfdc, review https://github.com/renanescola40-afk/eurocomply_saas/pull/2724#pullrequestreview-5897516363 timestamp 2026-11-13T20:22:48Z, compare SHA256 of proof, obtain final-HEAD independent formal APPROVED and post-merge official validator.",
-      "limitations": [
-        "QAT-01 source CI only; QAT-02/03/04, external QA auth, Production runtime and deployment not established.",
-        "Formal A-15 acceptance pending independent native exact-final-HEAD APPROVED and official post-merge verification.",
-        "generated_at is the provider completion timestamp of the last required job, not the JSON commit timestamp.",
-        "workflow_run_id points to the authenticated Enterprise Production Gate workflow run containing the verified Quality/security/build and E2E source checks; remaining required jobs are independently linked by name in the proof."
-      ],
-      "reviewer_status": "ACCEPTED",
-      "acceptance_status": "ACCEPTED",
-      "accepted_by": "renansilva2002-tech",
-      "accepted_at": "2026-11-13T20:22:48Z"
     }
   ],
   "limitations": [
