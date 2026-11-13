@@ -163,3 +163,22 @@ POSTHOG_ACCOUNT_LINKED_DPA_COMPLETION_EVIDENCE=PASS_ATTRIBUTABLE
 POSTHOG_PRODUCTION_ACCOUNT_RECOVERY=OPEN
 QUALIFIED_PROVIDER_TRANSFER_LEGAL_ACCEPTANCE=OPEN
 ```
+
+## 2026-11-13 — Direct current PostHog settings readback (TRU-03 / A-23)
+
+**Evidence class:** direct read-only connected PostHog API response observed 13 November 2026; current project identity confirmed twice by \`project-get\` (explicit project ID and active-project query). No underlying event, session recording, API token, personal data or credential was retrieved. No current Production token binding was observed.
+
+| Check / provider response | Attributable observed result | Evidence boundary |
+| --- | --- | --- |
+| Connected **active** project | \`id=209928\`, name \`Default project\`; \`ingested_event=true\` | Distinct from the dated 2026-09-10 snapshot that recorded connected project \`255188\`. Do not overwrite that historical observation or infer the two project IDs are the same instance. |
+| Relevant project settings | \`anonymize_ips=true\`; \`session_recording_opt_in=true\`; \`capture_console_log_opt_in=true\` | These settings demonstrate enabled capabilities in this connected project, not that the canonical SaaS Production sends customer data to it. The actual data captured, consent behavior, sensitive-data masking and source attribution remain unverified. |
+| Session recordings | \`session_recording_retention_period=30d\` | Project configuration, **not** a guarantee of total personal-data deletion within 30 days or a final contractual retention promise. |
+| Event retention | Active-project \`events-retention-get\`: \`project_retention_months=null\`, \`organization_retention_months=null\`, \`default_retention_months=12\`, \`plan_retention_months=12\`, \`default_period_deletes=true\` | A 12-month **configured fallback event period**, not verified deletion of all event copies, backups or ancillary data. |
+| Cleanup and deletion proof | \`next_monthly_cleanup_on=2026-12-03\`, \`first_pass_on=2027-03-03\`, \`next_deletion_on=null\`, \`next_deletion_before=null\` | There is no currently attributable completed deletion event or scheduled next specific deletion cutoff in the readback. Do not mark downstream deletion PASS. |
+| Application binding | Project \`209928\` has not been mapped to the exact Production SDK token and current canonical deployed build | \`POSTHOG_PRODUCTION_PROJECT_ATTRIBUTION=OPEN\`; until resolved, no Production data-category, session-recording, transfer or retention conclusion can be drawn from this project. |
+
+**Vercel corroboration, metadata-only:** on 13 November 2026 the read-only \`filter_project_envs\` response for connected project \`prj_APpXAyQFy1Gie50xfbO45zjkyUSm\` and team \`team_wu3LZI6ReFxO16xipv73GLwG\` supplied 100 visible environment-variable records and \`hiddenProductionEnvCount=0\`. None of **those 100 records** was named with \`POSTHOG\`; this result does **not** establish exhaustive environment visibility or the absence of injected/runtime analytics configuration, and no value was decrypted. The Production project token and precise supplier data flow therefore remain **NOT VERIFIED**.
+
+**Impact:** the connected project has potentially privacy-relevant recording and console-capture configuration. Before any buyer-facing statement that RISCK COMPLY Production analytics is inactive, consent-gated, masked, or subject to particular retention, independently establish the exact Production binding, deployed consent behavior, event payload categories, masking rules and operational lifecycle. This is a potential legal/privacy exposure to assess, not a claim of a confirmed Production violation. Existing signed-DPA evidence in this register remains historically scoped; neither this readback nor the DPA establishes Chapter V or live deletion acceptance.
+
+**Control verdict:** \`TRU-03=EVIDENCE_ADVANCED / NOT_ACCEPTED\`; \`A-23=NOT_ACCEPTED\`. No external legal review or production configuration change was made.
