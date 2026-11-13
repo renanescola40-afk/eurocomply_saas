@@ -219,7 +219,7 @@ export function checkMappedAuditCoverage(readSource) {
 
   const commercialWriterMatches = literal(variableInitializer(commercialWriter, 'ATOMIC_COMMERCIAL_RESOURCE_RPC'), commercialRpc)
     && hasCall(commercialWriter, 'buildAuditChainRecord', ([input]) =>
-      expressionIs(property(input, 'action'), '`${input.resource}.${input.operation}`'), 'mutateCommercialResourceAtomic')
+      expressionIs(property(input, 'action'), `${input.resource}.${input.operation}`), 'mutateCommercialResourceAtomic')
     && hasCall(commercialWriter, 'rpc', ([name, input]) =>
       expressionIs(name, 'ATOMIC_COMMERCIAL_RESOURCE_RPC')
       && expressionIs(property(input, 'p_resource_type'), 'input.resource')
