@@ -27,13 +27,13 @@
     "controls_pass_source": 2,
     "controls_blocked_source": 1,
     "controls_not_verified_source": 35,
-    "evidence_records_generated": 4,
+    "evidence_records_generated": 5,
     "evidence_records_valid": 0,
     "gates_total": 24,
     "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
     "gates_accepted": 0,
-    "evidence_records_validation": "PENDING_EXACT_SHA_CI_VALIDATION",
+    "evidence_records_validation": "PENDING_FINAL_EXACT_HEAD_QUALIFIED_FORMAL_REVIEW_AND_PROVIDER_CI",
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
@@ -504,8 +504,10 @@
       "blocker_evidence_refs": [],
       "accepted_by": null,
       "accepted_at": null,
-      "evidence_ids": [],
-      "notes": null
+      "evidence_ids": [
+        "EV-QAT-01-EXACT-SOURCE-CI-3494D2B5-20261113"
+      ],
+      "notes": "Current-source 11/11 CI PASS and qualified independent review timestamp postdate provider checks; effective as control PASS only after authenticated final-HEAD A-15 approval and provider-backed validation."
     },
     {
       "control_id": "QAT-02",
@@ -1025,9 +1027,18 @@
         "QAT-01"
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
-      "status": "NOT_ELIGIBLE",
-      "accepted": false,
-      "acceptance_evidence_ref": null
+      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "accepted": true,
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
+      "accepted_by": "renansilva2002-tech",
+      "reviewer_id": "renansilva2002-tech",
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
+      "accepted_at": "2026-11-13T20:22:48Z",
+      "acceptance_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+      "acceptance_evidence_sha256": "326e5db0f305854f38ad80573febc7879b6e352d345c2f732e2ac8cb104f84aa",
+      "notes": "Conditional source-only admission at 3494d2b58bff24d5e1430191923c5b426258cfdc: 11/11 native required checks and CircleCI success; authenticated independent COMMENTED observation 5897516363 after checks, prior technical review preserved. Formal A-15 acceptance requires fresh independent native APPROVED on the later evidence-only PR head, required CI and post-merge validator."
     },
     {
       "gate_id": "A-16",
@@ -1285,6 +1296,35 @@
       ],
       "reviewer_status": "NOT_REVIEWED",
       "acceptance_status": "NOT_ACCEPTED"
+    },
+    {
+      "evidence_id": "EV-QAT-01-EXACT-SOURCE-CI-3494D2B5-20261113",
+      "control_id": "QAT-01",
+      "gate_id": "A-15",
+      "evidence_type": "source-ci",
+      "status": "PASS",
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "branch": "evidence/a15-qat01-final-freeze-20261113",
+      "commit_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
+      "workflow_run_id": 43473877569,
+      "environment": "source-ci",
+      "generated_at": "2026-11-13T17:43:22.000Z",
+      "source_system": "GitHub Actions + CircleCI (authenticated exact-source provider checks)",
+      "test_command_or_provider_query": "Authenticated GitHub check-runs and combined CircleCI status for 3494d2b58bff24d5e1430191923c5b426258cfdc; scripts/enterprise-evidence/verify-qat01-native-checks.mjs; independent COMMENTED review 5897516363",
+      "result_summary": "11/11 required GitHub Actions source/regression/security jobs and CircleCI passed for 3494d2b58bff24d5e1430191923c5b426258cfdc; independently reviewed AFTER latest provider check; only source CI, not runtime release.",
+      "artifact_path": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
+      "artifact_sha256": "326e5db0f305854f38ad80573febc7879b6e352d345c2f732e2ac8cb104f84aa",
+      "reproducibility_instructions": "Verify 11 exact SHA authenticated GitHub Actions jobs and latest ci/circleci: pr-source-autopilot success for 3494d2b58bff24d5e1430191923c5b426258cfdc, review https://github.com/renanescola40-afk/eurocomply_saas/pull/2724#pullrequestreview-5897516363 timestamp 2026-11-13T20:22:48Z, compare SHA256 of proof, obtain final-HEAD independent formal APPROVED and post-merge official validator.",
+      "limitations": [
+        "QAT-01 source CI only; QAT-02/03/04, external QA auth, Production runtime and deployment not established.",
+        "Formal A-15 acceptance pending independent native exact-final-HEAD APPROVED and official post-merge verification.",
+        "generated_at is the provider completion timestamp of the last required job, not the JSON commit timestamp.",
+        "workflow_run_id points to the authenticated Enterprise Production Gate workflow run containing the verified Quality/security/build and E2E source checks; remaining required jobs are independently linked by name in the proof."
+      ],
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "accepted_by": "renansilva2002-tech",
+      "accepted_at": "2026-11-13T20:22:48Z"
     }
   ],
   "limitations": [
