@@ -27,13 +27,13 @@
     "controls_pass_source": 2,
     "controls_blocked_source": 1,
     "controls_not_verified_source": 35,
-    "evidence_records_generated": 4,
+    "evidence_records_generated": 5,
     "evidence_records_valid": 0,
     "gates_total": 24,
     "gates_eligible_for_independent_review": 2,
     "gates_blocked": 1,
     "gates_accepted": 0,
-    "evidence_records_validation": "PENDING_EXACT_SHA_CI_VALIDATION",
+    "evidence_records_validation": "PENDING_FINAL_EXACT_HEAD_INDEPENDENT_APPROVAL_AND_PROVIDER_CI",
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
@@ -504,8 +504,10 @@
       "blocker_evidence_refs": [],
       "accepted_by": null,
       "accepted_at": null,
-      "evidence_ids": [],
-      "notes": null
+      "evidence_ids": [
+        "EV-QAT-01-SOURCE-CI-994631A9-20261113"
+      ],
+      "notes": "Source-CI record is a proposed canonical acceptance claim; it becomes effective only after authenticated independent approval on the final PR HEAD and official provider-backed validator success. Source registry status remains NOT_VERIFIED."
     },
     {
       "control_id": "QAT-02",
@@ -1025,9 +1027,18 @@
         "QAT-01"
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
-      "status": "NOT_ELIGIBLE",
-      "accepted": false,
-      "acceptance_evidence_ref": null
+      "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
+      "accepted": true,
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
+      "accepted_by": "renansilva2002-tech",
+      "reviewer_id": "renansilva2002-tech",
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
+      "accepted_at": "2026-11-13T13:41:28.886Z",
+      "acceptance_sha": "994631a9eca492812debfc2c4dfbe9fd1f918e67",
+      "acceptance_evidence_sha256": "6b440e97afbb635a33396e7ccd3ca1dbbebe40e6355dc7628db947becae4da26",
+      "notes": "Candidate claim only: #2721 technical review is retained, but native approval of the exact final acceptance PR HEAD is required by the authenticated validator. No acceptance may be credited before that provider-backed review and post-merge validation."
     },
     {
       "gate_id": "A-16",
@@ -1285,6 +1296,34 @@
       ],
       "reviewer_status": "NOT_REVIEWED",
       "acceptance_status": "NOT_ACCEPTED"
+    },
+    {
+      "evidence_id": "EV-QAT-01-SOURCE-CI-994631A9-20261113",
+      "control_id": "QAT-01",
+      "gate_id": "A-15",
+      "evidence_type": "source-ci",
+      "status": "PASS",
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "branch": "main",
+      "commit_sha": "994631a9eca492812debfc2c4dfbe9fd1f918e67",
+      "workflow_run_id": 43421952183,
+      "environment": "source-ci",
+      "generated_at": "2026-11-13T13:40:37.433Z",
+      "source_system": "GitHub Actions + CircleCI",
+      "test_command_or_provider_query": "Authenticated check-runs and commit status readback for exact SHA 994631a9eca492812debfc2c4dfbe9fd1f918e67; scripts/enterprise-evidence/verify-qat01-native-checks.mjs",
+      "result_summary": "11/11 mandatory GitHub Actions source, regression and security checks succeeded, as did ci/circleci: pr-source-autopilot. Merge commit 5030dde5... has no changed files relative to the tested source. Formal acceptance remains conditional on an independent native approval of the final PR HEAD.",
+      "artifact_path": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
+      "artifact_sha256": "6b440e97afbb635a33396e7ccd3ca1dbbebe40e6355dc7628db947becae4da26",
+      "reproducibility_instructions": "Fetch all check-run pages and commit statuses for exact tested source SHA with authenticated GitHub access; run verify-qat01-native-checks.mjs; verify the 11 required check names, conclusions, job URLs, and CircleCI context. Compare 994631a... to 5030dde... for zero file differences. Require native qualified approval of the final acceptance PR HEAD and post-merge Enterprise Evidence Tests.",
+      "limitations": [
+        "Source CI is not authenticated external QA or Production runtime evidence.",
+        "Vercel deployment is blocked and is not part of this QAT-01 source-CI claim.",
+        "The existing #2721 technical review is not the final formal acceptance review."
+      ],
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "accepted_by": "renansilva2002-tech",
+      "accepted_at": "2026-11-13T13:41:28.886Z"
     }
   ],
   "limitations": [
