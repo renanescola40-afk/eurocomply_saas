@@ -46,6 +46,24 @@ describe('public procurement pack', () => {
     expect(procurementProviders.some((provider) => provider.name === 'GitHub Actions')).toBe(false);
   });
 
+  it('keeps a completed PostHog DPA notice distinct from unverified Production data flows', () => {
+    const posthog = procurementProviders.find((provider) => provider.name === 'PostHog');
+
+    expect(posthog?.regionDisclosure).toContain('Default project 209928');
+    expect(posthog?.regionDisclosure).toContain('ingested_event=true');
+    expect(posthog?.regionDisclosure).toContain('PandaDoc notice');
+    expect(posthog?.regionDisclosure).toContain('1 September 2026');
+    expect(posthog?.regionDisclosure).toContain('no exact canonical Production analytics-project binding has been verified');
+    expect(posthog?.regionDisclosure).toContain('12-month event-retention fallback');
+    expect(posthog?.regionDisclosure).toContain('GDPR role review remain open');
+    expect(posthog?.regionDisclosure).not.toContain('connected assurance project was not the Production project');
+    expect(posthog?.regionDisclosure).not.toContain('account-linked DPA evidence remain open');
+    // Match the public API's no-sensitive-keywords contract on the complete
+    // serialized response, not just on the specific field under review.
+    expect(JSON.stringify(buildPublicProcurementPack('https://www.risckcomply.com')))
+      .not.toMatch(/secret|password|token|service_role/i);
+  });
+
   it('has unique control and document identifiers', () => {
     expect(new Set(procurementControls.map((control) => control.id)).size).toBe(procurementControls.length);
     expect(new Set(procurementDocuments.map((document) => document.path)).size).toBe(procurementDocuments.length);

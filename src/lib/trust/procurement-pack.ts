@@ -164,7 +164,7 @@ export const procurementProviders: ProcurementProvider[] = [
     name: 'PostHog',
     purpose: 'Product analytics and usage insights',
     status: 'optional',
-    regionDisclosure: 'Production source/configuration has historically targeted EU service endpoints; the connected assurance project was not the Production project, so Production account recovery and account-linked DPA evidence remain open.',
+    regionDisclosure: 'The historical Production source/configuration targets EU PostHog endpoints. The connected Default project 209928 reported ingested_event=true on 11 November 2026; connected-project settings subsequently showed recording enabled and a configured 12-month event-retention fallback, but no exact canonical Production analytics-project binding has been verified. The provider register records a PandaDoc notice that a PostHog DPA naming Samuel Cerqueira, Unipessoal Lda was completed by all participants on 1 September 2026; exact applicable account/flow, retention, onward-transfer and GDPR role review remain open. Do not equate connected-project settings or historical DPA evidence with verified Production processing.',
   },
   {
     name: 'Resend',
