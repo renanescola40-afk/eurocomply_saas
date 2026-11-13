@@ -61,7 +61,9 @@ async function expectHealthyAuthenticatedPage(page: Page, label: string) {
   expect(pathname, `${label} should not be a public or authentication page`).not.toMatch(
     /\/(?:login|signup|pricing|checkout)(?:\/|$)/,
   );
-  await expect(page.locator('main'), `${label} must render the application main area`).toBeVisible();
+  // EnterpriseDashboardShell and nested feature pages each render a main element.
+  // Assert the outermost rendered application area, without Playwright strict-mode collisions.
+  await expect(page.locator('main').first(), `${label} must render the application main area`).toBeVisible();
   expect(page.url(), `${label} should never navigate to /undefined`).not.toContain('/undefined');
 }
 
