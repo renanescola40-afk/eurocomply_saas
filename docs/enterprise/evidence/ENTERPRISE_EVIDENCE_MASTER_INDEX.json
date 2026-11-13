@@ -37,7 +37,7 @@
     "artifact_sha256_values_computed": 4,
     "source_gates_pass": 2,
     "source_product_ready_percent": 8.33,
-    "gate_eligibility_note": "A-09/BIL-01 and A-18/OPS-01 were formally accepted on immutable post-merge fb710ca7... (run 43316294291); current main advanced at a2ce8563... after PR #2717 and those previous approvals cannot be projected onto new SHA. Historical proof preserved under each gate, active accepted=false pending one final exact-source native reacceptance."
+    "gate_eligibility_note": "A-09/BIL-01 and A-18/OPS-01 were formally accepted on immutable post-merge fb710ca7... (run 43316294291); current main advanced at a2ce8563... after PR #2717 and those previous approvals cannot be projected onto new SHA. Historical proof preserved under each gate, active accepted=false pending one final exact-source native reacceptance. A-15/QAT-01 remains an independently reviewed source-CI candidate awaiting formal post-proof-commit acceptance on PR #2724; the active accepted flag is false to match gates_accepted=0 and control NOT_VERIFIED."
   },
   "controls": [
     {
@@ -1028,17 +1028,9 @@
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "accepted": true,
-      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
-      "accepted_by": "renansilva2002-tech",
-      "reviewer_id": "renansilva2002-tech",
-      "reviewer_status": "ACCEPTED",
-      "acceptance_status": "ACCEPTED",
-      "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
-      "accepted_at": "2026-11-13T20:22:48Z",
-      "acceptance_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
-      "acceptance_evidence_sha256": "326e5db0f305854f38ad80573febc7879b6e352d345c2f732e2ac8cb104f84aa",
-      "notes": "Conditional source-only admission at 3494d2b58bff24d5e1430191923c5b426258cfdc: 11/11 native required checks and CircleCI success; authenticated independent COMMENTED observation 5897516363 after checks, prior technical review preserved. Formal A-15 acceptance requires fresh independent native APPROVED on the later evidence-only PR head, required CI and post-merge validator."
+      "accepted": false,
+      "acceptance_evidence_ref": null,
+      "notes": "SOURCE-CI CANDIDATE ONLY: 11/11 checks on frozen QAT-01 source 3494d2b5 and qualified COMMENTED review #5897516363 are preserved in the separate proof/evidence record; A-15 has not passed authenticated final-HEAD FORMAL APPROVED and post-merge validation on PR #2724. No formal gate acceptance claim on this current mainline branch. Historical review: https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962."
     },
     {
       "gate_id": "A-16",
