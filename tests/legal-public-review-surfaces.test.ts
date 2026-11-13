@@ -322,4 +322,14 @@ describe('public legal review surfaces', () => {
     expect(transfers).toContain('retention/deletion');
     expect(provider).toContain('DPA');
   });
+  it('does not assert a verified Production PostHog token binding from the connected project', async () => {
+    const trust = await readFile(TRUST_CENTER_CONTENT, 'utf8');
+
+    expect(trust).toContain('11 November 2026');
+    expect(trust).toContain('ingested_event=true');
+    expect(trust).toContain('do not establish whether its token matches canonical RISCK COMPLY Production');
+    expect(trust).not.toContain('a Production PostHog analytics binding');
+    expect(trust).not.toContain('The connected PostHog assurance project does not match the Production project');
+  });
+
 });
