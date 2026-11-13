@@ -1306,7 +1306,7 @@
       "repository": "renanescola40-afk/eurocomply_saas",
       "branch": "evidence/a15-qat01-final-freeze-20261113",
       "commit_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
-      "workflow_run_id": 117719604774,
+      "workflow_run_id": 43473877569,
       "environment": "source-ci",
       "generated_at": "2026-11-13T17:43:22.000Z",
       "source_system": "GitHub Actions + CircleCI (authenticated exact-source provider checks)",
@@ -1318,7 +1318,8 @@
       "limitations": [
         "QAT-01 source CI only; QAT-02/03/04, external QA auth, Production runtime and deployment not established.",
         "Formal A-15 acceptance pending independent native exact-final-HEAD APPROVED and official post-merge verification.",
-        "generated_at is the provider completion timestamp of the last required job, not the JSON commit timestamp."
+        "generated_at is the provider completion timestamp of the last required job, not the JSON commit timestamp.",
+        "workflow_run_id points to the authenticated Enterprise Production Gate workflow run containing the verified Quality/security/build and E2E source checks; remaining required jobs are independently linked by name in the proof."
       ],
       "reviewer_status": "ACCEPTED",
       "acceptance_status": "ACCEPTED",
