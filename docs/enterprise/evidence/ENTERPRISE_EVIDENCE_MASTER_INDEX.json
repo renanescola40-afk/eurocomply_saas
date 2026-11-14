@@ -935,7 +935,7 @@
       "accepted_at": null,
       "acceptance_sha": null,
       "acceptance_evidence_sha256": null,
-      "notes": "Source control remains eligible, but no current-head formal acceptance. Source fb710ca7... passed native authenticated exact-SHA Enterprise Evidence Tests (2/24) after qualified formal review; main a2ce8563... merged an unrelated SEC-06 SQL proof, invalidating the strict current-head acceptance. Preserve previous claim under prior_postmerge_release_acceptance and require one governed post-source-freeze reacceptance; never reuse prior review as current-head authority.",
+      "notes": "Joint A-09/A-18/A-19 release source prepared after PR #2734. Awaiting the qualified native A-09 source observation on this pull request before binding the existing combined proof. Prior acceptance and provider evidence remain recorded below.",
       "prior_postmerge_release_acceptance": {
         "prior_gate_id": "A-09",
         "original_source_sha": "e62a87e1108e763374644a9362d2b991bd28de4b",
