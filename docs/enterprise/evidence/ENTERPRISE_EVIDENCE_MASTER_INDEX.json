@@ -1026,9 +1026,17 @@
       ],
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "ELIGIBLE_FOR_INDEPENDENT_REVIEW",
-      "accepted": false,
-      "acceptance_evidence_ref": null,
-      "notes": "SOURCE-CI CANDIDATE ONLY: 11/11 checks on frozen QAT-01 source 3494d2b5 and qualified COMMENTED review #5897516363 are preserved in the separate proof/evidence record; A-15 has not passed authenticated final-HEAD FORMAL APPROVED and post-merge validation on PR #2724. No formal gate acceptance claim on this current mainline branch. Historical review: https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962. Historical QAT-01 source candidate is retained in docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json (merged PR #2724); it is intentionally excluded from this unrelated PR's active per-SHA evidence_records list pending post-merge/current-release provider verification."
+      "accepted": true,
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
+      "accepted_by": "renansilva2002-tech",
+      "reviewer_id": "renansilva2002-tech",
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "approval_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
+      "accepted_at": "2026-11-14T22:56:49Z",
+      "acceptance_sha": "b0fc4a76c7eda6e0d38d14c1a3c298c942791129",
+      "acceptance_evidence_sha256": "20a680d68da9e3897f0544bb295cf33dfb99f35e7e51a24bd7c23600ffbee650",
+      "notes": "Current #2736 corrected source CI 11/11 and CircleCI success on b0fc4a76c7eda6e0d38d14c1a3c298c942791129; independent COMMENTED observation 5907655859 after checks. Final native four-gate APPROVED on evidence-only HEAD and official post-merge validator required."
     },
     {
       "gate_id": "A-16",
@@ -1288,6 +1296,35 @@
       ],
       "reviewer_status": "NOT_REVIEWED",
       "acceptance_status": "NOT_ACCEPTED"
+    },
+    {
+      "evidence_id": "EV-QAT-01-EXACT-SOURCE-CI-B0FC4A76-20261114",
+      "control_id": "QAT-01",
+      "gate_id": "A-15",
+      "evidence_type": "source-ci",
+      "status": "PASS",
+      "repository": "renanescola40-afk/eurocomply_saas",
+      "branch": "agent/a15-cumulative-acceptance",
+      "commit_sha": "b0fc4a76c7eda6e0d38d14c1a3c298c942791129",
+      "workflow_run_id": 43649702242,
+      "environment": "source-ci",
+      "generated_at": "2026-11-14T22:52:04Z",
+      "source_system": "GitHub Actions + CircleCI (authenticated exact-source provider checks)",
+      "test_command_or_provider_query": "Authenticated GitHub check-runs and CircleCI status for b0fc4a76c7eda6e0d38d14c1a3c298c942791129; scripts/enterprise-evidence/verify-qat01-native-checks.mjs; independent COMMENTED review 5907655859",
+      "result_summary": "11/11 required GitHub Actions source/regression/security jobs and CircleCI passed for b0fc4a76c7eda6e0d38d14c1a3c298c942791129; independently observed after latest provider check; source CI only.",
+      "artifact_path": "docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json",
+      "artifact_sha256": "20a680d68da9e3897f0544bb295cf33dfb99f35e7e51a24bd7c23600ffbee650",
+      "reproducibility_instructions": "Verify 11 authenticated exact-SHA jobs and CircleCI on b0fc4a76c7eda6e0d38d14c1a3c298c942791129; native source observation https://github.com/renanescola40-afk/eurocomply_saas/pull/2736#pullrequestreview-5907655859 at 2026-11-14T22:56:49Z; compare proof SHA256; require independent final-HEAD APPROVED covering all four gates and security, then official post-merge validation.",
+      "limitations": [
+        "QAT-01 source CI only; QAT-02/03/04, external QA auth, Production runtime and deployment not established.",
+        "Formal A-15 acceptance pending independent native exact-final-HEAD APPROVED and official post-merge verification.",
+        "generated_at is the provider completion timestamp of the last required job, not the JSON commit timestamp.",
+        "workflow_run_id points to the authenticated Enterprise Production Gate workflow run containing the verified Quality/security/build and E2E source checks; remaining required jobs are independently linked by name in the proof."
+      ],
+      "reviewer_status": "ACCEPTED",
+      "acceptance_status": "ACCEPTED",
+      "accepted_by": "renansilva2002-tech",
+      "accepted_at": "2026-11-14T22:56:49Z"
     }
   ],
   "limitations": [
@@ -1295,5 +1332,10 @@
     "Existing source PASS references are preserved and are not represented as newly generated evidence.",
     "No gate-level acceptance artifact was supplied; eligible gates are not counted as accepted.",
     "Evidence record validation has not yet completed in CI; the three captured records are not represented as validator-passed."
-  ]
+  ],
+  "cumulative_acceptance": {
+    "schema": "risck-comply.a15-cumulative-acceptance.v1",
+    "checkpoint_sha": "2b91e5ef41b221dd849696a9887cf195c2253eac",
+    "source_sha": "b0fc4a76c7eda6e0d38d14c1a3c298c942791129"
+  }
 }
