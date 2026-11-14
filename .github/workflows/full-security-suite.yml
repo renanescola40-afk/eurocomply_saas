@@ -493,6 +493,8 @@ jobs:
     needs: [core, actionlint, gitleaks, semgrep, codeql, dependency-review, scorecard]
     if: always()
     permissions:
+      actions: read
+      issues: read
       contents: read
       pull-requests: read
       checks: read
@@ -533,4 +535,4 @@ jobs:
           # Every PR can change the candidate SHA. Verify formal acceptance
           # even for code-only PRs; otherwise A-09/A-18 can silently become
           # invalid while this *required* merge check still reports SUCCESS.
-          node scripts/enterprise-evidence/validate-evidence.mjs --report
+          node scripts/enterprise-evidence/validate-evidence.mjs --report --require-a19-review

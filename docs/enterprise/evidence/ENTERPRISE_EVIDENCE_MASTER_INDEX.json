@@ -1112,7 +1112,9 @@
       "acceptance_rule": "ALL_ATOMIC_CRITERIA_PASS",
       "status": "NOT_ELIGIBLE",
       "accepted": false,
-      "acceptance_evidence_ref": null
+      "acceptance_evidence_ref": "docs/enterprise/gate-closure-v35/A19_OPS02_ACCEPTANCE_PROOF.json",
+      "acceptance_sha": "ce2bcacc0be398ee589e855d758182e727ceb10e",
+      "acceptance_evidence_sha256": "f8d51c01848b8a2ac3c457638e4a61525e22475778554c88501abc4c86fe580b"
     },
     {
       "gate_id": "A-20",

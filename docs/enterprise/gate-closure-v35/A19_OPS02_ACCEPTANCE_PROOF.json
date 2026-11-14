@@ -1,0 +1,24 @@
+{
+  "schema": "risck-comply.g1.a19-ops02-acceptance-proof.v1",
+  "gate_id": "A-19",
+  "control_id": "OPS-02",
+  "acceptance_source_sha": "ce2bcacc0be398ee589e855d758182e727ceb10e",
+  "technical_comment_id": 6876516442,
+  "release_comment_id": 6876465909,
+  "workflow_run_id": 43587913240,
+  "artifact_id": 14111720488,
+  "artifact_sha256": "24e3e7118cb31f4f791dd9fd83b7bd886e26372663b217327d7a8201899c07fc",
+  "qualified_review": {
+    "reviewer_login": "renansilva2002-tech"
+  },
+  "release_decision": "NO_GO",
+  "evidence_urls": {
+    "technical_review": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2616#issuecomment-6876516442",
+    "release_decision": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2616#issuecomment-6876465909",
+    "native_ruleset": "https://github.com/renanescola40-afk/eurocomply_saas/rules/17764297",
+    "reviewed_integration": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2732#pullrequestreview-5903962122",
+    "branch_protection": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43587913240/artifacts/14111720488",
+    "production_governance": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43588014556/job/132426566740",
+    "release_validation": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43587915647/job/132426457935"
+  }
+}
