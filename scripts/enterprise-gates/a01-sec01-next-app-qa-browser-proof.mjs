@@ -203,15 +203,40 @@ try {
   // Observe the actual QA provider denial before judging the browser UI.
   // Never retain request bodies, user identities or provider response text.
   failureDetail = 'invalid_password_provider_response_missing';
-  const [deniedResponse] = await Promise.all([
-    page.waitForResponse(
-      (response) => response.url().startsWith(QA_URL + '/auth/v1/token') &&
-        response.url().includes('grant_type=password') &&
-        response.request().method() === 'POST',
+  const isPasswordRequest = (request) => {
+    const url = new URL(request.url());
+    return url.origin === QA_URL && url.pathname === '/auth/v1/token' &&
+      url.searchParams.get('grant_type') === 'password' && request.method() === 'POST';
+  };
+  let requestSent = false;
+  let requestFailed = false;
+  const observeRequest = (request) => {
+    if (isPasswordRequest(request)) requestSent = true;
+  };
+  const observeRequestFailure = (request) => {
+    if (isPasswordRequest(request)) requestFailed = true;
+  };
+  page.on('request', observeRequest);
+  page.on('requestfailed', observeRequestFailure);
+  let deniedResponse;
+  try {
+    const response = page.waitForResponse(
+      (response) => isPasswordRequest(response.request()),
       { timeout: 30000 },
-    ),
-    passwordForm.locator('button[type="submit"]').click(),
-  ]);
+    ).catch(() => null);
+    failureDetail = 'invalid_password_submit_unavailable';
+    await passwordForm.locator('button[type="submit"]').click();
+    deniedResponse = await response;
+    if (!deniedResponse) {
+      failureDetail = requestFailed ? 'invalid_password_request_failed'
+        : requestSent ? 'invalid_password_provider_response_missing'
+          : 'invalid_password_request_not_sent';
+      throw new Error(failureDetail);
+    }
+  } finally {
+    page.off('request', observeRequest);
+    page.off('requestfailed', observeRequestFailure);
+  }
   failureDetail = 'invalid_password_provider_denial_unexpected';
   requireTrue([400, 401, 403].includes(deniedResponse.status()), 'unexpected_invalid_password_status');
   let denialCode = null;

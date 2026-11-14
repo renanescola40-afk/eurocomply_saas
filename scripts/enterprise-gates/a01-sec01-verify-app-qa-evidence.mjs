@@ -54,12 +54,34 @@ const valid = expectedExit === 2 &&
   Array.isArray(evidence.required_but_not_proven) &&
   evidence.required_but_not_proven.includes(
     'true_expired_signed_access_jwt_denial_at_app_and_api');
+const knownFailureStages = new Set([
+  ...expectedNames, 'preflight', 'create_disposable_qa_user', 'launch_isolated_nextjs',
+]);
+const knownFailureDetails = new Set([
+  'password_form_email_input_unavailable', 'password_form_password_input_unavailable',
+  'invalid_password_submit_unavailable', 'invalid_password_request_not_sent',
+  'invalid_password_request_failed', 'invalid_password_provider_response_missing',
+  'invalid_password_provider_denial_unexpected', 'invalid_password_ui_alert_missing',
+  'invalid_password_session_or_route_not_denied',
+  'valid_password_input_unavailable', 'valid_password_submit_unavailable',
+]);
+const sameRun = evidence.schema === 'risck-sec01-next-app-qa-browser-proof-v1' &&
+  evidence.execution === 'LOCAL_NEXT_APP_BROWSER_QA_AUTH' && evidence.source_sha === sha &&
+  (!process.env.CIRCLE_SHA1 || process.env.CIRCLE_SHA1 === sha) && evidence.qa_ref === 'zrxrrfbllsxtleyxjpsz';
+const observations = sameRun && Array.isArray(evidence.checks) &&
+  evidence.checks.length <= expectedNames.length &&
+  evidence.checks.every((check, index) => check?.name === expectedNames[index] && check.status === 'PASS')
+  ? evidence.checks.length : 0;
+
 console.log(JSON.stringify({
   evidence_type: 'SEC01_QA_APPLICATION_PARTIAL',
   source_sha: sha,
   qa_ref: 'zrxrrfbllsxtleyxjpsz',
   checks_passed: valid ? expectedNames.length : 0,
-  cleanup_verified: evidence.qa_cleanup_verified === true,
+  observed_checks_passed: observations,
+  failure_stage: sameRun && knownFailureStages.has(evidence.failure_stage) ? evidence.failure_stage : null,
+  failure_detail: sameRun && knownFailureDetails.has(evidence.failure_detail) ? evidence.failure_detail : null,
+  cleanup_verified: sameRun && evidence.qa_cleanup_verified === true,
   status: valid ? 'PROOF_VALIDATED_PARTIAL' : 'PROOF_FAILED',
   SEC01: 'NOT_VERIFIED',
   A01: 'NOT_ACCEPTED',
