@@ -34,9 +34,12 @@ test('reports a failed browser step without converting partial observations to P
       control: 'NOT_VERIFIED',
       gate: 'NOT_ACCEPTED',
     };
+    const fixtureEnv = { ...process.env };
+    // The temporary repository has its own HEAD, independent of the CI checkout.
+    delete fixtureEnv.CIRCLE_SHA1;
     const verify = () => {
       writeFileSync(path, JSON.stringify(evidence));
-      const result = spawnSync(process.execPath, [verifier, '1'], { cwd, encoding: 'utf8' });
+      const result = spawnSync(process.execPath, [verifier, '1'], { cwd, encoding: 'utf8', env: fixtureEnv });
       assert.equal(result.status, 1);
       return JSON.parse(result.stdout);
     };
