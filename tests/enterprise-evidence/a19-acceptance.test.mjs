@@ -7,6 +7,69 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import * as validator from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 
+test('A-15 source observation survives unrelated auto-dismissal while real withdrawal fails closed', () => {
+  const source = 'a'.repeat(40);
+  const reviewer = { login: 'renansilva2002-tech' };
+  const observation = {
+    id: 10, state: 'COMMENTED', commit_id: source, user: reviewer,
+    submitted_at: '2026-11-14T22:38:36Z',
+    body: 'A-15/QAT-01 INDEPENDENT SOURCE CI VERIFICATION: 11/11 PASS',
+  };
+  const oldApproval = {
+    ...observation, id: 11, state: 'DISMISSED', body: '',
+    submitted_at: '2026-11-14T22:38:52Z',
+  };
+  const pull = { mergedAt: null };
+  const rejection = /A-15\/QAT-01.{0,85}(?:WITHHELD|REJECTED|NOT APPROVED)/i;
+  assert.equal(validator.sourceObservationWithdrawn(
+    [observation, oldApproval], observation, pull, rejection), false);
+  assert.equal(validator.sourceObservationWithdrawn([
+    observation, oldApproval, {
+      ...oldApproval, id: 12, state: 'CHANGES_REQUESTED',
+      submitted_at: '2026-11-14T22:39:00Z',
+    },
+  ], observation, pull, rejection), true);
+  assert.equal(validator.sourceObservationWithdrawn([
+    observation, oldApproval, {
+      ...oldApproval, id: 13, state: 'COMMENTED',
+      body: 'A-15/QAT-01 NOT APPROVED',
+      submitted_at: '2026-11-14T22:39:00Z',
+    },
+  ], observation, pull, rejection), true);
+});
+
+test('cumulative A-15 ancestry accepts only a frozen source and evidence-only finalization', () => {
+  const temp = mkdtempSync(join(tmpdir(), 'risck-a15-cumulative-'));
+  const git = (...args) => execFileSync('git', args, { cwd: temp, encoding: 'utf8' }).trim();
+  const write = (name, value) => {
+    const file = join(temp, name);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, value);
+  };
+  try {
+    git('init', '-q');
+    git('config', 'user.email', 'fixture@example.invalid');
+    git('config', 'user.name', 'CI fixture');
+    write('app.txt', 'baseline');
+    git('add', '.'); git('commit', '-qm', 'checkpoint');
+    const checkpoint = git('rev-parse', 'HEAD');
+    write('scripts/enterprise-evidence/validate-evidence.mjs', 'contract');
+    write('tests/enterprise-evidence/a19-acceptance.test.mjs', 'regression');
+    git('add', '.'); git('commit', '-qm', 'source');
+    const source = git('rev-parse', 'HEAD');
+    write('docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json', '{}');
+    write('docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json', '{}');
+    git('add', '.'); git('commit', '-qm', 'finalize');
+    const final = git('rev-parse', 'HEAD');
+    const options = { root: temp, checkpoint, source, expectedSha: final };
+    assert.equal(validator.cumulativeAncestry(options), true);
+    assert.equal(validator.cumulativeAncestry({ ...options, source: checkpoint }), false);
+    write('app.txt', 'unreviewed');
+    git('add', '.'); git('commit', '-qm', 'unrelated application change');
+    assert.equal(validator.cumulativeAncestry({ ...options, expectedSha: git('rev-parse', 'HEAD') }), false);
+  } finally { rmSync(temp, { recursive: true, force: true }); }
+});
+
 test('A-19 accepts only an authenticated exact-head formal review, and remains pending before review', async () => {
   const source = 'a'.repeat(40);
   const head = 'b'.repeat(40);

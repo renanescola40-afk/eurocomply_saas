@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { verifyQat01NativeChecks } from './verify-qat01-native-checks.mjs';
@@ -25,6 +26,14 @@ const COMBINED_SCHEMA='risck-comply.g1.a09-a18-combined-acceptance-proof.v1';
 const A09_READBACK='A-09/BIL-01 INDEPENDENT VERCEL PRODUCTION READBACK: 6/6 MATCH';
 const A09_EVIDENCE_APPROVAL='A-09/BIL-01 INDEPENDENT EVIDENCE ACCEPTANCE: APPROVED';
 const A09_REJECTION=/(?:FORMAL GATE ACCEPTANCE|A-09\s*\/\s*BIL-01).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+const CUMULATIVE_CHECKPOINT='2b91e5ef41b221dd849696a9887cf195c2253eac';
+const CUMULATIVE_RUN=43607687300, CUMULATIVE_ARTIFACT=14118881399;
+const CUMULATIVE_DIGEST='af156e08b35ac0ea8d75ca0c1e0ee318c9ceaa52afd82095ed0cce373e2d1587';
+const A15_PROOF='docs/enterprise/gate-closure-v34/A15_QAT01_FORMAL_ACCEPTANCE_PROOF.json';
+const CUMULATIVE_GATES=['A-09','A-15','A-18','A-19'];
+const CUMULATIVE_LINES=['A-09/BIL-01','A-15/QAT-01','A-18/OPS-01','A-19/OPS-02']
+ .map(label=>label+' FORMAL GATE ACCEPTANCE: APPROVED');
+const CUMULATIVE_SECURITY='A-15 CUMULATIVE ACCEPTANCE SECURITY REVIEW: APPROVED';
 
 function gateProof(document,gate){
  if(gate.acceptance_evidence_ref!==COMBINED_PROOF) return document;
@@ -88,6 +97,15 @@ function decisionWithdrawn(reviews,decision,pull,rejection){
   if(!Number.isSafeInteger(review.id)||!Number.isSafeInteger(decision.id))return true;
   return review.id>decision.id;
  });
+}
+
+// A dismissed review is the withdrawal of that review, not of an earlier,
+// separate COMMENTED source observation. GitHub automatically dismisses an
+// old APPROVED review on a new commit without dismissing its prior COMMENTED
+// observation. Explicit later rejection and CHANGES_REQUESTED still revoke it.
+export function sourceObservationWithdrawn(reviews,observation,pull,rejection){
+ return decisionWithdrawn(reviews.filter(review=>review?.state!=='DISMISSED'),
+  observation,pull,rejection);
 }
 
 function hasFormalReview(reviews,pull,reviewer,gateLabel,rejection,earliest){
@@ -320,6 +338,141 @@ function committedDigest(root,sha,file){
  return result.status===0?crypto.createHash('sha256').update(result.stdout).digest('hex'):null;
 }
 
+export function cumulativeAncestry({checkpoint=CUMULATIVE_CHECKPOINT,source,expectedSha,root=ROOT}={}){
+ if(!SHA40.test(checkpoint||'')||!SHA40.test(source||'')||!SHA40.test(expectedSha||'')||
+    source===expectedSha)return false;
+ const parent=runGit(root,['rev-parse',source+'^']);
+ if(parent.status!==0||parent.stdout.toString('utf8').trim()!==checkpoint||
+    runGit(root,['merge-base','--is-ancestor',source,expectedSha]).status!==0)return false;
+ const changes=(a,b)=>{
+  const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',a,b,'--']);
+  return diff.status===0?diff.stdout.toString('utf8').split('\0').filter(Boolean):null;
+ };
+ const engineering=changes(checkpoint,source),evidence=changes(source,expectedSha);
+ const allowedEngineering=new Set([
+  'scripts/enterprise-evidence/validate-evidence.mjs',
+  'scripts/enterprise-evidence/verify-qat01-native-checks.mjs',
+  'tests/enterprise-evidence/a19-acceptance.test.mjs',
+ ]);
+ const allowedEvidence=new Set([INDEX_PATH,A15_PROOF]);
+ return Boolean(engineering?.length&&engineering.every(file=>allowedEngineering.has(file))&&
+  evidence?.includes(INDEX_PATH)&&evidence.includes(A15_PROOF)&&
+  evidence.every(file=>allowedEvidence.has(file)));
+}
+
+function committedJson(root,sha,file){
+ const result=runGit(root,['show',sha+':'+file]);
+ if(result.status!==0)return null;
+ try{return JSON.parse(result.stdout.toString('utf8'));}catch{return null;}
+}
+
+function cumulativeIntegrity(index,{expectedSha,root=ROOT}={}){
+ const claim=index.cumulative_acceptance;
+ if(claim?.schema!=='risck-comply.a15-cumulative-acceptance.v1'||
+    claim.checkpoint_sha!==CUMULATIVE_CHECKPOINT||
+    !cumulativeAncestry({source:claim.source_sha,expectedSha,root}))return false;
+ const previous=committedJson(root,CUMULATIVE_CHECKPOINT,INDEX_PATH);
+ if(!previous||index.gates.length!==previous.gates.length||
+    JSON.stringify({...previous,gates:previous.gates.filter(g=>g.gate_id!=='A-15'),
+      evidence_records:previous.evidence_records.filter(r=>r.control_id!=='QAT-01')})!==
+    JSON.stringify({...index,cumulative_acceptance:undefined,
+      gates:index.gates.filter(g=>g.gate_id!=='A-15'),
+      evidence_records:index.evidence_records.filter(r=>r.control_id!=='QAT-01')})||
+    !['A-09','A-18','A-19'].every(id=>{
+      const old=previous.gates.find(g=>g.gate_id===id),now=index.gates.find(g=>g.gate_id===id);
+      return old&&(id==='A-19'||old.accepted===true)&&JSON.stringify(old)===JSON.stringify(now)&&
+       committedDigest(root,expectedSha,old.acceptance_evidence_ref)===old.acceptance_evidence_sha256&&
+       committedDigest(root,CUMULATIVE_CHECKPOINT,old.acceptance_evidence_ref)===old.acceptance_evidence_sha256;
+    }))return false;
+ if(index.gates.filter(g=>g.gate_id==='A-15').length!==1||
+    index.evidence_records.filter(r=>r.control_id==='QAT-01'&&r.status==='PASS').length!==1)return false;
+ const a15=index.gates.find(g=>g.gate_id==='A-15');
+ const record=index.evidence_records.find(r=>r.control_id==='QAT-01'&&r.status==='PASS');
+ const proof=committedJson(root,expectedSha,A15_PROOF);
+ const digest=committedDigest(root,expectedSha,A15_PROOF);
+ return Boolean(a15?.accepted===true&&a15.acceptance_sha===claim.source_sha&&
+  a15.acceptance_evidence_ref===A15_PROOF&&a15.acceptance_evidence_sha256===digest&&
+  record?.commit_sha===claim.source_sha&&record.artifact_path===A15_PROOF&&
+  record.artifact_sha256===digest&&proof?.acceptance_source_sha===claim.source_sha&&
+  proof.tested_source_sha===claim.source_sha&&proof.source_ci?.verified_source_sha===claim.source_sha&&
+  proof.qualified_review?.source_ci_verification?.reviewed_head_sha===claim.source_sha);
+}
+
+async function officialCheckpoint(readProvider,request,token){
+ const [run,artifacts]=await Promise.all([
+  readProvider('/actions/runs/'+CUMULATIVE_RUN),
+  readProvider('/actions/runs/'+CUMULATIVE_RUN+'/artifacts?per_page=100'),
+ ]);
+ const artifact=artifacts?.artifacts?.find(a=>a.id===CUMULATIVE_ARTIFACT);
+ if(run?.head_sha!==CUMULATIVE_CHECKPOINT||run?.conclusion!=='success'||
+    artifact?.workflow_run?.head_sha!==CUMULATIVE_CHECKPOINT||artifact.expired||
+    artifact.digest!=='sha256:'+CUMULATIVE_DIGEST)return false;
+ const response=await request('https://api.github.com/repos/'+REPOSITORY+
+  '/actions/artifacts/'+CUMULATIVE_ARTIFACT+'/zip',{
+    redirect:'follow',headers:{Accept:'application/vnd.github+json',
+      Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28'},
+    signal:AbortSignal.timeout(12000),
+  });
+ if(!response?.ok)return false;
+ const length=Number(response.headers?.get('content-length')||0);
+ if(length>5_000_000)return false;
+ const bytes=Buffer.from(await response.arrayBuffer());
+ if(bytes.length>5_000_000||crypto.createHash('sha256').update(bytes).digest('hex')!==CUMULATIVE_DIGEST)return false;
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'risck-checkpoint-'));
+ try{
+  const zip=path.join(dir,'evidence.zip');fs.writeFileSync(zip,bytes);
+  const result=spawnSync('unzip',['-p',zip,'enterprise-evidence-factory/progress-report.json'],
+   {timeout:10000,maxBuffer:1024*1024});
+  if(result.status!==0)return false;
+  const report=JSON.parse(result.stdout.toString('utf8'));
+  return report.valid===true&&report.errors?.length===0&&
+   report.source_sha===CUMULATIVE_CHECKPOINT&&report.ci_sha===CUMULATIVE_CHECKPOINT&&
+   report.summary?.gates_accepted===3&&report.summary?.controls_pass===3&&
+   ['A-09','A-18','A-19'].every(id=>report.gates?.some(g=>g.gate_id===id&&g.accepted===true));
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+}
+
+export async function verifyCumulativeRelease(index,{
+ expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
+}={}){
+ if(!SHA40.test(expectedSha||'')||!token||!cumulativeIntegrity(index,{expectedSha,root}))return false;
+ const readProvider=githubRead(request,token),source=index.cumulative_acceptance.source_sha;
+ try{
+  const pull=await reviewedPull(readProvider,expectedSha,prNumber,QUALIFIED_REVIEWER);
+  if(!pull||runGit(root,['merge-base','--is-ancestor',source,pull.sha]).status!==0)return false;
+  if(pull.mergedAt){
+   const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
+   const [headTree,mergeTree]=trees.stdout.toString('utf8').trim().split('\n');
+   if(trees.status!==0||!SHA40.test(headTree)||headTree!==mergeTree)return false;
+  }
+  const [ci,reviews,checkpoint]=await Promise.all([
+   verifyQat01NativeChecks({sha:source,token,request}),
+   readProvider('/pulls/'+pull.number+'/reviews?per_page=100'),
+   officialCheckpoint(readProvider,request,token),
+  ]);
+  if(!checkpoint||ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
+      !Array.isArray(reviews))return false;
+  const proof=JSON.parse(fs.readFileSync(path.join(root,A15_PROOF),'utf8'));
+  const sourceObservation=proof.qualified_review?.source_ci_verification;
+  const sourceReview=reviews.find(r=>r.id===sourceObservation?.review_id&&
+   r.user?.login===QUALIFIED_REVIEWER&&r.state==='COMMENTED'&&r.commit_id===source&&
+   includesReviewLine(r.body,'A-15/QAT-01 INDEPENDENT SOURCE CI VERIFICATION: 11/11 PASS')&&
+   !sourceObservationWithdrawn(reviews,r,pull,/A-15\/QAT-01.{0,85}(?:WITHHELD|REJECTED|NOT APPROVED)/i));
+  const finished=Math.max(...ci.checks.map(c=>Date.parse(c.completed_at)));
+  if(!sourceReview||!Number.isFinite(finished)||Date.parse(sourceReview.submitted_at)<finished||
+     sourceObservation.reviewed_head_sha!==source||sourceObservation.review_url!==sourceReview.html_url)return false;
+  const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+  const approval=reviews.find(r=>r.state==='APPROVED'&&r.user?.login===QUALIFIED_REVIEWER&&
+   r.commit_id===pull.sha&&CUMULATIVE_LINES.every(line=>includesReviewLine(r.body,line))&&
+   includesReviewLine(r.body,CUMULATIVE_SECURITY)&&!rejection.test(r.body)&&
+   !decisionWithdrawn(reviews,r,pull,rejection)&&
+   r.html_url==='https://github.com/'+REPOSITORY+'/pull/'+pull.number+'#pullrequestreview-'+r.id&&
+   Date.parse(r.submitted_at)>=Date.parse(sourceReview.submitted_at)&&
+   (!pull.mergedAt||Date.parse(r.submitted_at)<=Date.parse(pull.mergedAt)));
+  return approval?{approvalUrl:approval.html_url,acceptedAt:approval.submitted_at}:false;
+ }catch{return false;}
+}
+
 // Prove two separate evidence-only intervals without widening either gate's path rules.
 // The exact-head provider reviews are still required for all three claims.
 export function a19AncestryTarget(indexGates,{expectedSha,root=ROOT}={}){
@@ -407,7 +560,7 @@ export function evidenceExpectedSha(record,{frozenSha,candidateSha}={}){
  return historical?frozenSha:candidateSha;
 }
 
-export function reconcile({scope,gates,index,expectedSha,now=new Date(),providerA18Approved=false,providerA09Approved=false,providerA15Approved=false,a19Review=null}){
+export function reconcile({scope,gates,index,expectedSha,now=new Date(),providerA18Approved=false,providerA09Approved=false,providerA15Approved=false,a19Review=null,cumulativeReview=null}){
  const errors=[];if(scope.mandatory.length!==38)errors.push('atomic_scope_must_equal_38');if(gates.groups.length!==24)errors.push('formal_gate_scope_must_equal_24');if(index.fixed_scope?.atomic_controls!==38||index.fixed_scope?.formal_gates!==24)errors.push('index_scope_mismatch');
  const qatGate=(index.gates||[]).find(gate=>gate.gate_id==='A-15'&&gate.accepted===true);
  const isQatPass=record=>record.control_id==='QAT-01'&&record.status==='PASS';
@@ -426,17 +579,20 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
   committedDigest(ROOT,expectedSha,A19_PROOF)!==null||
   combined.some(gate=>frozenA19Claims(ROOT,gate.acceptance_sha)?.some(
    claim=>claim.acceptance_evidence_ref===A19_PROOF)));
- const a19Target=a19Candidate&&a19AncestryTarget(indexGates,{expectedSha});
+ const cumulative=Boolean(index.cumulative_acceptance);
+ const carry=Boolean(cumulative&&cumulativeReview&&cumulativeIntegrity(index,{expectedSha}));
+ if(cumulative&&!carry)errors.push('cumulative_acceptance_requires_authenticated_release');
+ const a19Target=a19Candidate&&a19AncestryTarget(indexGates,{expectedSha:carry?CUMULATIVE_CHECKPOINT:expectedSha});
  const a19Bound=Boolean(a19Target);
  if(jointRequired&&!a19Bound)errors.push('invalid_joint_release:A-19:source_or_artifact_mismatch');
- if(a19Bound&&!a19Review)errors.push('invalid_gate_acceptance:A-19:authenticated_current_head_review_required');
- const a19Approved=Boolean(a19Bound&&a19Review?.state==='APPROVED');
+ if(a19Bound&&!a19Review&&!carry)errors.push('invalid_gate_acceptance:A-19:authenticated_current_head_review_required');
+ const a19Approved=Boolean(a19Bound&&(a19Review?.state==='APPROVED'||carry));
  for(const id of ids){const n=mappedIds.filter(x=>x===id).length;if(n!==1)errors.push('control_must_map_to_exactly_one_gate:'+id);}
  for(const id of mappedIds)if(!ids.has(id))errors.push('gate_maps_unknown_control:'+id);
  for(const r of index.evidence_records||[]){if(seen.has(r.evidence_id))errors.push('duplicate_evidence_id:'+r.evidence_id);seen.add(r.evidence_id);if(!ids.has(r.control_id))errors.push('unknown_control:'+r.control_id);const mapped=gates.groups.filter(g=>g.atomicCriteria.includes(r.control_id)).map(g=>g.id);if(!mapped.includes(r.gate_id))errors.push('control_gate_mapping_mismatch:'+r.control_id);const boundSha=recordSha(r);const re=validateEvidenceRecord(r,{expectedSha:boundSha,now});if(re.length)errors.push(r.evidence_id+':'+re.join(','));if(!byControl.has(r.control_id))byControl.set(r.control_id,[]);byControl.get(r.control_id).push(r);}
  const g1SourceAdmission=evaluateG1Scope(scope,ROOT);
  if(!g1SourceAdmission.valid)errors.push('g1_source_acceptance_evidence_invalid');
- const controls=scope.mandatory.map(c=>{const rs=byControl.get(c.id)||[];const validPass=(c.id==='OPS-02'&&a19Approved)||rs.some(r=>r.status==='PASS'&&r.reviewer_status==='ACCEPTED'&&r.acceptance_status==='ACCEPTED'&&(!isQatPass(r)||(providerA15Approved&&qatEvidenceMatches(r)))&&validateEvidenceRecord(r,{expectedSha:isQatPass(r)?recordSha(r):expectedSha,now}).length===0);const sourceEvidenceValid=Array.isArray(c.evidenceRefs)&&c.evidenceRefs.length>0&&c.evidenceRefs.every(ref=>{if(typeof ref!=='string'||!ref.trim())return false;const p=path.resolve(ROOT,ref);return p.startsWith(ROOT+path.sep)&&fs.existsSync(p)&&fs.statSync(p).isFile();});const sourceAccepted=c.status==='PASS'&&typeof c.acceptedBy==='string'&&c.acceptedBy.trim().length>0&&Number.isFinite(Date.parse(c.acceptedAt||''))&&Date.parse(c.acceptedAt)<=now.getTime()&&sourceEvidenceValid&&g1SourceAdmission.valid&&g1SourceAdmission.passIds.includes(c.id);const status=c.status==='BLOCKED'?'BLOCKED':validPass||sourceAccepted?'PASS':rs.some(r=>r.status==='FAIL')?'FAIL':rs.some(r=>r.status==='BLOCKED')?'BLOCKED':c.status==='PASS'?'NOT_VERIFIED':c.status;if(c.status==='BLOCKED'&&validPass)errors.push('blocked_control_pass_claim_requires_source_reconciliation:'+c.id);if(c.status==='PASS'&&!sourceAccepted&&!validPass)errors.push('source_pass_unverified:'+c.id);return {control_id:c.id,status,source_status:c.status,evidence_count:rs.length+(c.id==='OPS-02'&&a19Candidate?1:0),valid_pass_evidence:validPass};});
+ const controls=scope.mandatory.map(c=>{const rs=byControl.get(c.id)||[];const validPass=(c.id==='OPS-02'&&a19Approved)||rs.some(r=>r.status==='PASS'&&r.reviewer_status==='ACCEPTED'&&r.acceptance_status==='ACCEPTED'&&(!isQatPass(r)||((providerA15Approved||carry)&&qatEvidenceMatches(r)))&&validateEvidenceRecord(r,{expectedSha:isQatPass(r)?recordSha(r):expectedSha,now}).length===0);const sourceEvidenceValid=Array.isArray(c.evidenceRefs)&&c.evidenceRefs.length>0&&c.evidenceRefs.every(ref=>{if(typeof ref!=='string'||!ref.trim())return false;const p=path.resolve(ROOT,ref);return p.startsWith(ROOT+path.sep)&&fs.existsSync(p)&&fs.statSync(p).isFile();});const sourceAccepted=c.status==='PASS'&&typeof c.acceptedBy==='string'&&c.acceptedBy.trim().length>0&&Number.isFinite(Date.parse(c.acceptedAt||''))&&Date.parse(c.acceptedAt)<=now.getTime()&&sourceEvidenceValid&&g1SourceAdmission.valid&&g1SourceAdmission.passIds.includes(c.id);const status=c.status==='BLOCKED'?'BLOCKED':validPass||sourceAccepted?'PASS':rs.some(r=>r.status==='FAIL')?'FAIL':rs.some(r=>r.status==='BLOCKED')?'BLOCKED':c.status==='PASS'?'NOT_VERIFIED':c.status;if(c.status==='BLOCKED'&&validPass)errors.push('blocked_control_pass_claim_requires_source_reconciliation:'+c.id);if(c.status==='PASS'&&!sourceAccepted&&!validPass)errors.push('source_pass_unverified:'+c.id);return {control_id:c.id,status,source_status:c.status,evidence_count:rs.length+(c.id==='OPS-02'&&a19Candidate?1:0),valid_pass_evidence:validPass};});
  if(combined.length>0&&!combinedClaimsMatch(indexGates,combined)){
   errors.push('combined_acceptance_claims_must_match');
  }
@@ -445,18 +601,23 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
   let claim=indexGates.find(row=>row.gate_id===gate.id);
   if(gate.id==='A-19'&&a19Approved)claim={...a19Candidate,accepted:true,
    accepted_by:QUALIFIED_REVIEWER,reviewer_id:QUALIFIED_REVIEWER,reviewer_status:'ACCEPTED',
-   acceptance_status:'ACCEPTED',approval_url:a19Review.approvalUrl,accepted_at:a19Review.acceptedAt};
+   acceptance_status:'ACCEPTED',approval_url:carry?cumulativeReview.approvalUrl:a19Review.approvalUrl,
+   accepted_at:carry?cumulativeReview.acceptedAt:a19Review.acceptedAt};
   const eligible=children.length===gate.atomicCriteria.length&&children.every(control=>control?.status==='PASS');
   const computed=eligible?'ELIGIBLE_FOR_INDEPENDENT_REVIEW':
    children.some(control=>control?.status==='BLOCKED')?'BLOCKED':'NOT_ELIGIBLE';
   const status=claim?.status==='REQUIRES_RECONCILIATION'?'REQUIRES_RECONCILIATION':computed;
   const reviewErrors=validateGateAcceptance(claim,{
-   eligible:eligible&&status===computed,expectedSha:gate.id==='A-19'&&a19Approved?a19Target:expectedSha,now,
-   providerApproved:gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved,
+   eligible:eligible&&status===computed,
+   expectedSha:carry&&gate.id==='A-19'?claim.acceptance_sha:
+    carry&&['A-09','A-18'].includes(gate.id)?CUMULATIVE_CHECKPOINT:
+    gate.id==='A-19'&&a19Approved?a19Target:expectedSha,now,
+   providerApproved:carry&&CUMULATIVE_GATES.includes(gate.id)||
+    (gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved),
   });
   if(reviewErrors.length)errors.push('invalid_gate_acceptance:'+gate.id+':'+reviewErrors.join(','));
   return {gate_id:gate.id,atomic_control_ids:gate.atomicCriteria,status,accepted:claim?.accepted===true&&reviewErrors.length===0,
-   ...(gate.id==='A-19'&&a19Approved?{approval_url:a19Review.approvalUrl}:{})};
+   ...(gate.id==='A-19'&&a19Approved?{approval_url:carry?cumulativeReview.approvalUrl:a19Review.approvalUrl}:{})};
  });
  if(combined.length>0){
   const jointIds=jointRequired?['A-09','A-18','A-19']:['A-09','A-18'];
@@ -466,6 +627,10 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    for(const gate of gateRows)if(jointIds.includes(gate.gate_id))gate.accepted=false;
   }
  }
+ if(cumulative&&(!carry||CUMULATIVE_GATES.some(id=>!gateRows.find(gate=>gate.gate_id===id)?.accepted))){
+  if(!errors.includes('cumulative_acceptance_requires_authenticated_release'))errors.push('cumulative_acceptance_requires_four_gates');
+  for(const gate of gateRows)if(CUMULATIVE_GATES.includes(gate.gate_id))gate.accepted=false;
+ }
  return {valid:errors.length===0,errors,summary:{controls_total:38,controls_pass:controls.filter(c=>c.status==='PASS').length,controls_blocked:controls.filter(c=>c.status==='BLOCKED').length,controls_not_verified:controls.filter(c=>c.status==='NOT_VERIFIED').length,controls_fail:controls.filter(c=>c.status==='FAIL').length,evidence_records:(index.evidence_records||[]).length,evidence_records_valid:(index.evidence_records||[]).filter(r=>validateEvidenceRecord(r,{expectedSha:recordSha(r),now}).length===0).length,gates_total:24,gates_eligible:gateRows.filter(g=>g.status==='ELIGIBLE_FOR_INDEPENDENT_REVIEW').length,gates_blocked:gateRows.filter(g=>g.status==='BLOCKED').length,gates_accepted:gateRows.filter(g=>g.accepted).length},controls,gates:gateRows};
 }
 async function main(){
@@ -474,15 +639,16 @@ async function main(){
  const expectedSha=process.env.EVIDENCE_EXACT_SHA||index.source.commit_sha;
  const providerExpectedSha=process.env.EVIDENCE_EXACT_SHA;
  const options={expectedSha:providerExpectedSha,prNumber:process.env.EVIDENCE_PR_NUMBER,token:process.env.GITHUB_TOKEN};
+ const cumulativeReview=index.cumulative_acceptance&&await verifyCumulativeRelease(index,options);
  const findGate=id=>(index.gates||[]).find(g=>g.gate_id===id);
  const a18=findGate('A-18'),a09=findGate('A-09'),a15=findGate('A-15'),a19=findGate('A-19');
- const providerA18Approved=a18?.accepted===true&&SHA40.test(providerExpectedSha||'')&&
+ const providerA18Approved=!index.cumulative_acceptance&&a18?.accepted===true&&SHA40.test(providerExpectedSha||'')&&
   await verifyGitHubA18CurrentHead(a18,{expectedSha:providerExpectedSha,prNumber:options.prNumber,token:options.token});
- const providerA09Approved=a09?.accepted===true&&await verifyGitHubA09CurrentHead(a09,options);
- const providerA15Approved=a15?.accepted===true&&await verifyGitHubA15CurrentHead(a15,options);
+ const providerA09Approved=!index.cumulative_acceptance&&a09?.accepted===true&&await verifyGitHubA09CurrentHead(a09,options);
+ const providerA15Approved=!index.cumulative_acceptance&&a15?.accepted===true&&await verifyGitHubA15CurrentHead(a15,options);
  let a19Review=null;
  const a19Target=a19AncestryTarget(index.gates||[],{expectedSha});
- if(a19Target){
+ if(a19Target&&!index.cumulative_acceptance){
   const bytes=fs.readFileSync(path.join(ROOT,A19_PROOF));
   if(crypto.createHash('sha256').update(bytes).digest('hex')===a19.acceptance_evidence_sha256){
    const proof=JSON.parse(bytes.toString('utf8'));
@@ -496,7 +662,7 @@ async function main(){
   }
  }
  const result=reconcile({scope:read('config/g1-enterprise-scope-v1.json'),gates:read('config/g1-product-ready-24-gates.json'),
-  index,expectedSha,providerA18Approved,providerA09Approved,providerA15Approved,a19Review});
+  index,expectedSha,providerA18Approved,providerA09Approved,providerA15Approved,a19Review,cumulativeReview});
  if(args.includes('--require-a19-review')&&a19Review?.state==='PENDING'){
   result.valid=false;
   result.errors.push('invalid_gate_acceptance:A-19:authenticated_current_head_review_required');

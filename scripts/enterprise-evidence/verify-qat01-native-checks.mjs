@@ -50,7 +50,7 @@ export async function verifyQat01NativeChecks({sha,token,request=fetch}={}){
       const latest=matches[0];
       if(!latest)errors.push('missing_authenticated_check:'+name);
       else if(!trustedRun(latest,sha))errors.push('latest_required_check_not_success:'+name);
-      else checks.push({name,job_url:latest.html_url,id:latest.id});
+      else checks.push({name,job_url:latest.html_url,id:latest.id,completed_at:latest.completed_at});
     }
     const circle=statuses.statuses.filter(x=>x.context===CIRCLECI_CONTEXT);
     circle.sort((a,b)=>Date.parse(b.updated_at||b.created_at||'')-Date.parse(a.updated_at||a.created_at||''));
