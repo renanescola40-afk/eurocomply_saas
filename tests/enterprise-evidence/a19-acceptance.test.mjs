@@ -77,6 +77,16 @@ test('joint acceptance preserves the A-19 evidence source through A-09/A-18 fina
   const indexPath = 'docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
   const combinedPath = 'docs/enterprise/gate-closure-v33/A18_A09_COMBINED_ACCEPTANCE_PROOF.json';
   const index = JSON.parse(readFileSync(indexPath, 'utf8'));
+  // This fixture must model standalone A-19 *before* A-09/A-18 admission,
+  // regardless of the live ledger's current combined-acceptance state.
+  // Otherwise a later legitimate evidence-only index commit causes the
+  // standalone regression to fail for the wrong reason.
+  for (const gate of index.gates.filter(gate => ['A-09', 'A-18'].includes(gate.gate_id))) {
+    gate.accepted = false;
+    gate.acceptance_evidence_ref = null;
+    gate.acceptance_sha = null;
+    gate.acceptance_evidence_sha256 = null;
+  }
   const a19 = index.gates.find(gate => gate.gate_id === 'A-19');
   const put = (path, content) => {
     const file = join(temp, path);
