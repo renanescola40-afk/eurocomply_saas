@@ -2,20 +2,20 @@
   "schema": "risck-comply.g1.a15-qat01-formal-acceptance-proof.v1",
   "gate_id": "A-15",
   "atomic_control_id": "QAT-01",
-  "acceptance_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
-  "tested_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
-  "release_candidate_main_sha": "2989cd8a1c627b08126f7411defbe2c5d1392283",
+  "acceptance_source_sha": "b0fc4a76c7eda6e0d38d14c1a3c298c942791129",
+  "tested_source_sha": "b0fc4a76c7eda6e0d38d14c1a3c298c942791129",
+  "release_candidate_main_sha": "2b91e5ef41b221dd849696a9887cf195c2253eac",
   "qualified_review": {
     "reviewer_login": "renansilva2002-tech",
     "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2721#pullrequestreview-5890553962",
-    "scope": "Historical technical review #2721 preserved as separate provenance; native COMMENTED source verification #5897516363 on exact HEAD after all 11 current provider checks; final independent FORMAL APPROVED on post-evidence HEAD remains mandatory.",
+    "scope": "Historical #2721 technical review retained; current #2736 independent COMMENTED exact-source observation after all 11 required checks on the corrected source; final four-gate APPROVED on evidence HEAD mandatory.",
     "source_ci_verification": {
       "reviewer_login": "renansilva2002-tech",
-      "review_id": 5897516363,
-      "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2724#pullrequestreview-5897516363",
+      "review_id": 5907655859,
+      "review_url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2736#pullrequestreview-5907655859",
       "review_type": "COMMENTED",
-      "reviewed_head_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
-      "submitted_at_utc": "2026-11-13T20:22:48Z",
+      "reviewed_head_sha": "b0fc4a76c7eda6e0d38d14c1a3c298c942791129",
+      "submitted_at_utc": "2026-11-14T22:56:49Z",
       "required_statement": "A-15/QAT-01 INDEPENDENT SOURCE CI VERIFICATION: 11/11 PASS"
     }
   },
@@ -25,78 +25,89 @@
         "name": "Core CI, build and npm audit",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523058"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702203/job/132615324055",
+        "completed_at": "2026-11-14T22:52:04Z"
       },
       {
         "name": "Run security gates, typecheck and tests",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877353/job/132052523343"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702179/job/132615206751",
+        "completed_at": "2026-11-14T22:46:07Z"
       },
       {
         "name": "CI / quality",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877700/job/132052526432"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702207/job/132615273550",
+        "completed_at": "2026-11-14T22:49:37Z"
       },
       {
         "name": "CodeQL",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523124"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702203/job/132615323880",
+        "completed_at": "2026-11-14T22:47:09Z"
       },
       {
         "name": "Semgrep SAST",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523036"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702203/job/132615324029",
+        "completed_at": "2026-11-14T22:46:11Z"
       },
       {
         "name": "Secret scanning (Gitleaks)",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523451"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702203/job/132615324053",
+        "completed_at": "2026-11-14T22:45:48Z"
       },
       {
         "name": "Actionlint",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523278"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702203/job/132615324003",
+        "completed_at": "2026-11-14T22:45:55Z"
       },
       {
         "name": "OSSF Scorecard",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052522576"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702203/job/132615323967",
+        "completed_at": "2026-11-14T22:45:55Z"
       },
       {
         "name": "Dependency Review",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877242/job/132052523240"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702203/job/132615323661",
+        "completed_at": "2026-11-14T22:45:39Z"
       },
       {
         "name": "Quality, security, build",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877569/job/132052523666"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702242/job/132615207530",
+        "completed_at": "2026-11-14T22:50:25Z"
       },
       {
         "name": "E2E production-like gate",
         "status": "completed",
         "conclusion": "success",
-        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43473877569/job/132052523873"
+        "job_url": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/43649702242/job/132615207767",
+        "completed_at": "2026-11-14T22:48:28Z"
       }
     ],
     "circleci": {
       "context": "ci/circleci: pr-source-autopilot",
       "state": "success",
-      "url": "https://app.circleci.com/workflow/5aaa0c31-0b32-4d01-873c-224e04b3f3fe/job/455c4a1a-58aa-4fc4-a82d-813d50f62516"
+      "url": "https://app.circleci.com/workflow/2aa13660-7f21-4082-9323-3db07fabc843/job/6f6250e8-b481-484a-96c5-7e5c36e6b056"
     },
     "decision": "SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE",
-    "verified_source_sha": "3494d2b58bff24d5e1430191923c5b426258cfdc",
-    "provider_last_required_job_completed_at": "2026-11-13T17:43:22.000Z",
-    "independent_source_verification_review_id": 5897516363
+    "verified_source_sha": "b0fc4a76c7eda6e0d38d14c1a3c298c942791129",
+    "provider_last_required_job_completed_at": "2026-11-14T22:52:04Z",
+    "independent_source_verification_review_id": 5907655859
   },
   "limitations": [
     "Source CI only: 11/11 current exact-source native GitHub Actions checks and CircleCI verified; no authenticated external QA, Production runtime, Vercel deployment or release approval claimed.",
