@@ -26,7 +26,8 @@ function assertSyntheticWriteQaEnvironment(env: NodeJS.ProcessEnv) {
     const runId = env.GITHUB_RUN_ID ?? '';
     const attempt = env.GITHUB_RUN_ATTEMPT ?? '';
     const projectId = `risck-recovery-${runId}-${attempt}`;
-    const runnerTemp = (env.RUNNER_TEMP ?? '').replace(/\\/+$/, '');
+    const rawRunnerTemp = env.RUNNER_TEMP ?? '';
+    const runnerTemp = rawRunnerTemp.endsWith('/') ? rawRunnerTemp.slice(0, -1) : rawRunnerTemp;
     let isolatedDb: URL | null = null;
     try {
       isolatedDb = new URL(env.RECOVERY_ISOLATED_DATABASE_URL ?? '');
@@ -35,14 +36,22 @@ function assertSyntheticWriteQaEnvironment(env: NodeJS.ProcessEnv) {
     }
     const validProject = /^[0-9]{1,16}$/.test(runId) && /^[0-9]{1,3}$/.test(attempt) &&
       projectId.length <= 63;
+    const workflowPrefix =
+      'renanescola40-afk/eurocomply_saas/.github/workflows/product-fria-ephemeral-qa.yml@';
+    const workflowRef = env.GITHUB_WORKFLOW_REF ?? '';
+    const isMainRef = workflowRef === `${workflowPrefix}refs/heads/main`;
+    const prPart = workflowRef.startsWith(`${workflowPrefix}refs/pull/`)
+      ? workflowRef.slice(`${workflowPrefix}refs/pull/`.length).split('/')
+      : [];
+    const isPrRef = prPart.length === 2 && prPart[1] === 'merge' &&
+      Number.isSafeInteger(Number(prPart[0])) && Number(prPart[0]) > 0 &&
+      String(Number(prPart[0])) === prPart[0];
     const exactWorkflow =
       env.GITHUB_ACTIONS === 'true' &&
       env.GITHUB_REPOSITORY === 'renanescola40-afk/eurocomply_saas' &&
       env.GITHUB_WORKFLOW === 'Product FRIA Ephemeral Runtime QA' &&
-      /^renanescola40-afk\\/eurocomply_saas\\/\\.github\\/workflows\\/product-fria-ephemeral-qa\\.yml@refs\\/(?:heads\\/main|pull\\/[0-9]+\\/merge)$/.test(
-        env.GITHUB_WORKFLOW_REF ?? '',
-      ) &&
-      ['pull_request', 'push', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME ?? '');
+      ((env.GITHUB_EVENT_NAME === 'pull_request' && isPrRef) ||
+       (['push', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME ?? '') && isMainRef));
     const exactOrigins =
       app.protocol === 'http:' && app.hostname === '127.0.0.1' && app.port === '3000' &&
       app.username === '' && app.password === '' && app.pathname === '/' &&
