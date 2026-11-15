@@ -1,0 +1,1919 @@
+{
+  "schema": "risck-comply.dat01.consolidated-technical-decision-packet.v1",
+  "checkpointSha": "c4ca03e6a7cae835ccec37b3fed1f811de23d8b5",
+  "sourceOfTruth": {
+    "caseMatrix": "docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+    "caseMatrixSha256": "23fb89056d867e891cd0a6a75079852b2fd0bc0f4ef81ab8904cfdaa0e72c444",
+    "crosswalk": "docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+    "providerComparison": "docs/enterprise/closure-v21/DAT01_NONEXACT_PROVIDER_SQL_BYTES_20261104.json",
+    "reviewGuide": "docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md",
+    "issue": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711",
+    "mergedSourcePr": "https://github.com/renanescola40-afk/eurocomply_saas/pull/2696"
+  },
+  "meaning": "Technical proposals for independent assessment; no disposition, replay authorization or gate acceptance is inferred. Historical provider hashes were authenticated read-only in issue #2711, not freshly recollected here. Links identify immutable Git blobs/commit snapshots. Reviewer must inspect complete SQL and record case-specific rationale in native review.",
+  "counts": {
+    "reviewCases": 48,
+    "originalWholeSourceUnproven": 34,
+    "nonexactMappings": 25,
+    "overlap": 11,
+    "genuinelyResolvedByQualifiedDecision": 0,
+    "requiringQualifiedDecision": 48
+  },
+  "replayAuthorization": "NOT_GRANTED",
+  "formalA12": "BLOCKED",
+  "protectedEnterpriseCheckpoint": "4/24 gates; 4/38 controls; unchanged",
+  "cases": [
+    {
+      "caseId": "DAT01-017",
+      "priority": "P0_POLICY_SEMANTICS_REVIEW",
+      "providerLedgerOrder": 17,
+      "providerVersion": "20260726070000",
+      "providerName": "permissions_catalog_rls_hotfix",
+      "appliedSqlSha256": "51165bd874a1d55bc1d6d1f955ebd40c629f0b0a039c81cc331f93580351f23e",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260726070000_permissions_catalog_rls_hotfix.sql",
+        "candidateBlobSha1AtCheckpoint": "1a1f8753d759b27003395ad5b76ebcc8e0788b62",
+        "historicalCandidateCommit": "a287eb03c2af908e796a3a788c4f45d973d77b1f",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260726070000",
+        "candidateFileVersion": "20260726070000",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Applied policy uses USING (true) for authenticated permissions and role_permissions reads; candidate source uses auth.uid() IS NOT NULL. Current privilege/RLS boundaries were read back in issue #2711. Qualified reviewer must decide historical exposure semantics and exact source exception; no automatic vulnerability claim.",
+      "proposedDisposition": "PENDING_QUALIFIED_SOURCE_EXCEPTION_AND_SECURITY_DECISION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity. The applied catalog policy and candidate policy have materially different expressions.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "RLS_HISTORICAL_POLICY_SEMANTICS",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/1a1f8753d759b27003395ad5b76ebcc8e0788b62",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260726070000_permissions_catalog_rls_hotfix.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-101",
+      "priority": "P0_POLICY_SEMANTICS_REVIEW",
+      "providerLedgerOrder": 101,
+      "providerVersion": "20260922112154",
+      "providerName": "reconcile_transactional_email_delivery_logs_v1",
+      "appliedSqlSha256": "3a4af676fb07d8f1565a22d657a888fb1d59f19f74b92a08057e71209ea33ae9",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql",
+        "candidateBlobSha1AtCheckpoint": "9aba3aecf04e0477a71b6bca1879d092b2411d5a",
+        "historicalCandidateCommit": "400fe61fc6a42ab538b55e12122d694f8d161f30",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260922112154",
+        "candidateFileVersion": "20260922112154",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Applied email_delivery_logs select policy uses service_role USING (true); candidate/current catalog use CURRENT_USER = service_role. Current anon/authenticated direct CRUD is absent per issue #2711. Qualified reviewer must trace forward reconciliation and policy semantics.",
+      "proposedDisposition": "PENDING_QUALIFIED_SOURCE_EXCEPTION_AND_SECURITY_DECISION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity. The applied email-log policy and current candidate policy have materially different expressions.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/9aba3aecf04e0477a71b6bca1879d092b2411d5a",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260922112154_reconcile_transactional_email_delivery_logs_v1.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-019",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 19,
+      "providerVersion": "20260804230433",
+      "providerName": "move_rls_helpers_to_private_schema",
+      "appliedSqlSha256": "31426eb2a17a61a62a9ab760a03ea0885dc31763ecb48445cbbb8fb852c61c0e",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260804230433_move_rls_helpers_to_private_schema.sql",
+        "candidateBlobSha1AtCheckpoint": "513a04a0e244dd5acd4a3e54f270334e84dba4ae",
+        "historicalCandidateCommit": "f4933361d3d1d768614aa31b503b60a60db60d71",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260804230433",
+        "candidateFileVersion": "20260804230433",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, ACL_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/513a04a0e244dd5acd4a3e54f270334e84dba4ae",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260804230433_move_rls_helpers_to_private_schema.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-020",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 20,
+      "providerVersion": "20260805223500",
+      "providerName": "remove_permissive_tenant_rls_bypasses",
+      "appliedSqlSha256": "5461708cb3e8f110f007a50d9c39c02c319a8735f48a1644c1f4b8a640ddb05b",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260805223500_remove_permissive_tenant_rls_bypasses.sql",
+        "candidateBlobSha1AtCheckpoint": "5be66c46c795aa438e05520acb4d219a6c5bde1e",
+        "historicalCandidateCommit": "aee8b07a6365296d959fa38cf0cb91f17922a90d",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260805223500",
+        "candidateFileVersion": "20260805223500",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT, DROP_DDL_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/5be66c46c795aa438e05520acb4d219a6c5bde1e",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260805223500_remove_permissive_tenant_rls_bypasses.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-021",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 21,
+      "providerVersion": "20260807091341",
+      "providerName": "reconcile_membership_rls_and_remove_permissive_bypasses",
+      "appliedSqlSha256": "8130b5fc8c8424a544160c51d87f71e5f77e8c22647561379412ad4b68954261",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260807091341_reconcile_membership_rls_and_remove_permissive_bypasses.sql",
+        "candidateBlobSha1AtCheckpoint": "4aa0d2137406845a799a734039014dddc4db8148",
+        "historicalCandidateCommit": "b8e5009e4a933017c10867f15446d2fdf5689fa4",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260807091341",
+        "candidateFileVersion": "20260807091341",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, RLS_POLICY_DDL_PRESENT, DROP_DDL_PRESENT, DML_CHANGE_PRESENT, NO_SEARCH_PATH_SEEN_IN_BATCH_REVIEW_FUNCTION_SCOPE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/4aa0d2137406845a799a734039014dddc4db8148",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260807091341_reconcile_membership_rls_and_remove_permissive_bypasses.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-028",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 28,
+      "providerVersion": "20260812230229",
+      "providerName": "optimize_ai_incidents_rls_and_deduplicate_ai_systems_index",
+      "appliedSqlSha256": "d541750f96365fc6463c5a273ed0f07e01d9192ae5e8ce1fd8396b2efb0252d4",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260812230229_optimize_ai_incidents_rls_and_deduplicate_ai_systems_index.sql",
+        "candidateBlobSha1AtCheckpoint": "69d38cce42fe3c8081f9fcc28607f837f8e345be",
+        "historicalCandidateCommit": "4dacc62027831221132a23ea4358ded1b8c9fd6c",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260812230229",
+        "candidateFileVersion": "20260812230229",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT, ACL_CHANGE_PRESENT, DROP_DDL_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/69d38cce42fe3c8081f9fcc28607f837f8e345be",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260812230229_optimize_ai_incidents_rls_and_deduplicate_ai_systems_index.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-033",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 33,
+      "providerVersion": "20260813124224",
+      "providerName": "reconcile_organization_add_ons",
+      "appliedSqlSha256": "195d4560e2b9cab3f628135ecd974b1f111187a58f47c1f12aa083c225155aff",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260813124224_reconcile_organization_add_ons.sql",
+        "candidateBlobSha1AtCheckpoint": "5033185fc5e33105e03ba48696e45357154303dc",
+        "historicalCandidateCommit": "7a7f904d9391968b61802ab83df13058f6e15c36",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260813124224",
+        "candidateFileVersion": "20260813124224",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT, ACL_CHANGE_PRESENT, DROP_DDL_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/5033185fc5e33105e03ba48696e45357154303dc",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260813124224_reconcile_organization_add_ons.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-034",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 34,
+      "providerVersion": "20260822120617",
+      "providerName": "atomic_vendor_risk_quota_mutations",
+      "appliedSqlSha256": "0c72e61ac821d9ad99347a0466550f1f327e1c30e5061f035a7495e2c8eaa506",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql",
+        "candidateBlobSha1AtCheckpoint": "1fde4a94844589874a28c9ca4b8b18d5ce0384ae",
+        "historicalCandidateCommit": "353e4c6d96284ecba3f2be158936fef8b20a76f7",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260822120617",
+        "candidateFileVersion": "20260822120617",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, ACL_CHANGE_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/1fde4a94844589874a28c9ca4b8b18d5ce0384ae",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260822120617_atomic_vendor_risk_quota_mutations.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-068",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 68,
+      "providerVersion": "20260831115851",
+      "providerName": "deterministic_commercial_contract_source_precedence",
+      "appliedSqlSha256": "821d15c0ae6c0a5bbb544153012bd7d6056ebbe1ef20a0e2fabdd77338238b80",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+        "candidateBlobSha1AtCheckpoint": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20260831115851",
+        "candidateFileVersion": "20260831130000",
+        "classification": "provider_record_to_canonical_source",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false,
+        "consolidationGroup": "CONSOLIDATION_1"
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE, CONSOLIDATION_VERSION_DISTINCTION_REQUIRED. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding. Keep every provider ledger version distinct and ordered across the consolidation.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "PRESERVE_DISTINCT_CONSOLIDATED_VERSION_ORDER",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/6ff310598bc1538b2d821150772dbeaf347fd6fa",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-069",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 69,
+      "providerVersion": "20260902193810",
+      "providerName": "reconcile_deterministic_commercial_contract_source_precedence",
+      "appliedSqlSha256": "894ca7297890ae01ab57986af20654e33b62e95fe732cad4b8336afeed6f0fac",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+        "candidateBlobSha1AtCheckpoint": "6ff310598bc1538b2d821150772dbeaf347fd6fa",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20260902193810",
+        "candidateFileVersion": "20260831130000",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false,
+        "consolidationGroup": "CONSOLIDATION_1"
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE, CONSOLIDATION_VERSION_DISTINCTION_REQUIRED. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding. Keep every provider ledger version distinct and ordered across the consolidation.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "PRESERVE_DISTINCT_CONSOLIDATED_VERSION_ORDER",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/6ff310598bc1538b2d821150772dbeaf347fd6fa",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260831130000_reconcile_deterministic_commercial_contract_source_precedence.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-071",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 71,
+      "providerVersion": "20260902202558",
+      "providerName": "reconcile_linkedin_marketing_queue_runtime",
+      "appliedSqlSha256": "88ad165648dcaf47a5984aedcd59b9f2bb30f8316c10e64163b4c10669e29252",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260902162000_linkedin_marketing_queue.sql",
+        "candidateBlobSha1AtCheckpoint": "a7864789c6f3b4672d78ebeb8737bc9278c9c02e",
+        "historicalCandidateCommit": "071258a285f61dd355366330bc98e25c15c439c6",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260902202558",
+        "candidateFileVersion": "20260902162000",
+        "classification": "provider_record_to_canonical_source",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, ACL_CHANGE_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/a7864789c6f3b4672d78ebeb8737bc9278c9c02e",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260902162000_linkedin_marketing_queue.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-077",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 77,
+      "providerVersion": "20260905075429",
+      "providerName": "fail_fast_audit_chain_advisory_contention",
+      "appliedSqlSha256": "0b32cd5b0ebd5c51bfe4aa30db0ba9ba6448a5dfd4aefe5233f44ac70c6eb8df",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql",
+        "candidateBlobSha1AtCheckpoint": "2fea83e2ed4a0b0198cd0d156221d9265bee6e48",
+        "historicalCandidateCommit": "40ffc779e2bc0e4963754022a41c3388c66bfb32",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260905075429",
+        "candidateFileVersion": "20260905075429",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, ACL_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_71_84_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/2fea83e2ed4a0b0198cd0d156221d9265bee6e48",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260905075429_fail_fast_audit_chain_advisory_contention.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-078",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 78,
+      "providerVersion": "20260907142133",
+      "providerName": "p0_audit_chain_fail_closed_nonretryable_conflicts_20260907",
+      "appliedSqlSha256": "3bd65011f7b2824d9bb5da539dee659c75646d5bcce8218e0bbfec636fecaeb0",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260907142133_p0_audit_chain_fail_closed_nonretryable_conflicts_20260907.sql",
+        "candidateBlobSha1AtCheckpoint": "2fec78987fe08eb1aa2e2f06a080fa8a6e882dbc",
+        "historicalCandidateCommit": "77dd86615c1116e2941b947c5508673292eee114",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260907142133",
+        "candidateFileVersion": "20260907142133",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, ACL_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_71_84_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/2fec78987fe08eb1aa2e2f06a080fa8a6e882dbc",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260907142133_p0_audit_chain_fail_closed_nonretryable_conflicts_20260907.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-091",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 91,
+      "providerVersion": "20260909006900",
+      "providerName": "harden_security_advisor_rpc_surface",
+      "appliedSqlSha256": "d476e7bccc26e35ee42f1a542b7367bbed14106861c204c1741da7589615eeee",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260909006900_harden_security_advisor_rpc_surface.sql",
+        "candidateBlobSha1AtCheckpoint": "0714aa5f5f60c551238fd31500c60f3c33faab3d",
+        "historicalCandidateCommit": "2463df98c666529f73c29d119357bf653bb21e62",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260909006900",
+        "candidateFileVersion": "20260909006900",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, ACL_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/0714aa5f5f60c551238fd31500c60f3c33faab3d",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260909006900_harden_security_advisor_rpc_surface.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-092",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 92,
+      "providerVersion": "20260909230946",
+      "providerName": "reconcile_data_governance_enterprise_foundation",
+      "appliedSqlSha256": "0b27879c8931dd9d70f25202c91c258182bad613d3373c49e904949e1dd4435e",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+        "candidateBlobSha1AtCheckpoint": "0324110de0279d5619f0b7023f8fc0249f287966",
+        "historicalCandidateCommit": "95dcfa9864a78743a457689505d09de67e028411",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260909230946",
+        "candidateFileVersion": "20260909142500",
+        "classification": "canonical_name_match",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT, ACL_CHANGE_PRESENT, DROP_DDL_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/0324110de0279d5619f0b7023f8fc0249f287966",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260909142500_reconcile_data_governance_enterprise_foundation.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-093",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 93,
+      "providerVersion": "20260909231011",
+      "providerName": "harden_data_subject_request_lifecycle",
+      "appliedSqlSha256": "de6ce60712a80565113b7bc106c6639d7f1bec188d381ec1a9efb157c42d26ed",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql",
+        "candidateBlobSha1AtCheckpoint": "4c6751127df4dd74f2d1b2ce58ef3b4f8b10500c",
+        "historicalCandidateCommit": "f17c23dfac681dc4127b8421e55c10b5b86ac823",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260909231011",
+        "candidateFileVersion": "20260909143000",
+        "classification": "canonical_name_match",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT, ACL_CHANGE_PRESENT, DROP_DDL_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/4c6751127df4dd74f2d1b2ce58ef3b4f8b10500c",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260909143000_harden_data_subject_request_lifecycle.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-102",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 102,
+      "providerVersion": "20260922112907",
+      "providerName": "harden_transactional_email_delivery_log_policies_v1",
+      "appliedSqlSha256": "8bb11aa94e48620561cf74c4e47464b777beb35e7d6ec479368e522ab917c7bd",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260922112907_harden_transactional_email_delivery_log_policies_v1.sql",
+        "candidateBlobSha1AtCheckpoint": "1163ec79781783de19dba4bbf5c27d2e5f0eb076",
+        "historicalCandidateCommit": "12ab9c5e20299045734a6789e6f948cdcd078cc6",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260922112907",
+        "candidateFileVersion": "20260922112907",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT, DROP_DDL_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/1163ec79781783de19dba4bbf5c27d2e5f0eb076",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260922112907_harden_transactional_email_delivery_log_policies_v1.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-103",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 103,
+      "providerVersion": "20260922203500",
+      "providerName": "reconcile_team_membership_runtime_rpcs",
+      "appliedSqlSha256": "ec8b6213e5a1b73ec6d0b49dfccf5bdabff0fac6dadf1c14a1ccb9c9727e0420",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260922203500_reconcile_team_membership_runtime_rpcs.sql",
+        "candidateBlobSha1AtCheckpoint": "4dabf323a9c2ddf425def2bf7eaa7c719debbb43",
+        "historicalCandidateCommit": "e8681d025dd06e899c91a0da0decce3481e110ee",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260922203500",
+        "candidateFileVersion": "20260922203500",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, ACL_CHANGE_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/4dabf323a9c2ddf425def2bf7eaa7c719debbb43",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260922203500_reconcile_team_membership_runtime_rpcs.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-107",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 107,
+      "providerVersion": "20260929101551",
+      "providerName": "optimize_rls_auth_initplan_terminal",
+      "appliedSqlSha256": "bb40fccf46f8dcf72c8f92197d12fba06b4fd9fe89685e134387d883f22aa847",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260929101551_optimize_rls_auth_initplan_terminal.sql",
+        "candidateBlobSha1AtCheckpoint": "19ad9071d65b2757a3f3e7a106cb49de6019f4ed",
+        "historicalCandidateCommit": "d3829c5d0e0b41a4b617eb520eb35b18a2960915",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260929101551",
+        "candidateFileVersion": "20260929101551",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/19ad9071d65b2757a3f3e7a106cb49de6019f4ed",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260929101551_optimize_rls_auth_initplan_terminal.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-109",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 109,
+      "providerVersion": "20260929102134",
+      "providerName": "consolidate_compliance_tasks_select_policies_terminal",
+      "appliedSqlSha256": "626cabba53ffb1424f309b95df904605bed21f4fb827ac3d93228610ca9cba8f",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260929102134_consolidate_compliance_tasks_select_policies_terminal.sql",
+        "candidateBlobSha1AtCheckpoint": "cdb8a02ce3a5f69fb0aa0b4a32217c1f6a690c4c",
+        "historicalCandidateCommit": "62179bcfa06c3aa0f98b6829aa59029144e13ba6",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260929102134",
+        "candidateFileVersion": "20260929102134",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT, DROP_DDL_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/cdb8a02ce3a5f69fb0aa0b4a32217c1f6a690c4c",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260929102134_consolidate_compliance_tasks_select_policies_terminal.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-111",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 111,
+      "providerVersion": "20261003134528",
+      "providerName": "fix_ai_system_text_array_rpc_contract",
+      "appliedSqlSha256": "dea017549e2569cfa5d4d8f5298a1a435ead801ac7f5bb77cb879d0a34313704",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261003134528_fix_ai_system_text_array_rpc_contract.sql",
+        "candidateBlobSha1AtCheckpoint": "5a59d89727dc96806b06aa3531cc0573440218ea",
+        "historicalCandidateCommit": "cc53b5df3b1d2be9686e1bddda0d62dd41633238",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261003134528",
+        "candidateFileVersion": "20261003134528",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/5a59d89727dc96806b06aa3531cc0573440218ea",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261003134528_fix_ai_system_text_array_rpc_contract.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-113",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 113,
+      "providerVersion": "20261003173930",
+      "providerName": "reconcile_ai_incident_atomic_rpc",
+      "appliedSqlSha256": "1112bfa0b431e99ab473871d1f2e41ce0163c235a3b2535be44ba28b672dc3cf",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261003173930_reconcile_ai_incident_atomic_rpc.sql",
+        "candidateBlobSha1AtCheckpoint": "52670f84e28088f5fc358b790b233bfb1916e0ec",
+        "historicalCandidateCommit": "2c1aa2d020166c98ec537b620c8903472630273d",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261003173930",
+        "candidateFileVersion": "20261003173930",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, ACL_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/52670f84e28088f5fc358b790b233bfb1916e0ec",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261003173930_reconcile_ai_incident_atomic_rpc.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-128",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 128,
+      "providerVersion": "20261010075142",
+      "providerName": "harden_active_membership_governance_read",
+      "appliedSqlSha256": "29bad3ef3fbb77aafc5ef789829f1f41acdcc0d1b4cd91fb2019e81c4b7430c6",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261009210000_harden_active_membership_governance_read.sql",
+        "candidateBlobSha1AtCheckpoint": "50083d15b3340dc8106eb4dd75cd5a3067db89f0",
+        "historicalCandidateCommit": "c505c26eb8afb94ea357dba05755141102901b15",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261010075142",
+        "candidateFileVersion": "20261009210000",
+        "classification": "canonical_name_match",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: RLS_POLICY_DDL_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/50083d15b3340dc8106eb4dd75cd5a3067db89f0",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261009210000_harden_active_membership_governance_read.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-129",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 129,
+      "providerVersion": "20261013133323",
+      "providerName": "fix_enterprise_provision_usage_conflict_ambiguity",
+      "appliedSqlSha256": "6eb4f7dfe9291502bc07fb2404af0bceeba5c9426e95ed7ef7c9f17f55c5d89e",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+        "candidateBlobSha1AtCheckpoint": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+        "historicalCandidateCommit": "6bb79daea8d6dc5bc443d185da0da7e57090bd37",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261013133323",
+        "candidateFileVersion": "20261022100000",
+        "classification": "superseded_by_forward_reconciliation",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false,
+        "consolidationGroup": "CONSOLIDATION_2"
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, DML_CHANGE_PRESENT, CONSOLIDATION_VERSION_DISTINCTION_REQUIRED. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding. Keep every provider ledger version distinct and ordered across the consolidation.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "PRESERVE_DISTINCT_CONSOLIDATED_VERSION_ORDER",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-130",
+      "priority": "P1_SECURITY_AND_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 130,
+      "providerVersion": "20261013133341",
+      "providerName": "fix_enterprise_provision_usage_update_ambiguity",
+      "appliedSqlSha256": "8e29bd0e1ec7f1cf75210b34b51aed46f39327ea104c14d70ef2ce09b6badac6",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+        "candidateBlobSha1AtCheckpoint": "37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+        "historicalCandidateCommit": "6bb79daea8d6dc5bc443d185da0da7e57090bd37",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261013133341",
+        "candidateFileVersion": "20261022100000",
+        "classification": "superseded_by_forward_reconciliation",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false,
+        "consolidationGroup": "CONSOLIDATION_2"
+      },
+      "securityImplications": "Recorded SQL risk signals: SECURITY_DEFINER_PRESENT, DML_CHANGE_PRESENT, CONSOLIDATION_VERSION_DISTINCTION_REQUIRED. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding. Keep every provider ledger version distinct and ordered across the consolidation.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "PRESERVE_DISTINCT_CONSOLIDATED_VERSION_ORDER",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/37f27669b0a9a835fc82af5fd72bdb5daea0b8b1",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261022100000_reconcile_enterprise_provision_usage_ambiguities.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-018",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 18,
+      "providerVersion": "20260804224915",
+      "providerName": "live_security_definer_acl_hardening",
+      "appliedSqlSha256": "db0054e387bdc8657317a4fa3b0870b3563c2e01144db9afceedb8735024af58",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260804224915_live_security_definer_acl_hardening.sql",
+        "candidateBlobSha1AtCheckpoint": "e82dd33f0f5a5052572ee36228667fe14db7eb74",
+        "historicalCandidateCommit": "f4933361d3d1d768614aa31b503b60a60db60d71",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260804224915",
+        "candidateFileVersion": "20260804224915",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: ACL_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_PREFIX_LF_PROVENANCE_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/e82dd33f0f5a5052572ee36228667fe14db7eb74",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260804224915_live_security_definer_acl_hardening.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-070",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 70,
+      "providerVersion": "20260902193849",
+      "providerName": "reconcile_enterprise_sso_production_runtime",
+      "appliedSqlSha256": "494631c9521dc224cef5609cc975c4ebb9731ce14bfcced71ee026fb3cf35adb",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+        "candidateBlobSha1AtCheckpoint": "0aca9099c57aabe9afa5cf240bfe9375a7b7c51c",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20260902193849",
+        "candidateFileVersion": "20260902083000",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/0aca9099c57aabe9afa5cf240bfe9375a7b7c51c",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260902083000_reconcile_enterprise_sso_production_runtime.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-094",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 94,
+      "providerVersion": "20260909232229",
+      "providerName": "finalize_backend_only_force_rls_and_trigger_acl",
+      "appliedSqlSha256": "1bc1f8f133c138d72d948ee6b1eccc9243fe51780a4b925b6dba9b731b5b6788",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260909144000_finalize_backend_only_force_rls_and_trigger_acl.sql",
+        "candidateBlobSha1AtCheckpoint": "985b87aab915b76cdb1e00a48110669e277551f6",
+        "historicalCandidateCommit": "0736379c52aad82568fb3a7773ff745aa64ffb8f",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260909232229",
+        "candidateFileVersion": "20260909144000",
+        "classification": "canonical_name_match",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: ACL_CHANGE_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/985b87aab915b76cdb1e00a48110669e277551f6",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260909144000_finalize_backend_only_force_rls_and_trigger_acl.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-104",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 104,
+      "providerVersion": "20260924141739",
+      "providerName": "tenant_wide_mfa_terminal",
+      "appliedSqlSha256": "023fc0af949877edfc43fd10a12d0b4aa60b8bd884f82330fa07ff0625e1a3fb",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+        "candidateBlobSha1AtCheckpoint": "9591e772493d2dc84893407448927c8e8e7ef6f8",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20260924141739",
+        "candidateFileVersion": "20260924142500",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/9591e772493d2dc84893407448927c8e8e7ef6f8",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260924142500_tenant_wide_mfa_terminal.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-105",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 105,
+      "providerVersion": "20260924142553",
+      "providerName": "tenant_mfa_app_private_rls_authority",
+      "appliedSqlSha256": "47c93b26e13524655ea1905b06d11fc6904f773619389727cc519d655cbac762",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+        "candidateBlobSha1AtCheckpoint": "4000b04cdf04e465eee4043dbc8e57b543c41b0d",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20260924142553",
+        "candidateFileVersion": "20260924143500",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/4000b04cdf04e465eee4043dbc8e57b543c41b0d",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260924143500_tenant_mfa_app_private_rls_authority.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-106",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 106,
+      "providerVersion": "20260924143358",
+      "providerName": "tenant_mfa_public_rpc_acl_hardening",
+      "appliedSqlSha256": "66fcbd24e9810398b1470ca22ec60f63462830fc1402a7bc8cbbc6fe7ea7d050",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+        "candidateBlobSha1AtCheckpoint": "d82a1946504bbb9dc3c5f5d6c3312331eeb64f51",
+        "historicalCandidateCommit": "46f15c28e6aa5f41f663bb9637c0f5db3c387ef6",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260924143358",
+        "candidateFileVersion": "20260924144500",
+        "classification": "canonical_name_match",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: ACL_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/d82a1946504bbb9dc3c5f5d6c3312331eeb64f51",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260924144500_tenant_mfa_public_rpc_acl_hardening.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-108",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 108,
+      "providerVersion": "20260929101638",
+      "providerName": "add_critical_fk_indexes_terminal",
+      "appliedSqlSha256": "d329f40a847a60368b6068d65c668220968869b0561f5313403880155c872bd8",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260929101638_add_critical_fk_indexes_terminal.sql",
+        "candidateBlobSha1AtCheckpoint": "7ea230bf05a2a70ee39038aa83baeb7e9a550cb8",
+        "historicalCandidateCommit": "4d4830b622b0087153f6c71d146982fe3aa9625c",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20260929101638",
+        "candidateFileVersion": "20260929101638",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: none in triage. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_85_98_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/7ea230bf05a2a70ee39038aa83baeb7e9a550cb8",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260929101638_add_critical_fk_indexes_terminal.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-112",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 112,
+      "providerVersion": "20261003171225",
+      "providerName": "reconcile_risk_schema_contract",
+      "appliedSqlSha256": "1186770ebdef087aa24312c2544d19be5f3a1b24787ec6867b8f7667439901d9",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261003171225_reconcile_risk_schema_contract.sql",
+        "candidateBlobSha1AtCheckpoint": "7a3e170a4dae7ee929cfe9b29a04191fef6ff9dd",
+        "historicalCandidateCommit": "026748a72728eb3ffa7c993224c9f121f79b5397",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261003171225",
+        "candidateFileVersion": "20261003171225",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: DROP_DDL_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/7a3e170a4dae7ee929cfe9b29a04191fef6ff9dd",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261003171225_reconcile_risk_schema_contract.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-114",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 114,
+      "providerVersion": "20261003205557",
+      "providerName": "fix_team_invitation_persistence_42702",
+      "appliedSqlSha256": "5371aab27e28dfb4e3ad38397cc897fb20f6dcbac255a2e3371acf9675e30332",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261003205557_fix_team_invitation_persistence_42702.sql",
+        "candidateBlobSha1AtCheckpoint": "187fa89cea71f639b141cd689164a39899ce2bde",
+        "historicalCandidateCommit": "21b23a46d328a560520d949ba06c6bdaf44b849c",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261003205557",
+        "candidateFileVersion": "20261003205557",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: none in triage. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/187fa89cea71f639b141cd689164a39899ce2bde",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261003205557_fix_team_invitation_persistence_42702.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-115",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 115,
+      "providerVersion": "20261003220421",
+      "providerName": "fix_team_invitation_acceptance_42702",
+      "appliedSqlSha256": "33937e182c16a8cc3d483561214605eee9f5376a7cead13da65f7568cd21f9e1",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261003221000_fix_team_invitation_acceptance_42702.sql",
+        "candidateBlobSha1AtCheckpoint": "763afbeeda820e042a8d8680918c404017cee4db",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261003220421",
+        "candidateFileVersion": "20261003221000",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/763afbeeda820e042a8d8680918c404017cee4db",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261003221000_fix_team_invitation_acceptance_42702.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-116",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 116,
+      "providerVersion": "20261003220519",
+      "providerName": "fix_team_invitation_membership_conflict_42702",
+      "appliedSqlSha256": "2cdf4141ab8bec955a5838243cd64f5142b670dcc01a7113576596df68a2c9cd",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql",
+        "candidateBlobSha1AtCheckpoint": "95d287db168e532c07450706f56685ba3347e10f",
+        "historicalCandidateCommit": "60c7284639d2bda4eb300304bfaa42955d3b620a",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261003220519",
+        "candidateFileVersion": "20261003221500",
+        "classification": "canonical_name_match",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/95d287db168e532c07450706f56685ba3347e10f",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261003221500_fix_team_invitation_membership_conflict_42702.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-117",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 117,
+      "providerVersion": "20261004082501",
+      "providerName": "validate_audit_logs_actor_user_fk",
+      "appliedSqlSha256": "db12bfe5613df5425519632bd17fed43b3f3215c8917b1c2df58b6d55f31ee41",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+        "candidateBlobSha1AtCheckpoint": "51853c8d20baded57d6da7c54d901dd67aa1727b",
+        "historicalCandidateCommit": "9b997b1f8eb14f4947d83eb856476c1cfc429055",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261004082501",
+        "candidateFileVersion": "20261004002000",
+        "classification": "canonical_name_match",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: none in triage. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/51853c8d20baded57d6da7c54d901dd67aa1727b",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261004002000_validate_audit_logs_actor_user_fk.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-118",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 118,
+      "providerVersion": "20261004103137",
+      "providerName": "force_rls_sales_console_backend_only",
+      "appliedSqlSha256": "85db3506d8a55a24d20be470e0735c4f6227de5624bf1e7b083942e243d8417b",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql",
+        "candidateBlobSha1AtCheckpoint": "82c385142c9f4d6ac18dbc62affa75ad9a379096",
+        "historicalCandidateCommit": "35ed8ccf2f332a3f92ecdf809091e1b8e077e1c5",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261004103137",
+        "candidateFileVersion": "20261004104500",
+        "classification": "canonical_name_match",
+        "comparison": "NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: ACL_CHANGE_PRESENT, DML_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING_AND_SOURCE_EXCEPTION",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is NO_BYTE_EQUALITY_WITH_CONSERVATIVE_REPRESENTATIONS; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/82c385142c9f4d6ac18dbc62affa75ad9a379096",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261004104500_force_rls_sales_console_backend_only.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-119",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 119,
+      "providerVersion": "20261004110936",
+      "providerName": "add_sales_lead_email_templates",
+      "appliedSqlSha256": "561206132e6a308b736564265583b4cc975a76738f80093225d43dc1d401785d",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261004110936_add_sales_lead_email_templates.sql",
+        "candidateBlobSha1AtCheckpoint": "edda404e8787baf6b2e4af9a039b0890e0ef095d",
+        "historicalCandidateCommit": "35e1f5aca770a00261c9456e8cf48c22b09c2caa",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261004110936",
+        "candidateFileVersion": "20261004110936",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: none in triage. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/edda404e8787baf6b2e4af9a039b0890e0ef095d",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261004110936_add_sales_lead_email_templates.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-120",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 120,
+      "providerVersion": "20261005001641",
+      "providerName": "harden_sync_legacy_risk_score_trigger_acl",
+      "appliedSqlSha256": "83df4db3bbb83926e6de111c1d3b11166c3750594c10b41bb55047e98aa7642e",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261005001641_harden_sync_legacy_risk_score_trigger_acl.sql",
+        "candidateBlobSha1AtCheckpoint": "33f5bde1d52ba1bd8aad0a40af579eb36b3a9156",
+        "historicalCandidateCommit": "9f9acc2df86bff12a8eb471494c5c599bee0e528",
+        "wholeOriginalSourceProven": false
+      },
+      "versionMapping": {
+        "providerVersion": "20261005001641",
+        "candidateFileVersion": "20261005001641",
+        "classification": "exact_version_candidate_not_whole_file_identity",
+        "comparison": "whole_original_source_bytes_unproven",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: ACL_CHANGE_PRESENT. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_ORIGINAL_SOURCE_OR_EXCEPTION",
+      "proposalRationale": "The version-matched Git file is a historical candidate; provider applied-statement digest does not prove original whole-file source identity.",
+      "requiredIndependentDecisions": [
+        "SOURCE_BYTES_OR_EXCEPTION",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/closure-v21/DAT01_EXACT_SQL_HASH_BATCH_99_112_20261104.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/33f5bde1d52ba1bd8aad0a40af579eb36b3a9156",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261005001641_harden_sync_legacy_risk_score_trigger_acl.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-121",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 121,
+      "providerVersion": "20261006125506",
+      "providerName": "20260721180000_annex_iv_technical_documentation_governance",
+      "appliedSqlSha256": "652786fda5b8b9e78ca40bb02272693987afa2a711eacc32e395d38726fa2c4b",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql",
+        "candidateBlobSha1AtCheckpoint": "62ea5e6eb2e7c93eb81c19e99675b685943ee0c2",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261006125506",
+        "candidateFileVersion": "20260721180000",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/62ea5e6eb2e7c93eb81c19e99675b685943ee0c2",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260721180000_annex_iv_technical_documentation_governance.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-122",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 122,
+      "providerVersion": "20261006125509",
+      "providerName": "20260721180100_annex_iv_package_section_integrity",
+      "appliedSqlSha256": "a984d66947fe8c0a913907f1460100e612ebcbd68f551f5efa85bf5eb8896100",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260721180100_annex_iv_package_section_integrity.sql",
+        "candidateBlobSha1AtCheckpoint": "cb53d8749531ce438482a07002fd3f8074c58d88",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261006125509",
+        "candidateFileVersion": "20260721180100",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/cb53d8749531ce438482a07002fd3f8074c58d88",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260721180100_annex_iv_package_section_integrity.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-123",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 123,
+      "providerVersion": "20261006125511",
+      "providerName": "20260722200000_annex_iv_operational_workflow",
+      "appliedSqlSha256": "ea03f251ec326c93c2d48778b813fe3531d4db94aa65db9677e2db0408009952",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260722200000_annex_iv_operational_workflow.sql",
+        "candidateBlobSha1AtCheckpoint": "e00d5f11c7fcc0d3120749b90988618dd30dbbef",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261006125511",
+        "candidateFileVersion": "20260722200000",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/e00d5f11c7fcc0d3120749b90988618dd30dbbef",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260722200000_annex_iv_operational_workflow.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-124",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 124,
+      "providerVersion": "20261006125514",
+      "providerName": "20260803133000_article_50_product_integration",
+      "appliedSqlSha256": "d56475e7132fb8f0a5d7131763ab44a2d7bed6922e63b80637994bd7239bc9e7",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260803133000_article_50_product_integration.sql",
+        "candidateBlobSha1AtCheckpoint": "702a9accd566e17b43b3d318f62a0d02bba39878",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261006125514",
+        "candidateFileVersion": "20260803133000",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/702a9accd566e17b43b3d318f62a0d02bba39878",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260803133000_article_50_product_integration.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-125",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 125,
+      "providerVersion": "20261006125518",
+      "providerName": "20260803133100_article_50_claim_evidence_constraints",
+      "appliedSqlSha256": "3608522681bf77f7f0c2380cd18e5d50b84ff4409976493a5ed513b945d839f9",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql",
+        "candidateBlobSha1AtCheckpoint": "aadaa1856cb57acb8dac072463c82e8e2b884518",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261006125518",
+        "candidateFileVersion": "20260803133100",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/aadaa1856cb57acb8dac072463c82e8e2b884518",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20260803133100_article_50_claim_evidence_constraints.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-126",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 126,
+      "providerVersion": "20261006125623",
+      "providerName": "20261006140000_harden_annex_iv_trigger_function_acl",
+      "appliedSqlSha256": "d5465b63bbce5dadb4636ccd739231947832e90197b399ea356fbc4af0f094be",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql",
+        "candidateBlobSha1AtCheckpoint": "640e6f2f7f5b5fd443b70063e56d12dc627125b9",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261006125623",
+        "candidateFileVersion": "20261006140000",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/640e6f2f7f5b5fd443b70063e56d12dc627125b9",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261006140000_harden_annex_iv_trigger_function_acl.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-127",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 127,
+      "providerVersion": "20261006130430",
+      "providerName": "20261006140500_reconcile_gap_task_reference_integrity",
+      "appliedSqlSha256": "a6e961666eacd8c3b2bf1418097863b213e8bbec5bf2129a133e80d7d29174d2",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261006140500_reconcile_gap_task_reference_integrity.sql",
+        "candidateBlobSha1AtCheckpoint": "7b8546ea62b1de88b27a3b872a6206e12c52fe2c",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261006130430",
+        "candidateFileVersion": "20261006140500",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/7b8546ea62b1de88b27a3b872a6206e12c52fe2c",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261006140500_reconcile_gap_task_reference_integrity.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    },
+    {
+      "caseId": "DAT01-131",
+      "priority": "P2_SOURCE_PROVENANCE_REVIEW",
+      "providerLedgerOrder": 131,
+      "providerVersion": "20261015205458",
+      "providerName": "enterprise_entitlement_v3_compatibility",
+      "appliedSqlSha256": "e9c82b1680d17240bb84a103784706ab7c4c36e6ac3c3eeb8d523090624e519d",
+      "sourceIdentity": {
+        "candidatePath": "supabase/migrations/20261015090000_enterprise_entitlement_v3_compatibility.sql",
+        "candidateBlobSha1AtCheckpoint": "c16446c0502fe961745102e3a187978f6cbf6692",
+        "historicalCandidateCommit": null,
+        "wholeOriginalSourceProven": null
+      },
+      "versionMapping": {
+        "providerVersion": "20261015205458",
+        "candidateFileVersion": "20261015090000",
+        "classification": "canonical_name_match",
+        "comparison": "BYTE_EQUAL_SOURCE_TEXT",
+        "independentlyAccepted": false
+      },
+      "securityImplications": "Recorded SQL risk signals: APPLIED_SQL_NOT_IN_THIS_RECOVERY_BUNDLE. These flags require qualified review of the underlying SQL and effective RLS, grants, SECURITY DEFINER and tenant scope where applicable; no safety verdict is inferred from flags.",
+      "proposedDisposition": "PENDING_QUALIFIED_VERSION_BINDING",
+      "proposalRationale": "The provider version differs from the candidate file version. Existing conservative source-text comparison is BYTE_EQUAL_SOURCE_TEXT; this does not establish an independently accepted version binding.",
+      "requiredIndependentDecisions": [
+        "PROVIDER_VERSION_TO_SOURCE_MAPPING",
+        "ORDERED_PG17_QA_REPLAY_AND_SECURITY_REVIEW"
+      ],
+      "immutableEvidence": {
+        "caseMatrix": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/case-review-triage-48.json",
+        "providerStatementArchive": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/recovered-provider-statements/nonexact-crosswalk-25.json",
+        "sourceBlob": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c16446c0502fe961745102e3a187978f6cbf6692",
+        "candidateAtCheckpoint": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/supabase/migrations/20261015090000_enterprise_entitlement_v3_compatibility.sql",
+        "providerReadbackIssueComment": "https://github.com/renanescola40-afk/eurocomply_saas/issues/2711#issuecomment-6830472328",
+        "caseReviewGuide": "https://github.com/renanescola40-afk/eurocomply_saas/blob/c4ca03e6a7cae835ccec37b3fed1f811de23d8b5/docs/enterprise/phase1-v22/DAT01_INDEPENDENT_CASE_REVIEW_GUIDE_20261107.md"
+      },
+      "qualifiedDisposition": "PENDING",
+      "reviewer": null,
+      "replayAuthorized": false
+    }
+  ]
+}
