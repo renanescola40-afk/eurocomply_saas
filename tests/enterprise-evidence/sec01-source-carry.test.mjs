@@ -88,7 +88,7 @@ test('source carry demands exact-head qualified gate review, GitHub CI, FRIA and
  assert.match(src,/includesReviewLine\(review\.body,SEC01_CARRY_REVIEW\)/);
  assert.match(src,/review\.commit_id===pull\.sha/);
  assert.match(src,/decisionWithdrawn\(reviews,review,pull,rejection\)/);
- assert.match(src,/checkpointArtifact\.digest!=='sha256:'\+SEC01_CARRY_DIGEST/);
+ assert.match(src,/checkpointArtifact\?\.digest!=='sha256:'\+SEC01_CARRY_DIGEST/);
  assert.match(src,/sec01SourceCarryIntegrity\(index,\{expectedSha,root\}\)/);
 });
 
