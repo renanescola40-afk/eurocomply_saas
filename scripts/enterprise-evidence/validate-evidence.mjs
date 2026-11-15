@@ -567,6 +567,38 @@ export function sec01SourceCarryIntegrity(index,{
  return true;
 }
 
+/**
+ * Github may temporarily hide/recreate check runs when a single job in the
+ * parent workflow is rerun. Give exact-SHA authenticated provider state
+ * a bounded opportunity to settle; never infer PASS from absence, and fail
+ * immediately on invalid provider data or an unrelated rejection.
+ * The injected functions are exclusively for deterministic regression tests.
+ */
+export async function verifyQat01AfterProviderSettles({
+ sha,token,request,verify=verifyQat01NativeChecks,
+ sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
+ attempts=31,intervalMs=5000,
+}={}){
+ if(!SHA40.test(sha||'')||!token||!Number.isInteger(attempts)||attempts<1||
+    attempts>31||!Number.isInteger(intervalMs)||intervalMs<0||intervalMs>5000)
+  return {decision:'NOT_VERIFIED',errors:['invalid_settled_source_ci_request']};
+ let report;
+ for(let attempt=0;attempt<attempts;attempt++){
+  report=await verify({sha,token,request});
+  if(report?.decision==='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE')return report;
+  const errors=report?.errors;
+  const transient=Array.isArray(errors)&&errors.length>0&&errors.every(e=>
+   typeof e==='string'&&(
+    e.startsWith('missing_authenticated_check:')||
+    e.startsWith('latest_required_check_not_success:')||
+    e==='authentic_circleci_success_missing'
+   ));
+  if(!transient)return report;
+  if(attempt<attempts-1)await sleep(intervalMs);
+ }
+ return report;
+}
+
 export async function verifySec01SourceCarry(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
@@ -599,7 +631,7 @@ export async function verifySec01SourceCarry(index,{
    readProvider('/actions/runs/'+SEC01_CARRY_RUN),
    readProvider('/actions/runs/'+SEC01_CARRY_RUN+'/artifacts?per_page=100'),
    readProvider('/commits/'+pull.sha+'/check-runs?per_page=100'),
-   verifyQat01NativeChecks({sha:pull.sha,token,request}),
+   verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
    readProvider('/pulls/'+pull.number+'/reviews?per_page=100'),
   ]);
   const checkpointArtifact=baseArtifacts?.artifacts?.find(a=>a.id===SEC01_CARRY_ARTIFACT);
