@@ -570,21 +570,30 @@ export function sec01SourceCarryIntegrity(index,{
 export async function verifySec01SourceCarry(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
+ // Never disclose provider responses, credentials, artifacts or review text in logs.
+ // Each marker identifies only the failing class of a trustworthy check.
+ const fail=(stage)=>{
+  if(process.env.GITHUB_ACTIONS==='true' &&
+     process.env.EVIDENCE_PR_NUMBER==='2738'){
+   console.error('SEC01_SOURCE_CARRY_BLOCKED:'+stage);
+  }
+  return false;
+ };
  const hasPrNumber=prNumber!==null&&prNumber!==undefined&&String(prNumber).trim()!=='';
  if((hasPrNumber&&Number(prNumber)!==SEC01_CARRY_PR)||!token||
-    !sec01SourceCarryIntegrity(index,{expectedSha,root}))return false;
+    !sec01SourceCarryIntegrity(index,{expectedSha,root}))return fail('source_integrity_or_auth_input');
  const readProvider=githubRead(request,token);
  try{
   // On a PR use its exact head; on a merged main push require GitHub's
   // authenticated unique commit-to-merged-PR association and identical trees.
   const pull=await reviewedPull(readProvider,expectedSha,
    hasPrNumber?prNumber:null,QUALIFIED_REVIEWER);
-  if(!pull||pull.number!==SEC01_CARRY_PR)return false;
+  if(!pull||pull.number!==SEC01_CARRY_PR)return fail('authenticated_pr_identity');
   if(pull.mergedAt){
    const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
-   if(trees.status!==0)return false;
+   if(trees.status!==0)return fail('merged_git_trees_readback');
    const [sourceTree,mergedTree]=trees.stdout.toString('utf8').trim().split('\n');
-   if(!SHA40.test(sourceTree)||sourceTree!==mergedTree)return false;
+   if(!SHA40.test(sourceTree)||sourceTree!==mergedTree)return fail('merged_tree_mismatch');
   }
   const [baseRun,baseArtifacts,headChecks,headCi,reviews]=await Promise.all([
    readProvider('/actions/runs/'+SEC01_CARRY_RUN),
@@ -594,17 +603,35 @@ export async function verifySec01SourceCarry(index,{
    readProvider('/pulls/'+pull.number+'/reviews?per_page=100'),
   ]);
   const checkpointArtifact=baseArtifacts?.artifacts?.find(a=>a.id===SEC01_CARRY_ARTIFACT);
-  if(baseRun?.head_sha!==SEC01_CARRY_BASE||baseRun.conclusion!=='success'||
-     baseRun.event!=='push'||checkpointArtifact?.workflow_run?.head_sha!==SEC01_CARRY_BASE||
-     checkpointArtifact.expired||checkpointArtifact.digest!=='sha256:'+SEC01_CARRY_DIGEST||
-     headCi.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
-     !Array.isArray(headChecks?.check_runs)||!Array.isArray(reviews))return false;
+  if(baseRun?.head_sha!==SEC01_CARRY_BASE||baseRun?.conclusion!=='success'||
+     baseRun?.event!=='push')return fail('immutable_main_workflow');
+  if(!checkpointArtifact||checkpointArtifact?.workflow_run?.head_sha!==SEC01_CARRY_BASE||
+     checkpointArtifact?.expired||
+     checkpointArtifact?.digest!=='sha256:'+SEC01_CARRY_DIGEST)return fail('immutable_main_artifact');
+  if(headCi.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'){
+    // These are well-defined error codes from the checked-in QAT-01 verifier;
+    // no full provider errors or credential values are emitted.
+    const allowed=new Set(['exact_source_sha_required','authenticated_github_read_required',
+      'invalid_check_page','inconsistent_total_count','incomplete_pagination',
+      'incomplete_result','invalid_status_shape','provider_readback_unavailable',
+      'provider_readback_incomplete','authentic_circleci_success_missing']);
+    const codes=(headCi.errors??[]).map(e=>{
+      if(typeof e!=='string')return 'unknown';
+      if(e.startsWith('missing_authenticated_check:'))return 'missing_named_ci_check';
+      if(e.startsWith('latest_required_check_not_success:'))return 'named_ci_check_not_success';
+      return allowed.has(e)?e:'unknown';
+    });
+    return fail('current_source_ci:'+codes.join(','));
+  }
+  if(!Array.isArray(headChecks?.check_runs))return fail('head_check_readback_shape');
+  if(!Array.isArray(reviews))return fail('qualified_review_readback_shape');
+
   const tested=headChecks.check_runs.filter(c=>c?.name===SEC01_CARRY_RUNTIME_CHECK&&
      c?.head_sha===pull.sha&&c?.app?.slug==='github-actions');
   tested.sort((a,b)=>Date.parse(b.completed_at||'')-Date.parse(a.completed_at||'')||
      (b.id||0)-(a.id||0));
   if(tested[0]?.status!=='completed'||tested[0]?.conclusion!=='success'||
-     !/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/actions\/runs\/\d+\/job\/\d+$/.test(tested[0].html_url||''))return false;
+     !/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/actions\/runs\/\d+\/job\/\d+$/.test(tested[0].html_url||''))return fail('current_head_fria_e2e');
   const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|SOURCE CHANGE FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
   const approved=reviews.find(review=>review?.state==='APPROVED'&&
      review.user?.login===QUALIFIED_REVIEWER&&review.commit_id===pull.sha&&
@@ -618,8 +645,8 @@ export async function verifySec01SourceCarry(index,{
   return approved?{
    approvalUrl:approved.html_url,acceptedAt:approved.submitted_at,
    sec01SourceCarry:true,
-  }:false;
- }catch{return false;}
+  }:fail('qualified_exact_head_four_gate_review');
+ }catch{return fail('authenticated_provider_readback_exception');}
 }
 
 export async function verifyCumulativeRelease(index,{
