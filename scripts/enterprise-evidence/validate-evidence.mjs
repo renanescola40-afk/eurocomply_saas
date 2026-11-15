@@ -570,11 +570,15 @@ export function sec01SourceCarryIntegrity(index,{
 export async function verifySec01SourceCarry(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
- if(Number(prNumber)!==SEC01_CARRY_PR||!token||
+ const hasPrNumber=prNumber!==null&&prNumber!==undefined&&String(prNumber).trim()!=='';
+ if((hasPrNumber&&Number(prNumber)!==SEC01_CARRY_PR)||!token||
     !sec01SourceCarryIntegrity(index,{expectedSha,root}))return false;
  const readProvider=githubRead(request,token);
  try{
-  const pull=await reviewedPull(readProvider,expectedSha,prNumber,QUALIFIED_REVIEWER);
+  // On a PR use its exact head; on a merged main push require GitHub's
+  // authenticated unique commit-to-merged-PR association and identical trees.
+  const pull=await reviewedPull(readProvider,expectedSha,
+   hasPrNumber?prNumber:null,QUALIFIED_REVIEWER);
   if(!pull||pull.number!==SEC01_CARRY_PR)return false;
   if(pull.mergedAt){
    const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
