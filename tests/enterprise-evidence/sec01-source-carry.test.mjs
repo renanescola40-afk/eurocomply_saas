@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
-import {sec01SourceCarryIntegrity} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import {sec01SourceCarryIntegrity,reconcile} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 
 const indexPath='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
 const proofs=[
@@ -100,4 +100,26 @@ test('real PR #2738 source diff is restricted to reviewed files and unchanged ac
  assert.equal(actual,assessed,'must check exact PR HEAD, never a merge or stale baseline');
  const index=JSON.parse(readFileSync(indexPath,'utf8'));
  assert.equal(sec01SourceCarryIntegrity(index,{expectedSha:actual}),true);
+});
+
+test('reconciliation can retain 4/24 after a separately authenticated current-head decision (simulation only)',()=>{
+ if(process.env.EVIDENCE_PR_NUMBER!=='2738')return;
+ const sha=process.env.EVIDENCE_EXACT_SHA;
+ assert.match(sha??'',/^[a-f0-9]{40}$/);
+ const index=JSON.parse(readFileSync(indexPath,'utf8'));
+ const scope=JSON.parse(readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ // No provider approval is generated here. This is only a deterministic dry-run
+ // for the eventual separately authenticated native GitHub formal review.
+ const hypothetical={sec01SourceCarry:true,
+  approvalUrl:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2738#pullrequestreview-999999',
+  acceptedAt:new Date().toISOString()};
+ const r=reconcile({scope,gates,index,expectedSha:sha,cumulativeReview:hypothetical});
+ assert.deepEqual(r.errors,[]);
+ assert.equal(r.valid,true);
+ assert.equal(r.summary.controls_pass,4);
+ assert.equal(r.summary.gates_accepted,4);
+ for(const id of ['A-09','A-15','A-18','A-19']){
+  assert.equal(r.gates.find(g=>g.gate_id===id)?.accepted,true,id);
+ }
 });
