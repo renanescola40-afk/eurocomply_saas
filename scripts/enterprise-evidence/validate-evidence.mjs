@@ -66,6 +66,7 @@ const SEC01_CARRY_ALLOWED=new Set([
  'tests/security/sec01-password-recovery-session-proof.test.ts',
  'scripts/enterprise-evidence/validate-evidence.mjs',
  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
+ 'tests/enterprise-evidence/validate-evidence.test.mjs',
 ]);
 const SEC01_CARRY_RUNTIME_CHECK='Disposable final customer journey + FRIA lifecycle';
 
