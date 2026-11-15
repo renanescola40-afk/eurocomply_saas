@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 
 import { supabase } from '@/integrations/supabase/client';
+import { hasObservedPasswordRecoverySession, type RecoveryAuthSession } from '@/lib/auth/recovery-session-proof';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 const copy = {
@@ -51,16 +52,23 @@ export default function ResetPasswordPage() {
       if (mounted) setState((current) => (current === 'checking' ? 'invalid' : current));
     }, 5_000);
 
-    void supabase.auth.getSession().then(({ data }: { data: { session: unknown | null } }) => {
+    void supabase.auth.getSession().then(({ data }: { data: { session: RecoveryAuthSession } }) => {
       if (!mounted) return;
-      setState(data.session ? 'ready' : 'invalid');
+      // An INITIAL_SESSION from a normal login is not proof of account recovery.
+      // The early client-level observer also covers PKCE redirect events
+      // delivered before this component subscribes.
+      setState(hasObservedPasswordRecoverySession(data.session) ? 'ready' : 'invalid');
     }).catch(() => {
       if (mounted) setState('invalid');
     });
 
-    const { data } = supabase.auth.onAuthStateChange((event: string, session: unknown | null) => {
+    const { data } = supabase.auth.onAuthStateChange((event: string, session: RecoveryAuthSession) => {
       if (!mounted) return;
-      if (event === 'PASSWORD_RECOVERY' || session) setState('ready');
+      if (event === 'PASSWORD_RECOVERY' && hasObservedPasswordRecoverySession(session)) {
+        setState('ready');
+      } else if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
+        setState('invalid');
+      }
     });
 
     return () => {
@@ -89,6 +97,14 @@ export default function ResetPasswordPage() {
 
     setBusy(true);
     try {
+      // Re-check after asynchronous form interaction. A sign-out or a normal
+      // sign-in on another tab must invalidate the recovery-only UI authority.
+      const { data: currentSession, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !hasObservedPasswordRecoverySession(currentSession?.session ?? null)) {
+        setState('invalid');
+        setError(text.invalid);
+        return;
+      }
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
         setError(text.unavailable);
