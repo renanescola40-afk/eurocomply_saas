@@ -91,3 +91,13 @@ test('source carry demands exact-head qualified gate review, GitHub CI, FRIA and
  assert.match(src,/checkpointArtifact\.digest!=='sha256:'\+SEC01_CARRY_DIGEST/);
  assert.match(src,/sec01SourceCarryIntegrity\(index,\{expectedSha,root\}\)/);
 });
+
+test('real PR #2738 source diff is restricted to reviewed files and unchanged accepted proofs',()=>{
+ if(process.env.EVIDENCE_PR_NUMBER!=='2738')return;
+ const assessed=process.env.EVIDENCE_EXACT_SHA;
+ assert.match(assessed??'',/^[a-f0-9]{40}$/);
+ const actual=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+ assert.equal(actual,assessed,'must check exact PR HEAD, never a merge or stale baseline');
+ const index=JSON.parse(readFileSync(indexPath,'utf8'));
+ assert.equal(sec01SourceCarryIntegrity(index,{expectedSha:actual}),true);
+});
