@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
+import { observeRecoveryAuthEvent } from '@/lib/auth/recovery-session-proof';
 
 // ==========================================
 // SUPABASE CLIENT INITIALIZATION
@@ -75,7 +76,7 @@ export const supabase = (() => {
   // Important for OAuth PKCE and password-recovery links in Next.js SSR:
   // createBrowserClient stores the verifier/session in cookies so the localized
   // callback and reset-password routes can complete the exchange safely.
-  return createBrowserClient(SUPABASE_URL, SUPABASE_KEY, {
+  const client = createBrowserClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -83,4 +84,15 @@ export const supabase = (() => {
       flowType: 'pkce',
     },
   });
+
+  // Subscribe as soon as the browser client is constructed: a recovery URL
+  // can be consumed before React mounts the reset-password page. Never turn
+  // an ordinary INITIAL_SESSION or SIGNED_IN event into recovery authority.
+  if (typeof window !== 'undefined') {
+    client.auth.onAuthStateChange((event, session) => {
+      observeRecoveryAuthEvent(event, session);
+    });
+  }
+
+  return client;
 })();

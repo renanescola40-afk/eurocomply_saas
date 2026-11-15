@@ -34,6 +34,79 @@ function assertIsolatedQaRuntime(baseURL: string, supabaseURL: string) {
   } catch {
     throw new Error('payment_first_runtime_requires_isolated_qa');
   }
+  // The FRIA workflow runs an independently provisioned disposable Supabase
+  // instance on loopback. It cannot satisfy hosted-HTTPS QA checks, but may
+  // exercise synthetic writes only when the exact GitHub runner, database,
+  // project identity and firewall attestations all match.
+  const env = process.env;
+  const ephemeralRequested =
+    env.RECOVERY_EPHEMERAL_DATABASE_PROVISIONED === 'true' ||
+    env.RECOVERY_EPHEMERAL_DATABASE_MODE === 'project-schema';
+  if (ephemeralRequested) {
+    const runId = env.GITHUB_RUN_ID ?? '';
+    const attempt = env.GITHUB_RUN_ATTEMPT ?? '';
+    const projectId = `risck-recovery-${runId}-${attempt}`;
+    const workflowPrefix =
+      'renanescola40-afk/eurocomply_saas/.github/workflows/product-fria-ephemeral-qa.yml@';
+    const workflowRef = env.GITHUB_WORKFLOW_REF ?? '';
+    const prParts = workflowRef.startsWith(`${workflowPrefix}refs/pull/`)
+      ? workflowRef.slice(`${workflowPrefix}refs/pull/`.length).split('/')
+      : [];
+    const isPr = prParts.length === 2 && prParts[1] === 'merge' &&
+      Number.isSafeInteger(Number(prParts[0])) && Number(prParts[0]) > 0 &&
+      String(Number(prParts[0])) === prParts[0];
+    const exactWorkflow =
+      env.GITHUB_ACTIONS === 'true' &&
+      env.GITHUB_REPOSITORY === 'renanescola40-afk/eurocomply_saas' &&
+      env.GITHUB_WORKFLOW === 'Product FRIA Ephemeral Runtime QA' &&
+      ((env.GITHUB_EVENT_NAME === 'pull_request' && isPr) ||
+       (['push', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME ?? '') &&
+        workflowRef === `${workflowPrefix}refs/heads/main`));
+    let isolatedDb: URL | null = null;
+    try { isolatedDb = new URL(env.RECOVERY_ISOLATED_DATABASE_URL ?? ''); } catch {}
+    const rawTemp = env.RUNNER_TEMP ?? '';
+    const runnerTemp = rawTemp.endsWith('/') ? rawTemp.slice(0, -1) : rawTemp;
+    const correctTarget =
+      app.href === 'http://127.0.0.1:3000/' &&
+      db.href === 'http://127.0.0.1:54321/' &&
+      env.NEXT_PUBLIC_APP_URL === app.origin &&
+      env.SITE_URL === app.origin &&
+      env.SUPABASE_URL === db.origin;
+    const durableBoundary =
+      /^[0-9]{1,16}$/.test(runId) && /^[0-9]{1,3}$/.test(attempt) &&
+      projectId.length <= 63 && runnerTemp.startsWith('/') &&
+      env.RECOVERY_EPHEMERAL_DATABASE_PROVISIONED === 'true' &&
+      env.RECOVERY_EPHEMERAL_DATABASE_MODE === 'project-schema' &&
+      env.RECOVERY_EPHEMERAL_PROJECT_ID === projectId &&
+      env.RECOVERY_EPHEMERAL_WORKDIR === `${runnerTemp}/${projectId}` &&
+      env.RECOVERY_LOCAL_DB_CONTAINER === `supabase_db_${projectId}` &&
+      env.RECOVERY_FIREWALL_IPV4 === 'true' &&
+      env.RECOVERY_FIREWALL_IPV6 === 'true' &&
+      env.RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL === 'false' &&
+      /^[1-9][0-9]*$/.test(env.E2E_FRIA_PRE_RESTART_MIGRATION_COUNT ?? '') &&
+      isolatedDb?.protocol === 'postgresql:' &&
+      isolatedDb.hostname === '127.0.0.1' &&
+      isolatedDb.username === 'postgres' &&
+      isolatedDb.pathname === '/postgres' &&
+      Boolean(isolatedDb.password) &&
+      isolatedDb.port === env.RECOVERY_LOCAL_DB_HOST_PORT &&
+      Boolean(env.RECOVERY_LOCAL_DB_HOST_PORT) &&
+      Boolean(env.NEXT_PUBLIC_SUPABASE_ANON_KEY) &&
+      Boolean(env.SUPABASE_SERVICE_ROLE_KEY);
+    const noExternalEffects =
+      env.PLAYWRIGHT_USE_PRODUCTION_SERVER !== 'true' &&
+      env.E2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED === 'true' &&
+      env.E2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED === 'true' &&
+      env.E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED === 'true' &&
+      !env.STRIPE_SECRET_KEY && !env.STRIPE_WEBHOOK_SECRET &&
+      !env.RESEND_API_KEY && !env.SENDGRID_API_KEY &&
+      !env.SMTP_HOST && !env.SMTP_URL && !env.MAILGUN_API_KEY;
+    if (!exactWorkflow || !correctTarget || !durableBoundary || !noExternalEffects) {
+      throw new Error('payment_first_runtime_requires_verified_ephemeral_qa');
+    }
+    return;
+  }
+
   const appHost = app.hostname.toLowerCase().replace(/\.+$/, '');
   const dbHost = db.hostname.toLowerCase().replace(/\.+$/, '');
   if (

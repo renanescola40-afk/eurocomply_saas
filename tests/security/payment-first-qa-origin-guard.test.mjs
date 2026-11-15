@@ -15,10 +15,12 @@ const typedGuard = source.slice(begin, end);
 const plainGuard = typedGuard
   .replace('baseURL: string, supabaseURL: string', 'baseURL, supabaseURL')
   .replace('let app: URL;', 'let app;')
-  .replace('let db: URL;', 'let db;');
+  .replace('let db: URL;', 'let db;')
+  .replace('let isolatedDb: URL | null = null;', 'let isolatedDb = null;');
+const runtimeEnv = { E2E_QA_APPROVED_SUPABASE_REF: 'zrxrrfbllsxtleyxjpsz' };
 const assertIsolatedQaRuntime = runInNewContext(
   plainGuard + '\nassertIsolatedQaRuntime',
-  { URL, process: { env: { E2E_QA_APPROVED_SUPABASE_REF: 'zrxrrfbllsxtleyxjpsz' } } },
+  { URL, process: { env: runtimeEnv } },
 );
 
 const app = 'https://disposable-qa.example.invalid';
@@ -86,3 +88,82 @@ test('paid-owner retention browser proof also requires an isolated provider fixt
   assert.match(retention, /E2E_QA_MAIL_SINK_CONFIRMED === 'true'/);
   assert.match(retention, /test\.skip\(!isolatedTarget/);
 });
+
+const ephemeral = {
+  GITHUB_ACTIONS: 'true',
+  GITHUB_REPOSITORY: 'renanescola40-afk/eurocomply_saas',
+  GITHUB_WORKFLOW: 'Product FRIA Ephemeral Runtime QA',
+  GITHUB_WORKFLOW_REF:
+    'renanescola40-afk/eurocomply_saas/.github/workflows/product-fria-ephemeral-qa.yml@refs/pull/2738/merge',
+  GITHUB_EVENT_NAME: 'pull_request',
+  GITHUB_RUN_ID: '43708930485',
+  GITHUB_RUN_ATTEMPT: '1',
+  RUNNER_TEMP: '/home/runner/work/_temp',
+  NEXT_PUBLIC_APP_URL: 'http://127.0.0.1:3000',
+  SITE_URL: 'http://127.0.0.1:3000',
+  SUPABASE_URL: 'http://127.0.0.1:54321',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: 'synthetic-anon-fixture',
+  SUPABASE_SERVICE_ROLE_KEY: 'synthetic-service-role-fixture',
+  RECOVERY_ISOLATED_DATABASE_URL: 'postgresql://postgres:synthetic-password@127.0.0.1:38083/postgres',
+  RECOVERY_LOCAL_DB_HOST_PORT: '38083',
+  RECOVERY_EPHEMERAL_DATABASE_PROVISIONED: 'true',
+  RECOVERY_EPHEMERAL_DATABASE_MODE: 'project-schema',
+  RECOVERY_EPHEMERAL_PROJECT_ID: 'risck-recovery-43708930485-1',
+  RECOVERY_EPHEMERAL_WORKDIR: '/home/runner/work/_temp/risck-recovery-43708930485-1',
+  RECOVERY_LOCAL_DB_CONTAINER: 'supabase_db_risck-recovery-43708930485-1',
+  RECOVERY_FIREWALL_IPV4: 'true',
+  RECOVERY_FIREWALL_IPV6: 'true',
+  RECOVERY_EPHEMERAL_MIGRATION_HISTORY_CANONICAL: 'false',
+  E2E_FRIA_PRE_RESTART_MIGRATION_COUNT: '340',
+  E2E_FRIA_COMMERCIAL_AUTHORITY_VERIFIED: 'true',
+  E2E_FRIA_UNLICENSED_AUTHORITY_VERIFIED: 'true',
+  E2E_FRIA_EVIDENCE_VAULT_SCHEMA_VERIFIED: 'true',
+};
+function withEphemeralEnv(override, callback) {
+  const previous = { ...runtimeEnv };
+  for (const key of Object.keys(runtimeEnv)) delete runtimeEnv[key];
+  Object.assign(runtimeEnv, ephemeral, override);
+  try { callback(); }
+  finally {
+    for (const key of Object.keys(runtimeEnv)) delete runtimeEnv[key];
+    Object.assign(runtimeEnv, previous);
+  }
+}
+
+test('payment-first proof admits only an attested FRIA disposable local Auth stack', () => {
+  withEphemeralEnv({}, () => {
+    assert.doesNotThrow(() => assertIsolatedQaRuntime(
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:54321',
+    ));
+  });
+});
+
+for (const [name, env, appUrl, dbUrl] of [
+  ['not a GitHub Actions runner', { GITHUB_ACTIONS: '' }],
+  ['arbitrary workflow', { GITHUB_WORKFLOW: 'Untrusted Browser Runner' }],
+  ['wrong workflow ref', { GITHUB_WORKFLOW_REF: 'other/repository@refs/pull/2738/merge' }],
+  ['unapproved source ref', { GITHUB_EVENT_NAME: 'pull_request', GITHUB_WORKFLOW_REF: 'renanescola40-afk/eurocomply_saas/.github/workflows/product-fria-ephemeral-qa.yml@refs/heads/main' }],
+  ['wrong project ID', { RECOVERY_EPHEMERAL_PROJECT_ID: 'risck-recovery-elsewhere' }],
+  ['wrong container ID', { RECOVERY_LOCAL_DB_CONTAINER: 'supabase_db_prod' }],
+  ['missing IPv4 firewall', { RECOVERY_FIREWALL_IPV4: '' }],
+  ['missing IPv6 firewall', { RECOVERY_FIREWALL_IPV6: '' }],
+  ['unreviewed schema replay', { E2E_FRIA_PRE_RESTART_MIGRATION_COUNT: '0' }],
+  ['external database', { RECOVERY_ISOLATED_DATABASE_URL: 'postgresql://postgres:synthetic@db.example.invalid:38083/postgres' }],
+  ['wrong database bind', { RECOVERY_LOCAL_DB_HOST_PORT: '38084' }],
+  ['production-like runner', { PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true' }],
+  ['Stripe secret present', { STRIPE_SECRET_KEY: 'sk_live_synthetic' }],
+  ['outbound email credential present', { RESEND_API_KEY: 'synthetic-resend-key' }],
+  ['actual production app', {}, 'https://www.risckcomply.com', 'http://127.0.0.1:54321'],
+  ['actual production Supabase', {}, 'http://127.0.0.1:3000', 'https://tganhbbhfxcpblmgqprg.supabase.co'],
+]) {
+  test('payment-first FRIA preflight denies ' + name, () => {
+    withEphemeralEnv(env, () => {
+      assert.throws(
+        () => assertIsolatedQaRuntime(appUrl ?? 'http://127.0.0.1:3000',
+          dbUrl ?? 'http://127.0.0.1:54321'),
+        /payment_first_runtime_requires_verified_ephemeral_qa/,
+      );
+    });
+  });
+}

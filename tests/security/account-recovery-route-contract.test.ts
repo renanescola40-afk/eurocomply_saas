@@ -53,6 +53,16 @@ describe('public account recovery contract', () => {
     expect(resetPage).not.toContain('document.cookie');
   });
 
+  it('does not open recovery-only form on a normal authenticated session', () => {
+    const browserClient = readFileSync('src/integrations/supabase/client.ts', 'utf8');
+    expect(resetPage).not.toContain("data.session ? 'ready' : 'invalid'");
+    expect(resetPage).not.toContain("event === 'PASSWORD_RECOVERY' || session");
+    expect(resetPage).toContain("hasObservedPasswordRecoverySession(data.session)");
+    expect(resetPage).toContain("event === 'PASSWORD_RECOVERY' && hasObservedPasswordRecoverySession(session)");
+    expect(resetPage).toContain("!hasObservedPasswordRecoverySession(currentSession?.session ?? null)");
+    expect(browserClient).toContain('observeRecoveryAuthEvent(event, session)');
+  });
+
   it('exposes localized, actionable request and completion routes', () => {
     expect(recoveryPage).toContain("fetch('/api/auth/recovery'");
     expect(login).toContain('href={`/${locale}/recover-password`}');
