@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
-import {sec01SourceCarryIntegrity,reconcile} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import {sec01SourceCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 
 const indexPath='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
 const proofs=[
@@ -121,5 +121,76 @@ test('reconciliation can retain 4/24 after a separately authenticated current-he
  assert.equal(r.summary.gates_accepted,4);
  for(const id of ['A-09','A-15','A-18','A-19']){
   assert.equal(r.gates.find(g=>g.gate_id===id)?.accepted,true,id);
+ }
+});
+
+const validHead='19c1ad6d5d5c845f4484febddd868c292bc1dafa';
+const token='synthetic-token-with-no-provider-access';
+const unverified=errors=>({decision:'NOT_VERIFIED',errors});
+const verified={decision:'SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE',errors:[],checks:[
+ {name:'Synthetic exact SHA check',id:123,job_url:'https://github.com/example/repo/actions/runs/1/job/123'},
+],circleci:{context:'ci/circleci: pr-source-autopilot',state:'success'}};
+
+test('bounded source CI retry re-reads authenticated exact-SHA checks after GitHub re-run race',async()=>{
+ let calls=0,waits=0;
+ const result=await verifyQat01AfterProviderSettles({
+  sha:validHead,token,attempts:5,intervalMs:1,
+  verify:async({sha,token:actualToken})=>{
+   assert.equal(sha,validHead);
+   assert.equal(actualToken,token);
+   return ++calls<3
+    ?unverified(['missing_authenticated_check:Core CI, build and npm audit',
+      'latest_required_check_not_success:CodeQL']):verified;
+  },
+  sleep:async ms=>{assert.equal(ms,1);waits++;},
+ });
+ assert.equal(calls,3);
+ assert.equal(waits,2);
+ assert.equal(result.decision,verified.decision);
+});
+
+test('bounded provider retries can never mint a PASS for checks that remain absent',async()=>{
+ let calls=0,waits=0;
+ const result=await verifyQat01AfterProviderSettles({
+  sha:validHead,token,attempts:3,intervalMs:1,
+  verify:async()=>{calls++;return unverified(['missing_authenticated_check:Semgrep SAST']);},
+  sleep:async()=>{waits++;},
+ });
+ assert.equal(calls,3);
+ assert.equal(waits,2);
+ assert.equal(result.decision,'NOT_VERIFIED');
+});
+
+test('provider errors and invalid proofs fail immediately, without repeated calls',async()=>{
+ for(const errors of [
+  ['provider_readback_incomplete'],
+  ['invalid_check_page'],
+  ['missing_authenticated_check:CodeQL','provider_readback_unavailable'],
+  ['latest_required_check_not_success:CodeQL','invalid_status_shape'],
+  [],
+ ]) {
+  let calls=0;
+  const result=await verifyQat01AfterProviderSettles({
+   sha:validHead,token,attempts:10,intervalMs:0,
+   verify:async()=>{calls++;return unverified(errors);},
+   sleep:async()=>{throw Error('should not retry untrusted provider response');},
+  });
+  assert.equal(result.decision,'NOT_VERIFIED');
+  assert.equal(calls,1);
+ }
+});
+
+test('source CI retry never accepts invalid SHA, missing token or excessive retry budget',async()=>{
+ for(const params of [
+  {sha:'not-a-sha',token},
+  {sha:validHead,token:''},
+  {sha:validHead,token,attempts:32},
+  {sha:validHead,token,intervalMs:5001},
+ ]) {
+  const out=await verifyQat01AfterProviderSettles({
+   ...params,verify:async()=>{throw Error('invalid preflight triggered read');}
+  });
+  assert.equal(out.decision,'NOT_VERIFIED');
+  assert.deepEqual(out.errors,['invalid_settled_source_ci_request']);
  }
 });
