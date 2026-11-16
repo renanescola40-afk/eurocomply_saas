@@ -229,6 +229,27 @@ try {
     undefined,
     { timeout: 60000 },
   );
+  // First-visit users see the real, fixed-bottom analytics-consent dialog
+  // above parts of the login form. It may intercept a legitimate pointer
+  // click on the password submit button. Handle this just like a real user:
+  // explicitly DECLINE optional analytics, and verify that the dialog closes.
+  // Never force-click, hide DOM elements, mock requests or pre-seed consent.
+  failureDetail = 'analytics_consent_decline_unavailable';
+  const consentDialog = page.getByRole('dialog', {
+    name: 'Privacy-first product analytics',
+  });
+  await consentDialog.waitFor({ state: 'visible', timeout: 30000 });
+  await consentDialog.getByRole('button', { name: 'Decline', exact: true })
+    .click({ noWaitAfter: true });
+  await consentDialog.waitFor({ state: 'hidden', timeout: 15000 });
+  failureDetail = 'analytics_consent_not_denied';
+  requireTrue(
+    await page.evaluate(() =>
+      window.localStorage.getItem('risckcomply.analytics.consent') === 'denied'),
+    'analytics_consent_not_denied',
+  );
+  // The main auth flow still requires the actual pointer action, genuine
+  // Supabase provider response, visible error and no session cookie.
   failureDetail = 'password_form_email_input_unavailable';
   await passwordForm.locator('input[type="email"]').fill(email);
   failureDetail = 'password_form_password_input_unavailable';
