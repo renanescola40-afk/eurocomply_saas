@@ -8,6 +8,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { EnterpriseSsoLogin } from '@/components/auth/enterprise-sso-login';
 import { useAuth } from '@/hooks/useAuth';
 import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
+import { isAllowedLoginReturnDestination } from '@/lib/auth/login-return-destinations';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { getCommercialSurfaceCopy } from '@/lib/i18n/commercial-surface-copy';
 import { normalizePublicCheckoutPlanId } from '@/lib/billing/paid-checkout-plan';
@@ -36,8 +37,7 @@ function safeNext(next: string | null, locale: string, planId?: string | null) {
   const fallback = successHref(locale, planId);
   const value = next?.trim();
   if (!value || value.length > 240 || value.startsWith('//') || value.includes('://')) return fallback;
-  const allowed = [`/${locale}/onboarding`, `/${locale}/dashboard/organizations`, `/${locale}/dashboard/observability`, `/${locale}/checkout`];
-  return allowed.some((path) => value === path || value.startsWith(`${path}/`) || value.startsWith(`${path}?`)) ? value : fallback;
+  return isAllowedLoginReturnDestination(value, locale) ? value : fallback;
 }
 
 function signUpHref(locale: string, planId: string | null, nextPath: string) {
