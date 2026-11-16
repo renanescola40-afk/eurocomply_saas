@@ -196,6 +196,15 @@ try {
   // QA interactions to the only form with a password input: a generic "form
   // input[type=email]" selector resolves to both forms and fails Playwright strict mode.
   const passwordForm = page.locator('form:has(input[type="password"])');
+  // URL navigation and server-rendered markup do not prove that React has
+  // attached the submit handler. Wait for the post-hydration marker before
+  // entering real QA credentials; do not fake or intercept provider responses.
+  failureDetail = 'password_form_hydration_unavailable';
+  await page.waitForFunction(
+    () => Boolean(document.querySelector('form[data-auth-hydrated="true"] input[type="password"]')),
+    undefined,
+    { timeout: 60000 },
+  );
   failureDetail = 'password_form_email_input_unavailable';
   await passwordForm.locator('input[type="email"]').fill(email);
   failureDetail = 'password_form_password_input_unavailable';

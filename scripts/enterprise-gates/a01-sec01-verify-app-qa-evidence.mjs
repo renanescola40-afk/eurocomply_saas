@@ -59,6 +59,7 @@ const knownFailureStages = new Set([
   ...expectedNames, 'preflight', 'create_disposable_qa_user', 'launch_isolated_nextjs',
 ]);
 const knownFailureDetails = new Set([
+  'password_form_hydration_unavailable',
   'password_form_email_input_unavailable', 'password_form_password_input_unavailable',
   'invalid_password_submit_unavailable', 'invalid_password_request_not_sent',
   'invalid_password_request_failed', 'invalid_password_provider_response_missing',
