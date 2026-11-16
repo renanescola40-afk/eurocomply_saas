@@ -1103,11 +1103,15 @@ export async function verifyCumulativeRelease(index,{
   if(sec01LoginCarryIntegrity(index,{expectedSha,root})){
    return verifySec01LoginCarry(index,{expectedSha,prNumber,token,request,root});
   }
-  if(sec01HydrationCarryIntegrity(index,{expectedSha,root})){
-   return verifySec01HydrationCarry(index,{expectedSha,prNumber,token,request,root});
-  }
+  // Click carry is the narrower, later PR. Its changes sit inside the
+  // earlier hydration carry's cumulative six-file allowlist, so dispatch
+  // it first; each verifier still enforces its OWN exact PR number and
+  // native qualified review rather than inheriting an earlier approval.
   if(sec01ClickCarryIntegrity(index,{expectedSha,root})){
    return verifySec01ClickCarry(index,{expectedSha,prNumber,token,request,root});
+  }
+  if(sec01HydrationCarryIntegrity(index,{expectedSha,root})){
+   return verifySec01HydrationCarry(index,{expectedSha,prNumber,token,request,root});
   }
   return verifyDocsPacketCarry(index,{expectedSha,prNumber,token,request,root});
  }
