@@ -22,7 +22,7 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     // A stalled getSession() snapshot cannot disable an otherwise valid
     // credential submit; server-side Supabase authentication remains decisive.
     const handler = login.split('async function handleSubmit(')[1]?.split('  const inputClass =')[0];
-    const passwordForm = login.split('<form className="space-y-4" onSubmit={handleSubmit}>')[1]
+    const passwordForm = login.split('<form className="space-y-4" onSubmit={handleSubmit} data-auth-hydrated={formHydrated ? "true" : "false"}>')[1]
       ?.split('</form>')[0];
     expect(handler).toBeTruthy();
     expect(handler).not.toMatch(/if \(loading\)\s*\{/);
