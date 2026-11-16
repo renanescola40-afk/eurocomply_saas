@@ -1081,17 +1081,6 @@ export async function verifySec01ClickCarry(index,{
 export async function verifyCumulativeRelease(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
- // PR-specific non-sensitive admission tracing; never reveal token, provider
- // payloads, secrets, file contents, user identities or request metadata.
- if(process.env.GITHUB_ACTIONS==='true'&&process.env.EVIDENCE_PR_NUMBER==='2743'){
-  const bits={
-   sha_valid:SHA40.test(expectedSha||''),
-   token_present:Boolean(token),
-   cumulative_integrity:cumulativeIntegrity(index,{expectedSha,root}),
-   click_carry_integrity:sec01ClickCarryIntegrity(index,{expectedSha,root}),
-  };
-  console.error('SEC01_CLICK_ADMISSION_TRACE:'+JSON.stringify(bits));
- }
  if(!SHA40.test(expectedSha||'')||!token)return false;
  if(!cumulativeIntegrity(index,{expectedSha,root})){
   if(sec01SourceCarryIntegrity(index,{expectedSha,root})){
