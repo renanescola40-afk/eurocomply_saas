@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import Stripe from 'stripe';
 
 const mocks = vi.hoisted(() => ({
   constructEvent: vi.fn(),
@@ -450,4 +451,102 @@ describe('Stripe webhook route signature validation and dispatch', () => {
       }),
     );
   });
+
+  // These tests drive the real Stripe SDK HMAC verification through the
+  // production route's call to constructEvent. Only the QA ledger persistence
+  // adapter is mocked: no event is sent, no secret/SQL/entitlement is changed.
+  it('uses the real Stripe SDK HMAC verifier on canonical QA route and preserves exact signed bytes', async () => {
+    await withQaEnv(async () => {
+      const stripe = new Stripe('sk_test_local_only_no_network');
+      const event = { ...makeStripeEvent('invoice.paid'), id: 'evt_crypto_qa_123456',
+        created: Math.floor(Date.now() / 1000), data: { object: { id: 'in_crypto_123456' } } };
+      const payload = JSON.stringify(event);
+      const signature = stripe.webhooks.generateTestHeaderString({
+        payload, secret: TEST_STRIPE_WEBHOOK_SECRET, timestamp: Math.floor(Date.now() / 1000),
+      });
+      mocks.constructEvent.mockImplementation((raw, header, secret, tolerance) =>
+        stripe.webhooks.constructEvent(raw, header, secret, tolerance));
+      mocks.recordSignedQaStripeTestEvent.mockResolvedValue({
+        recorded: true, duplicate: false, status: 'processing',
+      });
+
+      const response = await POST(makeWebhookRequest(payload, { 'stripe-signature': signature }));
+      expect(response.status).toBe(202);
+      expect(await response.json()).toEqual({
+        received: true, intakeOnly: true, processed: false, duplicate: false,
+      });
+      expect(mocks.recordSignedQaStripeTestEvent).toHaveBeenCalledWith({
+        rawBody: payload, signature,
+      });
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it('rejects tampered, wrong-secret and expired Stripe HMAC signatures before any QA DB access', async () => {
+    await withQaEnv(async () => {
+      const stripe = new Stripe('sk_test_local_only_no_network');
+      const event = { ...makeStripeEvent('invoice.paid'), id: 'evt_crypto_deny_123456',
+        created: Math.floor(Date.now() / 1000) };
+      const payload = JSON.stringify(event);
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const signed = stripe.webhooks.generateTestHeaderString({
+        payload, secret: TEST_STRIPE_WEBHOOK_SECRET, timestamp: nowSeconds,
+      });
+      const wrongSecret = stripe.webhooks.generateTestHeaderString({
+        payload, secret: 'wrong_local_fixture_secret', timestamp: nowSeconds,
+      });
+      const expired = stripe.webhooks.generateTestHeaderString({
+        payload, secret: TEST_STRIPE_WEBHOOK_SECRET, timestamp: nowSeconds - 3600,
+      });
+      mocks.constructEvent.mockImplementation((raw, header, secret, tolerance) =>
+        stripe.webhooks.constructEvent(raw, header, secret, tolerance));
+
+      for (const [body, signature] of [
+        [payload.replace('invoice.paid', 'invoice.payment_failed'), signed],
+        [payload, wrongSecret],
+        [payload, expired],
+      ]) {
+        const response = await POST(makeWebhookRequest(body, { 'stripe-signature': signature }));
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({ error: 'invalid_webhook' });
+      }
+      expect(mocks.constructEvent).toHaveBeenCalledTimes(3);
+      expect(mocks.recordSignedQaStripeTestEvent).not.toHaveBeenCalled();
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    });
+  });
+
+  it('accepts a second authenticated TEST delivery as intake duplicate, never as entitlement fulfillment', async () => {
+    await withQaEnv(async () => {
+      const stripe = new Stripe('sk_test_local_only_no_network');
+      const event = { ...makeStripeEvent('customer.subscription.updated'),
+        id: 'evt_crypto_replay_123456', created: Math.floor(Date.now() / 1000) };
+      const payload = JSON.stringify(event);
+      const signature = stripe.webhooks.generateTestHeaderString({
+        payload, secret: TEST_STRIPE_WEBHOOK_SECRET, timestamp: Math.floor(Date.now() / 1000),
+      });
+      mocks.constructEvent.mockImplementation((raw, header, secret, tolerance) =>
+        stripe.webhooks.constructEvent(raw, header, secret, tolerance));
+      mocks.recordSignedQaStripeTestEvent
+        .mockResolvedValueOnce({ recorded: true, duplicate: false, status: 'processing' })
+        .mockResolvedValueOnce({ recorded: false, duplicate: true, status: 'processing' });
+
+      const first = await POST(makeWebhookRequest(payload, { 'stripe-signature': signature }));
+      const second = await POST(makeWebhookRequest(payload, { 'stripe-signature': signature }));
+      expect(first.status).toBe(202);
+      expect(second.status).toBe(202);
+      expect((await first.json()).duplicate).toBe(false);
+      expect(await second.json()).toEqual({
+        received: true, intakeOnly: true, processed: false, duplicate: true,
+      });
+      expect(mocks.recordSignedQaStripeTestEvent).toHaveBeenCalledTimes(2);
+      expect(mocks.syncEnterpriseContractBillingEvent).not.toHaveBeenCalled();
+      expect(mocks.syncStripeSubscriptionForInvoiceEvent).not.toHaveBeenCalled();
+      expect(mocks.handleStripeWebhookEventWithRecovery).not.toHaveBeenCalled();
+    });
+  });
+
 });
