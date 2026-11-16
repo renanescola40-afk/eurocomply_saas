@@ -105,6 +105,7 @@ describe('auth and onboarding redirect invariants', () => {
     expect(callback).toContain("'/checkout'");
     expect(callback).toContain("'/dashboard/organizations'");
     expect(callback).toContain("'/dashboard/observability'");
+    expect(callback).toContain("'/profile'");
     expect(callback).toContain('isAllowedCallbackContinuation(normalizedNext, locale)');
     expect(callback).not.toContain('rawNext.startsWith(`/${locale}/`) ? rawNext : fallback');
   });
