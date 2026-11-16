@@ -1027,19 +1027,24 @@ export function sec01ClickCarryIntegrity(index,{
 export async function verifySec01ClickCarry(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
+ const reject=(stage)=>{
+  if(process.env.GITHUB_ACTIONS==='true'&&process.env.EVIDENCE_PR_NUMBER==='2743')
+    console.error('SEC01_CLICK_CARRY_BLOCKED:'+stage);
+  return false;
+ };
  const prSpecified=prNumber!==undefined&&prNumber!==null&&String(prNumber).trim()!=='';
  if((prSpecified&&Number(prNumber)!==SEC01_CLICK_CARRY_PR)||
-    !token||!sec01ClickCarryIntegrity(index,{expectedSha,root}))return false;
+    !token||!sec01ClickCarryIntegrity(index,{expectedSha,root}))return reject('source_integrity_or_auth_input');
  const readProvider=githubRead(request,token);
  try{
   const pull=await reviewedPull(readProvider,expectedSha,
    prSpecified?prNumber:null,QUALIFIED_REVIEWER);
-  if(!pull||pull.number!==SEC01_CLICK_CARRY_PR)return false;
+  if(!pull||pull.number!==SEC01_CLICK_CARRY_PR)return reject('authenticated_pr_identity');
   if(pull.mergedAt){
    const tree=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
    const entries=tree.stdout?.toString('utf8').trim().split('\n')||[];
    if(tree.status!==0||entries.length!==2||!SHA40.test(entries[0])||
-      entries[0]!==entries[1])return false;
+      entries[0]!==entries[1])return reject('merged_tree_mismatch');
   }
   const [run,artifacts,reviews,ci]=await Promise.all([
    readProvider('/actions/runs/'+SEC01_CLICK_CARRY_RUN),
@@ -1048,11 +1053,14 @@ export async function verifySec01ClickCarry(index,{
    verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
   ]);
   const artifact=artifacts?.artifacts?.find(a=>a.id===SEC01_CLICK_CARRY_ARTIFACT);
-  if(run?.head_sha!==SEC01_CLICK_CARRY_BASE||run?.conclusion!=='success'||
-     run?.event!=='push'||artifact?.workflow_run?.head_sha!==SEC01_CLICK_CARRY_BASE||
-     artifact?.expired||artifact?.digest!=='sha256:'+SEC01_CLICK_CARRY_DIGEST||
-     ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
-     !Array.isArray(reviews))return false;
+  if(run?.head_sha!==SEC01_CLICK_CARRY_BASE||run?.conclusion!=='success'||run?.event!=='push')
+    return reject('immutable_main_workflow');
+  if(artifact?.workflow_run?.head_sha!==SEC01_CLICK_CARRY_BASE||artifact?.expired||
+     artifact?.digest!=='sha256:'+SEC01_CLICK_CARRY_DIGEST)
+    return reject('immutable_main_artifact');
+  if(ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE')
+    return reject('current_source_ci');
+  if(!Array.isArray(reviews))return reject('qualified_review_readback_shape');
   const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|PLAYWRIGHT POINTER QA FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
   const approved=reviews.find(review=>review?.state==='APPROVED'&&
      review.user?.login===QUALIFIED_REVIEWER&&review.commit_id===pull.sha&&
@@ -1066,8 +1074,8 @@ export async function verifySec01ClickCarry(index,{
   return approved?{
    approvalUrl:approved.html_url,acceptedAt:approved.submitted_at,
    clickCarry:true,
-  }:false;
- }catch{return false;}
+  }:reject('qualified_exact_head_formal_review');
+ }catch{return reject('authenticated_provider_readback_exception');}
 }
 
 export async function verifyCumulativeRelease(index,{
