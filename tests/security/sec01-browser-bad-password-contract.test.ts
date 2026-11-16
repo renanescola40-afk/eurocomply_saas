@@ -50,6 +50,21 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(negative).toContain('isLoginPath(page.url())');
   });
 
+  it('waits for a genuinely hydrated React password form before QA credential input', () => {
+    expect(login).toContain('useEffect(() => { setFormHydrated(true); }, [])');
+    expect(login).toContain('data-auth-hydrated={formHydrated ? "true" : "false"}');
+    expect(login).toContain('const [formHydrated, setFormHydrated] = useState(false)');
+    const beforeFill = runner.split("stage = 'bad_password_denied_in_real_browser';")[1]
+      ?.split("failureDetail = 'password_form_email_input_unavailable';")[0];
+    expect(beforeFill).toBeTruthy();
+    expect(beforeFill).toContain("failureDetail = 'password_form_hydration_unavailable'");
+    expect(beforeFill).toContain('await page.waitForFunction(');
+    expect(beforeFill).toContain('form[data-auth-hydrated="true"] input[type="password"]');
+    expect(beforeFill).not.toContain("page.route(");
+    const verifier = readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs', 'utf8');
+    expect(verifier).toContain("'password_form_hydration_unavailable'");
+  });
+
   it('retains fail-closed QA-only evidence and fixed non-sensitive failure detail', () => {
     expect(runner).toContain("SEC01_APP_EXECUTE === 'QA_ONLY_APP_BROWSER_PROOF'");
     expect(runner).toContain("SEC01_QA_PROJECT_REF === QA_REF");
