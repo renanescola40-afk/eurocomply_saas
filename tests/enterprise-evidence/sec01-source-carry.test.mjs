@@ -270,13 +270,14 @@ test('SEC-01 hydration carry binds exact PR, checkpoint and qualified reviewed s
 });
 
 
-test('A-01 pointer click carry accepts only four reviewed files from immutable four-gate main',()=>{
+test('A-01 pointer click carry accepts only five reviewed files from immutable four-gate main',()=>{
  const root=mkdtempSync(join(tmpdir(),'risck-sec01-click-carry-'));
  const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
  const put=(p,content)=>{const where=join(root,p);mkdirSync(dirname(where),{recursive:true});writeFileSync(where,content);};
  const commit=message=>{git('add','.');git('commit','-qm',message);return git('rev-parse','HEAD');};
  const allowed=[
   'scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs',
+  'scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs',
   'tests/security/sec01-browser-bad-password-contract.test.ts',
   'scripts/enterprise-evidence/validate-evidence.mjs',
   'tests/enterprise-evidence/sec01-source-carry.test.mjs',
@@ -299,7 +300,7 @@ test('A-01 pointer click carry accepts only four reviewed files from immutable f
   const options={checkpoint,root};
   assert.equal(sec01ClickCarryIntegrity(index,{...options,expectedSha:checkpoint}),false);
   for(const path of allowed)put(path,'reviewed login UI source '+path);
-  const candidate=commit('exactly four reviewed pointer-QA paths');
+  const candidate=commit('exactly five reviewed pointer-QA paths');
   assert.equal(sec01ClickCarryIntegrity(index,{...options,expectedSha:candidate}),true);
   assert.equal(sec01ClickCarryIntegrity({...index,gates:[]},{...options,expectedSha:candidate}),false);
   git('reset','--hard',checkpoint);
