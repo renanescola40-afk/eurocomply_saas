@@ -95,7 +95,11 @@ test('A-01 QA browser carry accepts only four reviewed files from immutable four
   git('config','user.name','Synthetic QA');
   const index={
    cumulative_acceptance:{schema:'risck-comply.a15-cumulative-acceptance.v1'},
-   gates:['A-09','A-15','A-18','A-19'].map(gate_id=>({gate_id,accepted:true})),
+   gates:['A-09','A-15','A-18','A-19'].map(gate_id=>({
+    gate_id,accepted:true,
+    acceptance_evidence_ref:gate_id==='A-15'?proofs[1]:
+     gate_id==='A-19'?proofs[2]:proofs[0],
+   })),
    evidence_records:[{status:'PASS',artifact_path:proofs[1]}],
   };
   put(indexPath,JSON.stringify(index));
