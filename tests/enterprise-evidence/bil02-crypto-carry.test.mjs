@@ -17,6 +17,7 @@ const allowed=[
  'tests/billing/qa-stripe-test-ledger-crypto.test.mjs',
  'scripts/enterprise-evidence/validate-evidence.mjs',
  'tests/enterprise-evidence/bil02-crypto-carry.test.mjs',
+ 'tests/enterprise-evidence/validate-evidence.test.mjs',
 ];
 const gateIds=['A-09','A-15','A-18','A-19'];
 function fixture() {
@@ -41,7 +42,7 @@ function fixture() {
  return {root,git,put,commit,index,checkpoint,cleanup:()=>rmSync(root,{recursive:true,force:true})};
 }
 
-test('BIL-02 crypto carry admits only four exact test/validator paths, with immutable gate evidence',()=>{
+test('BIL-02 crypto carry admits only five exact test/validator paths, with immutable gate evidence',()=>{
  const f=fixture();
  try{
   const opts={root:f.root,checkpoint:f.checkpoint};
@@ -81,6 +82,9 @@ test('BIL-02 carry requires real provider-backed checkpoint, exact-PR identity, 
   ['BIL02_CRYPTO_CARRY_ARTIFACT','14280608301'],
   ['BIL02_CRYPTO_CARRY_DIGEST','656734f674f91bf120e37a7e8b18cd3aca5ee48542336249e3666b3e518d4e23'],
  ])assert.ok(s.includes(key+'='+(/^[0-9]+$/.test(value)?value:"'"+value+"'")),key);
+ const requiredNodeEntrypoint=readFileSync('tests/enterprise-evidence/validate-evidence.test.mjs','utf8');
+ assert.ok(requiredNodeEntrypoint.includes("import './bil02-crypto-carry.test.mjs'"));
+ assert.ok(requiredNodeEntrypoint.includes("import '../billing/qa-stripe-test-ledger-crypto.test.mjs'"));
  for(const guard of [
   'bil02CryptoCarryIntegrity(index,{expectedSha,root})',
   "artifact?.digest!=='sha256:'+BIL02_CRYPTO_CARRY_DIGEST",
