@@ -284,6 +284,21 @@ try {
   // and no AI-system records are read or written.
   check(stage, await isApiAuthResult(authApi, 403, 'organization_required'));
 
+  // SEC-01 / PR #2738: a legitimate SIGNED_IN session must never act as
+  // PASSWORD_RECOVERY provenance. Test the real browser and QA Auth session.
+  stage = 'signed_in_session_recovery_form_denied';
+  await page.goto('/en/reset-password', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('alert').filter({ hasText: /invalid or expired/i })
+    .waitFor({ state: 'visible', timeout: 45000 });
+  const ordinarySessionCookies = (await context.cookies(LOCAL_URL))
+    .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
+  check(stage, ordinarySessionCookies.length > 0 &&
+    await page.locator('input[type="password"]').count() === 0);
+  // UI denial must not silently sign out an otherwise valid user.
+  await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: /^sign out$/i })
+    .waitFor({ state: 'visible', timeout: 45000 });
+
   stage = 'capture_session_cookies_in_memory_only';
   const staleCookies = (await context.cookies(LOCAL_URL))
     .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));

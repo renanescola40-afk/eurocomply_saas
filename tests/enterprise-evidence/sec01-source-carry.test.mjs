@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
-import {sec01SourceCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import {sec01SourceCarryIntegrity,sec01QaBrowserCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 
 const indexPath='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
 const proofs=[
@@ -76,6 +76,98 @@ test('SEC-01 carry accepts only the exact, immutable four-gate baseline plus its
 
   assert.equal(readFileSync(join(root,indexPath),'utf8'),JSON.stringify(index));
  }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('A-01 QA browser carry accepts only four reviewed files from immutable four-gate main',()=>{
+ const root=mkdtempSync(join(tmpdir(),'risck-sec01-qa-browser-carry-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
+ const put=(p,content)=>{const where=join(root,p);mkdirSync(dirname(where),{recursive:true});writeFileSync(where,content);};
+ const commit=message=>{git('add','.');git('commit','-qm',message);return git('rev-parse','HEAD');};
+ const allowed=[
+  'scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs',
+  'scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs',
+  'scripts/enterprise-evidence/validate-evidence.mjs',
+  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
+ ];
+ try{
+  git('init','-q');
+  git('config','user.email','synthetic@example.invalid');
+  git('config','user.name','Synthetic QA');
+  const index={
+   cumulative_acceptance:{schema:'risck-comply.a15-cumulative-acceptance.v1'},
+   gates:['A-09','A-15','A-18','A-19'].map(gate_id=>({
+    gate_id,accepted:true,
+    acceptance_evidence_ref:gate_id==='A-15'?proofs[1]:
+     gate_id==='A-19'?proofs[2]:proofs[0],
+   })),
+   evidence_records:[{status:'PASS',artifact_path:proofs[1]}],
+  };
+  put(indexPath,JSON.stringify(index));
+  for(const path of proofs)put(path,'immutable acceptance proof '+path);
+  const checkpoint=commit('frozen main with four formally accepted gates');
+  const options={checkpoint,root};
+  assert.equal(sec01QaBrowserCarryIntegrity(index,{...options,expectedSha:checkpoint}),false);
+  for(const path of allowed)put(path,'reviewed QA browser harness '+path);
+  const candidate=commit('exactly four approved-path source changes');
+  assert.equal(sec01QaBrowserCarryIntegrity(index,{...options,expectedSha:candidate}),true);
+  assert.equal(sec01QaBrowserCarryIntegrity({...index,gates:[]},{...options,expectedSha:candidate}),false);
+  git('reset','--hard',checkpoint);
+  for(const path of allowed.slice(0,-1))put(path,'missing contract test '+path);
+  const missingTest=commit('omit required regression test');
+  assert.equal(sec01QaBrowserCarryIntegrity(index,{...options,expectedSha:missingTest}),false);
+  git('reset','--hard',candidate);
+  put('src/app/api/stripe/webhook/route.ts','unreviewed commercial source');
+  const forbidden=commit('unexpected billing source');
+  assert.equal(sec01QaBrowserCarryIntegrity(index,{...options,expectedSha:forbidden}),false);
+  git('reset','--hard',candidate);
+  put('.github/workflows/enterprise-evidence-tests.yml','disable required CI');
+  const workflow=commit('unexpected CI workflow');
+  assert.equal(sec01QaBrowserCarryIntegrity(index,{...options,expectedSha:workflow}),false);
+  git('reset','--hard',candidate);
+  put(proofs[0],'modified accepted billing proof');
+  const proofMutation=commit('try to replace signed gate proof');
+  assert.equal(sec01QaBrowserCarryIntegrity(index,{...options,expectedSha:proofMutation}),false);
+  git('reset','--hard',candidate);
+  put(indexPath,JSON.stringify({...index,manualAcceptance:true}));
+  const forgedLedger=commit('try to modify frozen acceptance index');
+  assert.equal(sec01QaBrowserCarryIntegrity(index,{...options,expectedSha:forgedLedger}),false);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('QA browser carry requires exact PR, authentic accepted checkpoint, QAT-01 and substantive independent review',()=>{
+ const source=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
+ assert.match(source,/SEC01_QA_BROWSER_CARRY_PR=2739/);
+ assert.match(source,/SEC01_QA_BROWSER_CARRY_BASE='c29b0821969ecac5e7a4da9e00451e79cb91c728'/);
+ assert.match(source,/SEC01_QA_BROWSER_CARRY_RUN=43755316565/);
+ assert.match(source,/SEC01_QA_BROWSER_CARRY_ARTIFACT=14177794329/);
+ assert.match(source,/SEC01_QA_BROWSER_CARRY_DIGEST='eee2c457a42f006bf895ad7090dc36f287ed511fc2750a4f8d5e8ce153a57b23'/);
+ assert.match(source,/verifyQat01AfterProviderSettles\(\{sha:pull\.sha,token,request\}\)/);
+ assert.match(source,/CUMULATIVE_LINES\.every\(line=>includesReviewLine\(review\.body,line\)\)/);
+ assert.match(source,/includesReviewLine\(review\.body,SEC01_QA_BROWSER_CARRY_REVIEW\)/);
+ assert.match(source,/review\.commit_id===pull\.sha/);
+ assert.match(source,/sec01QaBrowserCarryIntegrity\(index,\{expectedSha,root\}\)/);
+});
+
+test('A-01 QA browser exact-head dry-run preserves 4/24 without fabricating a native review',()=>{
+ if(process.env.EVIDENCE_PR_NUMBER!=='2739')return;
+ const sha=process.env.EVIDENCE_EXACT_SHA;
+ assert.match(sha??'',/^[a-f0-9]{40}$/);
+ assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sha);
+ const index=JSON.parse(readFileSync(indexPath,'utf8'));
+ assert.equal(sec01QaBrowserCarryIntegrity(index,{expectedSha:sha}),true);
+ const scope=JSON.parse(readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ // Hypothetical result ONLY: the real verifier still requires a new native
+ // reviewer APPROVED body against this final SHA, authenticated CI and checkpoint.
+ const hypothetical={qaBrowserCarry:true,
+  approvalUrl:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2739#pullrequestreview-999999',
+  acceptedAt:new Date().toISOString()};
+ const result=reconcile({scope,gates,index,expectedSha:sha,cumulativeReview:hypothetical});
+ assert.deepEqual(result.errors,[]);
+ assert.equal(result.valid,true);
+ assert.equal(result.summary.gates_accepted,4);
+ assert.equal(result.summary.controls_pass,4);
+ assert.equal(result.controls.find(c=>c.control_id==='SEC-01')?.status,'NOT_VERIFIED');
 });
 
 test('source carry demands exact-head qualified gate review, GitHub CI, FRIA and original checkpoint',()=>{
