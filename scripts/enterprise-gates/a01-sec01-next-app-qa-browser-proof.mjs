@@ -119,6 +119,30 @@ async function isApiAuthResult(response, expectedStatus, expectedError) {
   }
 }
 
+
+/**
+ * Fail-closed, non-sensitive click classification. Only DOM booleans are read:
+ * no credentials, browser errors, URLs, storage or request bodies enter proof.
+ */
+async function classifyRealSubmitFailure(button, prefix) {
+  const code = (suffix) => prefix + '_submit_' + suffix;
+  try {
+    if (await button.count() !== 1) return code('missing_or_ambiguous');
+    if (!await button.isVisible()) return code('hidden');
+    if (!await button.isEnabled()) return code('disabled');
+    const receivesEvents = await button.evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      if (box.width <= 0 || box.height <= 0) return false;
+      const target = node.ownerDocument.elementFromPoint(
+        box.left + box.width / 2, box.top + box.height / 2);
+      return target === node || (target !== null && node.contains(target));
+    }, undefined, { timeout: 2500 });
+    return receivesEvents ? code('action_failed') : code('obscured');
+  } catch {
+    return code('action_failed');
+  }
+}
+
 function ensureQaOnly() {
   requireTrue(process.env.SEC01_APP_EXECUTE === 'QA_ONLY_APP_BROWSER_PROOF', 'explicit_qa_app_flag_required');
   requireTrue(process.env.SEC01_QA_PROJECT_REF === QA_REF, 'approved_qa_ref_required');
@@ -238,7 +262,13 @@ try {
     // navigation wait timeout with an unavailable login submit control.
     // Keep real pointer actionability checks (never force-click or mock auth).
     failureDetail = 'invalid_password_submit_unavailable';
-    await passwordForm.locator('button[type="submit"]').click({ noWaitAfter: true });
+    const invalidSubmit = passwordForm.locator('button[type="submit"]');
+    try {
+      await invalidSubmit.click({ noWaitAfter: true });
+    } catch {
+      failureDetail = await classifyRealSubmitFailure(invalidSubmit, 'invalid_password');
+      throw new Error('invalid_password_click_failed');
+    }
     deniedResponse = await response;
     if (!deniedResponse) {
       failureDetail = requestFailed ? 'invalid_password_request_failed'
@@ -274,7 +304,13 @@ try {
   // A valid login can navigate away: its destination and server-side identity
   // are verified separately below, without racing Playwright's click wait.
   failureDetail = 'valid_password_submit_unavailable';
-  await passwordForm.locator('button[type="submit"]').click({ noWaitAfter: true });
+  const validSubmit = passwordForm.locator('button[type="submit"]');
+  try {
+    await validSubmit.click({ noWaitAfter: true });
+  } catch {
+    failureDetail = await classifyRealSubmitFailure(validSubmit, 'valid_password');
+    throw new Error('valid_password_click_failed');
+  }
   // The onboarding screen may immediately redirect (e.g. payment-first).
   // Prove that navigation left login and that SSR session cookies exist;
   // actual authority is separately verified on the protected profile + API.
