@@ -16,6 +16,7 @@ const CALLBACK_CONTINUATION_PATHS = [
   '/checkout',
   ORGANIZATION_DASHBOARD_PATH,
   '/dashboard/observability',
+  '/profile',
 ] as const;
 
 type SupabaseClaimsApi = {
