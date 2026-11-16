@@ -134,6 +134,7 @@ const SEC01_CLICK_CARRY_DIGEST='226f51e75f92cda00f4efa8fcedb0757724ba101499f3740
 const SEC01_CLICK_CARRY_REVIEW='SEC-01 PLAYWRIGHT POINTER QA FOUR-GATE CARRY SECURITY REVIEW: APPROVED';
 const SEC01_CLICK_CARRY_FILES=new Set([
  'scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs',
+ 'scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs',
  'tests/security/sec01-browser-bad-password-contract.test.ts',
  'scripts/enterprise-evidence/validate-evidence.mjs',
  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
