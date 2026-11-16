@@ -233,8 +233,12 @@ try {
       (response) => isPasswordRequest(response.request()),
       { timeout: 30000 },
     ).catch(() => null);
+    // Playwright click waits for implicit navigation by default. The real
+    // Supabase denial is observed separately below, so do not conflate a
+    // navigation wait timeout with an unavailable login submit control.
+    // Keep real pointer actionability checks (never force-click or mock auth).
     failureDetail = 'invalid_password_submit_unavailable';
-    await passwordForm.locator('button[type="submit"]').click();
+    await passwordForm.locator('button[type="submit"]').click({ noWaitAfter: true });
     deniedResponse = await response;
     if (!deniedResponse) {
       failureDetail = requestFailed ? 'invalid_password_request_failed'
@@ -267,8 +271,10 @@ try {
   stage = 'real_browser_password_login';
   failureDetail = 'valid_password_input_unavailable';
   await passwordForm.locator('input[type="password"]').fill(password);
+  // A valid login can navigate away: its destination and server-side identity
+  // are verified separately below, without racing Playwright's click wait.
   failureDetail = 'valid_password_submit_unavailable';
-  await passwordForm.locator('button[type="submit"]').click();
+  await passwordForm.locator('button[type="submit"]').click({ noWaitAfter: true });
   // The onboarding screen may immediately redirect (e.g. payment-first).
   // Prove that navigation left login and that SSR session cookies exist;
   // actual authority is separately verified on the protected profile + API.
