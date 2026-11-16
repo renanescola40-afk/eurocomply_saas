@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
-import {sec01SourceCarryIntegrity,sec01QaBrowserCarryIntegrity,sec01LoginCarryIntegrity,sec01HydrationCarryIntegrity,sec01ClickCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import {sec01SourceCarryIntegrity,sec01QaBrowserCarryIntegrity,sec01LoginCarryIntegrity,sec01HydrationCarryIntegrity,sec01ClickCarryIntegrity,sec01ProfileCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 
 const indexPath='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
 const proofs=[
@@ -589,4 +589,111 @@ test('source CI retry never accepts invalid SHA, missing token or excessive retr
   assert.equal(out.decision,'NOT_VERIFIED');
   assert.deepEqual(out.errors,['invalid_settled_source_ci_request']);
  }
+});
+
+
+test('PR #2744 profile-return continuation is restricted to 7 exact files and frozen 4-gate proof bytes',()=>{
+ const root=mkdtempSync(join(tmpdir(),'risck-sec01-profile-carry-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
+ const put=(name,content)=>{const target=join(root,name);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,content);};
+ const commit=msg=>{git('add','.');git('commit','-qm',msg);return git('rev-parse','HEAD');};
+ const files=[
+  'src/app/[locale]/login/page.tsx',
+  'src/app/auth/callback/route.ts',
+  'src/lib/auth/login-return-destinations.ts',
+  'tests/auth-onboarding-flow.test.ts',
+  'tests/security/sec01-login-return-destinations.test.ts',
+  'scripts/enterprise-evidence/validate-evidence.mjs',
+  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
+ ];
+ try{
+  git('init','-q');
+  git('config','user.email','synthetic@example.invalid');
+  git('config','user.name','Synthetic code review');
+  const index={
+   cumulative_acceptance:{schema:'risck-comply.a15-cumulative-acceptance.v1'},
+   gates:['A-09','A-15','A-18','A-19'].map(gate_id=>({
+    gate_id,accepted:true,
+    acceptance_evidence_ref:gate_id==='A-15'?proofs[1]:gate_id==='A-19'?proofs[2]:proofs[0],
+   })),
+   evidence_records:[{status:'PASS',artifact_path:proofs[1]}],
+  };
+  put(indexPath,JSON.stringify(index));
+  for(const proof of proofs)put(proof,'immutable provider-signed proof: '+proof);
+  const checkpoint=commit('four-gate immutable main checkpoint');
+  const opts={root,checkpoint};
+  assert.equal(sec01ProfileCarryIntegrity(index,{...opts,expectedSha:checkpoint}),false);
+  for(const file of files)put(file,'reviewable source change in '+file);
+  const candidate=commit('seven-profile-path isolated SEC-01 source correction');
+  assert.equal(sec01ProfileCarryIntegrity(index,{...opts,expectedSha:candidate}),true);
+  assert.equal(sec01ProfileCarryIntegrity({...index,gates:[]},{...opts,expectedSha:candidate}),false);
+
+  git('reset','--hard',checkpoint);
+  for(const file of files.filter(name=>name!=='tests/auth-onboarding-flow.test.ts'))put(file,'incomplete source '+file);
+  const missingTest=commit('omit required existing regression');
+  assert.equal(sec01ProfileCarryIntegrity(index,{...opts,expectedSha:missingTest}),false);
+
+  git('reset','--hard',candidate);
+  put('src/app/api/stripe/webhook/route.ts','unauthorized new billing behavior');
+  const billing=commit('out-of-scope commercial mutation');
+  assert.equal(sec01ProfileCarryIntegrity(index,{...opts,expectedSha:billing}),false);
+
+  git('reset','--hard',candidate);
+  put('.github/workflows/full-security-suite.yml','fake merge success');
+  const workflow=commit('weaken required merge checks');
+  assert.equal(sec01ProfileCarryIntegrity(index,{...opts,expectedSha:workflow}),false);
+
+  git('reset','--hard',candidate);
+  put(proofs[0],'tampered accepted A-09/A-18 evidence');
+  const proof=commit('attempt old proof substitution');
+  assert.equal(sec01ProfileCarryIntegrity(index,{...opts,expectedSha:proof}),false);
+
+  git('reset','--hard',candidate);
+  put(indexPath,JSON.stringify({...index,unreviewedGate:true}));
+  const forged=commit('attempt acceptance ledger rewrite');
+  assert.equal(sec01ProfileCarryIntegrity(index,{...opts,expectedSha:forged}),false);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('PR #2744 profile carry demands authentic exact-main 4/24 proof and substantive exact-HEAD reviewer',()=>{
+ const src=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
+ assert.match(src,/SEC01_PROFILE_CARRY_PR=2744/);
+ assert.match(src,/SEC01_PROFILE_CARRY_BASE='88d8d2739e773a0924dcfd16afb148db42dc8991'/);
+ assert.match(src,/SEC01_PROFILE_CARRY_RUN=43887299140/);
+ assert.match(src,/SEC01_PROFILE_CARRY_ARTIFACT=14235048073/);
+ assert.match(src,/SEC01_PROFILE_CARRY_DIGEST='c1a8a2d991ebfc7334c5ee0c55efcb5d6dd4e63c10496699da0c8b6b18840f8a'/);
+ assert.match(src,/artifact\?\.digest!=='sha256:'\+SEC01_PROFILE_CARRY_DIGEST/);
+ assert.match(src,/ci\.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'/);
+ assert.match(src,/CUMULATIVE_LINES\.every\(line=>includesReviewLine\(review\.body,line\)\)/);
+ assert.match(src,/includesReviewLine\(review\.body,SEC01_PROFILE_CARRY_REVIEW\)/);
+ assert.match(src,/review\.commit_id===pull\.sha/);
+ assert.match(src,/decisionWithdrawn\(reviews,review,pull,rejection\)/);
+ assert.match(src,/verifyQat01AfterProviderSettles\(\{sha:pull\.sha,token,request\}\)/);
+ assert.match(src,/if\(sec01ProfileCarryIntegrity\(index,\{expectedSha,root\}\)\)/);
+});
+
+test('PR #2744 exact-head dry-run can preserve only the previous four gates (never SEC-01 PASS)',()=>{
+ if(process.env.EVIDENCE_PR_NUMBER!=='2744')return;
+ const sha=process.env.EVIDENCE_EXACT_SHA;
+ assert.match(sha??'',/^[a-f0-9]{40}$/);
+ assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sha);
+ const index=JSON.parse(readFileSync(indexPath,'utf8'));
+ assert.equal(sec01ProfileCarryIntegrity(index,{expectedSha:sha}),true);
+ const scope=JSON.parse(readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ // Deliberately synthetic review: a real review must be fetched from GitHub.
+ const hypothetical={
+  profileCarry:true,
+  approvalUrl:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2744#pullrequestreview-999999',
+  acceptedAt:new Date().toISOString(),
+ };
+ const report=reconcile({scope,gates,index,expectedSha:sha,cumulativeReview:hypothetical});
+ assert.deepEqual(report.errors,[]);
+ assert.equal(report.valid,true);
+ assert.equal(report.summary.gates_accepted,4);
+ assert.equal(report.summary.controls_pass,4);
+ for(const id of ['A-09','A-15','A-18','A-19']){
+  assert.equal(report.gates.find(row=>row.gate_id===id)?.accepted,true);
+ }
+ assert.equal(report.controls.find(row=>row.control_id==='SEC-01')?.status,'NOT_VERIFIED');
 });
