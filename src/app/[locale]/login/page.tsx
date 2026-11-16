@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -68,7 +68,13 @@ function LoginContent() {
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
+  const [formHydrated, setFormHydrated] = useState(false);
   const [error, setError] = useState<string | null>(publicErrorCode ? publicErrors[publicErrorCode] : null);
+
+  // This marker becomes true only after React has hydrated the password form.
+  // It carries no session or authorization authority: QA waits for it before
+  // submitting real credentials, rather than racing against server-rendered HTML.
+  useEffect(() => { setFormHydrated(true); }, []);
 
   async function handleProvider() {
     if (loading || busy) {
@@ -135,7 +141,7 @@ function LoginContent() {
               <button type="button" onClick={handleProvider} disabled={busy || loading} className="h-10 w-full rounded-lg border border-slate-700 bg-[#0d1624] px-4 text-sm font-semibold text-slate-100 transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60">{busy ? text.loading : text.google}</button>
               <EnterpriseSsoLogin locale={locale} next={afterSignInUrl} />
               <div className="my-6 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500"><span className="h-px flex-1 bg-slate-800" /> {text.divider} <span className="h-px flex-1 bg-slate-800" /></div>
-              <form className="space-y-4" onSubmit={handleSubmit}>
+              <form className="space-y-4" onSubmit={handleSubmit} data-auth-hydrated={formHydrated ? "true" : "false"}>
                 <label className="block text-sm font-medium text-slate-300">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className={inputClass} /></label>
                 <label className="block text-sm font-medium text-slate-300">{text.password}<input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className={inputClass} /></label>
                 <div className="flex justify-end"><Link href={`/${locale}/recover-password`} className="rounded-md text-sm font-semibold text-blue-300 hover:text-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{forgotLabel}</Link></div>
