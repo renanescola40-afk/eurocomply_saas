@@ -164,6 +164,26 @@ const SEC01_PROFILE_CARRY_FILES=new Set([
  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
 ]);
 
+
+/**
+ * PR #2745 — source-only genuine Stripe SDK HMAC/replay regression.
+ * Preserve the immutable accepted four-gate main checkpoint and demand
+ * exact-head QAT-01 checks + new substantive independent review.
+ * Does NOT accept BIL-02 or A-10; QA provider delivery is still blocked.
+ */
+const BIL02_CRYPTO_CARRY_PR=2745;
+const BIL02_CRYPTO_CARRY_BASE='af109b20839c62ca0bf9cd24ac99dc33a41b98f5';
+const BIL02_CRYPTO_CARRY_RUN=43975605464;
+const BIL02_CRYPTO_CARRY_ARTIFACT=14280608301;
+const BIL02_CRYPTO_CARRY_DIGEST='656734f674f91bf120e37a7e8b18cd3aca5ee48542336249e3666b3e518d4e23';
+const BIL02_CRYPTO_CARRY_REVIEW='BIL-02 CRYPTOGRAPHIC QA TESTS FOUR-GATE CARRY SECURITY REVIEW: APPROVED';
+const BIL02_CRYPTO_CARRY_FILES=new Set([
+ 'src/app/api/stripe/webhook/route.test.ts',
+ 'tests/billing/qa-stripe-test-ledger-crypto.test.mjs',
+ 'scripts/enterprise-evidence/validate-evidence.mjs',
+ 'tests/enterprise-evidence/bil02-crypto-carry.test.mjs',
+]);
+
 function gateProof(document,gate){
  if(gate.acceptance_evidence_ref!==COMBINED_PROOF) return document;
  if(document?.schema!==COMBINED_SCHEMA||Object.keys(document.gates??{}).length!==2||
@@ -1188,6 +1208,91 @@ export async function verifySec01ProfileCarry(index,{
  }catch{return false;}
 }
 
+
+/**
+ * A strictly read-only evidence carry for BIL-02 tests. Neither one of the
+ * new tests nor the validator may modify the canonical accepted index,
+ * proof records, billing runtime, CI policy, SQL or Production.
+ */
+export function bil02CryptoCarryIntegrity(index,{
+ expectedSha,root=ROOT,checkpoint=BIL02_CRYPTO_CARRY_BASE,
+}={}){
+ if(!SHA40.test(expectedSha||'')||!SHA40.test(checkpoint||'')||
+    expectedSha===checkpoint||
+    index?.cumulative_acceptance?.schema!=='risck-comply.a15-cumulative-acceptance.v1'||
+    runGit(root,['merge-base','--is-ancestor',checkpoint,expectedSha]).status!==0)return false;
+ const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',
+   checkpoint,expectedSha,'--']);
+ if(diff.status!==0||!Buffer.isBuffer(diff.stdout))return false;
+ const names=diff.stdout.toString('utf8').split('\0').filter(Boolean);
+ if(names.length!==BIL02_CRYPTO_CARRY_FILES.size||
+    !names.every(name=>BIL02_CRYPTO_CARRY_FILES.has(name)))return false;
+ const baseline=committedJson(root,checkpoint,INDEX_PATH);
+ if(!baseline||JSON.stringify(baseline)!==JSON.stringify(index)||
+    !CUMULATIVE_GATES.every(id=>baseline.gates?.some(g=>g.gate_id===id&&
+      (id==='A-19'||g.accepted===true))))return false;
+ const frozen=new Set([COMBINED_PROOF,A15_PROOF,A19_PROOF]);
+ for(const gate of baseline.gates||[])if(gate.accepted===true){
+  if(typeof gate.acceptance_evidence_ref!=='string')return false;
+  frozen.add(gate.acceptance_evidence_ref);
+ }
+ for(const record of baseline.evidence_records||[])if(record.status==='PASS'){
+  if(typeof record.artifact_path!=='string')return false;
+  frozen.add(record.artifact_path);
+ }
+ for(const path of frozen){
+  const prior=committedDigest(root,checkpoint,path);
+  if(!SHA256.test(prior||'')||committedDigest(root,expectedSha,path)!==prior)return false;
+ }
+ return true;
+}
+
+export async function verifyBil02CryptoCarry(index,{
+ expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
+}={}){
+ const prSpecified=prNumber!==undefined&&prNumber!==null&&String(prNumber).trim()!=='';
+ if((prSpecified&&Number(prNumber)!==BIL02_CRYPTO_CARRY_PR)||
+    !token||!bil02CryptoCarryIntegrity(index,{expectedSha,root}))return false;
+ const readProvider=githubRead(request,token);
+ try{
+  const pull=await reviewedPull(readProvider,expectedSha,
+   prSpecified?prNumber:null,QUALIFIED_REVIEWER);
+  if(!pull||pull.number!==BIL02_CRYPTO_CARRY_PR)return false;
+  if(pull.mergedAt){
+   const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
+   const pair=trees.stdout?.toString('utf8').trim().split('\n')||[];
+   if(trees.status!==0||pair.length!==2||!SHA40.test(pair[0])||
+      pair[0]!==pair[1])return false;
+  }
+  const [run,artifacts,reviews,ci]=await Promise.all([
+   readProvider('/actions/runs/'+BIL02_CRYPTO_CARRY_RUN),
+   readProvider('/actions/runs/'+BIL02_CRYPTO_CARRY_RUN+'/artifacts?per_page=100'),
+   readProvider('/pulls/'+pull.number+'/reviews?per_page=100'),
+   verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
+  ]);
+  const artifact=artifacts?.artifacts?.find(a=>a.id===BIL02_CRYPTO_CARRY_ARTIFACT);
+  if(run?.head_sha!==BIL02_CRYPTO_CARRY_BASE||run?.conclusion!=='success'||
+     run?.event!=='push'||artifact?.workflow_run?.head_sha!==BIL02_CRYPTO_CARRY_BASE||
+     artifact?.expired||artifact?.digest!=='sha256:'+BIL02_CRYPTO_CARRY_DIGEST||
+     ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
+     !Array.isArray(reviews))return false;
+  const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|CRYPTOGRAPHIC QA TESTS FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+  const approved=reviews.find(review=>review?.state==='APPROVED'&&
+     review.user?.login===QUALIFIED_REVIEWER&&review.commit_id===pull.sha&&
+     CUMULATIVE_LINES.every(line=>includesReviewLine(review.body,line))&&
+     includesReviewLine(review.body,CUMULATIVE_SECURITY)&&
+     includesReviewLine(review.body,BIL02_CRYPTO_CARRY_REVIEW)&&
+     !rejection.test(review.body)&&!decisionWithdrawn(reviews,review,pull,rejection)&&
+     review.html_url==='https://github.com/'+REPOSITORY+'/pull/'+pull.number+
+       '#pullrequestreview-'+review.id&&
+     (!pull.mergedAt||Date.parse(review.submitted_at)<=Date.parse(pull.mergedAt)));
+  return approved?{
+   approvalUrl:approved.html_url,acceptedAt:approved.submitted_at,
+   bil02CryptoCarry:true,
+  }:false;
+ }catch{return false;}
+}
+
 export async function verifyCumulativeRelease(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
@@ -1206,6 +1311,9 @@ export async function verifyCumulativeRelease(index,{
   // earlier hydration carry's cumulative six-file allowlist, so dispatch
   // it first; each verifier still enforces its OWN exact PR number and
   // native qualified review rather than inheriting an earlier approval.
+  if(bil02CryptoCarryIntegrity(index,{expectedSha,root})){
+   return verifyBil02CryptoCarry(index,{expectedSha,prNumber,token,request,root});
+  }
   if(sec01ProfileCarryIntegrity(index,{expectedSha,root})){
    return verifySec01ProfileCarry(index,{expectedSha,prNumber,token,request,root});
   }
@@ -1357,14 +1465,16 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    sec01ClickCarryIntegrity(index,{expectedSha}));
  const profileCarry=Boolean(cumulative&&cumulativeReview?.profileCarry===true&&
    sec01ProfileCarryIntegrity(index,{expectedSha}));
+ const bil02Carry=Boolean(cumulative&&cumulativeReview?.bil02CryptoCarry===true&&
+   bil02CryptoCarryIntegrity(index,{expectedSha}));
  const carry=Boolean(cumulative&&cumulativeReview&&
-   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||cumulativeIntegrity(index,{expectedSha})));
+   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||bil02Carry||cumulativeIntegrity(index,{expectedSha})));
  const qatGate=(index.gates||[]).find(gate=>gate.gate_id==='A-15'&&gate.accepted===true);
  const isQatPass=record=>record.control_id==='QAT-01'&&record.status==='PASS';
  const qatEvidenceMatches=record=>qatGate&&record.gate_id==='A-15'&&
   record.artifact_path===qatGate.acceptance_evidence_ref&&
   record.artifact_sha256===qatGate.acceptance_evidence_sha256&&
-  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry)?DOCS_CHECKPOINT:expectedSha});
+  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||bil02Carry)?DOCS_CHECKPOINT:expectedSha});
  const recordSha=record=>isQatPass(record)&&qatEvidenceMatches(record)
   ?qatGate.acceptance_sha
   :evidenceExpectedSha(record,{frozenSha:index.source?.commit_sha,candidateSha:expectedSha});
@@ -1406,7 +1516,7 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    eligible:eligible&&status===computed,
    expectedSha:carry&&gate.id==='A-19'?claim.acceptance_sha:
     carry&&['A-09','A-18'].includes(gate.id)?CUMULATIVE_CHECKPOINT:
-    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
+    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||bil02Carry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
    providerApproved:carry&&CUMULATIVE_GATES.includes(gate.id)||
     (gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved),
   });
