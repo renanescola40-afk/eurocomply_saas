@@ -140,6 +140,30 @@ const SEC01_CLICK_CARRY_FILES=new Set([
  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
 ]);
 
+
+/**
+ * PR #2744: only the login/OAuth profile-return bug fix may extend the
+ * existing four formally accepted gates. The checkpoint is an authenticated
+ * GitHub Actions success with 4/24 gates and 4/38 controls, not a new PASS.
+ * Code changes never inherit approval; require exact-head source CI and a
+ * qualified, substantive independent four-gate security review.
+ */
+const SEC01_PROFILE_CARRY_PR=2744;
+const SEC01_PROFILE_CARRY_BASE='88d8d2739e773a0924dcfd16afb148db42dc8991';
+const SEC01_PROFILE_CARRY_RUN=43887299140;
+const SEC01_PROFILE_CARRY_ARTIFACT=14235048073;
+const SEC01_PROFILE_CARRY_DIGEST='c1a8a2d991ebfc7334c5ee0c55efcb5d6dd4e63c10496699da0c8b6b18840f8a';
+const SEC01_PROFILE_CARRY_REVIEW='SEC-01 PROFILE RETURN FOUR-GATE CARRY SECURITY REVIEW: APPROVED';
+const SEC01_PROFILE_CARRY_FILES=new Set([
+ 'src/app/[locale]/login/page.tsx',
+ 'src/app/auth/callback/route.ts',
+ 'src/lib/auth/login-return-destinations.ts',
+ 'tests/auth-onboarding-flow.test.ts',
+ 'tests/security/sec01-login-return-destinations.test.ts',
+ 'scripts/enterprise-evidence/validate-evidence.mjs',
+ 'tests/enterprise-evidence/sec01-source-carry.test.mjs',
+]);
+
 function gateProof(document,gate){
  if(gate.acceptance_evidence_ref!==COMBINED_PROOF) return document;
  if(document?.schema!==COMBINED_SCHEMA||Object.keys(document.gates??{}).length!==2||
@@ -1078,6 +1102,91 @@ export async function verifySec01ClickCarry(index,{
  }catch{return reject('authenticated_provider_readback_exception');}
 }
 
+
+/**
+ * This narrowly-scoped continuation cannot modify the evidence index,
+ * historical acceptance proofs, workflows, SQL, server security, billing or
+ * Production. A new PR head is independently reviewed, even if main passed.
+ */
+export function sec01ProfileCarryIntegrity(index,{
+ expectedSha,root=ROOT,checkpoint=SEC01_PROFILE_CARRY_BASE,
+}={}){
+ if(!SHA40.test(expectedSha||'')||!SHA40.test(checkpoint||'')||
+    expectedSha===checkpoint||
+    index?.cumulative_acceptance?.schema!=='risck-comply.a15-cumulative-acceptance.v1'||
+    runGit(root,['merge-base','--is-ancestor',checkpoint,expectedSha]).status!==0)return false;
+ const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',
+   checkpoint,expectedSha,'--']);
+ if(diff.status!==0||!Buffer.isBuffer(diff.stdout))return false;
+ const names=diff.stdout.toString('utf8').split('\0').filter(Boolean);
+ if(names.length!==SEC01_PROFILE_CARRY_FILES.size||
+    !names.every(name=>SEC01_PROFILE_CARRY_FILES.has(name)))return false;
+ const baseline=committedJson(root,checkpoint,INDEX_PATH);
+ if(!baseline||JSON.stringify(baseline)!==JSON.stringify(index)||
+    !CUMULATIVE_GATES.every(id=>baseline.gates?.some(g=>g.gate_id===id&&g.accepted===true)))
+    return false;
+ const frozen=new Set([COMBINED_PROOF,A15_PROOF,A19_PROOF]);
+ for(const gate of baseline.gates||[])if(gate.accepted===true){
+  if(typeof gate.acceptance_evidence_ref!=='string')return false;
+  frozen.add(gate.acceptance_evidence_ref);
+ }
+ for(const record of baseline.evidence_records||[])if(record.status==='PASS'){
+  if(typeof record.artifact_path!=='string')return false;
+  frozen.add(record.artifact_path);
+ }
+ for(const path of frozen){
+  const prior=committedDigest(root,checkpoint,path);
+  if(!SHA256.test(prior||'')||committedDigest(root,expectedSha,path)!==prior)return false;
+ }
+ return true;
+}
+
+export async function verifySec01ProfileCarry(index,{
+ expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
+}={}){
+ const prSpecified=prNumber!==undefined&&prNumber!==null&&String(prNumber).trim()!=='';
+ if((prSpecified&&Number(prNumber)!==SEC01_PROFILE_CARRY_PR)||
+    !token||!sec01ProfileCarryIntegrity(index,{expectedSha,root}))return false;
+ const readProvider=githubRead(request,token);
+ try{
+  const pull=await reviewedPull(readProvider,expectedSha,
+   prSpecified?prNumber:null,QUALIFIED_REVIEWER);
+  if(!pull||pull.number!==SEC01_PROFILE_CARRY_PR)return false;
+  if(pull.mergedAt){
+   const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
+   const items=trees.stdout?.toString('utf8').trim().split('\n')||[];
+   if(trees.status!==0||items.length!==2||!SHA40.test(items[0])||
+      items[0]!==items[1])return false;
+  }
+  const [run,artifacts,reviews,ci]=await Promise.all([
+   readProvider('/actions/runs/'+SEC01_PROFILE_CARRY_RUN),
+   readProvider('/actions/runs/'+SEC01_PROFILE_CARRY_RUN+'/artifacts?per_page=100'),
+   readProvider('/pulls/'+pull.number+'/reviews?per_page=100'),
+   verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
+  ]);
+  const artifact=artifacts?.artifacts?.find(a=>a.id===SEC01_PROFILE_CARRY_ARTIFACT);
+  if(run?.head_sha!==SEC01_PROFILE_CARRY_BASE||run?.conclusion!=='success'||
+    run?.event!=='push'||artifact?.workflow_run?.head_sha!==SEC01_PROFILE_CARRY_BASE||
+    artifact?.expired||artifact?.digest!=='sha256:'+SEC01_PROFILE_CARRY_DIGEST||
+    ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
+    !Array.isArray(reviews))return false;
+  const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|PROFILE RETURN FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+  const approved=reviews.find(review=>review?.state==='APPROVED'&&
+    review.user?.login===QUALIFIED_REVIEWER&&review.commit_id===pull.sha&&
+    CUMULATIVE_LINES.every(line=>includesReviewLine(review.body,line))&&
+    includesReviewLine(review.body,CUMULATIVE_SECURITY)&&
+    includesReviewLine(review.body,SEC01_PROFILE_CARRY_REVIEW)&&
+    !rejection.test(review.body)&&!decisionWithdrawn(reviews,review,pull,rejection)&&
+    review.html_url==='https://github.com/'+REPOSITORY+'/pull/'+pull.number+
+      '#pullrequestreview-'+review.id&&
+    (!pull.mergedAt||Date.parse(review.submitted_at)<=Date.parse(pull.mergedAt)));
+  return approved?{
+    approvalUrl:approved.html_url,acceptedAt:approved.submitted_at,
+    profileCarry:true,
+  }:false;
+ }catch{return false;}
+}
+
 export async function verifyCumulativeRelease(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
@@ -1096,6 +1205,9 @@ export async function verifyCumulativeRelease(index,{
   // earlier hydration carry's cumulative six-file allowlist, so dispatch
   // it first; each verifier still enforces its OWN exact PR number and
   // native qualified review rather than inheriting an earlier approval.
+  if(sec01ProfileCarryIntegrity(index,{expectedSha,root})){
+   return verifySec01ProfileCarry(index,{expectedSha,prNumber,token,request,root});
+  }
   if(sec01ClickCarryIntegrity(index,{expectedSha,root})){
    return verifySec01ClickCarry(index,{expectedSha,prNumber,token,request,root});
   }
@@ -1242,14 +1354,16 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    sec01HydrationCarryIntegrity(index,{expectedSha}));
  const clickCarry=Boolean(cumulative&&cumulativeReview?.clickCarry===true&&
    sec01ClickCarryIntegrity(index,{expectedSha}));
+ const profileCarry=Boolean(cumulative&&cumulativeReview?.profileCarry===true&&
+   sec01ProfileCarryIntegrity(index,{expectedSha}));
  const carry=Boolean(cumulative&&cumulativeReview&&
-   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||cumulativeIntegrity(index,{expectedSha})));
+   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||cumulativeIntegrity(index,{expectedSha})));
  const qatGate=(index.gates||[]).find(gate=>gate.gate_id==='A-15'&&gate.accepted===true);
  const isQatPass=record=>record.control_id==='QAT-01'&&record.status==='PASS';
  const qatEvidenceMatches=record=>qatGate&&record.gate_id==='A-15'&&
   record.artifact_path===qatGate.acceptance_evidence_ref&&
   record.artifact_sha256===qatGate.acceptance_evidence_sha256&&
-  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry)?DOCS_CHECKPOINT:expectedSha});
+  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry)?DOCS_CHECKPOINT:expectedSha});
  const recordSha=record=>isQatPass(record)&&qatEvidenceMatches(record)
   ?qatGate.acceptance_sha
   :evidenceExpectedSha(record,{frozenSha:index.source?.commit_sha,candidateSha:expectedSha});
@@ -1291,7 +1405,7 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    eligible:eligible&&status===computed,
    expectedSha:carry&&gate.id==='A-19'?claim.acceptance_sha:
     carry&&['A-09','A-18'].includes(gate.id)?CUMULATIVE_CHECKPOINT:
-    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
+    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
    providerApproved:carry&&CUMULATIVE_GATES.includes(gate.id)||
     (gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved),
   });
