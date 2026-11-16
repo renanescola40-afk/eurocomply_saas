@@ -18,6 +18,20 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(handler).not.toMatch(/console\.(log|warn|error)/);
   });
 
+  it('does not block password login on pending initial session hydration', () => {
+    // A stalled getSession() snapshot cannot disable an otherwise valid
+    // credential submit; server-side Supabase authentication remains decisive.
+    const handler = login.split('async function handleSubmit(')[1]?.split('  const inputClass =')[0];
+    const passwordForm = login.split('<form className="space-y-4" onSubmit={handleSubmit}>')[1]
+      ?.split('</form>')[0];
+    expect(handler).toBeTruthy();
+    expect(handler).not.toMatch(/if \(loading\)\s*\{/);
+    expect(handler).toContain('await signInWithEmail(email.trim().toLowerCase(), secret)');
+    expect(passwordForm).toContain('<button type="submit" disabled={busy}');
+    expect(passwordForm).not.toContain('disabled={busy || loading}');
+    expect(login).toContain('disabled={busy || loading}'); // SSO/OAuth gate unaffected.
+  });
+
   it('requires a real provider invalid-credentials response and visible browser denial', () => {
     const negative = runner.split("stage = 'bad_password_denied_in_real_browser';")[1]
       ?.split("stage = 'real_browser_password_login';")[0];
