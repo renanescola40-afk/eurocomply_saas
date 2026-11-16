@@ -435,6 +435,22 @@ test('A-01 hydration exact-head dry-run preserves 4/24 without fabricating a nat
  assert.equal(result.controls.find(c=>c.control_id==='SEC-01')?.status,'NOT_VERIFIED');
 });
 
+test('PR #2743 pointer carry is dispatched before overlapping earlier hydration carry',()=>{
+ const source=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
+ const start=source.indexOf('export async function verifyCumulativeRelease(');
+ const end=source.indexOf('export function reconcile(',start);
+ assert.ok(start>=0&&end>start,'must inspect the real cumulative release verifier');
+ const entry=source.slice(start,end);
+ const click=entry.indexOf('if(sec01ClickCarryIntegrity(index,{expectedSha,root}))');
+ const hydration=entry.indexOf('if(sec01HydrationCarryIntegrity(index,{expectedSha,root}))');
+ assert.ok(click>=0&&hydration>click,
+  'later exact-PR #2743 carry must be checked before earlier overlapping #2742 carry');
+ assert.ok(entry.includes('return verifySec01ClickCarry(index,{expectedSha,prNumber,token,request,root});'),
+  'pointer carry still requires its own exact-PR authenticated reviewer and provider proof');
+ assert.ok(entry.includes('return verifySec01HydrationCarry(index,{expectedSha,prNumber,token,request,root});'),
+  'earlier hydration carry must remain independently enforced');
+});
+
 test('A-01 pointer click exact-head dry-run preserves 4/24 without fabricating a native review',()=>{
  if(process.env.EVIDENCE_PR_NUMBER!=='2743')return;
  const sha=process.env.EVIDENCE_EXACT_SHA;
