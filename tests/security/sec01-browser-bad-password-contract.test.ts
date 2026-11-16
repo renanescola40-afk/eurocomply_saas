@@ -65,6 +65,35 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(verifier).toContain("'password_form_hydration_unavailable'");
   });
 
+  it('uses real pointer actions without implicit navigation waiting, and separately checks actual provider responses', () => {
+    const badPassword = runner.split("stage = 'bad_password_denied_in_real_browser';")[1]
+      ?.split("stage = 'real_browser_password_login';")[0];
+    const validPassword = runner.split("stage = 'real_browser_password_login';")[1]
+      ?.split("stage = 'authenticated_private_profile_available';")[0];
+    expect(badPassword).toBeTruthy();
+    expect(validPassword).toBeTruthy();
+    // Pointer clicks remain subject to Playwright actionability checks; only
+    // its implicit navigation wait is disabled. Never use force or DOM dispatch.
+    expect(badPassword).toContain('await invalidSubmit.click({ noWaitAfter: true });');
+    expect(validPassword).toContain('await validSubmit.click({ noWaitAfter: true });');
+    expect(badPassword).not.toContain('force: true');
+    expect(validPassword).not.toContain('force: true');
+    expect(runner).not.toContain('.dispatchEvent(');
+    expect(badPassword).toContain("classifyRealSubmitFailure(invalidSubmit, 'invalid_password')");
+    expect(validPassword).toContain("classifyRealSubmitFailure(validSubmit, 'valid_password')");
+    expect(runner).toContain('async function classifyRealSubmitFailure(button, prefix)');
+    expect(runner).toContain('node.ownerDocument.elementFromPoint(');
+    const verifier = readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs', 'utf8');
+    for (const prefix of ['invalid_password', 'valid_password']) {
+      for (const suffix of ['missing_or_ambiguous', 'hidden', 'disabled', 'obscured', 'action_failed']) {
+        expect(verifier).toContain(prefix + '_submit_' + suffix);
+      }
+    }
+    expect(badPassword).toContain('page.waitForResponse(');
+    expect(badPassword).toContain("denialCode === 'invalid_credentials'");
+    expect(validPassword).toContain("() => window.location.pathname !== '/en/login'");
+  });
+
   it('retains fail-closed QA-only evidence and fixed non-sensitive failure detail', () => {
     expect(runner).toContain("SEC01_APP_EXECUTE === 'QA_ONLY_APP_BROWSER_PROOF'");
     expect(runner).toContain("SEC01_QA_PROJECT_REF === QA_REF");

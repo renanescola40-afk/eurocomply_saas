@@ -66,6 +66,16 @@ const knownFailureDetails = new Set([
   'invalid_password_provider_denial_unexpected', 'invalid_password_ui_alert_missing',
   'invalid_password_session_or_route_not_denied',
   'valid_password_input_unavailable', 'valid_password_submit_unavailable',
+  'invalid_password_submit_missing_or_ambiguous',
+  'invalid_password_submit_hidden',
+  'invalid_password_submit_disabled',
+  'invalid_password_submit_obscured',
+  'invalid_password_submit_action_failed',
+  'valid_password_submit_missing_or_ambiguous',
+  'valid_password_submit_hidden',
+  'valid_password_submit_disabled',
+  'valid_password_submit_obscured',
+  'valid_password_submit_action_failed',
 ]);
 const sameRun = evidence.schema === 'risck-sec01-next-app-qa-browser-proof-v1' &&
   evidence.execution === 'LOCAL_NEXT_APP_BROWSER_QA_AUTH' && evidence.source_sha === sha &&
