@@ -14,6 +14,7 @@ const expectedNames = [
   'real_browser_password_login',
   'authenticated_private_profile_available',
   'authenticated_api_identity_distinguished',
+  'signed_in_session_recovery_form_denied',
   'capture_session_cookies_in_memory_only',
   'real_browser_logout',
   'after_logout_api_denied',
