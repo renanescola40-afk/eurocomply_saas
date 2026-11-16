@@ -182,6 +182,7 @@ const BIL02_CRYPTO_CARRY_FILES=new Set([
  'tests/billing/qa-stripe-test-ledger-crypto.test.mjs',
  'scripts/enterprise-evidence/validate-evidence.mjs',
  'tests/enterprise-evidence/bil02-crypto-carry.test.mjs',
+ 'tests/enterprise-evidence/validate-evidence.test.mjs',
 ]);
 
 function gateProof(document,gate){
