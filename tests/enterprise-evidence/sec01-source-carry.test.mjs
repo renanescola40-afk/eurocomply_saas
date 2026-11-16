@@ -325,6 +325,23 @@ test('A-01 pointer click carry accepts only five reviewed files from immutable f
   assert.equal(sec01ClickCarryIntegrity(index,{...options,expectedSha:forgedLedger}),false);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
+test('PR #2743 source-carry dispatch precedes overlapping #2742 hydration ancestry',()=>{
+ // A later branch may modify only files already allowed by an earlier source
+ // carry, so both integrity predicates can be true at the same time.
+ // The exact-PR verifier must not be shadowed by the earlier PR guard.
+ const source=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
+ const dispatch=source.split('export async function verifyCumulativeRelease(')[1]
+   ?.split(' const readProvider=',1)[0];
+ assert.ok(dispatch,'qualified release dispatch must exist');
+ const click=dispatch.indexOf('if(sec01ClickCarryIntegrity(index,{expectedSha,root}))');
+ const hydration=dispatch.indexOf('if(sec01HydrationCarryIntegrity(index,{expectedSha,root}))');
+ assert.ok(click>=0&&hydration>=0&&click<hydration,
+   'exact PR #2743 carry must not be shadowed by earlier PR #2742');
+ assert.match(dispatch,/return verifySec01ClickCarry\(index,\{expectedSha,prNumber,token,request,root\}\)/);
+ assert.match(source,/Number\(prNumber\)!==SEC01_CLICK_CARRY_PR/);
+ assert.match(source,/SEC01_CLICK_CARRY_PR=2743/);
+});
+
 test('SEC-01 pointer click carry binds exact PR, checkpoint and qualified reviewed source',()=>{
  const source=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
  assert.match(source,/SEC01_CLICK_CARRY_PR=2743/);
