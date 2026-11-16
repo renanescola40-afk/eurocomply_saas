@@ -457,7 +457,7 @@ describe('Stripe webhook route signature validation and dispatch', () => {
   // adapter is mocked: no event is sent, no secret/SQL/entitlement is changed.
   it('uses the real Stripe SDK HMAC verifier on canonical QA route and preserves exact signed bytes', async () => {
     await withQaEnv(async () => {
-      const stripe = new Stripe('sk_test_local_only_no_network');
+      const stripe = new Stripe('synthetic-hmac-sdk-client-fixture');
       const event = { ...makeStripeEvent('invoice.paid'), id: 'evt_crypto_qa_123456',
         created: Math.floor(Date.now() / 1000), data: { object: { id: 'in_crypto_123456' } } };
       const payload = JSON.stringify(event);
@@ -486,7 +486,7 @@ describe('Stripe webhook route signature validation and dispatch', () => {
 
   it('rejects tampered, wrong-secret and expired Stripe HMAC signatures before any QA DB access', async () => {
     await withQaEnv(async () => {
-      const stripe = new Stripe('sk_test_local_only_no_network');
+      const stripe = new Stripe('synthetic-hmac-sdk-client-fixture');
       const event = { ...makeStripeEvent('invoice.paid'), id: 'evt_crypto_deny_123456',
         created: Math.floor(Date.now() / 1000) };
       const payload = JSON.stringify(event);
@@ -521,7 +521,7 @@ describe('Stripe webhook route signature validation and dispatch', () => {
 
   it('accepts a second authenticated TEST delivery as intake duplicate, never as entitlement fulfillment', async () => {
     await withQaEnv(async () => {
-      const stripe = new Stripe('sk_test_local_only_no_network');
+      const stripe = new Stripe('synthetic-hmac-sdk-client-fixture');
       const event = { ...makeStripeEvent('customer.subscription.updated'),
         id: 'evt_crypto_replay_123456', created: Math.floor(Date.now() / 1000) };
       const payload = JSON.stringify(event);
