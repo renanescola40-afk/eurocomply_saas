@@ -105,6 +105,7 @@ describe('auth and onboarding redirect invariants', () => {
     expect(callback).toContain("'/checkout'");
     expect(callback).toContain("'/dashboard/organizations'");
     expect(callback).toContain("'/dashboard/observability'");
+    expect(callback).toContain("'/profile'");
     expect(callback).toContain('isAllowedCallbackContinuation(normalizedNext, locale)');
     expect(callback).not.toContain('rawNext.startsWith(`/${locale}/`) ? rawNext : fallback');
   });
@@ -151,13 +152,16 @@ describe('auth and onboarding redirect invariants', () => {
 
   it('preserves only safe localized continuations and rejects open redirects', () => {
     const login = readRepoFile('src/app/[locale]/login/page.tsx');
+    const loginDestinations = readRepoFile('src/lib/auth/login-return-destinations.ts');
     const signup = readRepoFile('src/app/[locale]/signup/page.tsx');
 
     expect(login).toContain("value.startsWith('//')");
     expect(login).toContain("value.includes('://')");
-    expect(login).toContain('`/${locale}/onboarding`');
-    expect(login).toContain('`/${locale}/dashboard/organizations`');
-    expect(login).toContain('`/${locale}/dashboard/observability`');
+    expect(login).toContain('isAllowedLoginReturnDestination(value, locale)');
+    expect(loginDestinations).toContain('`/${locale}/onboarding`');
+    expect(loginDestinations).toContain('`/${locale}/dashboard/organizations`');
+    expect(loginDestinations).toContain('`/${locale}/dashboard/observability`');
+    expect(loginDestinations).toContain('`/${locale}/profile`');
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
     expect(signup).toContain('`/${locale}/onboarding`');
