@@ -74,11 +74,21 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(validPassword).toBeTruthy();
     // Pointer clicks remain subject to Playwright actionability checks; only
     // its implicit navigation wait is disabled. Never use force or DOM dispatch.
-    expect(badPassword).toContain('await passwordForm.locator(\'button[type="submit"]\').click({ noWaitAfter: true });');
-    expect(validPassword).toContain('await passwordForm.locator(\'button[type="submit"]\').click({ noWaitAfter: true });');
+    expect(badPassword).toContain('await invalidSubmit.click({ noWaitAfter: true });');
+    expect(validPassword).toContain('await validSubmit.click({ noWaitAfter: true });');
     expect(badPassword).not.toContain('force: true');
     expect(validPassword).not.toContain('force: true');
     expect(runner).not.toContain('.dispatchEvent(');
+    expect(badPassword).toContain("classifyRealSubmitFailure(invalidSubmit, 'invalid_password')");
+    expect(validPassword).toContain("classifyRealSubmitFailure(validSubmit, 'valid_password')");
+    expect(runner).toContain('async function classifyRealSubmitFailure(button, prefix)');
+    expect(runner).toContain('node.ownerDocument.elementFromPoint(');
+    const verifier = readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs', 'utf8');
+    for (const prefix of ['invalid_password', 'valid_password']) {
+      for (const suffix of ['missing_or_ambiguous', 'hidden', 'disabled', 'obscured', 'action_failed']) {
+        expect(verifier).toContain(prefix + '_submit_' + suffix);
+      }
+    }
     expect(badPassword).toContain('page.waitForResponse(');
     expect(badPassword).toContain("denialCode === 'invalid_credentials'");
     expect(validPassword).toContain("() => window.location.pathname !== '/en/login'");
