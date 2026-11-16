@@ -1052,7 +1052,7 @@ export async function verifySec01ClickCarry(index,{
      artifact?.expired||artifact?.digest!=='sha256:'+SEC01_CLICK_CARRY_DIGEST||
      ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
      !Array.isArray(reviews))return false;
-  const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|LOGIN HYDRATION QA FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+  const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|PLAYWRIGHT POINTER QA FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
   const approved=reviews.find(review=>review?.state==='APPROVED'&&
      review.user?.login===QUALIFIED_REVIEWER&&review.commit_id===pull.sha&&
      CUMULATIVE_LINES.every(line=>includesReviewLine(review.body,line))&&
