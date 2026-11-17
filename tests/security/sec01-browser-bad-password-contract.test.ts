@@ -45,7 +45,22 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(negative).toContain("'invalid_password_request_not_sent'");
     expect(negative).toContain("'invalid_password_request_failed'");
     expect(negative).toContain("denialCode === 'invalid_credentials'");
-    expect(negative).toContain("getByRole('alert').waitFor");
+    expect(negative).toContain("page.getByRole('alert').filter({ hasText: genericDenialText })");
+    expect(negative).toContain("await passwordDenial.waitFor({ state: 'visible', timeout: 30000 })");
+    expect(negative).toContain('denialVisible = await passwordDenial.count() === 1');
+    expect(negative).toContain("genericDenialText = 'Could not sign in. Check your details and try again.'");
+    expect(negative).toContain("failureDetail = 'invalid_password_ui_auth_pending'");
+    expect(negative).toContain("'invalid_password_ui_alert_text_mismatch'");
+    expect(negative).toContain("'invalid_password_ui_alert_ambiguous'");
+    expect(negative).toContain("throw new Error('invalid_password_ui_proof_missing')");
+    expect(negative).not.toContain("await page.getByRole('alert').waitFor");
+    expect(negative).not.toContain('force: true');
+    const copy = readFileSync('src/lib/i18n/commercial-surface-copy.ts', 'utf8');
+    expect(copy).toContain("failed: 'Could not sign in. Check your details and try again.'");
+    const verifier = readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs', 'utf8');
+    for (const suffix of ['unexpected_navigation','form_missing','auth_pending','alert_ambiguous','alert_hidden','alert_text_mismatch','alert_absent']) {
+      expect(verifier).toContain("'invalid_password_ui_" + suffix + "'");
+    }
     expect(negative).toContain('invalidPasswordCookies.length === 0');
     expect(negative).toContain('isLoginPath(page.url())');
   });
