@@ -1,14 +1,16 @@
 # RISCK COMPLY — Enterprise Sales Kit
 
-## Temporary assisted launch (18 November 2026)
+## Temporary assisted sales launch (20 November 2026)
 
-Until billing activation, contractual terms and production security checks are verified, public pricing CTAs for Essential and Professional send plan-specific requests to `/en/book-demo?plan=<plan>` instead of automatic signup. Existing prices, entitlements, Stripe configuration and private checkout routes remain unchanged. Business and Enterprise remain sales-led. This is not authorization to process live customer subscriptions or upload customer evidence before the minimum release criteria are met.
+Owner-approved marketing go-live target: **Friday 20 November 2026**, conditional on Vercel account recovery and public-route checks. During this temporary assisted-sales phase, public pricing CTAs for Essential and Professional request a plan-specific demonstration at `/{locale}/book-demo?plan=<plan>` instead of initiating automatic signup; Business and Enterprise remain sales-led. Canonical prices, entitlements, Stripe settings and private checkout routes are unchanged. The operating plan and go/no-go checklist are in [`ASSISTED_COMMERCIAL_LAUNCH_2026-11-20.md`](./ASSISTED_COMMERCIAL_LAUNCH_2026-11-20.md).
+
+Marketing lead capture and demonstrations are distinct from permission to sign binding SaaS contracts, take customer funds, onboard regulated/customer data or grant live production access. Production remains NO_GO until legal, tax/billing, security and release prerequisites are verified.
 
 This folder is the source of truth for GTM positioning, sales demos, discovery calls, outbound messaging, buyer enablement and enterprise FAQ responses.
 
 ## Commercial truth boundary
 
-As of **2026-09-24**, the canonical commercial motion is:
+The **2026-09-24 historical operating motion** (superseded for public acquisition by the temporary assisted-sales process described above) was:
 
 - Essential: €49/month, self-serve monthly checkout;
 - Professional: €149/month, self-serve monthly checkout;
@@ -18,7 +20,7 @@ As of **2026-09-24**, the canonical commercial motion is:
 - taxes/VAT are not represented as conclusively determined until the applicable customer/transaction treatment is established;
 - no legal, certification, audit or regulatory approval claim may exceed current Trust Center and signed-contract evidence.
 
-`enterprise-gtm-playbook.md`, `config/billing-commercial-catalog.json`, `docs/enterprise/ENTERPRISE_PRICING_AND_BILLING_ARCHITECTURE.md` and `src/lib/i18n/pricing-commercial-truth.ts` must remain aligned with this boundary.
+The billing catalogue remains the source of truth for prices and entitlements. For the temporary launch, `src/lib/i18n/pricing-commercial-truth.ts` is authoritative for the public assisted-sales CTA/FAQ override; do not read the historical 2026-09-24 self-serve statements as the currently enabled payment flow.
 
 ## Ready-to-use assets
 
