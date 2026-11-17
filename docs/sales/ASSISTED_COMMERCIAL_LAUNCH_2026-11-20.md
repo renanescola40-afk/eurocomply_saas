@@ -51,6 +51,68 @@ Canonical authority: `config/billing-commercial-catalog.json`; taxes depend on c
 
 **Stop before effective contract, funds, live data or activation** if legal identity/authority, terms/DPA, applicable CAE/activity status, VAT treatment, invoice capability, Stripe identity if used, live security/tenant boundaries, production release evidence, or operational support remain unresolved. A manual transfer or payment link does not bypass those checks.
 
+## 3A. Manual demo scheduling — owner-approved, no scheduling tools
+
+**Decision:** Every buyer demo is scheduled through `comercial@risckcomply.com`; there is no self-service calendar or automatic booked slot. The public form means **request a demo**, not **reserve an appointment**. The owner has confirmed they can send and receive email using this mailbox, but live form-to-mail delivery remains unverified.
+
+1. A visitor submits a request and receives an acknowledgement **only if** the deployed API successfully processes the request. The page must clearly disclose that no meeting was reserved.
+2. An operator reviews the lead for legitimate B2B interest, relevant business need, country, selected plan, and voluntary contact consent. Never assume a requested meeting has been confirmed.
+3. After manually checking real availability, the operator emails **two or three actual available 30-minute slots** with the date, year and explicit time zone (for example, `Europe/Lisbon`). For international buyers, ask for their location/time zone and use the corresponding local-time translation.
+4. The buyer replies with a slot; only then does the operator manually confirm the meeting and share the chosen meeting platform/link or dial-in. Do not invent a video link or claim to have sent a calendar invite.
+5. Record meeting outcome and the next action in the authorized internal Sales Console or another access-controlled business record. Do not create calendar entries, send emails or expose personal data in GitHub without explicit authorization.
+6. If a slot does not work, offer new actual availability; if declined, record an opt-out and stop direct marketing. Contact consent for a demonstration does **not** automatically authorize newsletters or unrelated marketing.
+
+### Template — First reply and availability (English)
+
+Subject: RISCK COMPLY — your demo request
+
+Hello [First name],
+
+Thank you for contacting RISCK COMPLY. I'd be happy to discuss your team's AI governance workflows in a brief 30-minute introductory meeting.
+
+I can offer the following times (all in [time zone, e.g. Europe/Lisbon]):
+- [Weekday, DD Month YYYY, HH:MM]
+- [Weekday, DD Month YYYY, HH:MM]
+- [Weekday, DD Month YYYY, HH:MM]
+
+Would one of these work, or would you prefer a different time zone? Once we agree on the time, I will confirm the meeting details.
+
+Best,  
+RISCK COMPLY  
+comercial@risckcomply.com
+
+### Template — Confirmed meeting (English)
+
+Subject: RISCK COMPLY — meeting confirmed for [date]
+
+Hello [First name],
+
+Confirmed: our 30-minute introductory call is scheduled for **[Weekday, DD Month YYYY, HH:MM, time zone]**.
+
+Meeting details: [manually created and verified meeting link or dial-in]
+
+We'll focus on your current AI-system inventory, ownership, risk review and evidence workflow. Please do not send sensitive documents or regulated customer records ahead of this introductory discussion.
+
+Best,  
+RISCK COMPLY  
+comercial@risckcomply.com
+
+### Template — Reschedule (English)
+
+Subject: RISCK COMPLY — rescheduling our conversation
+
+Hello [First name],
+
+Thanks for the update. No problem — we can reschedule.
+
+My next available options are [date and time, time zone] or [date and time, time zone]. Please let me know what works best and I will confirm the revised meeting details.
+
+Best,  
+RISCK COMPLY  
+comercial@risckcomply.com
+
+**Important:** Templates are ready for manual use; they are not proof that a message, invitation or demo was sent.
+
 ## 4. Copy-ready English outreach (manual approval required)
 
 **Subject:** AI inventory and evidence workflows at [Company]
@@ -90,6 +152,7 @@ comercial@risckcomply.com
 | Check | Current evidence/owner action | Status |
 | --- | --- | --- |
 | Mailing address sends/receives | Owner confirmed access; no app-driven delivery test | OWNER_CONFIRMED / RUNTIME_UNVERIFIED |
+| Manual 30-minute demo scheduling | Owner selected email-based availability and confirmation; customer-safe templates prepared | INTERNAL_PROCESS_PREPARED |
 | Sales playbook and qualifying flow | Documents and this runbook prepared | SOURCE_PREPARED |
 | Prices and customer-safe positioning | Canonical plans, no free-trial claim, no guaranteed AI Act compliance | SOURCE_PREPARED |
 | Plan-specific public CTAs | GitHub PR #2748, subject to checks and review | NOT_DEPLOYED |

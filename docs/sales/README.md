@@ -22,6 +22,10 @@ The **2026-09-24 historical operating motion** (superseded for public acquisitio
 
 The billing catalogue remains the source of truth for prices and entitlements. For the temporary launch, `src/lib/i18n/pricing-commercial-truth.ts` is authoritative for the public assisted-sales CTA/FAQ override; do not read the historical 2026-09-24 self-serve statements as the currently enabled payment flow.
 
+## Manual demos — Friday assisted launch
+
+The owner selected manual scheduling through `comercial@risckcomply.com`. A submitted demo form is **not** a confirmed appointment: the team proposes real availability by email, the buyer agrees to a slot, and only then is a meeting link/invitation confirmed. See [`ASSISTED_COMMERCIAL_LAUNCH_2026-11-20.md`](./ASSISTED_COMMERCIAL_LAUNCH_2026-11-20.md), section 3A, for the process and approved-to-draft English templates. No automated emails or calendar events have been sent.
+
 ## Ready-to-use assets
 
 1. [`enterprise-gtm-playbook.md`](./enterprise-gtm-playbook.md) — full GTM source of truth covering positioning, ICP, sector personas, pricing, checkout/demo motion, pricing copy, objections, FAQ, enterprise sales page, security questionnaire copy, demo script, outbound, LinkedIn, one-page deck, ROI calculator outline and procurement checklist.

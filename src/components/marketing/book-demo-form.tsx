@@ -91,7 +91,7 @@ export function BookDemoForm({ locale, planIntent }: BookDemoFormProps) {
 
       captureDemandEvent(analyticsEvents.demoSubmitted);
       setState('success');
-      setMessage('Demo request received. We will use your details to follow up with the next step.');
+      setMessage('Demo request received. Our commercial team will email you to agree a date and time. No meeting is booked yet.');
       form.reset();
     } catch (error) {
       setState('error');
@@ -187,8 +187,12 @@ export function BookDemoForm({ locale, planIntent }: BookDemoFormProps) {
         disabled={!hydrated || state === 'submitting'}
         className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-7 py-4 text-base font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {!hydrated ? 'Preparing secure form...' : state === 'submitting' ? 'Submitting...' : 'Book demo'}
+        {!hydrated ? 'Preparing secure form...' : state === 'submitting' ? 'Submitting...' : 'Request a demo'}
       </button>
+
+      <p className="mt-3 text-center text-xs leading-5 text-white/45">
+        We reply by email to arrange a mutually agreed time. Sending this request does not confirm a booking.
+      </p>
 
       {message ? (
         <p className={`mt-4 rounded-lg border px-4 py-3 text-sm ${state === 'success' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100' : 'border-red-400/30 bg-red-400/10 text-red-100'}`} aria-live="polite">
