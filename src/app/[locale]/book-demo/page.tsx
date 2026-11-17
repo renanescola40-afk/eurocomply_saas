@@ -9,6 +9,7 @@ import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ plan?: string | string[] }>;
 };
 
 type Outcome = [string, string, typeof Building2];
@@ -24,7 +25,7 @@ const agenda = [
   '3 min — trigger: buyer review, board request, audit prep or AI policy rollout',
   '7 min — current AI workflow and evidence mapping',
   '12 min — RISCK COMPLY walkthrough: inventory, risk, policies and evidence',
-  '5 min — commercial fit: self-service checkout, Business-assisted motion or Enterprise review',
+  '5 min — commercial fit: assisted onboarding, plan selection and procurement review',
   '3 min — next step and procurement blockers',
 ];
 
@@ -44,9 +45,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 }
 
-export default async function BookDemoPage({ params }: PageProps) {
+export default async function BookDemoPage({ params, searchParams }: PageProps) {
   const { locale: requestedLocale } = await params;
   const locale = resolveLocale(requestedLocale);
+  const query = searchParams ? await searchParams : {};
+  const planIntent = typeof query.plan === 'string' && /^(essential|professional|business|enterprise)$/.test(query.plan)
+    ? (query.plan as 'essential' | 'professional' | 'business' | 'enterprise')
+    : undefined;
 
   return (
     <main className="min-h-screen bg-[#050913] text-white">
@@ -94,7 +99,7 @@ export default async function BookDemoPage({ params }: PageProps) {
           </div>
         </div>
 
-        <BookDemoForm locale={locale} />
+        <BookDemoForm locale={locale} planIntent={planIntent} />
         </div>
       </section>
 

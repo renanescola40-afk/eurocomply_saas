@@ -9,6 +9,7 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
 type BookDemoFormProps = {
   locale: string;
+  planIntent?: 'essential' | 'professional' | 'business' | 'enterprise';
 };
 
 const complianceOptions = [
@@ -28,7 +29,7 @@ const subscribeHydration = () => () => {};
 const clientHydrated = () => true;
 const serverHydrated = () => false;
 
-export function BookDemoForm({ locale }: BookDemoFormProps) {
+export function BookDemoForm({ locale, planIntent }: BookDemoFormProps) {
   const [state, setState] = useState<SubmitState>('idle');
   const hydrated = useSyncExternalStore(subscribeHydration, clientHydrated, serverHydrated);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export function BookDemoForm({ locale }: BookDemoFormProps) {
       currentProcess: String(formData.get('currentProcess') || ''),
       message: String(formData.get('message') || ''),
       consentToContact: formData.get('consentToContact') === 'on',
-      source: 'book-demo-page',
+      source: planIntent ? `contact-sales-${planIntent}` : 'book-demo-page',
       locale,
     };
 

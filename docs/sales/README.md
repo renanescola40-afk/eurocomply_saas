@@ -1,5 +1,9 @@
 # RISCK COMPLY — Enterprise Sales Kit
 
+## Temporary assisted launch (18 November 2026)
+
+Until billing activation, contractual terms and production security checks are verified, public pricing CTAs for Essential and Professional send plan-specific requests to `/en/book-demo?plan=<plan>` instead of automatic signup. Existing prices, entitlements, Stripe configuration and private checkout routes remain unchanged. Business and Enterprise remain sales-led. This is not authorization to process live customer subscriptions or upload customer evidence before the minimum release criteria are met.
+
 This folder is the source of truth for GTM positioning, sales demos, discovery calls, outbound messaging, buyer enablement and enterprise FAQ responses.
 
 ## Commercial truth boundary

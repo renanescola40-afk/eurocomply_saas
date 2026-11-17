@@ -16,8 +16,8 @@ describe('RISCK COMPLY commercial UI V2 consistency', () => {
     expect(source).toContain('PricingStructuredData');
     expect(source).toContain('planHref(locale, plan)');
     expect(source).toContain("if (plan.id === 'enterprise') return `/${locale}/enterprise`");
-    expect(source).toContain("if (plan.salesLed) return `/${locale}/book-demo?plan=${publicSlug}`");
-    expect(source).toContain("return `/${locale}/signup?plan=${publicSlug}`");
+    expect(source).toContain("return `/${locale}/book-demo?plan=${publicSlug}`");
+    expect(source).not.toContain("return `/${locale}/signup?plan=${publicSlug}`");
     expect(source).toContain('/brand/risck-comply-wordmark.svg');
     expect(source).toContain('bg-[#050913]');
     expect(source).toContain('bg-blue-600');
@@ -46,7 +46,8 @@ describe('RISCK COMPLY commercial UI V2 consistency', () => {
   it('keeps demo demand capture and analytics while aligning page and form to graphite/cobalt', async () => {
     const [page, form] = await Promise.all([readFile(BOOK_DEMO_PAGE, 'utf8'), readFile(BOOK_DEMO_FORM, 'utf8')]);
 
-    expect(page).toContain('<BookDemoForm locale={locale} />');
+    expect(page).toContain('<BookDemoForm locale={locale} planIntent={planIntent} />');
+    expect(form).toContain('contact-sales-${planIntent}');
     expect(page).toContain('/brand/risck-comply-wordmark.svg');
     expect(page).toContain('bg-[#050913]');
     expect(page).not.toContain('radial-gradient');
