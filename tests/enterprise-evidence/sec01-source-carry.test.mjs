@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
-import {sec01SourceCarryIntegrity,sec01QaBrowserCarryIntegrity,sec01LoginCarryIntegrity,sec01HydrationCarryIntegrity,sec01ClickCarryIntegrity,sec01ProfileCarryIntegrity,sec01ConsentCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import {sec01SourceCarryIntegrity,sec01QaBrowserCarryIntegrity,sec01LoginCarryIntegrity,sec01HydrationCarryIntegrity,sec01ClickCarryIntegrity,sec01ProfileCarryIntegrity,sec01ConsentCarryIntegrity,sec01AlertCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 
 const indexPath='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
 const proofs=[
@@ -790,6 +790,105 @@ test('PR #2746 exact candidate dry-run preserves four gates but cannot accept SE
  // A synthetic object ONLY for local reconciliation; native review is mandatory.
  const hypothetical={consentCarry:true,
   approvalUrl:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2746#pullrequestreview-999999',
+  acceptedAt:new Date().toISOString()};
+ const r=reconcile({scope,gates,index,expectedSha:sha,cumulativeReview:hypothetical});
+ assert.deepEqual(r.errors,[]);
+ assert.equal(r.valid,true);
+ assert.equal(r.summary.gates_accepted,4);
+ assert.equal(r.summary.controls_pass,4);
+ assert.equal(r.controls.find(x=>x.control_id==='SEC-01')?.status,'NOT_VERIFIED');
+ assert.equal(r.gates.find(x=>x.gate_id==='A-01')?.accepted,false);
+});
+test('PR #2747 consent-dialog carry allows exactly five SEC-01 proof files and frozen four-gate acceptance',()=>{
+ const root=mkdtempSync(join(tmpdir(),'risck-sec01-consent-carry-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
+ const put=(p,s)=>{const target=join(root,p);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,s);};
+ const commit=msg=>{git('add','.');git('commit','-qm',msg);return git('rev-parse','HEAD');};
+ const files=[
+  'scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs',
+  'scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs',
+  'tests/security/sec01-browser-bad-password-contract.test.ts',
+  'scripts/enterprise-evidence/validate-evidence.mjs',
+  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
+ ];
+ try{
+  git('init','-q');
+  git('config','user.email','synthetic@example.invalid');
+  git('config','user.name','Synthetic independent QA');
+  const index={
+   cumulative_acceptance:{schema:'risck-comply.a15-cumulative-acceptance.v1'},
+   gates:['A-09','A-15','A-18','A-19'].map(gate_id=>({
+    gate_id,accepted:gate_id!=='A-19',
+    acceptance_evidence_ref:gate_id==='A-15'?proofs[1]:
+      gate_id==='A-19'?proofs[2]:proofs[0],
+   })),
+   evidence_records:[{status:'PASS',artifact_path:proofs[1]}],
+  };
+  put(indexPath,JSON.stringify(index));
+  for(const p of proofs)put(p,'immutable qualified security acceptance proof '+p);
+  const checkpoint=commit('immutable prior main four-gate evidence');
+  const options={root,checkpoint};
+  assert.equal(sec01AlertCarryIntegrity(index,{...options,expectedSha:checkpoint}),false);
+  for(const p of files)put(p,'SEC-01 reviewed password-alert source QA code '+p);
+  const current=commit('five file SEC-01 password alert QA verification');
+  assert.equal(sec01AlertCarryIntegrity(index,{...options,expectedSha:current}),true);
+  assert.equal(sec01AlertCarryIntegrity({...index,gates:[]},{...options,expectedSha:current}),false);
+  assert.equal(sec01AlertCarryIntegrity({
+   ...index,gates:index.gates.map(g=>g.gate_id==='A-15'?{...g,accepted:false}:g),
+  },{...options,expectedSha:current}),false);
+  git('reset','--hard',checkpoint);
+  for(const p of files.filter(p=>p!=='tests/security/sec01-browser-bad-password-contract.test.ts')){
+   put(p,'incomplete QA change '+p);
+  }
+  const omitted=commit('missing fail-closed regression');
+  assert.equal(sec01AlertCarryIntegrity(index,{...options,expectedSha:omitted}),false);
+  const tamper=[
+   ['.github/workflows/enterprise-evidence-tests.yml','remove mandatory reviewer'],
+   ['src/app/api/stripe/webhook/route.ts','unreviewed payment code'],
+   ['src/server/security/api-guards.ts','unreviewed backend auth change'],
+   [proofs[0],'forged accepted gate proof'],
+   [indexPath,'{"accepted":true,"faked":true}'],
+  ];
+  for(const [path,change] of tamper){
+   git('reset','--hard',current);
+   put(path,change);
+   const attempt=commit('unrelated or forged source');
+   assert.equal(sec01AlertCarryIntegrity(index,{...options,expectedSha:attempt}),false,path);
+  }
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('PR #2747 password alert QA carry requires authentic accepted main and exact-SHA qualified reviewer',()=>{
+ const s=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
+ for(const line of [
+  "SEC01_ALERT_CARRY_PR=2747",
+  "SEC01_ALERT_CARRY_BASE='0e49de5244efd631983d9d78654b20f22dcc6122'",
+  "SEC01_ALERT_CARRY_RUN=43985069702",
+  "SEC01_ALERT_CARRY_ARTIFACT=14284442862",
+  "SEC01_ALERT_CARRY_DIGEST='096553d9c6c9798e50d0d38e45cf375159889d32e0577a2214c506b82d6b7c11'",
+  "artifact?.digest!=='sha256:'+SEC01_ALERT_CARRY_DIGEST",
+  "ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'",
+  "CUMULATIVE_LINES.every(line=>includesReviewLine(review.body,line))",
+  "includesReviewLine(review.body,SEC01_ALERT_CARRY_REVIEW)",
+  "review.commit_id===pull.sha",
+  "decisionWithdrawn(reviews,review,pull,rejection)",
+  "verifyQat01AfterProviderSettles({sha:pull.sha,token,request})",
+  "return verifySec01AlertCarry(index,{expectedSha,prNumber,token,request,root})",
+ ])assert.ok(s.includes(line),'Missing fail-closed source guard: '+line);
+});
+
+test('PR #2747 exact candidate dry-run preserves four gates but cannot accept SEC-01',()=>{
+ if(process.env.EVIDENCE_PR_NUMBER!=='2747')return;
+ const sha=process.env.EVIDENCE_EXACT_SHA;
+ assert.match(sha??'',/^[a-f0-9]{40}$/);
+ assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sha);
+ const index=JSON.parse(readFileSync(indexPath,'utf8'));
+ assert.equal(sec01AlertCarryIntegrity(index,{expectedSha:sha}),true);
+ const scope=JSON.parse(readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ // A synthetic object ONLY for local reconciliation; native review is mandatory.
+ const hypothetical={alertCarry:true,
+  approvalUrl:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2747#pullrequestreview-999999',
   acceptedAt:new Date().toISOString()};
  const r=reconcile({scope,gates,index,expectedSha:sha,cumulativeReview:hypothetical});
  assert.deepEqual(r.errors,[]);
