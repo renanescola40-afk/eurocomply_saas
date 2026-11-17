@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,join} from 'node:path';
-import {sec01SourceCarryIntegrity,sec01QaBrowserCarryIntegrity,sec01LoginCarryIntegrity,sec01HydrationCarryIntegrity,sec01ClickCarryIntegrity,sec01ProfileCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
+import {sec01SourceCarryIntegrity,sec01QaBrowserCarryIntegrity,sec01LoginCarryIntegrity,sec01HydrationCarryIntegrity,sec01ClickCarryIntegrity,sec01ProfileCarryIntegrity,sec01ConsentCarryIntegrity,reconcile,verifyQat01AfterProviderSettles} from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 
 const indexPath='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
 const proofs=[
@@ -697,4 +697,105 @@ test('PR #2744 exact-head dry-run can preserve only the previous four gates (nev
   assert.equal(report.gates.find(row=>row.gate_id===id)?.accepted,true);
  }
  assert.equal(report.controls.find(row=>row.control_id==='SEC-01')?.status,'NOT_VERIFIED');
+});
+
+
+test('PR #2746 consent-dialog carry allows exactly five SEC-01 proof files and frozen four-gate acceptance',()=>{
+ const root=mkdtempSync(join(tmpdir(),'risck-sec01-consent-carry-'));
+ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
+ const put=(p,s)=>{const target=join(root,p);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,s);};
+ const commit=msg=>{git('add','.');git('commit','-qm',msg);return git('rev-parse','HEAD');};
+ const files=[
+  'scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs',
+  'scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs',
+  'tests/security/sec01-browser-bad-password-contract.test.ts',
+  'scripts/enterprise-evidence/validate-evidence.mjs',
+  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
+ ];
+ try{
+  git('init','-q');
+  git('config','user.email','synthetic@example.invalid');
+  git('config','user.name','Synthetic independent QA');
+  const index={
+   cumulative_acceptance:{schema:'risck-comply.a15-cumulative-acceptance.v1'},
+   gates:['A-09','A-15','A-18','A-19'].map(gate_id=>({
+    gate_id,accepted:gate_id!=='A-19',
+    acceptance_evidence_ref:gate_id==='A-15'?proofs[1]:
+      gate_id==='A-19'?proofs[2]:proofs[0],
+   })),
+   evidence_records:[{status:'PASS',artifact_path:proofs[1]}],
+  };
+  put(indexPath,JSON.stringify(index));
+  for(const p of proofs)put(p,'immutable qualified security acceptance proof '+p);
+  const checkpoint=commit('immutable prior main four-gate evidence');
+  const options={root,checkpoint};
+  assert.equal(sec01ConsentCarryIntegrity(index,{...options,expectedSha:checkpoint}),false);
+  for(const p of files)put(p,'SEC-01 reviewed consent QA code '+p);
+  const current=commit('five file SEC-01 consent QA correction');
+  assert.equal(sec01ConsentCarryIntegrity(index,{...options,expectedSha:current}),true);
+  assert.equal(sec01ConsentCarryIntegrity({...index,gates:[]},{...options,expectedSha:current}),false);
+  assert.equal(sec01ConsentCarryIntegrity({
+   ...index,gates:index.gates.map(g=>g.gate_id==='A-15'?{...g,accepted:false}:g),
+  },{...options,expectedSha:current}),false);
+  git('reset','--hard',checkpoint);
+  for(const p of files.filter(p=>p!=='tests/security/sec01-browser-bad-password-contract.test.ts')){
+   put(p,'incomplete QA change '+p);
+  }
+  const omitted=commit('missing fail-closed regression');
+  assert.equal(sec01ConsentCarryIntegrity(index,{...options,expectedSha:omitted}),false);
+  const tamper=[
+   ['.github/workflows/enterprise-evidence-tests.yml','remove mandatory reviewer'],
+   ['src/app/api/stripe/webhook/route.ts','unreviewed payment code'],
+   ['src/server/security/api-guards.ts','unreviewed backend auth change'],
+   [proofs[0],'forged accepted gate proof'],
+   [indexPath,'{"accepted":true,"faked":true}'],
+  ];
+  for(const [path,change] of tamper){
+   git('reset','--hard',current);
+   put(path,change);
+   const attempt=commit('unrelated or forged source');
+   assert.equal(sec01ConsentCarryIntegrity(index,{...options,expectedSha:attempt}),false,path);
+  }
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('PR #2746 consent QA carry requires authentic accepted main and exact-SHA qualified reviewer',()=>{
+ const s=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
+ for(const line of [
+  "SEC01_CONSENT_CARRY_PR=2746",
+  "SEC01_CONSENT_CARRY_BASE='af109b20839c62ca0bf9cd24ac99dc33a41b98f5'",
+  "SEC01_CONSENT_CARRY_RUN=43975605464",
+  "SEC01_CONSENT_CARRY_ARTIFACT=14280608301",
+  "SEC01_CONSENT_CARRY_DIGEST='656734f674f91bf120e37a7e8b18cd3aca5ee48542336249e3666b3e518d4e23'",
+  "artifact?.digest!=='sha256:'+SEC01_CONSENT_CARRY_DIGEST",
+  "ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'",
+  "CUMULATIVE_LINES.every(line=>includesReviewLine(review.body,line))",
+  "includesReviewLine(review.body,SEC01_CONSENT_CARRY_REVIEW)",
+  "review.commit_id===pull.sha",
+  "decisionWithdrawn(reviews,review,pull,rejection)",
+  "verifyQat01AfterProviderSettles({sha:pull.sha,token,request})",
+  "return verifySec01ConsentCarry(index,{expectedSha,prNumber,token,request,root})",
+ ])assert.ok(s.includes(line),'Missing fail-closed source guard: '+line);
+});
+
+test('PR #2746 exact candidate dry-run preserves four gates but cannot accept SEC-01',()=>{
+ if(process.env.EVIDENCE_PR_NUMBER!=='2746')return;
+ const sha=process.env.EVIDENCE_EXACT_SHA;
+ assert.match(sha??'',/^[a-f0-9]{40}$/);
+ assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sha);
+ const index=JSON.parse(readFileSync(indexPath,'utf8'));
+ assert.equal(sec01ConsentCarryIntegrity(index,{expectedSha:sha}),true);
+ const scope=JSON.parse(readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ // A synthetic object ONLY for local reconciliation; native review is mandatory.
+ const hypothetical={consentCarry:true,
+  approvalUrl:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2746#pullrequestreview-999999',
+  acceptedAt:new Date().toISOString()};
+ const r=reconcile({scope,gates,index,expectedSha:sha,cumulativeReview:hypothetical});
+ assert.deepEqual(r.errors,[]);
+ assert.equal(r.valid,true);
+ assert.equal(r.summary.gates_accepted,4);
+ assert.equal(r.summary.controls_pass,4);
+ assert.equal(r.controls.find(x=>x.control_id==='SEC-01')?.status,'NOT_VERIFIED');
+ assert.equal(r.gates.find(x=>x.gate_id==='A-01')?.accepted,false);
 });
