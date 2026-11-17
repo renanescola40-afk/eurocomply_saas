@@ -161,7 +161,10 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(runner).toContain('passwordForm.locator(\'input[type="email"]\').fill(email)');
     expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password + \'wrong\')');
     expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password)');
-    expect(runner.match(/passwordForm\.locator\(/g)).toHaveLength(5);
+    // Five original credential/submit actions plus one read-only disabled
+    // state check for sanitized post-denial diagnostics.
+    expect(runner.match(/passwordForm\.locator\(/g)).toHaveLength(6);
+    expect(runner).toContain("await passwordForm.locator('button[type=\"submit\"]').isDisabled()");
     expect(runner).not.toContain("page.locator('form input[type=");
     expect(runner).not.toContain("page.locator('form button[type=");
     expect(runner).toContain("failureDetail = 'password_form_email_input_unavailable'");
