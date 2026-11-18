@@ -79,3 +79,30 @@ test('review contract refuses empty, wrong SHA, wrong reviewer and unauthenticat
  assert.match(source,/artifact\?\.digest!=='sha256:'\+SEC01_ALERT_CARRY_DIGEST/);
  assert.match(source,/verifyAssistedCarry\(index,\{expectedSha,prNumber,token,request,root\}\)/);
 });
+
+
+test('real PR #2748 source carry reconciliation retains exactly four previously accepted gates (simulation only)',()=>{
+ if(process.env.EVIDENCE_PR_NUMBER!=='2748')return;
+ const sha=process.env.EVIDENCE_EXACT_SHA;
+ assert.match(sha??'',/^[a-f0-9]{40}$/);
+ assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sha);
+ const index=JSON.parse(readFileSync(INDEX,'utf8'));
+ assert.equal(validator.assistedCarryIntegrity(index,{expectedSha:sha}),true);
+ const scope=JSON.parse(readFileSync('config/g1-enterprise-scope-v1.json','utf8'));
+ const gates=JSON.parse(readFileSync('config/g1-product-ready-24-gates.json','utf8'));
+ // Synthetic local reconciliation only; does not generate a provider approval.
+ const hypothetical={
+  assistedCarry:true,
+  approvalUrl:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2748#pullrequestreview-999999',
+  acceptedAt:new Date().toISOString(),
+ };
+ const result=validator.reconcile({scope,gates,index,expectedSha:sha,cumulativeReview:hypothetical});
+ assert.deepEqual(result.errors,[]);
+ assert.equal(result.valid,true);
+ assert.equal(result.summary.gates_accepted,4);
+ assert.equal(result.summary.controls_pass,4);
+ for(const id of ['A-09','A-15','A-18','A-19']){
+  assert.equal(result.gates.find(g=>g.gate_id===id)?.accepted,true,id);
+ }
+ assert.equal(result.gates.find(g=>g.gate_id==='A-01')?.accepted,false);
+});

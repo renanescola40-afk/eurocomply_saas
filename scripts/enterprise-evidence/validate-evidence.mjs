@@ -1722,7 +1722,7 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    eligible:eligible&&status===computed,
    expectedSha:carry&&gate.id==='A-19'?claim.acceptance_sha:
     carry&&['A-09','A-18'].includes(gate.id)?CUMULATIVE_CHECKPOINT:
-    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
+    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||assistedCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
    providerApproved:carry&&CUMULATIVE_GATES.includes(gate.id)||
     (gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved),
   });
