@@ -65,7 +65,7 @@ test('assisted commercial carry allows only its reviewed source and immutable hi
   write(INDEX,JSON.stringify({...index,source:{...index.source,commit_sha:'a'.repeat(40)}}));
   git('add','.');git('commit','-qm','tampered ledger');
   assert.equal(validator.assistedCarryIntegrity(index,{...options,expectedSha:git('rev-parse','HEAD')}),false);
- }finally{rmSync(root,{recursive:true,force:true})}
+ }finally{rmSync(root,{recursive:true,force:true});}
 });
 test('review contract refuses empty, wrong SHA, wrong reviewer and unauthenticated decisions',()=>{
  const source=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
