@@ -38,6 +38,29 @@ describe('team member role route security contract', () => {
     expect(lookupSource).toContain(".eq('organization_id', organization.id)");
   });
 
+
+  it('models nullable Clerk user IDs and preserves all authorization checks before fail-closed role review', () => {
+    expect(routeSource).toContain('user_id: string | null;');
+    expect(routeSource).toContain("error: 'clerk_only_role_change_requires_review'");
+
+    const permission = routeSource.indexOf('const permission = await requirePermission({');
+    const stepUp = routeSource.indexOf('const stepUp = await requireStepUpForRequest({');
+    const tenantLookup = routeSource.indexOf(".eq('organization_id', organization.id)");
+    const noOp = routeSource.indexOf('if (previousRole === nextRole)');
+    const ownerGuard = routeSource.indexOf("if ((previousRole === 'owner' || nextRole === 'owner')");
+    const clerkGuard = routeSource.indexOf('if (!member.user_id) {');
+    const auditedRpc = routeSource.indexOf('changeMemberRoleWithChainedAuditAtomic({');
+
+    expect(permission).toBeGreaterThan(-1);
+    expect(stepUp).toBeGreaterThan(permission);
+    expect(tenantLookup).toBeGreaterThan(stepUp);
+    expect(noOp).toBeGreaterThan(tenantLookup);
+    expect(ownerGuard).toBeGreaterThan(noOp);
+    expect(clerkGuard).toBeGreaterThan(ownerGuard);
+    expect(auditedRpc).toBeGreaterThan(clerkGuard);
+    expect(routeSource).toContain('expectedUserId: member.user_id');
+  });
+
   it('delegates the transition and audit to one backend-only transaction using expected identity', () => {
     expect(routeSource).toContain('changeMemberRoleWithChainedAuditAtomic({');
     expect(routeSource).toContain('organizationId: organization.id');

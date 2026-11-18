@@ -196,4 +196,77 @@ describe('single-transaction audited team member role API (mocked, not PostgreSQ
     expect(response.status).toBe(403);
     expect(mocks.auditedAtomic).not.toHaveBeenCalled();
   });
+
+  it('returns a review conflict for a changed Clerk-only role without calling the audited RPC', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: { ...member(), user_id: null }, error: null });
+
+    const response = await POST(buildRequest('admin'));
+
+    expect(response.status).toBe(409);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(await response.json()).toEqual({ error: 'clerk_only_role_change_requires_review' });
+    expect(mocks.requireApiUser).toHaveBeenCalledOnce();
+    expect(mocks.requirePermission).toHaveBeenCalledOnce();
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledOnce();
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
+  it('keeps owner-only authorization ahead of the Clerk-only review conflict', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: { ...member('owner'), user_id: null }, error: null });
+    mocks.requirePermission.mockResolvedValue({ role: 'admin' });
+
+    const response = await POST(buildRequest('member'));
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      error: 'owner_role_change_requires_owner',
+      message: 'Only organization owners can grant or remove owner access.',
+    });
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
+  it('returns a review conflict when an authorized owner tries to demote a Clerk-only owner', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: { ...member('owner'), user_id: null }, error: null });
+
+    const response = await POST(buildRequest('member'));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'clerk_only_role_change_requires_review' });
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
+  it('preserves the unchanged-role no-op for Clerk-only members', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: { ...member(), user_id: null }, error: null });
+
+    const response = await POST(buildRequest('member'));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ changed: false, role: 'member' });
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
+  it('requires step-up before querying even a Clerk-only member', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: { ...member(), user_id: null }, error: null });
+    mocks.requireStepUpForRequest.mockResolvedValue({
+      ok: false,
+      response: new Response(JSON.stringify({ error: 'step_up_required' }), { status: 403 }),
+    });
+
+    const response = await POST(buildRequest('admin'));
+
+    expect(response.status).toBe(403);
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
+  it('does not bypass the own-organization membership lookup for Clerk-only targets', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const response = await POST(buildRequest('admin'));
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'team_member_not_found' });
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
 });

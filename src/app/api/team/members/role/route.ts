@@ -16,7 +16,7 @@ const roleChangeSchema = z.object({
 type OrganizationMemberRecord = {
   id: string;
   organization_id: string;
-  user_id: string;
+  user_id: string | null;
   role: string | null;
 };
 
@@ -116,6 +116,12 @@ export async function POST(request: Request) {
         { error: 'owner_role_change_requires_owner', message: 'Only organization owners can grant or remove owner access.' },
         { status: 403 },
       );
+    }
+
+    // Clerk-only memberships have no Supabase user_id for the audited role-change RPC.
+    // Keep permission, step-up, same-role, and owner-only checks above this guard.
+    if (!member.user_id) {
+      return noStoreJson({ error: 'clerk_only_role_change_requires_review' }, { status: 409 });
     }
 
     const { row: transition, error: transitionError } = await changeMemberRoleWithChainedAuditAtomic({
