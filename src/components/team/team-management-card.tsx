@@ -77,7 +77,8 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
               <tbody className="divide-y divide-slate-800/80">
                 {members.map((member) => {
                   const isCurrentUser = member.user_id === currentUserId;
-                  const canRemove = Boolean(onRemoveMember) && !isCurrentUser;
+                  const needsIdentityReview = !member.user_id;
+                  const canRemove = Boolean(onRemoveMember) && !isCurrentUser && !needsIdentityReview;
                   const displayName = member.profiles?.full_name || (isCurrentUser ? copy.you : copy.member);
                   return (
                     <tr key={member.id} className="bg-[#0b121e] transition hover:bg-[#0e1827]">
@@ -90,7 +91,13 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
                       </td>
                       <td className="px-4 py-4 font-mono text-[11px] tabular-nums text-slate-500">{formatDate(member.created_at, locale)}</td>
                       <td className="px-5 py-4 text-right sm:px-6">
-                        {canRemove && onRemoveMember ? <TeamActionButton message={copy.removeConfirm(displayName)} onConfirm={() => onRemoveMember(member.id)}>{copy.remove}</TeamActionButton> : <span className="text-xs text-slate-700">—</span>}
+                        {needsIdentityReview ? (
+                          <span role="status" className="text-xs text-amber-300" title="Contact support to review this member's identity before removing access.">Identity review required</span>
+                        ) : canRemove && onRemoveMember ? (
+                          <TeamActionButton message={copy.removeConfirm(displayName)} onConfirm={() => onRemoveMember(member.id)}>{copy.remove}</TeamActionButton>
+                        ) : (
+                          <span className="text-xs text-slate-700">—</span>
+                        )}
                       </td>
                     </tr>
                   );

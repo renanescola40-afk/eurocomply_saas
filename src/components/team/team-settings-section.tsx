@@ -36,9 +36,15 @@ const INVITE_BLOCKED_COPY = {
   action: 'Review billing and capacity',
 };
 
+const TEAM_IDENTITY_ERROR_COPY: Record<string, string> = {
+  clerk_only_removal_requires_review: 'This member cannot be removed until their identity has been reviewed. Contact support.',
+  clerk_only_role_change_requires_review: 'This member cannot change roles until their identity has been reviewed. Contact support.',
+};
+
 async function parseError(response: Response, fallback: string) {
-  const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
-  return body.message ?? body.error ?? fallback;
+  const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string } | null;
+  const identityReviewCopy = body?.error ? TEAM_IDENTITY_ERROR_COPY[body.error] : undefined;
+  return identityReviewCopy ?? body?.message ?? body?.error ?? fallback;
 }
 
 function toApiInviteRole(role: InviteMemberInput['role']) {
