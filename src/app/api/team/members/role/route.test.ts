@@ -59,11 +59,11 @@ function buildRequest(role: Role, memberId = MEMBER_B) {
 }
 
 function member(role: string | null = 'member') {
-  return { id: MEMBER_B, organization_id: ORGANIZATION_A, user_id: USER_B, role };
+  return { id: MEMBER_B, organization_id: ORGANIZATION_A, user_id: USER_B, role, status: 'active' };
 }
 
 function auditedResult(
-  outcome: 'changed' | 'last_owner' | 'state_changed' | 'permission_denied',
+  outcome: 'changed' | 'last_owner' | 'state_changed' | 'permission_denied' | 'member_inactive',
   previousRole = 'member',
   appliedRole: string | null = 'admin',
 ) {
@@ -129,6 +129,30 @@ describe('single-transaction audited team member role API (mocked, not PostgreSQ
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: 'team_member_not_found' });
     expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
+
+  it.each(['suspended', 'deprovisioned'])('rejects an inactive %s membership before audited RPC', async (status) => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: { ...member(), status }, error: null });
+    const response = await POST(buildRequest('admin'));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: 'team_member_inactive' });
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when a member status value is missing', async () => {
+    mocks.memberMaybeSingle.mockResolvedValue({ data: { ...member(), status: null }, error: null });
+    const response = await POST(buildRequest('admin'));
+    expect(response.status).toBe(409);
+    expect(mocks.auditedAtomic).not.toHaveBeenCalled();
+  });
+
+  it('maps atomic row-lock status rejection to HTTP conflict', async () => {
+    mocks.auditedAtomic.mockResolvedValue(auditedResult('member_inactive', 'member', null));
+    const response = await POST(buildRequest('admin'));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: 'team_member_inactive' });
+    expect(mocks.auditedAtomic).toHaveBeenCalledOnce();
   });
 
   it('returns success only for the signed audited-atomic changed outcome', async () => {

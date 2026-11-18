@@ -18,6 +18,7 @@ type OrganizationMemberRecord = {
   organization_id: string;
   user_id: string | null;
   role: string | null;
+  status: string | null;
 };
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
     const supabase = createAdminClient();
     const { data: memberData, error: memberError } = await supabase
       .from('organization_members')
-      .select('id,user_id,role,organization_id')
+      .select('id,user_id,role,status,organization_id')
       .eq('id', parsed.data.memberId)
       .eq('organization_id', organization.id)
       .maybeSingle();
@@ -95,6 +96,14 @@ export async function POST(request: Request) {
 
     if (!member) {
       return noStoreJson({ error: 'team_member_not_found' }, { status: 404 });
+    }
+
+    // Defense in depth: the atomic RPC also enforces status under row lock.
+    if (member.status !== 'active') {
+      return noStoreJson(
+        { error: 'team_member_inactive', message: 'Role changes require an active membership.' },
+        { status: 409 },
+      );
     }
 
     if (member.user_id === user.id) {
@@ -185,6 +194,13 @@ export async function POST(request: Request) {
 
     if (transition.outcome === 'state_changed') {
       return noStoreJson({ error: 'team_member_state_changed' }, { status: 409 });
+    }
+
+    if (transition.outcome === 'member_inactive') {
+      return noStoreJson(
+        { error: 'team_member_inactive', message: 'Role changes require an active membership.' },
+        { status: 409 },
+      );
     }
 
     if (transition.outcome === 'unchanged') {

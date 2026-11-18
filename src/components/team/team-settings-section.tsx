@@ -10,7 +10,7 @@ import { InviteMemberForm, type InviteMemberInput } from './invite-member-form';
 import { TeamManagementCard } from './team-management-card';
 import type { TeamRole } from './team-member-role-editor';
 
-type TeamMember = { id: string; role: string; user_id?: string | null; created_at?: string | null };
+type TeamMember = { id: string; role: string; status?: string | null; user_id?: string | null; created_at?: string | null };
 type PendingInvitation = { id: string; email: string; role: string; created_at?: string | null; expires_at?: string | null };
 type InviteBlockReason = 'plan' | 'capacity' | null;
 

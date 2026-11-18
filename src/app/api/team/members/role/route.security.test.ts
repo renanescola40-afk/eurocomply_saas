@@ -3,6 +3,11 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const routeSource = readFileSync(join(process.cwd(), 'src/app/api/team/members/role/route.ts'), 'utf8');
+const inactiveRoleMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261118230000_block_inactive_member_role_changes.sql'),
+  'utf8',
+);
+
 const migrationSource = readFileSync(
   join(process.cwd(), 'supabase/migrations/20260715113500_atomic_team_member_role_transition.sql'),
   'utf8',
@@ -59,6 +64,30 @@ describe('team member role route security contract', () => {
     expect(clerkGuard).toBeGreaterThan(ownerGuard);
     expect(auditedRpc).toBeGreaterThan(clerkGuard);
     expect(routeSource).toContain('expectedUserId: member.user_id');
+  });
+
+
+  it('enforces target status under row lock and preserves the internal RPC ACL', () => {
+    const lock = inactiveRoleMigration.indexOf('select member.* into v_member');
+    const missing = inactiveRoleMigration.indexOf('if not found then', lock);
+    const guard = inactiveRoleMigration.indexOf("if v_member.status is distinct from 'active' then");
+    const role = inactiveRoleMigration.indexOf("if lower(coalesce(v_member.role, '')) is distinct from v_expected_role then");
+    expect(lock).toBeGreaterThan(-1);
+    expect(missing).toBeGreaterThan(lock);
+    expect(guard).toBeGreaterThan(missing);
+    expect(role).toBeGreaterThan(guard);
+    expect(inactiveRoleMigration).toContain("'member_inactive'::text");
+    expect(inactiveRoleMigration).toContain('SECURITY DEFINER');
+    expect(inactiveRoleMigration).toContain('SET search_path TO');
+    expect(inactiveRoleMigration).toContain('FROM PUBLIC, anon, authenticated, service_role;');
+  });
+
+  it('handles inactive target status in the HTTP layer and after the row-lock decision', () => {
+    expect(routeSource).toContain("select('id,user_id,role,status,organization_id')");
+    expect(routeSource).toContain("if (member.status !== 'active')");
+    expect(routeSource).toContain("transition.outcome === 'member_inactive'");
+    expect(routeSource).toContain("error: 'team_member_inactive'");
+    expect(routeSource.indexOf("if (member.status !== 'active')")).toBeLessThan(routeSource.indexOf("changeMemberRoleWithChainedAuditAtomic({"));
   });
 
   it('delegates the transition and audit to one backend-only transaction using expected identity', () => {

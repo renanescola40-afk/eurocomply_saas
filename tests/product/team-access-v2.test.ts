@@ -96,7 +96,7 @@ describe('enterprise team access V2', () => {
     const card = await readFile(TEAM_MANAGEMENT, 'utf8');
     expect(card).toContain("const isActorOwner = parseOrganizationRole(currentUserRole) === 'owner'");
     expect(card).toContain("const isTargetOwner = parsedTargetRole === 'owner'");
-    expect(card).toContain('!isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && (!isTargetOwner || isActorOwner)');
+    expect(card).toContain('!isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && isActiveMember && (!isTargetOwner || isActorOwner)');
     expect(card).toContain('canAssignOwner={isActorOwner}');
     expect(card).toContain('canAssignAdmin={canAssignAdmin}');
     expect(card).toContain('onChangeRole={(role) => onChangeMemberRole(member.id, role)}');
@@ -147,6 +147,16 @@ describe('enterprise team access V2', () => {
     expect(source).toContain('const handleStepUpCancel = useCallback(() => {');
     expect(source).toContain('if (requestInFlightRef.current) return;');
     expect(source).toContain('operation.reject(new Error(copy.section.cancelled))');
+  });
+
+
+  it('displays inactive members but hides their role change controls', async () => {
+    const list = await readFile(new URL('../../src/server/queries/members.ts', import.meta.url), 'utf8');
+    const card = await readFile(TEAM_MANAGEMENT, 'utf8');
+    expect(list).toContain("role, status, created_at");
+    expect(card).toContain("const isActiveMember = member.status === 'active'");
+    expect(card).toContain('isCanonicalTargetRole && isActiveMember');
+    expect(card).toContain('Role changes require active membership');
   });
 
   it('renders members and pending invitations as enterprise access tables', async () => {

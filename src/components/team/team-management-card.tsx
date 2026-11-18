@@ -7,6 +7,7 @@ export type TeamMemberItem = {
   id: string;
   user_id?: string | null;
   role: string;
+  status?: string | null;
   created_at?: string | null;
   profiles?: { full_name?: string | null } | null;
 };
@@ -88,7 +89,8 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
                   const isTargetOwner = parsedTargetRole === 'owner';
                   // Never mutate a legacy/unknown role through canonical-only role APIs.
                   const isCanonicalTargetRole = parsedTargetRole !== null && member.role === parsedTargetRole;
-                  const canEditRole = Boolean(onChangeMemberRole) && !isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && (!isTargetOwner || isActorOwner);
+                  const isActiveMember = member.status === 'active';
+                  const canEditRole = Boolean(onChangeMemberRole) && !isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && isActiveMember && (!isTargetOwner || isActorOwner);
                   const canRemove = Boolean(onRemoveMember) && !isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && (!isTargetOwner || isActorOwner);
                   const displayName = member.profiles?.full_name || (isCurrentUser ? copy.you : copy.member);
                   return (
@@ -108,6 +110,7 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
                           <span role="status" className="text-xs text-amber-300" title="The member role must be reviewed before access can be changed.">Role review required</span>
                         ) : (
                           <div className="flex flex-col items-end gap-2">
+                            {!isActiveMember ? <span role="status" className="text-xs text-amber-300">Role changes require active membership</span> : null}
                             {canEditRole && onChangeMemberRole ? (
                               <TeamMemberRoleEditor
                                 memberId={member.id}
