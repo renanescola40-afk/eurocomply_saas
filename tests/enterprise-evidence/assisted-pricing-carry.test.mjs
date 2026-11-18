@@ -29,6 +29,7 @@ const PATCH=[
  'tests/product/public-pricing-commercial-truth.test.ts',
  'scripts/enterprise-evidence/validate-evidence.mjs',
  'tests/enterprise-evidence/assisted-pricing-carry.test.mjs',
+ 'tests/enterprise-evidence/validate-evidence.test.mjs',
 ];
 
 test('assisted commercial carry allows only its reviewed source and immutable historical proofs',()=>{
