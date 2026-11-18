@@ -108,7 +108,7 @@ describe('enterprise team access V2', () => {
     expect(permission).toContain("['owner', 'proprietario', 'proprietário', 'dono']");
     expect(card).toContain("parseOrganizationRole(currentUserRole) === 'owner'");
     expect(card).toContain("parseOrganizationRole(member.role)");
-    expect(card).toContain("member.role.trim().toLowerCase() === parsedTargetRole");
+    expect(card).toContain("member.role === parsedTargetRole");
     expect(card).toContain('!isCanonicalTargetRole ?');
     expect(card).toContain('Role review required');
   });

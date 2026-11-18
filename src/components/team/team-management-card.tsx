@@ -87,7 +87,7 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
                   const parsedTargetRole = parseOrganizationRole(member.role);
                   const isTargetOwner = parsedTargetRole === 'owner';
                   // Never mutate a legacy/unknown role through canonical-only role APIs.
-                  const isCanonicalTargetRole = parsedTargetRole !== null && member.role.trim().toLowerCase() === parsedTargetRole;
+                  const isCanonicalTargetRole = parsedTargetRole !== null && member.role === parsedTargetRole;
                   const canEditRole = Boolean(onChangeMemberRole) && !isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && (!isTargetOwner || isActorOwner);
                   const canRemove = Boolean(onRemoveMember) && !isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && (!isTargetOwner || isActorOwner);
                   const displayName = member.profiles?.full_name || (isCurrentUser ? copy.you : copy.member);
