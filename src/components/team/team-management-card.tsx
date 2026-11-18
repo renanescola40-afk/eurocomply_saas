@@ -1,4 +1,5 @@
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
+import { parseOrganizationRole } from '@/lib/security/permissions';
 import { TeamActionButton } from './team-action-button';
 import { TeamMemberRoleEditor, type TeamRole } from './team-member-role-editor';
 
@@ -82,10 +83,13 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
                 {members.map((member) => {
                   const isCurrentUser = member.user_id === currentUserId;
                   const needsIdentityReview = !member.user_id;
-                  const isActorOwner = currentUserRole?.toLowerCase() === 'owner';
-                  const isTargetOwner = member.role.toLowerCase() === 'owner';
-                  const canEditRole = Boolean(onChangeMemberRole) && !isCurrentUser && !needsIdentityReview && (!isTargetOwner || isActorOwner);
-                  const canRemove = Boolean(onRemoveMember) && !isCurrentUser && !needsIdentityReview && (!isTargetOwner || isActorOwner);
+                  const isActorOwner = parseOrganizationRole(currentUserRole) === 'owner';
+                  const parsedTargetRole = parseOrganizationRole(member.role);
+                  const isTargetOwner = parsedTargetRole === 'owner';
+                  // Never mutate a legacy/unknown role through canonical-only role APIs.
+                  const isCanonicalTargetRole = parsedTargetRole !== null && member.role.trim().toLowerCase() === parsedTargetRole;
+                  const canEditRole = Boolean(onChangeMemberRole) && !isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && (!isTargetOwner || isActorOwner);
+                  const canRemove = Boolean(onRemoveMember) && !isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && (!isTargetOwner || isActorOwner);
                   const displayName = member.profiles?.full_name || (isCurrentUser ? copy.you : copy.member);
                   return (
                     <tr key={member.id} className="bg-[#0b121e] transition hover:bg-[#0e1827]">
@@ -100,6 +104,8 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
                       <td className="px-5 py-4 text-right sm:px-6">
                         {needsIdentityReview ? (
                           <span role="status" className="text-xs text-amber-300" title="Contact support to review this member's identity before changing access.">Identity review required</span>
+                        ) : !isCanonicalTargetRole ? (
+                          <span role="status" className="text-xs text-amber-300" title="The member role must be reviewed before access can be changed.">Role review required</span>
                         ) : (
                           <div className="flex flex-col items-end gap-2">
                             {canEditRole && onChangeMemberRole ? (

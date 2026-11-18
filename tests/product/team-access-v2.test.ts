@@ -94,12 +94,23 @@ describe('enterprise team access V2', () => {
 
   it('hides role changes to self, Clerk-only targets, or other owners from non-owner actors', async () => {
     const card = await readFile(TEAM_MANAGEMENT, 'utf8');
-    expect(card).toContain("const isActorOwner = currentUserRole?.toLowerCase() === 'owner'");
-    expect(card).toContain("const isTargetOwner = member.role.toLowerCase() === 'owner'");
-    expect(card).toContain('!isCurrentUser && !needsIdentityReview && (!isTargetOwner || isActorOwner)');
+    expect(card).toContain("const isActorOwner = parseOrganizationRole(currentUserRole) === 'owner'");
+    expect(card).toContain("const isTargetOwner = parsedTargetRole === 'owner'");
+    expect(card).toContain('!isCurrentUser && !needsIdentityReview && isCanonicalTargetRole && (!isTargetOwner || isActorOwner)');
     expect(card).toContain('canAssignOwner={isActorOwner}');
     expect(card).toContain('canAssignAdmin={canAssignAdmin}');
     expect(card).toContain('onChangeRole={(role) => onChangeMemberRole(member.id, role)}');
+  });
+
+  it('reuses the authoritative role normalizer and refuses legacy/unknown member role edits', async () => {
+    const card = await readFile(TEAM_MANAGEMENT, 'utf8');
+    const permission = await readFile(new URL('../../src/lib/security/permissions.ts', import.meta.url), 'utf8');
+    expect(permission).toContain("['owner', 'proprietario', 'proprietário', 'dono']");
+    expect(card).toContain("parseOrganizationRole(currentUserRole) === 'owner'");
+    expect(card).toContain("parseOrganizationRole(member.role)");
+    expect(card).toContain("member.role.trim().toLowerCase() === parsedTargetRole");
+    expect(card).toContain('!isCanonicalTargetRole ?');
+    expect(card).toContain('Role review required');
   });
 
   it('limits available roles and requires explicit change confirmation', async () => {
