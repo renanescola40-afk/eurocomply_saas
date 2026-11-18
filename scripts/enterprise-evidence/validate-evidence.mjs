@@ -227,6 +227,7 @@ const ASSISTED_CARRY_FILES=new Set([
  'tests/product/public-pricing-commercial-truth.test.ts',
  'scripts/enterprise-evidence/validate-evidence.mjs',
  'tests/enterprise-evidence/assisted-pricing-carry.test.mjs',
+ 'tests/enterprise-evidence/validate-evidence.test.mjs',
 ]);
 
 function gateProof(document,gate){
