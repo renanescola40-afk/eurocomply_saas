@@ -112,6 +112,32 @@ describe('enterprise team access V2', () => {
     expect(editor).toContain('onConfirm={() => onChangeRole(selectedRole)}');
   });
 
+
+  it('never overwrites an unresolved team operation when another action begins', async () => {
+    const source = await readFile(TEAM_SETTINGS, 'utf8');
+    expect(source).toContain('const pendingOperationRef = useRef<PendingTeamOperation | null>(null)');
+    expect(source).toContain('if (pendingOperationRef.current) {');
+    expect(source).toContain("reject(new Error('Finish the current team action before starting another.'))");
+    expect(source).toContain('pendingOperationRef.current = operation;');
+  });
+
+  it('processes at most one MFA token at a time and clears the active operation', async () => {
+    const source = await readFile(TEAM_SETTINGS, 'utf8');
+    expect(source).toContain('if (requestInFlightRef.current) return;');
+    expect(source).toContain('requestInFlightRef.current = true;');
+    expect(source).toContain('finally {');
+    expect(source).toContain('pendingOperationRef.current = null;');
+    expect(source).toContain('requestInFlightRef.current = false;');
+    expect(source).toContain('setPendingOperation(null);');
+  });
+
+  it('does not cancel a team operation after its authenticated API request begins', async () => {
+    const source = await readFile(TEAM_SETTINGS, 'utf8');
+    expect(source).toContain('const handleStepUpCancel = useCallback(() => {');
+    expect(source).toContain('if (requestInFlightRef.current) return;');
+    expect(source).toContain('operation.reject(new Error(copy.section.cancelled))');
+  });
+
   it('renders members and pending invitations as enterprise access tables', async () => {
     const source = await readFile(TEAM_MANAGEMENT, 'utf8');
 

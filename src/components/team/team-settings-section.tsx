@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { STEP_UP_TOKEN_HEADER, StepUpMfaDialog } from '@/components/security/step-up-mfa-dialog';
@@ -78,11 +78,30 @@ export function TeamSettingsSection({
   const router = useRouter();
   const copy = getTeamWorkflowCopy(locale);
   const [pendingOperation, setPendingOperation] = useState<PendingTeamOperation | null>(null);
+  const pendingOperationRef = useRef<PendingTeamOperation | null>(null);
+  const requestInFlightRef = useRef(false);
 
-  const enqueueInvite = useCallback((payload: { email: string; role: string; locale: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'invite', payload, resolve, reject })), []);
-  const enqueueRemoveMember = useCallback((payload: { memberId: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'remove-member', payload, resolve, reject })), []);
-  const enqueueChangeMemberRole = useCallback((payload: { memberId: string; role: TeamRole }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'change-member-role', payload, resolve, reject })), []);
-  const enqueueCancelInvitation = useCallback((payload: { invitationId: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'cancel-invitation', payload, resolve, reject })), []);
+  // A single active MFA operation prevents orphaned promises and misrouted tokens.
+  const scheduleOperation = useCallback((
+    create: (resolve: () => void, reject: (error: Error) => void) => PendingTeamOperation,
+  ) => new Promise<void>((resolve, reject) => {
+    if (pendingOperationRef.current) {
+      reject(new Error('Finish the current team action before starting another.'));
+      return;
+    }
+    const operation = create(resolve, reject);
+    pendingOperationRef.current = operation;
+    setPendingOperation(operation);
+  }), []);
+
+  const enqueueInvite = useCallback((payload: { email: string; role: string; locale: string }) =>
+    scheduleOperation((resolve, reject) => ({ type: 'invite', payload, resolve, reject })), [scheduleOperation]);
+  const enqueueRemoveMember = useCallback((payload: { memberId: string }) =>
+    scheduleOperation((resolve, reject) => ({ type: 'remove-member', payload, resolve, reject })), [scheduleOperation]);
+  const enqueueChangeMemberRole = useCallback((payload: { memberId: string; role: TeamRole }) =>
+    scheduleOperation((resolve, reject) => ({ type: 'change-member-role', payload, resolve, reject })), [scheduleOperation]);
+  const enqueueCancelInvitation = useCallback((payload: { invitationId: string }) =>
+    scheduleOperation((resolve, reject) => ({ type: 'cancel-invitation', payload, resolve, reject })), [scheduleOperation]);
 
   const handleInvite = useCallback((input: InviteMemberInput) => enqueueInvite({ email: input.email, role: toApiInviteRole(input.role), locale: 'en' }), [enqueueInvite]);
   const handleRemoveMember = useCallback((memberId: string) => enqueueRemoveMember({ memberId }), [enqueueRemoveMember]);
@@ -90,26 +109,33 @@ export function TeamSettingsSection({
   const handleCancelInvitation = useCallback((invitationId: string) => enqueueCancelInvitation({ invitationId }), [enqueueCancelInvitation]);
 
   const handleStepUpToken = useCallback(async (token: string) => {
-    const operation = pendingOperation;
+    const operation = pendingOperationRef.current;
     if (!operation || !canManageTeam) return;
+    if (requestInFlightRef.current) return;
+    requestInFlightRef.current = true;
     try {
       const response = await teamActionRequest(operation, token);
       if (!response.ok) throw new Error(await parseError(response, copy.section.actionFailed));
       operation.resolve();
-      setPendingOperation(null);
       router.refresh();
     } catch (error) {
       operation.reject(error instanceof Error ? error : new Error(copy.section.actionFailed));
+    } finally {
+      pendingOperationRef.current = null;
+      requestInFlightRef.current = false;
       setPendingOperation(null);
     }
-  }, [canManageTeam, copy.section.actionFailed, pendingOperation, router]);
+  }, [canManageTeam, copy.section.actionFailed, router]);
 
   const handleStepUpCancel = useCallback(() => {
-    if (pendingOperation) {
-      pendingOperation.reject(new Error(copy.section.cancelled));
+    if (requestInFlightRef.current) return;
+    const operation = pendingOperationRef.current;
+    if (operation) {
+      pendingOperationRef.current = null;
       setPendingOperation(null);
+      operation.reject(new Error(copy.section.cancelled));
     }
-  }, [copy.section.cancelled, pendingOperation]);
+  }, [copy.section.cancelled]);
 
   return (
     <section className="space-y-5">
