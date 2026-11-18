@@ -114,7 +114,7 @@ function getTemplate(input: Pick<SendEmailInput, 'template' | 'subject'>) {
 }
 
 function getDefaultFromAddress() {
-  return process.env.EMAIL_FROM ?? 'RISCK COMPLY <no-reply@risckcomply.app>';
+  return process.env.EMAIL_FROM ?? 'RISCK COMPLY <no-reply@risckcomply.com>';
 }
 
 function sleep(ms: number) {

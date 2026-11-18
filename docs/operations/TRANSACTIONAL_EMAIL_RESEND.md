@@ -23,13 +23,15 @@ Configure these in Vercel production/preview and never commit real values:
 
 ```bash
 RESEND_API_KEY=
-EMAIL_FROM="RISCK COMPLY <no-reply@risckcomply.app>"
+EMAIL_FROM="RISCK COMPLY <no-reply@risckcomply.com>"
 SUPPORT_EMAIL=support@risckcomply.app
-EMAIL_REPLY_TO=support@risckcomply.app
+# Commercial lead acknowledgement replies are explicitly set to comercial@risckcomply.com by /api/leads; EMAIL_REPLY_TO is not consumed by the current sender.
 EMAIL_MAX_SEND_ATTEMPTS=3
 EMAIL_LOG_HASH_PEPPER=
 REQUIRE_TRANSACTIONAL_EMAIL_DELIVERY=false
 ```
+
+The commercial lead flow uses `replyTo: SALES_MAILBOX` for customer acknowledgement and `replyTo: record.work_email` for the internal notification (as verified in `src/app/api/leads/route.ts`). This sender change does not enable actual sends, configure or verify the commercial mailbox, or change non-commercial support replies. The sample `SUPPORT_EMAIL` remains a separate, unverified setting and must be confirmed before operational use.
 
 `EMAIL_LOG_HASH_PEPPER` should be a random server-side secret used to hash recipients in `email_delivery_logs`. If omitted, the app falls back to `AUDIT_CHAIN_SIGNING_SECRET` and then a non-production default.
 
@@ -40,8 +42,8 @@ This configuration-level readiness proof does **not** prove that the sending dom
 ## Resend setup
 
 1. Create or open the Resend project for RISCK COMPLY.
-2. Add the sending domain, for example `risckcomply.app`.
-3. Use a dedicated transactional sender such as `no-reply@risckcomply.app`.
+2. Use the verified sending domain `risckcomply.com` (check its current verified status in Resend before delivery).
+3. Use a dedicated transactional sender such as `no-reply@risckcomply.com`.
 4. Add the DNS records Resend gives you.
 5. Wait until Resend shows the domain as verified.
 6. Add the `RESEND_API_KEY` to the protected Production provider store and configure `EMAIL_FROM` as the reviewed sender variable.
@@ -191,7 +193,7 @@ For every test message:
 - SPF passes.
 - DKIM passes.
 - DMARC passes and aligns with the visible From domain.
-- The visible From is `RISCK COMPLY <no-reply@risckcomply.app>`.
+- The visible From is `RISCK COMPLY <no-reply@risckcomply.com>`.
 - No raw token or secret appears in subject/body.
 - The CTA opens an authenticated app page.
 - `email_delivery_logs` contains status `sent` and the Resend provider id.

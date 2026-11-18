@@ -52,6 +52,6 @@ describe('Resend Production binding contract', () => {
   it('keeps the delivery implementation bound to Resend and the configured sender', () => {
     expect(sender).toContain("const RESEND_ENDPOINT = 'https://api.resend.com/emails'");
     expect(sender).toContain('const apiKey = process.env.RESEND_API_KEY;');
-    expect(sender).toContain("return process.env.EMAIL_FROM ?? 'RISCK COMPLY <no-reply@risckcomply.app>';");
+    expect(sender).toContain("return process.env.EMAIL_FROM ?? 'RISCK COMPLY <no-reply@risckcomply.com>';");
   });
 });
