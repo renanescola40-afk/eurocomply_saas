@@ -100,6 +100,7 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
             members={members}
             invitations={invitations}
             currentUserId={user.id}
+            currentUserRole={organization.role}
             canManageTeam
             canInviteMembers={canInviteMembers}
             canInviteAdmin={canInviteAdmin}

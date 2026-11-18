@@ -8,6 +8,7 @@ import { STEP_UP_TOKEN_HEADER, StepUpMfaDialog } from '@/components/security/ste
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
 import { InviteMemberForm, type InviteMemberInput } from './invite-member-form';
 import { TeamManagementCard } from './team-management-card';
+import type { TeamRole } from './team-member-role-editor';
 
 type TeamMember = { id: string; role: string; user_id?: string | null; created_at?: string | null };
 type PendingInvitation = { id: string; email: string; role: string; created_at?: string | null; expires_at?: string | null };
@@ -16,6 +17,7 @@ type InviteBlockReason = 'plan' | 'capacity' | null;
 type PendingTeamOperation =
   | { type: 'invite'; payload: { email: string; role: string; locale: string }; resolve: () => void; reject: (error: Error) => void }
   | { type: 'remove-member'; payload: { memberId: string }; resolve: () => void; reject: (error: Error) => void }
+  | { type: 'change-member-role'; payload: { memberId: string; role: TeamRole }; resolve: () => void; reject: (error: Error) => void }
   | { type: 'cancel-invitation'; payload: { invitationId: string }; resolve: () => void; reject: (error: Error) => void };
 
 type TeamSettingsSectionProps = {
@@ -24,6 +26,7 @@ type TeamSettingsSectionProps = {
   invitations: PendingInvitation[];
   currentUserId?: string;
   canManageTeam: boolean;
+  currentUserRole: string;
   canInviteMembers: boolean;
   canInviteAdmin: boolean;
   inviteBlockReason: InviteBlockReason;
@@ -57,6 +60,7 @@ function teamActionRequest(operation: PendingTeamOperation, token: string) {
   const headers = { 'Content-Type': 'application/json', [STEP_UP_TOKEN_HEADER]: token };
   if (operation.type === 'invite') return fetch('/api/team/invites', { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(operation.payload) });
   if (operation.type === 'remove-member') return fetch('/api/team/members/remove', { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(operation.payload) });
+  if (operation.type === 'change-member-role') return fetch('/api/team/members/role', { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(operation.payload) });
   return fetch('/api/team/invitations/cancel', { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(operation.payload) });
 }
 
@@ -66,6 +70,7 @@ export function TeamSettingsSection({
   invitations,
   currentUserId,
   canManageTeam,
+  currentUserRole,
   canInviteMembers,
   canInviteAdmin,
   inviteBlockReason,
@@ -76,10 +81,12 @@ export function TeamSettingsSection({
 
   const enqueueInvite = useCallback((payload: { email: string; role: string; locale: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'invite', payload, resolve, reject })), []);
   const enqueueRemoveMember = useCallback((payload: { memberId: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'remove-member', payload, resolve, reject })), []);
+  const enqueueChangeMemberRole = useCallback((payload: { memberId: string; role: TeamRole }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'change-member-role', payload, resolve, reject })), []);
   const enqueueCancelInvitation = useCallback((payload: { invitationId: string }) => new Promise<void>((resolve, reject) => setPendingOperation({ type: 'cancel-invitation', payload, resolve, reject })), []);
 
   const handleInvite = useCallback((input: InviteMemberInput) => enqueueInvite({ email: input.email, role: toApiInviteRole(input.role), locale: 'en' }), [enqueueInvite]);
   const handleRemoveMember = useCallback((memberId: string) => enqueueRemoveMember({ memberId }), [enqueueRemoveMember]);
+  const handleChangeMemberRole = useCallback((memberId: string, role: TeamRole) => enqueueChangeMemberRole({ memberId, role }), [enqueueChangeMemberRole]);
   const handleCancelInvitation = useCallback((invitationId: string) => enqueueCancelInvitation({ invitationId }), [enqueueCancelInvitation]);
 
   const handleStepUpToken = useCallback(async (token: string) => {
@@ -130,6 +137,9 @@ export function TeamSettingsSection({
         members={members}
         invitations={invitations}
         currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        canAssignAdmin={canInviteAdmin}
+        onChangeMemberRole={canManageTeam ? handleChangeMemberRole : undefined}
         onRemoveMember={canManageTeam ? handleRemoveMember : undefined}
         onCancelInvitation={canManageTeam ? handleCancelInvitation : undefined}
       />

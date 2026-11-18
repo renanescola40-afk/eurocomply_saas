@@ -1,5 +1,6 @@
 import { getTeamWorkflowCopy } from '@/lib/i18n/team-workflow-copy';
 import { TeamActionButton } from './team-action-button';
+import { TeamMemberRoleEditor, type TeamRole } from './team-member-role-editor';
 
 export type TeamMemberItem = {
   id: string;
@@ -21,6 +22,9 @@ type TeamManagementCardProps = {
   members: TeamMemberItem[];
   invitations: PendingInvitationItem[];
   currentUserId?: string;
+  currentUserRole?: string;
+  canAssignAdmin?: boolean;
+  onChangeMemberRole?: (memberId: string, role: TeamRole) => Promise<void> | void;
   onRemoveMember?: (memberId: string) => Promise<void> | void;
   onCancelInvitation?: (invitationId: string) => Promise<void> | void;
 };
@@ -43,7 +47,7 @@ function roleTone(role: string) {
   return 'border-slate-700 bg-slate-900/60 text-slate-400';
 }
 
-export function TeamManagementCard({ locale, members, invitations, currentUserId, onRemoveMember, onCancelInvitation }: TeamManagementCardProps) {
+export function TeamManagementCard({ locale, members, invitations, currentUserId, currentUserRole, canAssignAdmin = false, onChangeMemberRole, onRemoveMember, onCancelInvitation }: TeamManagementCardProps) {
   const copy = getTeamWorkflowCopy(locale).access;
 
   return (
@@ -78,7 +82,10 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
                 {members.map((member) => {
                   const isCurrentUser = member.user_id === currentUserId;
                   const needsIdentityReview = !member.user_id;
-                  const canRemove = Boolean(onRemoveMember) && !isCurrentUser && !needsIdentityReview;
+                  const isActorOwner = currentUserRole?.toLowerCase() === 'owner';
+                  const isTargetOwner = member.role.toLowerCase() === 'owner';
+                  const canEditRole = Boolean(onChangeMemberRole) && !isCurrentUser && !needsIdentityReview && (!isTargetOwner || isActorOwner);
+                  const canRemove = Boolean(onRemoveMember) && !isCurrentUser && !needsIdentityReview && (!isTargetOwner || isActorOwner);
                   const displayName = member.profiles?.full_name || (isCurrentUser ? copy.you : copy.member);
                   return (
                     <tr key={member.id} className="bg-[#0b121e] transition hover:bg-[#0e1827]">
@@ -92,11 +99,24 @@ export function TeamManagementCard({ locale, members, invitations, currentUserId
                       <td className="px-4 py-4 font-mono text-[11px] tabular-nums text-slate-500">{formatDate(member.created_at, locale)}</td>
                       <td className="px-5 py-4 text-right sm:px-6">
                         {needsIdentityReview ? (
-                          <span role="status" className="text-xs text-amber-300" title="Contact support to review this member's identity before removing access.">Identity review required</span>
-                        ) : canRemove && onRemoveMember ? (
-                          <TeamActionButton message={copy.removeConfirm(displayName)} onConfirm={() => onRemoveMember(member.id)}>{copy.remove}</TeamActionButton>
+                          <span role="status" className="text-xs text-amber-300" title="Contact support to review this member's identity before changing access.">Identity review required</span>
                         ) : (
-                          <span className="text-xs text-slate-700">—</span>
+                          <div className="flex flex-col items-end gap-2">
+                            {canEditRole && onChangeMemberRole ? (
+                              <TeamMemberRoleEditor
+                                memberId={member.id}
+                                displayName={displayName}
+                                currentRole={member.role}
+                                canAssignOwner={isActorOwner}
+                                canAssignAdmin={canAssignAdmin}
+                                onChangeRole={(role) => onChangeMemberRole(member.id, role)}
+                              />
+                            ) : null}
+                            {canRemove && onRemoveMember ? (
+                              <TeamActionButton message={copy.removeConfirm(displayName)} onConfirm={() => onRemoveMember(member.id)}>{copy.remove}</TeamActionButton>
+                            ) : null}
+                            {!canEditRole && !canRemove ? <span className="text-xs text-slate-700">—</span> : null}
+                          </div>
                         )}
                       </td>
                     </tr>

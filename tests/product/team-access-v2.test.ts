@@ -16,6 +16,7 @@ describe('enterprise team access V2', () => {
     expect(page).toContain("isPlanAtLeast(entitlements.plan, 'enterprise')");
     expect(page).toContain('canInviteMembers={canInviteMembers}');
     expect(page).toContain('canInviteAdmin={canInviteAdmin}');
+    expect(page).toContain('currentUserRole={organization.role}');
   });
 
   it('keeps step-up MFA around team mutations', async () => {
@@ -25,6 +26,7 @@ describe('enterprise team access V2', () => {
     expect(source).toContain("action=\"manage_team\"");
     expect(source).toContain("fetch('/api/team/invites'");
     expect(source).toContain("fetch('/api/team/members/remove'");
+    expect(source).toContain("fetch('/api/team/members/role'");
     expect(source).toContain("fetch('/api/team/invitations/cancel'");
     expect(source).toContain('<StepUpMfaDialog');
   });
@@ -76,6 +78,40 @@ describe('enterprise team access V2', () => {
     expect(settings).toContain('operation.reject(');
   });
 
+
+  it('connects existing-member role changes to the audited API through Step-Up MFA', async () => {
+    const settings = await readFile(TEAM_SETTINGS, 'utf8');
+    const route = await readFile(new URL('../../src/app/api/team/members/role/route.ts', import.meta.url), 'utf8');
+    expect(settings).toContain("type: 'change-member-role'");
+    expect(settings).toContain("fetch('/api/team/members/role'");
+    expect(settings).toContain('body: JSON.stringify(operation.payload)');
+    expect(settings).toContain('onChangeMemberRole={canManageTeam ? handleChangeMemberRole : undefined}');
+    expect(settings).toContain('STEP_UP_TOKEN_HEADER');
+    expect(settings).toContain('<StepUpMfaDialog');
+    expect(route).toContain('requireStepUpForRequest({');
+    expect(route).toContain("permission: 'manage_team'");
+  });
+
+  it('hides role changes to self, Clerk-only targets, or other owners from non-owner actors', async () => {
+    const card = await readFile(TEAM_MANAGEMENT, 'utf8');
+    expect(card).toContain("const isActorOwner = currentUserRole?.toLowerCase() === 'owner'");
+    expect(card).toContain("const isTargetOwner = member.role.toLowerCase() === 'owner'");
+    expect(card).toContain('!isCurrentUser && !needsIdentityReview && (!isTargetOwner || isActorOwner)');
+    expect(card).toContain('canAssignOwner={isActorOwner}');
+    expect(card).toContain('canAssignAdmin={canAssignAdmin}');
+    expect(card).toContain('onChangeRole={(role) => onChangeMemberRole(member.id, role)}');
+  });
+
+  it('limits available roles and requires explicit change confirmation', async () => {
+    const editor = await readFile(new URL('../../src/components/team/team-member-role-editor.tsx', import.meta.url), 'utf8');
+    expect(editor).toContain("['viewer', 'member', 'editor', 'admin', 'owner']");
+    expect(editor).toContain("role !== 'owner' || canAssignOwner || role === actualRole");
+    expect(editor).toContain("role !== 'admin' || canAssignAdmin || role === actualRole");
+    expect(editor).toContain('if (!actualRole) return');
+    expect(editor).toContain('selectedRole !== actualRole');
+    expect(editor).toContain('onConfirm={() => onChangeRole(selectedRole)}');
+  });
+
   it('renders members and pending invitations as enterprise access tables', async () => {
     const source = await readFile(TEAM_MANAGEMENT, 'utf8');
 
@@ -86,5 +122,6 @@ describe('enterprise team access V2', () => {
     expect(source).toContain('invitation.role');
     expect(source).toContain('invitation.expires_at');
     expect(source).toContain('<TeamActionButton');
+    expect(source).toContain('<TeamMemberRoleEditor');
   });
 });
