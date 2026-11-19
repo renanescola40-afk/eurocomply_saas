@@ -70,15 +70,15 @@ test('assisted commercial carry allows only its reviewed source and immutable hi
 test('review contract refuses empty, wrong SHA, wrong reviewer and unauthenticated decisions',()=>{
  const source=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
  assert.match(source,/ASSISTED_CARRY_PR=2748/);
- assert.match(source,/ASSISTED_CARRY_BASE='b5934f46393efad92c3542f9fb48b511160ae6d4'/);
+ assert.match(source,/ASSISTED_CARRY_BASE='5fdca302bcef1c89b717eb57ccff311d8ce64a36'/);
  assert.match(source,/r\.user\?\.login===QUALIFIED_REVIEWER&&r\.commit_id===pull\.sha/);
  assert.match(source,/includesReviewLine\(r\.body,ASSISTED_CARRY_REVIEW\)/);
  assert.match(source,/CUMULATIVE_LINES\.every\(line=>includesReviewLine\(r\.body,line\)\)/);
  assert.match(source,/!decisionWithdrawn\(reviews,r,pull,rejection\)/);
  assert.match(source,/verifyQat01AfterProviderSettles\(\{sha:pull\.sha,token,request\}\)/);
- assert.match(source,/ASSISTED_CARRY_RUN=44046962034/);
- assert.match(source,/ASSISTED_CARRY_ARTIFACT=14311557590/);
- assert.match(source,/ASSISTED_CARRY_DIGEST='3bc8b7b75ffd38661c6cedacd990331796eb13f4e2c0fc6d66a8cdb205fbdf8b'/);
+ assert.match(source,/ASSISTED_CARRY_RUN=44611947312/);
+ assert.match(source,/ASSISTED_CARRY_ARTIFACT=14573161827/);
+ assert.match(source,/ASSISTED_CARRY_DIGEST='d518626ddd5c1ff6a948c4b92775ae485dfb04694a06fc19d4568e468900438c'/);
  assert.match(source,/artifact\?\.digest!=='sha256:'\+ASSISTED_CARRY_DIGEST/);
  const assistedVerifier=source.slice(source.indexOf('export async function verifyAssistedCarry('),source.indexOf('export async function verifyCumulativeRelease('));
  assert.match(assistedVerifier,/api\('\/actions\/runs\/'\+ASSISTED_CARRY_RUN\)/);
