@@ -60,6 +60,19 @@ async function insertOne(admin, table, row, label) {
   return data;
 }
 
+async function seedDisposableMfaPolicy(admin, organizationId, label) {
+  // Persist an explicit default-off policy for the isolated fixture. This
+  // preserves the missing-policy fail-closed invariant without requiring AAL2
+  // for synthetic browser identities testing independent product boundaries.
+  const { data, error } = await admin.from('organization_security_settings')
+    .insert({ organization_id: organizationId, require_mfa_for_all_users: false })
+    .select('organization_id,require_mfa_for_all_users')
+    .single();
+  if (error || data?.organization_id !== organizationId || data?.require_mfa_for_all_users !== false) {
+    throw new Error(`${label}_mfa_policy_seed_failed`);
+  }
+}
+
 async function main() {
   if (env('GITHUB_ACTIONS') !== 'true') throw new Error('github_actions_required');
   const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
@@ -151,6 +164,16 @@ async function main() {
     onboarding_completed_at: null,
     selected_plan: 'professional',
   }, 'new_customer_organization');
+
+  // Authenticated membership and payment-first RLS must see a real policy,
+  // not the former implicit allow when organization_security_settings is absent.
+  for (const [organizationId, label] of [
+    [organization.id, 'fria_licensed'],
+    [unlicensedOrganization.id, 'fria_unlicensed'],
+    [newCustomerOrganization.id, 'fria_new_customer'],
+  ]) {
+    await seedDisposableMfaPolicy(admin, organizationId, label);
+  }
 
   await insertOne(admin, 'organization_members', {
     organization_id: newCustomerOrganization.id,
