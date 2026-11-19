@@ -36,9 +36,10 @@ describe('public pricing catalog contract', () => {
     expect(pricingPage).toContain('planPresentation[plan.id].publicSlug');
   });
 
-  it('keeps sales-led plans out of self-serve structured offers', () => {
+  it('keeps published fixed-price offers scoped and routes assisted pricing CTAs to the demo', () => {
     expect(pricingPage).toContain('!plan.salesLed && plan.priceMonthly !== null');
-    expect(pricingPage).toContain("if (plan.salesLed) return `/${locale}/book-demo?plan=${publicSlug}`");
+    expect(pricingPage).toContain("return `/${locale}/book-demo?plan=${publicSlug}`");
+    expect(pricingPage).not.toContain("return `/${locale}/signup?plan=${publicSlug}`");
     expect(pricingPage).toContain("if (plan.id === 'enterprise') return `/${locale}/enterprise`");
   });
 

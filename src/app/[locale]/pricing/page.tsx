@@ -58,8 +58,8 @@ const pricingMetadata: Record<Locale, { title: string; description: string }> = 
 function planHref(locale: string, plan: BillingPlan) {
   const publicSlug = planPresentation[plan.id].publicSlug;
   if (plan.id === 'enterprise') return `/${locale}/enterprise`;
-  if (plan.salesLed) return `/${locale}/book-demo?plan=${publicSlug}`;
-  return `/${locale}/signup?plan=${publicSlug}`;
+  // All public plans use assisted onboarding during the launch; keep billing authority unchanged.
+  return `/${locale}/book-demo?plan=${publicSlug}`;
 }
 
 function formatPriceNumber(value: number, locale: Locale) {
@@ -129,7 +129,7 @@ function PricingStructuredData({ locale }: { locale: Locale }) {
       name: `${SITE_NAME} ${plan.name}`,
       priceCurrency: 'EUR',
       price: plan.priceMonthly.toString(),
-      url: getCanonicalUrl(locale, `/signup?plan=${planPresentation[plan.id].publicSlug}`),
+      url: getCanonicalUrl(locale, `/book-demo?plan=${planPresentation[plan.id].publicSlug}`),
     })),
   };
 
@@ -169,7 +169,7 @@ export default async function PricingPage({ params }: Props) {
             <Link href={`/${locale}/enterprise`} className="hidden rounded-lg border border-slate-700 px-3 py-2 font-medium text-slate-300 transition hover:border-blue-400/35 hover:bg-blue-500/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 lg:inline-flex">{copy.enterprise}</Link>
             <Link href={`/${locale}/trust`} className="hidden rounded-lg border border-slate-700 px-3 py-2 font-medium text-slate-300 transition hover:border-blue-400/35 hover:bg-blue-500/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 md:inline-flex">{copy.trust}</Link>
             <Link href={`/${locale}/login`} className="rounded-lg border border-slate-700 px-3 py-2 font-medium text-slate-300 transition hover:border-blue-400/35 hover:bg-blue-500/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.signIn}</Link>
-            <Link href={`/${locale}/signup?plan=professional`} className="rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 sm:px-4">{copy.startTrial}</Link>
+            <Link href={`/${locale}/book-demo?plan=professional`} className="rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 sm:px-4">{copy.startTrial}</Link>
           </nav>
         </div>
       </header>
@@ -181,7 +181,7 @@ export default async function PricingPage({ params }: Props) {
             <h1 id="pricing-title" className="mt-6 max-w-5xl text-5xl font-semibold tracking-[-0.05em] md:text-7xl">{copy.heroTitle}</h1>
             <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">{copy.heroSubtitle}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={`/${locale}/signup?plan=professional`} className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.startProfessional}</Link>
+              <Link href={`/${locale}/book-demo?plan=professional`} className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-bold text-white transition hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.startProfessional}</Link>
               <Link href={`/${locale}/book-demo`} className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-700 px-6 text-sm font-bold transition hover:border-blue-400/35 hover:bg-blue-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.bookDemo}</Link>
               <Link href={`/${locale}/trust`} className="inline-flex h-12 items-center justify-center rounded-xl border border-blue-400/25 px-6 text-sm font-bold text-blue-200 transition hover:bg-blue-500/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{copy.reviewTrust}</Link>
             </div>

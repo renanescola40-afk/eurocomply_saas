@@ -10,7 +10,7 @@ describe('public commercial acquisition contract', () => {
 
     expect(pricingTruth).toContain('No free trial is currently offered.');
     expect(demoPage).not.toContain('pricing motion: trial');
-    expect(demoPage).toContain('commercial fit: self-service checkout, Business-assisted motion or Enterprise review');
+    expect(demoPage).toContain('commercial fit: assisted onboarding, plan selection and procurement review');
   });
 
   it('qualifies demo demand around operational AI governance instead of generic GRC', () => {

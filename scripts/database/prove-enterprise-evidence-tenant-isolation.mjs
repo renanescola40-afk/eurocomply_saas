@@ -58,6 +58,18 @@ async function insertOne(admin, table, row, label) {
   return data;
 }
 
+async function assertDisposableMfaPolicy(admin, organizationId, label) {
+  // New organizations must receive an explicit default-off policy atomically
+  // from the database trigger; this fixture cannot create the policy itself.
+  const { data, error } = await admin.from('organization_security_settings')
+    .select('organization_id,require_mfa_for_all_users')
+    .eq('organization_id', organizationId)
+    .single();
+  if (error || data?.organization_id !== organizationId || data?.require_mfa_for_all_users !== false) {
+    throw new Error(`${label}_mfa_policy_seed_failed`);
+  }
+}
+
 async function grantDisposableSignedContractAuthority(admin, organizationId, label) {
   const observedAt = new Date();
   const validFrom = new Date(observedAt.getTime() - 60_000).toISOString();
@@ -145,6 +157,16 @@ async function main() {
     slug: `evidence-a-secondary-${suffix}`,
     created_by: actorA.id,
   }, 'organization_a_secondary');
+
+  // Prove real database initialization of each newly created synthetic tenant.
+  // A missing security policy must still deny all tenant authorization.
+  for (const [organizationId, label] of [
+    [orgA.id, 'organization_a'],
+    [orgB.id, 'organization_b'],
+    [orgASecondary.id, 'organization_a_secondary'],
+  ]) {
+    await assertDisposableMfaPolicy(admin, organizationId, label);
+  }
 
   for (const [organizationId, userId, role, label] of [
     [orgA.id, actorA.id, 'owner', 'membership_a'],
