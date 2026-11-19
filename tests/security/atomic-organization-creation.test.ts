@@ -44,4 +44,28 @@ describe('atomic organization creation', () => {
       'grant execute on function public.create_organization_with_owner_atomic(text, text, uuid) to service_role',
     );
   });
+  it('initializes security policy atomically for every newly-created tenant, without backfilling old missing policies', () => {
+    const policyMigration = fs.readFileSync(
+      'supabase/migrations/20261119115000_initialize_new_tenant_mfa_policy.sql', 'utf8',
+    );
+    expect(policyMigration).toMatch(/(?:^|\n)begin\s*;/);
+    expect(policyMigration).toMatch(/after insert on public\.organizations/i);
+    expect(policyMigration).toMatch(/insert into public\.organization_security_settings/i);
+    expect(policyMigration).toMatch(/values\s*\(new\.id, false\)/i);
+    expect(policyMigration).toContain('security definer');
+    expect(policyMigration).toContain('set search_path = pg_catalog, public');
+    expect(policyMigration).toContain('trg_initialize_new_tenant_mfa_policy');
+    expect(policyMigration).toContain("has_function_privilege('anon'");
+    expect(policyMigration).not.toMatch(/insert into public\.organization_security_settings[\s\S]*?select\s+.*from\s+public\.organizations/i);
+    expect(policyMigration).toMatch(/commit\s*;\s*$/);
+    for (const fixture of [
+      'scripts/database/prove-enterprise-evidence-tenant-isolation.mjs',
+      'scripts/product/create-fria-ephemeral-fixtures.mjs',
+    ]) {
+      const body = fs.readFileSync(fixture, 'utf8');
+      expect(body).toContain('assertDisposableMfaPolicy');
+      expect(body).not.toContain("insert({ organization_id: organizationId, require_mfa_for_all_users: false })");
+    }
+  });
+
 });

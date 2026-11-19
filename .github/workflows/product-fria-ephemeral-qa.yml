@@ -138,7 +138,43 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Install Chromium for focused Playwright acceptance
-        run: bash scripts/quality/install-playwright-ci.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Avoid an unrelated Ubuntu apt-mirror outage when the GitHub-hosted
+          # runner already supplies the shared libraries needed by Chromium.
+          # This is not a test bypass: a real browser must boot and execute JS.
+          npx playwright install chromium
+          if ! node --input-type=module <<'BROWSER_CHECK'
+          import { chromium } from '@playwright/test';
+          const browser = await chromium.launch({ headless: true });
+          try {
+            const page = await browser.newPage();
+            await page.goto('data:text/html,<title>playwright-runtime-check</title>');
+            if (await page.title() !== 'playwright-runtime-check') {
+              throw new Error('chromium_js_runtime_unavailable');
+            }
+          } finally {
+            await browser.close();
+          }
+          BROWSER_CHECK
+          then
+            echo "Preinstalled Chromium libraries insufficient: installing full OS prerequisites"
+            bash scripts/quality/install-playwright-ci.sh
+            node --input-type=module <<'BROWSER_CHECK'
+          import { chromium } from '@playwright/test';
+          const browser = await chromium.launch({ headless: true });
+          try {
+            const page = await browser.newPage();
+            await page.goto('data:text/html,<title>playwright-runtime-check</title>');
+            if (await page.title() !== 'playwright-runtime-check') {
+              throw new Error('chromium_js_runtime_unavailable_after_dependencies');
+            }
+          } finally {
+            await browser.close();
+          }
+          BROWSER_CHECK
+          fi
 
       - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
