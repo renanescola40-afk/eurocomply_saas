@@ -76,7 +76,14 @@ test('review contract refuses empty, wrong SHA, wrong reviewer and unauthenticat
  assert.match(source,/CUMULATIVE_LINES\.every\(line=>includesReviewLine\(r\.body,line\)\)/);
  assert.match(source,/!decisionWithdrawn\(reviews,r,pull,rejection\)/);
  assert.match(source,/verifyQat01AfterProviderSettles\(\{sha:pull\.sha,token,request\}\)/);
- assert.match(source,/artifact\?\.digest!=='sha256:'\+SEC01_ALERT_CARRY_DIGEST/);
+ assert.match(source,/ASSISTED_CARRY_RUN=44046962034/);
+ assert.match(source,/ASSISTED_CARRY_ARTIFACT=14311557590/);
+ assert.match(source,/ASSISTED_CARRY_DIGEST='3bc8b7b75ffd38661c6cedacd990331796eb13f4e2c0fc6d66a8cdb205fbdf8b'/);
+ assert.match(source,/artifact\?\.digest!=='sha256:'\+ASSISTED_CARRY_DIGEST/);
+ const assistedVerifier=source.slice(source.indexOf('export async function verifyAssistedCarry('),source.indexOf('export async function verifyCumulativeRelease('));
+ assert.match(assistedVerifier,/api\('\/actions\/runs\/'\+ASSISTED_CARRY_RUN\)/);
+ assert.match(assistedVerifier,/run\?\.head_sha!==ASSISTED_CARRY_BASE/);
+ assert.doesNotMatch(assistedVerifier,/SEC01_ALERT_CARRY_(?:RUN|ARTIFACT|BASE|DIGEST)/);
  assert.match(source,/verifyAssistedCarry\(index,\{expectedSha,prNumber,token,request,root\}\)/);
 });
 

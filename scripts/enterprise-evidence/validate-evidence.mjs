@@ -209,6 +209,9 @@ const SEC01_ALERT_CARRY_FILES=new Set([
  */
 const ASSISTED_CARRY_PR=2748;
 const ASSISTED_CARRY_BASE='b5934f46393efad92c3542f9fb48b511160ae6d4';
+const ASSISTED_CARRY_RUN=44046962034;
+const ASSISTED_CARRY_ARTIFACT=14311557590;
+const ASSISTED_CARRY_DIGEST='3bc8b7b75ffd38661c6cedacd990331796eb13f4e2c0fc6d66a8cdb205fbdf8b';
 const ASSISTED_CARRY_REVIEW='ASSISTED PRICING CTA FOUR-GATE CARRY SECURITY REVIEW: APPROVED';
 const ASSISTED_CARRY_FILES=new Set([
  'docs/sales/ASSISTED_COMMERCIAL_LAUNCH_2026-11-20.md',
@@ -1462,15 +1465,15 @@ export async function verifyAssistedCarry(index,{
    if(pair.status!==0||trees.length!==2||!SHA40.test(trees[0])||trees[0]!==trees[1])return false;
   }
   const [run,artifacts,reviews,ci]=await Promise.all([
-   api('/actions/runs/'+SEC01_ALERT_CARRY_RUN),
-   api('/actions/runs/'+SEC01_ALERT_CARRY_RUN+'/artifacts?per_page=100'),
+   api('/actions/runs/'+ASSISTED_CARRY_RUN),
+   api('/actions/runs/'+ASSISTED_CARRY_RUN+'/artifacts?per_page=100'),
    api('/pulls/'+pull.number+'/reviews?per_page=100'),
    verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
   ]);
-  const artifact=artifacts?.artifacts?.find(a=>a.id===SEC01_ALERT_CARRY_ARTIFACT);
-  if(run?.head_sha!==SEC01_ALERT_CARRY_BASE||run?.conclusion!=='success'||
-     run?.event!=='push'||artifact?.workflow_run?.head_sha!==SEC01_ALERT_CARRY_BASE||
-     artifact?.expired||artifact?.digest!=='sha256:'+SEC01_ALERT_CARRY_DIGEST||
+  const artifact=artifacts?.artifacts?.find(a=>a.id===ASSISTED_CARRY_ARTIFACT);
+  if(run?.head_sha!==ASSISTED_CARRY_BASE||run?.conclusion!=='success'||
+     run?.event!=='push'||artifact?.workflow_run?.head_sha!==ASSISTED_CARRY_BASE||
+     artifact?.expired||artifact?.digest!=='sha256:'+ASSISTED_CARRY_DIGEST||
      ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
      !Array.isArray(reviews))return false;
   const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|ASSISTED PRICING CTA FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
