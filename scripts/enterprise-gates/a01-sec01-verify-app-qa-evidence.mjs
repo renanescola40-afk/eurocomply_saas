@@ -59,11 +59,16 @@ const knownFailureStages = new Set([
   ...expectedNames, 'preflight', 'create_disposable_qa_user', 'launch_isolated_nextjs',
 ]);
 const knownFailureDetails = new Set([
+  'analytics_consent_decline_unavailable', 'analytics_consent_not_denied',
   'password_form_hydration_unavailable',
   'password_form_email_input_unavailable', 'password_form_password_input_unavailable',
   'invalid_password_submit_unavailable', 'invalid_password_request_not_sent',
   'invalid_password_request_failed', 'invalid_password_provider_response_missing',
   'invalid_password_provider_denial_unexpected', 'invalid_password_ui_alert_missing',
+  'invalid_password_ui_unexpected_navigation', 'invalid_password_ui_form_missing',
+  'invalid_password_ui_auth_pending', 'invalid_password_ui_alert_ambiguous',
+  'invalid_password_ui_alert_hidden', 'invalid_password_ui_alert_text_mismatch',
+  'invalid_password_ui_alert_absent',
   'invalid_password_session_or_route_not_denied',
   'valid_password_input_unavailable', 'valid_password_submit_unavailable',
   'invalid_password_submit_missing_or_ambiguous',

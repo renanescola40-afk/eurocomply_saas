@@ -229,6 +229,27 @@ try {
     undefined,
     { timeout: 60000 },
   );
+  // First-visit users see the real, fixed-bottom analytics-consent dialog
+  // above parts of the login form. It may intercept a legitimate pointer
+  // click on the password submit button. Handle this just like a real user:
+  // explicitly DECLINE optional analytics, and verify that the dialog closes.
+  // Never force-click, hide DOM elements, mock requests or pre-seed consent.
+  failureDetail = 'analytics_consent_decline_unavailable';
+  const consentDialog = page.getByRole('dialog', {
+    name: 'Privacy-first product analytics',
+  });
+  await consentDialog.waitFor({ state: 'visible', timeout: 30000 });
+  await consentDialog.getByRole('button', { name: 'Decline', exact: true })
+    .click({ noWaitAfter: true });
+  await consentDialog.waitFor({ state: 'hidden', timeout: 15000 });
+  failureDetail = 'analytics_consent_not_denied';
+  requireTrue(
+    await page.evaluate(() =>
+      window.localStorage.getItem('risckcomply.analytics.consent') === 'denied'),
+    'analytics_consent_not_denied',
+  );
+  // The main auth flow still requires the actual pointer action, genuine
+  // Supabase provider response, visible error and no session cookie.
   failureDetail = 'password_form_email_input_unavailable';
   await passwordForm.locator('input[type="email"]').fill(email);
   failureDetail = 'password_form_password_input_unavailable';
@@ -290,8 +311,39 @@ try {
     // Missing or unparseable denial proof must fail closed.
   }
   requireTrue(denialCode === 'invalid_credentials', 'unexpected_invalid_password_error_code');
+  // The page can contain independent live regions from OAuth, SSO, sonner,
+  // and the password form. An unscoped role=alert locator does not prove that
+  // the INVALID-PASSWORD UI error is shown; it can also fail strict matching
+  // when unrelated alerts exist. Match the public generic error exactly,
+  // while preserving a visible, real browser assertion (no mocked response).
   failureDetail = 'invalid_password_ui_alert_missing';
-  await page.getByRole('alert').waitFor({ state: 'visible', timeout: 30000 });
+  const genericDenialText = 'Could not sign in. Check your details and try again.';
+  const passwordDenial = page.getByRole('alert').filter({ hasText: genericDenialText });
+  let denialVisible = false;
+  try {
+    await passwordDenial.waitFor({ state: 'visible', timeout: 30000 });
+    denialVisible = await passwordDenial.count() === 1;
+  } catch {
+    // Classify the missing UI without recording DOM text, URLs, user identifiers,
+    // passwords, cookies, access tokens or provider response payloads.
+  }
+  if (!denialVisible) {
+    if (!isLoginPath(page.url())) {
+      failureDetail = 'invalid_password_ui_unexpected_navigation';
+    } else if (await passwordForm.count() !== 1) {
+      failureDetail = 'invalid_password_ui_form_missing';
+    } else if (await passwordForm.locator('button[type="submit"]').isDisabled()) {
+      failureDetail = 'invalid_password_ui_auth_pending';
+    } else {
+      const matches = await passwordDenial.count();
+      const alerts = await page.getByRole('alert').count();
+      failureDetail = matches > 1 ? 'invalid_password_ui_alert_ambiguous'
+        : matches === 1 ? 'invalid_password_ui_alert_hidden'
+          : alerts > 0 ? 'invalid_password_ui_alert_text_mismatch'
+            : 'invalid_password_ui_alert_absent';
+    }
+    throw new Error('invalid_password_ui_proof_missing');
+  }
   failureDetail = 'invalid_password_session_or_route_not_denied';
   const invalidPasswordCookies = (await context.cookies(LOCAL_URL))
     .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));

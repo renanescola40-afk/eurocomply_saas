@@ -45,9 +45,53 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(negative).toContain("'invalid_password_request_not_sent'");
     expect(negative).toContain("'invalid_password_request_failed'");
     expect(negative).toContain("denialCode === 'invalid_credentials'");
-    expect(negative).toContain("getByRole('alert').waitFor");
+    expect(negative).toContain("page.getByRole('alert').filter({ hasText: genericDenialText })");
+    expect(negative).toContain("await passwordDenial.waitFor({ state: 'visible', timeout: 30000 })");
+    expect(negative).toContain('denialVisible = await passwordDenial.count() === 1');
+    expect(negative).toContain("genericDenialText = 'Could not sign in. Check your details and try again.'");
+    expect(negative).toContain("failureDetail = 'invalid_password_ui_auth_pending'");
+    expect(negative).toContain("'invalid_password_ui_alert_text_mismatch'");
+    expect(negative).toContain("'invalid_password_ui_alert_ambiguous'");
+    expect(negative).toContain("throw new Error('invalid_password_ui_proof_missing')");
+    expect(negative).not.toContain("await page.getByRole('alert').waitFor");
+    expect(negative).not.toContain('force: true');
+    const copy = readFileSync('src/lib/i18n/commercial-surface-copy.ts', 'utf8');
+    expect(copy).toContain("failed: 'Could not sign in. Check your details and try again.'");
+    const verifier = readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs', 'utf8');
+    for (const suffix of ['unexpected_navigation','form_missing','auth_pending','alert_ambiguous','alert_hidden','alert_text_mismatch','alert_absent']) {
+      expect(verifier).toContain("'invalid_password_ui_" + suffix + "'");
+    }
     expect(negative).toContain('invalidPasswordCookies.length === 0');
     expect(negative).toContain('isLoginPath(page.url())');
+  });
+
+  it('handles the real privacy banner before clicking the password submit button', () => {
+    const banner = readFileSync('src/components/analytics/AnalyticsConsentBanner.tsx', 'utf8');
+    const consent = runner.split("failureDetail = 'analytics_consent_decline_unavailable';")[1]
+      ?.split("failureDetail = 'password_form_email_input_unavailable';")[0];
+    const negative = runner.split("stage = 'bad_password_denied_in_real_browser';")[1]
+      ?.split("stage = 'real_browser_password_login';")[0];
+    expect(banner).toContain('fixed inset-x-4 bottom-4 z-50');
+    expect(banner).toContain('setVisible(existingConsent');
+    expect(banner).toContain('denyAnalyticsConsent()');
+    expect(banner).toContain('aria-labelledby={CONSENT_TITLE_ID}');
+    expect(consent).toBeTruthy();
+    expect(consent).toContain("page.getByRole('dialog'");
+    expect(consent).toContain("name: 'Privacy-first product analytics'");
+    expect(consent).toContain("getByRole('button', { name: 'Decline', exact: true })");
+    expect(consent).toContain("waitFor({ state: 'hidden'");
+    expect(consent).toContain("window.localStorage.getItem('risckcomply.analytics.consent') === 'denied'");
+    expect(negative?.indexOf("getByRole('button', { name: 'Decline'")).toBeLessThan(
+      negative?.indexOf("invalidSubmit.click({ noWaitAfter: true })") ?? -1,
+    );
+    // No synthetic consent pre-seeding, forced click or hidden overlay.
+    expect(consent).not.toContain('localStorage.setItem');
+    expect(consent).not.toContain('force: true');
+    expect(consent).not.toContain('.dispatchEvent(');
+    expect(consent).not.toContain('.route(');
+    const verifier = readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs', 'utf8');
+    expect(verifier).toContain("'analytics_consent_decline_unavailable'");
+    expect(verifier).toContain("'analytics_consent_not_denied'");
   });
 
   it('waits for a genuinely hydrated React password form before QA credential input', () => {
@@ -117,7 +161,10 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(runner).toContain('passwordForm.locator(\'input[type="email"]\').fill(email)');
     expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password + \'wrong\')');
     expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password)');
-    expect(runner.match(/passwordForm\.locator\(/g)).toHaveLength(5);
+    // Five original credential/submit actions plus one read-only disabled
+    // state check for sanitized post-denial diagnostics.
+    expect(runner.match(/passwordForm\.locator\(/g)).toHaveLength(6);
+    expect(runner).toContain("await passwordForm.locator('button[type=\"submit\"]').isDisabled()");
     expect(runner).not.toContain("page.locator('form input[type=");
     expect(runner).not.toContain("page.locator('form button[type=");
     expect(runner).toContain("failureDetail = 'password_form_email_input_unavailable'");

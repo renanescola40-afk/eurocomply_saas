@@ -164,6 +164,45 @@ const SEC01_PROFILE_CARRY_FILES=new Set([
  'tests/enterprise-evidence/sec01-source-carry.test.mjs',
 ]);
 
+
+/**
+ * A-01 SEC-01 PR #2746: strictly scoped real-browser consent dialog QA fix.
+ * This binds the unchanged four accepted main-gate proofs to the exact PR
+ * source and an independent native review; it DOES NOT accept SEC-01.
+ */
+const SEC01_CONSENT_CARRY_PR=2746;
+const SEC01_CONSENT_CARRY_BASE='af109b20839c62ca0bf9cd24ac99dc33a41b98f5';
+const SEC01_CONSENT_CARRY_RUN=43975605464;
+const SEC01_CONSENT_CARRY_ARTIFACT=14280608301;
+const SEC01_CONSENT_CARRY_DIGEST='656734f674f91bf120e37a7e8b18cd3aca5ee48542336249e3666b3e518d4e23';
+const SEC01_CONSENT_CARRY_REVIEW='SEC-01 CONSENT OVERLAY FOUR-GATE CARRY SECURITY REVIEW: APPROVED';
+const SEC01_CONSENT_CARRY_FILES=new Set([
+ 'scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs',
+ 'scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs',
+ 'tests/security/sec01-browser-bad-password-contract.test.ts',
+ 'scripts/enterprise-evidence/validate-evidence.mjs',
+ 'tests/enterprise-evidence/sec01-source-carry.test.mjs',
+]);
+
+/**
+ * A-01 SEC-01 PR #2747: strictly scoped scoped QA negative-password UI alert verification.
+ * This binds the unchanged four accepted main-gate proofs to the exact PR
+ * source and an independent native review; it DOES NOT accept SEC-01.
+ */
+const SEC01_ALERT_CARRY_PR=2747;
+const SEC01_ALERT_CARRY_BASE='0e49de5244efd631983d9d78654b20f22dcc6122';
+const SEC01_ALERT_CARRY_RUN=43985069702;
+const SEC01_ALERT_CARRY_ARTIFACT=14284442862;
+const SEC01_ALERT_CARRY_DIGEST='096553d9c6c9798e50d0d38e45cf375159889d32e0577a2214c506b82d6b7c11';
+const SEC01_ALERT_CARRY_REVIEW='SEC-01 QA INVALID PASSWORD ALERT FOUR-GATE CARRY SECURITY REVIEW: APPROVED';
+const SEC01_ALERT_CARRY_FILES=new Set([
+ 'scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs',
+ 'scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs',
+ 'tests/security/sec01-browser-bad-password-contract.test.ts',
+ 'scripts/enterprise-evidence/validate-evidence.mjs',
+ 'tests/enterprise-evidence/sec01-source-carry.test.mjs',
+]);
+
 function gateProof(document,gate){
  if(gate.acceptance_evidence_ref!==COMBINED_PROOF) return document;
  if(document?.schema!==COMBINED_SCHEMA||Object.keys(document.gates??{}).length!==2||
@@ -1188,6 +1227,163 @@ export async function verifySec01ProfileCarry(index,{
  }catch{return false;}
 }
 
+
+/** Only a reviewed five-file QA harness and validator edit can carry 4 accepted gates. */
+export function sec01ConsentCarryIntegrity(index,{
+ expectedSha,root=ROOT,checkpoint=SEC01_CONSENT_CARRY_BASE,
+}={}){
+ if(!SHA40.test(expectedSha||'')||!SHA40.test(checkpoint||'')||
+    expectedSha===checkpoint||
+    index?.cumulative_acceptance?.schema!=='risck-comply.a15-cumulative-acceptance.v1'||
+    runGit(root,['merge-base','--is-ancestor',checkpoint,expectedSha]).status!==0)return false;
+ const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',
+    checkpoint,expectedSha,'--']);
+ if(diff.status!==0||!Buffer.isBuffer(diff.stdout))return false;
+ const paths=diff.stdout.toString('utf8').split('\0').filter(Boolean);
+ if(paths.length!==SEC01_CONSENT_CARRY_FILES.size||
+    !paths.every(p=>SEC01_CONSENT_CARRY_FILES.has(p)))return false;
+ const baseline=committedJson(root,checkpoint,INDEX_PATH);
+ if(!baseline||JSON.stringify(baseline)!==JSON.stringify(index)||
+    !CUMULATIVE_GATES.every(id=>baseline.gates?.some(g=>g.gate_id===id&&
+      (id==='A-19'||g.accepted===true))))return false;
+ const immutable=new Set([COMBINED_PROOF,A15_PROOF,A19_PROOF]);
+ for(const gate of baseline.gates||[])if(gate.accepted===true){
+  if(typeof gate.acceptance_evidence_ref!=='string')return false;
+  immutable.add(gate.acceptance_evidence_ref);
+ }
+ for(const row of baseline.evidence_records||[])if(row.status==='PASS'){
+  if(typeof row.artifact_path!=='string')return false;
+  immutable.add(row.artifact_path);
+ }
+ for(const p of immutable){
+  const before=committedDigest(root,checkpoint,p);
+  if(!SHA256.test(before||'')||committedDigest(root,expectedSha,p)!==before)return false;
+ }
+ return true;
+}
+
+export async function verifySec01ConsentCarry(index,{
+ expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
+}={}){
+ const provided=prNumber!==undefined&&prNumber!==null&&String(prNumber).trim()!=='';
+ if((provided&&Number(prNumber)!==SEC01_CONSENT_CARRY_PR)||
+    !token||!sec01ConsentCarryIntegrity(index,{expectedSha,root}))return false;
+ const provider=githubRead(request,token);
+ try{
+  const pull=await reviewedPull(provider,expectedSha,
+    provided?prNumber:null,QUALIFIED_REVIEWER);
+  if(!pull||pull.number!==SEC01_CONSENT_CARRY_PR)return false;
+  if(pull.mergedAt){
+   const pair=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
+   const trees=pair.stdout?.toString('utf8').trim().split('\n')||[];
+   if(pair.status!==0||trees.length!==2||!SHA40.test(trees[0])||
+     trees[0]!==trees[1])return false;
+  }
+  const [run,artifacts,reviews,ci]=await Promise.all([
+   provider('/actions/runs/'+SEC01_CONSENT_CARRY_RUN),
+   provider('/actions/runs/'+SEC01_CONSENT_CARRY_RUN+'/artifacts?per_page=100'),
+   provider('/pulls/'+pull.number+'/reviews?per_page=100'),
+   verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
+  ]);
+  const artifact=artifacts?.artifacts?.find(a=>a.id===SEC01_CONSENT_CARRY_ARTIFACT);
+  if(run?.head_sha!==SEC01_CONSENT_CARRY_BASE||run?.conclusion!=='success'||
+    run?.event!=='push'||artifact?.workflow_run?.head_sha!==SEC01_CONSENT_CARRY_BASE||
+    artifact?.expired||artifact?.digest!=='sha256:'+SEC01_CONSENT_CARRY_DIGEST||
+    ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
+    !Array.isArray(reviews))return false;
+  const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|CONSENT OVERLAY FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+  const accepted=reviews.find(review=>review?.state==='APPROVED'&&
+    review.user?.login===QUALIFIED_REVIEWER&&review.commit_id===pull.sha&&
+    CUMULATIVE_LINES.every(line=>includesReviewLine(review.body,line))&&
+    includesReviewLine(review.body,CUMULATIVE_SECURITY)&&
+    includesReviewLine(review.body,SEC01_CONSENT_CARRY_REVIEW)&&
+    !rejection.test(review.body)&&!decisionWithdrawn(reviews,review,pull,rejection)&&
+    review.html_url==='https://github.com/'+REPOSITORY+'/pull/'+pull.number+
+      '#pullrequestreview-'+review.id&&
+    (!pull.mergedAt||Date.parse(review.submitted_at)<=Date.parse(pull.mergedAt)));
+  return accepted?{approvalUrl:accepted.html_url,acceptedAt:accepted.submitted_at,
+   consentCarry:true}:false;
+ }catch{return false;}
+}
+
+/** Only a reviewed five-file QA harness and validator edit can carry 4 accepted gates. */
+export function sec01AlertCarryIntegrity(index,{
+ expectedSha,root=ROOT,checkpoint=SEC01_ALERT_CARRY_BASE,
+}={}){
+ if(!SHA40.test(expectedSha||'')||!SHA40.test(checkpoint||'')||
+    expectedSha===checkpoint||
+    index?.cumulative_acceptance?.schema!=='risck-comply.a15-cumulative-acceptance.v1'||
+    runGit(root,['merge-base','--is-ancestor',checkpoint,expectedSha]).status!==0)return false;
+ const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',
+    checkpoint,expectedSha,'--']);
+ if(diff.status!==0||!Buffer.isBuffer(diff.stdout))return false;
+ const paths=diff.stdout.toString('utf8').split('\0').filter(Boolean);
+ if(paths.length!==SEC01_ALERT_CARRY_FILES.size||
+    !paths.every(p=>SEC01_ALERT_CARRY_FILES.has(p)))return false;
+ const baseline=committedJson(root,checkpoint,INDEX_PATH);
+ if(!baseline||JSON.stringify(baseline)!==JSON.stringify(index)||
+    !CUMULATIVE_GATES.every(id=>baseline.gates?.some(g=>g.gate_id===id&&
+      (id==='A-19'||g.accepted===true))))return false;
+ const immutable=new Set([COMBINED_PROOF,A15_PROOF,A19_PROOF]);
+ for(const gate of baseline.gates||[])if(gate.accepted===true){
+  if(typeof gate.acceptance_evidence_ref!=='string')return false;
+  immutable.add(gate.acceptance_evidence_ref);
+ }
+ for(const row of baseline.evidence_records||[])if(row.status==='PASS'){
+  if(typeof row.artifact_path!=='string')return false;
+  immutable.add(row.artifact_path);
+ }
+ for(const p of immutable){
+  const before=committedDigest(root,checkpoint,p);
+  if(!SHA256.test(before||'')||committedDigest(root,expectedSha,p)!==before)return false;
+ }
+ return true;
+}
+
+export async function verifySec01AlertCarry(index,{
+ expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
+}={}){
+ const provided=prNumber!==undefined&&prNumber!==null&&String(prNumber).trim()!=='';
+ if((provided&&Number(prNumber)!==SEC01_ALERT_CARRY_PR)||
+    !token||!sec01AlertCarryIntegrity(index,{expectedSha,root}))return false;
+ const provider=githubRead(request,token);
+ try{
+  const pull=await reviewedPull(provider,expectedSha,
+    provided?prNumber:null,QUALIFIED_REVIEWER);
+  if(!pull||pull.number!==SEC01_ALERT_CARRY_PR)return false;
+  if(pull.mergedAt){
+   const pair=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
+   const trees=pair.stdout?.toString('utf8').trim().split('\n')||[];
+   if(pair.status!==0||trees.length!==2||!SHA40.test(trees[0])||
+     trees[0]!==trees[1])return false;
+  }
+  const [run,artifacts,reviews,ci]=await Promise.all([
+   provider('/actions/runs/'+SEC01_ALERT_CARRY_RUN),
+   provider('/actions/runs/'+SEC01_ALERT_CARRY_RUN+'/artifacts?per_page=100'),
+   provider('/pulls/'+pull.number+'/reviews?per_page=100'),
+   verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
+  ]);
+  const artifact=artifacts?.artifacts?.find(a=>a.id===SEC01_ALERT_CARRY_ARTIFACT);
+  if(run?.head_sha!==SEC01_ALERT_CARRY_BASE||run?.conclusion!=='success'||
+    run?.event!=='push'||artifact?.workflow_run?.head_sha!==SEC01_ALERT_CARRY_BASE||
+    artifact?.expired||artifact?.digest!=='sha256:'+SEC01_ALERT_CARRY_DIGEST||
+    ci.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
+    !Array.isArray(reviews))return false;
+  const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|QA INVALID PASSWORD ALERT FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+  const accepted=reviews.find(review=>review?.state==='APPROVED'&&
+    review.user?.login===QUALIFIED_REVIEWER&&review.commit_id===pull.sha&&
+    CUMULATIVE_LINES.every(line=>includesReviewLine(review.body,line))&&
+    includesReviewLine(review.body,CUMULATIVE_SECURITY)&&
+    includesReviewLine(review.body,SEC01_ALERT_CARRY_REVIEW)&&
+    !rejection.test(review.body)&&!decisionWithdrawn(reviews,review,pull,rejection)&&
+    review.html_url==='https://github.com/'+REPOSITORY+'/pull/'+pull.number+
+      '#pullrequestreview-'+review.id&&
+    (!pull.mergedAt||Date.parse(review.submitted_at)<=Date.parse(pull.mergedAt)));
+  return accepted?{approvalUrl:accepted.html_url,acceptedAt:accepted.submitted_at,
+   alertCarry:true}:false;
+ }catch{return false;}
+}
+
 export async function verifyCumulativeRelease(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
@@ -1206,6 +1402,14 @@ export async function verifyCumulativeRelease(index,{
   // earlier hydration carry's cumulative six-file allowlist, so dispatch
   // it first; each verifier still enforces its OWN exact PR number and
   // native qualified review rather than inheriting an earlier approval.
+  // New post-consent alert proof shares its five-file change set with the earlier
+  // consent harness; validate the newer exact-PR identity before historic carries.
+  if(sec01AlertCarryIntegrity(index,{expectedSha,root})){
+   return verifySec01AlertCarry(index,{expectedSha,prNumber,token,request,root});
+  }
+  if(sec01ConsentCarryIntegrity(index,{expectedSha,root})){
+   return verifySec01ConsentCarry(index,{expectedSha,prNumber,token,request,root});
+  }
   if(sec01ProfileCarryIntegrity(index,{expectedSha,root})){
    return verifySec01ProfileCarry(index,{expectedSha,prNumber,token,request,root});
   }
@@ -1357,14 +1561,18 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    sec01ClickCarryIntegrity(index,{expectedSha}));
  const profileCarry=Boolean(cumulative&&cumulativeReview?.profileCarry===true&&
    sec01ProfileCarryIntegrity(index,{expectedSha}));
+ const consentCarry=Boolean(cumulative&&cumulativeReview?.consentCarry===true&&
+   sec01ConsentCarryIntegrity(index,{expectedSha}));
+ const alertCarry=Boolean(cumulative&&cumulativeReview?.alertCarry===true&&
+   sec01AlertCarryIntegrity(index,{expectedSha}));
  const carry=Boolean(cumulative&&cumulativeReview&&
-   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||cumulativeIntegrity(index,{expectedSha})));
+   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||cumulativeIntegrity(index,{expectedSha})));
  const qatGate=(index.gates||[]).find(gate=>gate.gate_id==='A-15'&&gate.accepted===true);
  const isQatPass=record=>record.control_id==='QAT-01'&&record.status==='PASS';
  const qatEvidenceMatches=record=>qatGate&&record.gate_id==='A-15'&&
   record.artifact_path===qatGate.acceptance_evidence_ref&&
   record.artifact_sha256===qatGate.acceptance_evidence_sha256&&
-  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry)?DOCS_CHECKPOINT:expectedSha});
+  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry)?DOCS_CHECKPOINT:expectedSha});
  const recordSha=record=>isQatPass(record)&&qatEvidenceMatches(record)
   ?qatGate.acceptance_sha
   :evidenceExpectedSha(record,{frozenSha:index.source?.commit_sha,candidateSha:expectedSha});
@@ -1406,7 +1614,7 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    eligible:eligible&&status===computed,
    expectedSha:carry&&gate.id==='A-19'?claim.acceptance_sha:
     carry&&['A-09','A-18'].includes(gate.id)?CUMULATIVE_CHECKPOINT:
-    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
+    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
    providerApproved:carry&&CUMULATIVE_GATES.includes(gate.id)||
     (gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved),
   });
