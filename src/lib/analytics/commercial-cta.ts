@@ -92,7 +92,10 @@ export function resolveCommercialCtaId({ pathname, href, explicitId }: ResolveCo
     if (destination.route === '/trust') return 'pricing-trust';
     if (destination.route === '/enterprise') return 'pricing-enterprise';
     if (destination.route === '/book-demo') {
-      return destination.plan === 'business' ? 'pricing-plan-business' : 'pricing-book-demo';
+      if (destination.plan === 'essential' || destination.plan === 'professional' || destination.plan === 'business') {
+        return `pricing-plan-${destination.plan}`;
+      }
+      return 'pricing-book-demo';
     }
     if (destination.route === '/signup') {
       const plan = destination.plan;

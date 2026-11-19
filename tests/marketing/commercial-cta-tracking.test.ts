@@ -19,6 +19,8 @@ describe('commercial CTA tracking contract', () => {
     expect(resolveCommercialCtaId({ pathname: '/de/pricing', href: '/de/signup?plan=essential' })).toBe('pricing-plan-essential');
     expect(resolveCommercialCtaId({ pathname: '/fr/pricing', href: '/fr/signup?plan=professional' })).toBe('pricing-plan-professional');
     expect(resolveCommercialCtaId({ pathname: '/es/pricing', href: '/es/book-demo?plan=business' })).toBe('pricing-plan-business');
+    expect(resolveCommercialCtaId({ pathname: '/de/pricing', href: '/de/book-demo?plan=essential' })).toBe('pricing-plan-essential');
+    expect(resolveCommercialCtaId({ pathname: '/fr/pricing', href: '/fr/book-demo?plan=professional' })).toBe('pricing-plan-professional');
     expect(resolveCommercialCtaId({ pathname: '/it/pricing', href: '/it/enterprise' })).toBe('pricing-enterprise');
     expect(resolveCommercialCtaId({ pathname: '/en/pricing', href: '/en/book-demo' })).toBe('pricing-book-demo');
     expect(resolveCommercialCtaId({ pathname: '/pt/pricing', href: '/pt/trust' })).toBe('pricing-trust');

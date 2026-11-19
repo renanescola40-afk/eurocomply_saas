@@ -231,7 +231,7 @@ test.describe('authenticated FRIA lifecycle runtime acceptance', () => {
     await expectHealthyPublicPage(page, 'public pricing');
     await expect(page).toHaveURL(/\/en\/pricing(?:\?|$)/);
     await expect(page.getByRole('heading', { name: 'Professional', exact: true })).toBeVisible();
-    await expect(page.locator('a[href="/en/signup?plan=professional"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/en/book-demo?plan=professional"]').first()).toBeVisible();
 
     // A real authenticated organization with membership but no durable commercial
     // authority must fail closed on both dashboard and legacy top-level paid routes,

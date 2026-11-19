@@ -28,7 +28,9 @@ describe('public pricing commercial truth', () => {
 
       expect(copy.startTrial).toBe(truth.primaryCta);
       expect(copy.startProfessional).toBe(truth.professionalCta);
+      expect(copy.plan.starter.cta).toBe(truth.primaryCta);
       expect(copy.plan.professional.cta).toBe(truth.professionalCta);
+      expect(copy.selfServe).toBe(truth.selfServeCheckout);
       expect(copy.selfServeTrial).toBe(truth.selfServeCheckout);
       expect(copy.faqs[1]).toEqual({
         question: truth.trialQuestion,
@@ -37,7 +39,7 @@ describe('public pricing commercial truth', () => {
 
       expect(copy.startTrial.toLowerCase()).not.toMatch(/trial|teste|prueba|essai|prova|testphase|test starten/);
       expect(copy.startProfessional.toLowerCase()).not.toMatch(/trial|teste|prueba|essai|prova|testphase|test starten/);
-      expect(copy.selfServeTrial.toLowerCase()).toMatch(/checkout/);
+      expect(copy.selfServeTrial.toLowerCase()).not.toMatch(/checkout|self-serve/);
     }
   });
 

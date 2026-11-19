@@ -9,6 +9,7 @@ import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ plan?: string | string[] }>;
 };
 
 type Outcome = [string, string, typeof Building2];
@@ -24,7 +25,7 @@ const agenda = [
   '3 min — trigger: buyer review, board request, audit prep or AI policy rollout',
   '7 min — current AI workflow and evidence mapping',
   '12 min — RISCK COMPLY walkthrough: inventory, risk, policies and evidence',
-  '5 min — commercial fit: self-service checkout, Business-assisted motion or Enterprise review',
+  '5 min — commercial fit: assisted onboarding, plan selection and procurement review',
   '3 min — next step and procurement blockers',
 ];
 
@@ -39,14 +40,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return makePublicMetadata({
     locale,
     path: '/book-demo',
-    title: 'Book a RISCK COMPLY Demo | AI Governance Workflows',
-    description: 'Book a RISCK COMPLY demo to review AI inventory, risk, policy, evidence and procurement workflows with your team context.',
+    title: 'Request a RISCK COMPLY Demo | AI Governance Workflows',
+    description: 'Request a RISCK COMPLY demo to review AI inventory, risk, policy, evidence and procurement workflows. Our team will arrange the meeting by email.',
   });
 }
 
-export default async function BookDemoPage({ params }: PageProps) {
+export default async function BookDemoPage({ params, searchParams }: PageProps) {
   const { locale: requestedLocale } = await params;
   const locale = resolveLocale(requestedLocale);
+  const query = searchParams ? await searchParams : {};
+  const planIntent = typeof query.plan === 'string' && /^(essential|professional|business|enterprise)$/.test(query.plan)
+    ? (query.plan as 'essential' | 'professional' | 'business' | 'enterprise')
+    : undefined;
 
   return (
     <main className="min-h-screen bg-[#050913] text-white">
@@ -71,10 +76,10 @@ export default async function BookDemoPage({ params }: PageProps) {
             <Users className="h-4 w-4" /> Enterprise readiness mapping
           </div>
           <h1 className="mt-7 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-[-0.06em] text-white sm:text-6xl">
-            Book a demo for AI inventory, risk, policy and evidence readiness.
+            Request a demo for AI inventory, risk, policy and evidence readiness.
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-white/62">
-            In 30 minutes, we map your current AI governance workflow and show how RISCK COMPLY can centralize AI systems, owners, risk, policies, evidence and procurement answers.
+            Request a 30-minute introductory conversation. We will confirm the time with you by email and discuss how RISCK COMPLY can support AI inventory, risk, policy, evidence and procurement workflows.
           </p>
 
           <div className="mt-8 divide-y divide-slate-800 overflow-hidden rounded-xl border border-slate-800/80 bg-[#0d1522]">
@@ -94,7 +99,7 @@ export default async function BookDemoPage({ params }: PageProps) {
           </div>
         </div>
 
-        <BookDemoForm locale={locale} />
+        <BookDemoForm locale={locale} planIntent={planIntent} />
         </div>
       </section>
 
