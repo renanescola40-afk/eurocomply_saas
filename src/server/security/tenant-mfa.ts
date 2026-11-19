@@ -36,11 +36,12 @@ export async function getTenantMfaSessionState(organizationId: string) {
       .eq('organization_id', organizationId)
       .maybeSingle<TenantMfaRow>();
 
-    if (error) {
+    if (error || typeof data?.require_mfa_for_all_users !== 'boolean') {
+      // A missing or malformed tenant policy cannot grant product access.
       throw new TenantMfaError('tenant_mfa_check_failed', 503);
     }
 
-    const required = data?.require_mfa_for_all_users === true;
+    const required = data.require_mfa_for_all_users;
     if (!required) {
       return { required: false, satisfied: true, assuranceLevel: null as string | null };
     }

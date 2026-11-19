@@ -60,6 +60,18 @@ async function insertOne(admin, table, row, label) {
   return data;
 }
 
+async function assertDisposableMfaPolicy(admin, organizationId, label) {
+  // New organizations must receive an explicit policy from the DB trigger,
+  // not from a test-only insert that could conceal broken tenant initialization.
+  const { data, error } = await admin.from('organization_security_settings')
+    .select('organization_id,require_mfa_for_all_users')
+    .eq('organization_id', organizationId)
+    .single();
+  if (error || data?.organization_id !== organizationId || data?.require_mfa_for_all_users !== false) {
+    throw new Error(`${label}_mfa_policy_seed_failed`);
+  }
+}
+
 async function main() {
   if (env('GITHUB_ACTIONS') !== 'true') throw new Error('github_actions_required');
   const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
@@ -151,6 +163,16 @@ async function main() {
     onboarding_completed_at: null,
     selected_plan: 'professional',
   }, 'new_customer_organization');
+
+  // Require an actual DB-triggered policy; test fixtures must never insert
+  // policies manually and conceal a broken new-tenant creation path.
+  for (const [organizationId, label] of [
+    [organization.id, 'fria_licensed'],
+    [unlicensedOrganization.id, 'fria_unlicensed'],
+    [newCustomerOrganization.id, 'fria_new_customer'],
+  ]) {
+    await assertDisposableMfaPolicy(admin, organizationId, label);
+  }
 
   await insertOne(admin, 'organization_members', {
     organization_id: newCustomerOrganization.id,
