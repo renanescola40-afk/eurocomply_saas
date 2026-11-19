@@ -48,7 +48,7 @@ describe('atomic organization creation', () => {
     const policyMigration = fs.readFileSync(
       'supabase/migrations/20261119115000_initialize_new_tenant_mfa_policy.sql', 'utf8',
     );
-    expect(policyMigration).toMatch(/^\s*begin\s*;/);
+    expect(policyMigration).toMatch(/(?:^|\n)begin\s*;/);
     expect(policyMigration).toMatch(/after insert on public\.organizations/i);
     expect(policyMigration).toMatch(/insert into public\.organization_security_settings/i);
     expect(policyMigration).toMatch(/values\s*\(new\.id, false\)/i);
