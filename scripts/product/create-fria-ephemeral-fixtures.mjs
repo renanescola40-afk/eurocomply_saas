@@ -60,13 +60,12 @@ async function insertOne(admin, table, row, label) {
   return data;
 }
 
-async function seedDisposableMfaPolicy(admin, organizationId, label) {
-  // Persist an explicit default-off policy for the isolated fixture. This
-  // preserves the missing-policy fail-closed invariant without requiring AAL2
-  // for synthetic browser identities testing independent product boundaries.
+async function assertDisposableMfaPolicy(admin, organizationId, label) {
+  // New organizations must receive an explicit policy from the DB trigger,
+  // not from a test-only insert that could conceal broken tenant initialization.
   const { data, error } = await admin.from('organization_security_settings')
-    .insert({ organization_id: organizationId, require_mfa_for_all_users: false })
     .select('organization_id,require_mfa_for_all_users')
+    .eq('organization_id', organizationId)
     .single();
   if (error || data?.organization_id !== organizationId || data?.require_mfa_for_all_users !== false) {
     throw new Error(`${label}_mfa_policy_seed_failed`);
@@ -165,14 +164,14 @@ async function main() {
     selected_plan: 'professional',
   }, 'new_customer_organization');
 
-  // Authenticated membership and payment-first RLS must see a real policy,
-  // not the former implicit allow when organization_security_settings is absent.
+  // Require an actual DB-triggered policy; test fixtures must never insert
+  // policies manually and conceal a broken new-tenant creation path.
   for (const [organizationId, label] of [
     [organization.id, 'fria_licensed'],
     [unlicensedOrganization.id, 'fria_unlicensed'],
     [newCustomerOrganization.id, 'fria_new_customer'],
   ]) {
-    await seedDisposableMfaPolicy(admin, organizationId, label);
+    await assertDisposableMfaPolicy(admin, organizationId, label);
   }
 
   await insertOne(admin, 'organization_members', {

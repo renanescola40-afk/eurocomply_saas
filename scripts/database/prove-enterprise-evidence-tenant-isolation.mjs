@@ -58,12 +58,12 @@ async function insertOne(admin, table, row, label) {
   return data;
 }
 
-async function seedDisposableMfaPolicy(admin, organizationId, label) {
-  // Explicit default-off policy for an isolated test tenant: a missing policy
-  // must remain fail-closed, while this proof exercises RLS tenant isolation.
+async function assertDisposableMfaPolicy(admin, organizationId, label) {
+  // New organizations must receive an explicit default-off policy atomically
+  // from the database trigger; this fixture cannot create the policy itself.
   const { data, error } = await admin.from('organization_security_settings')
-    .insert({ organization_id: organizationId, require_mfa_for_all_users: false })
     .select('organization_id,require_mfa_for_all_users')
+    .eq('organization_id', organizationId)
     .single();
   if (error || data?.organization_id !== organizationId || data?.require_mfa_for_all_users !== false) {
     throw new Error(`${label}_mfa_policy_seed_failed`);
@@ -158,14 +158,14 @@ async function main() {
     created_by: actorA.id,
   }, 'organization_a_secondary');
 
-  // The new MFA helper requires a persisted tenant security policy. These
-  // synthetic organizations must not rely on the old missing-policy bypass.
+  // Prove real database initialization of each newly created synthetic tenant.
+  // A missing security policy must still deny all tenant authorization.
   for (const [organizationId, label] of [
     [orgA.id, 'organization_a'],
     [orgB.id, 'organization_b'],
     [orgASecondary.id, 'organization_a_secondary'],
   ]) {
-    await seedDisposableMfaPolicy(admin, organizationId, label);
+    await assertDisposableMfaPolicy(admin, organizationId, label);
   }
 
   for (const [organizationId, userId, role, label] of [
