@@ -1494,7 +1494,7 @@ export async function verifyTenantMfaCarry(index,{
        (b.id||0)-(a.id||0));
      const c=rows[0];
      if(c?.status!=='completed'||c.conclusion!=='success'||
-       !/^https:\\/\\/github\\.com\\/renanescola40-afk\\/eurocomply_saas\\/actions\\/runs\\/\\d+\\/job\\/\\d+$/.test(c.html_url||''))return false;
+       !/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/actions\/runs\/\d+\/job\/\d+$/.test(c.html_url||''))return false;
    }
    const approval=tenantMfaCarryApprovedReview(reviews,pull);
    return approval?{approvalUrl:approval.html_url,acceptedAt:approval.submitted_at,tenantMfaCarry:true}:false;
