@@ -41,7 +41,7 @@ test('source admission refuses missing path, tampered proofs, unknown source or 
   put(INDEX,JSON.stringify(index));
   for(const file of files)put(file,readFileSync(file));
   const checkpoint=commit('immutable four-gate main');
-  for(const file of PATCH)put(file,'source '+file+'\\n');
+  for(const file of PATCH)put(file,'source '+file+'\n');
   const head=commit('MFA reviewed source');
   const opts={root,checkpoint,expectedSha:head};
   assert.equal(tenantMfaCarryIntegrity(index,opts),true);
@@ -75,7 +75,7 @@ test('native approved source carry requires explicit independently reviewed curr
   'A-19/OPS-02 FORMAL GATE ACCEPTANCE: APPROVED',
   'A-15 CUMULATIVE ACCEPTANCE SECURITY REVIEW: APPROVED',
   'TENANT MFA FAIL-CLOSED FOUR-GATE CARRY SECURITY REVIEW: APPROVED',
- ].join('\\n');
+ ].join('\n');
  const yes={id:135,state:'APPROVED',user:{login:'renansilva2002-tech'},
   commit_id:sha,body,submitted_at:'2026-11-19T14:30:40Z',
   html_url:'https://github.com/renanescola40-afk/eurocomply_saas/pull/2750#pullrequestreview-135'};

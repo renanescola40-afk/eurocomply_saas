@@ -1422,7 +1422,7 @@ export function tenantMfaCarryIntegrity(index,{expectedSha,root=ROOT,checkpoint=
  const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',
    checkpoint,expectedSha,'--']);
  if(diff.status!==0||!Buffer.isBuffer(diff.stdout))return false;
- const names=diff.stdout.toString('utf8').split('\\0').filter(Boolean);
+ const names=diff.stdout.toString('utf8').split('\0').filter(Boolean);
  if(names.length!==MFA_CARRY_FILES.size||!names.every(name=>MFA_CARRY_FILES.has(name)))return false;
  const frozen=committedJson(root,checkpoint,INDEX_PATH);
  if(!frozen||JSON.stringify(index)!==JSON.stringify(frozen)||
@@ -1446,7 +1446,7 @@ export function tenantMfaCarryIntegrity(index,{expectedSha,root=ROOT,checkpoint=
 /** Never infer a gate approval from a comment, outdated SHA or empty review. */
 export function tenantMfaCarryApprovedReview(reviews,pull){
  if(!Array.isArray(reviews)||pull?.number!==MFA_CARRY_PR||!SHA40.test(pull.sha||''))return false;
- const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|TENANT MFA FAIL-CLOSED FOUR-GATE CARRY SECURITY REVIEW).{0,85}\\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\\b/i;
+ const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|TENANT MFA FAIL-CLOSED FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
  return reviews.find(r=>r?.state==='APPROVED'&&r.user?.login===QUALIFIED_REVIEWER&&
    r.commit_id===pull.sha&&CUMULATIVE_LINES.every(line=>includesReviewLine(r.body,line))&&
    includesReviewLine(r.body,CUMULATIVE_SECURITY)&&includesReviewLine(r.body,MFA_CARRY_REVIEW)&&
@@ -1469,7 +1469,7 @@ export async function verifyTenantMfaCarry(index,{
    if(!pull||pull.number!==MFA_CARRY_PR)return false;
    if(pull.mergedAt){
      const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
-     const pair=trees.stdout?.toString('utf8').trim().split('\\n')||[];
+     const pair=trees.stdout?.toString('utf8').trim().split('\n')||[];
      if(trees.status!==0||pair.length!==2||!SHA40.test(pair[0])||pair[0]!==pair[1])return false;
    }
    const [run,artifacts,checks,ci,reviews]=await Promise.all([
