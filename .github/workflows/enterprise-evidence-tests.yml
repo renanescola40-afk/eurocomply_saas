@@ -58,6 +58,8 @@ jobs:
           node --test tests/enterprise-evidence/validate-evidence.test.mjs
           node --test tests/enterprise-evidence/a19-acceptance.test.mjs
           node --test tests/enterprise-evidence/privacy-lead-capture-carry.test.mjs
+          node --test tests/enterprise-evidence/netlify-qa-preview-carry.test.mjs
+          node --test scripts/qa-environment-guard.test.mjs scripts/check-netlify-preview.test.mjs
           node scripts/enterprise-evidence/validate-evidence.mjs --report
 
       - name: Generate exact-SHA SHA-256 evidence manifest
