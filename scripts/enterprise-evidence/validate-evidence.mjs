@@ -1658,7 +1658,7 @@ export function privacyCarryIntegrity(index,{expectedSha,root=ROOT,checkpoint=PR
 /** Reject comments, self-approval, stale SHA, dismissals and non-native review URLs. */
 export function privacyCarryApprovedReview(reviews,pull){
  if(!Array.isArray(reviews)||pull?.number!==PRIVACY_CARRY_PR||!SHA40.test(pull.sha||''))return false;
- const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|PUBLIC PRIVACY LEAD CAPTURE FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+ const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|PUBLIC PRIVACY LEAD CAPTURE FOUR-GATE CARRY SECURITY REVIEW|A-(?:09\/BIL-01|15\/QAT-01|18\/OPS-01|19\/OPS-02)).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
  return reviews.find(r=>r?.state==='APPROVED'&&r.user?.login===QUALIFIED_REVIEWER&&
    r.commit_id===pull.sha&&CUMULATIVE_LINES.every(line=>includesReviewLine(r.body,line))&&
    includesReviewLine(r.body,CUMULATIVE_SECURITY)&&includesReviewLine(r.body,PRIVACY_CARRY_REVIEW)&&

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync,mkdtempSync,writeFileSync,readFileSync,rmSync } from 'node:fs';
 import { dirname,join } from 'node:path';
+import { tmpdir } from 'node:os';
 import * as validator from '../../scripts/enterprise-evidence/validate-evidence.mjs';
 
 const INDEX='docs/enterprise/evidence/ENTERPRISE_EVIDENCE_MASTER_INDEX.json';
