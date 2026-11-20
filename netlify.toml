@@ -1,0 +1,6 @@
+[build]
+command = "node scripts/check-qa-environment.mjs && npm run build"
+
+# Netlify supplies CONTEXT and DEPLOY_PRIME_URL to preview builds. The guard
+# requires an exact isolated QA origin and rejects Production DB/keys when
+# RISCK_QA_ENVIRONMENT=true. No secrets or Production domain belong here.

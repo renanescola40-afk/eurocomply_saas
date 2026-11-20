@@ -11,6 +11,19 @@ const base={
  NEXT_PUBLIC_APP_URL:'https://qa.example.vercel.app'
 };
 test('valid QA preview configuration passes',()=>assert.deepEqual(validateQaEnvironment(base),{checked:true,errors:[]}));
+const netlify = {
+  ...base, VERCEL_ENV: undefined, NETLIFY: 'true', CONTEXT: 'deploy-preview',
+  DEPLOY_PRIME_URL: 'https://deploy-preview-2752--risck-qa.netlify.app',
+  NEXT_PUBLIC_APP_URL: 'https://deploy-preview-2752--risck-qa.netlify.app',
+};
+test('Netlify isolated QA preview passes with exact preview origin',()=>assert.deepEqual(validateQaEnvironment(netlify),{checked:true,errors:[]}));
+test('Netlify preview without QA flag fails',()=>assert.ok(validateQaEnvironment({...netlify,RISCK_QA_ENVIRONMENT:''}).errors.length));
+test('Netlify production cannot masquerade as QA preview',()=>assert.ok(validateQaEnvironment({...netlify,CONTEXT:'production'}).errors.length));
+test('Netlify QA rejects Production Supabase',()=>assert.ok(validateQaEnvironment({...netlify,NEXT_PUBLIC_SUPABASE_URL:'https://tganhbbhfxcpblmgqprg.supabase.co'}).errors.length));
+test('Netlify QA rejects mismatched app origin',()=>assert.ok(validateQaEnvironment({...netlify,NEXT_PUBLIC_APP_URL:'https://other.netlify.app'}).errors.length));
+test('Netlify QA rejects Vercel marker spoofing',()=>assert.ok(validateQaEnvironment({...netlify,VERCEL_ENV:'preview'}).errors.length));
+test('Netlify QA rejects privileged credentials',()=>assert.ok(validateQaEnvironment({...netlify,SUPABASE_SERVICE_ROLE_KEY:'opaque'}).errors.length));
+test('Netlify no-billing QA bootstrap passes without Stripe',()=>assert.deepEqual(validateQaEnvironment({...netlify,RISCK_QA_BOOTSTRAP_NO_BILLING:'true',STRIPE_SECRET_KEY:'',NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:'',STRIPE_WEBHOOK_SECRET:''}),{checked:true,errors:[]}));
 test('preview lacking QA flag fails',()=>assert.ok(validateQaEnvironment({...base,RISCK_QA_ENVIRONMENT:''}).errors.length));
 test('prod database destination fails',()=>assert.ok(validateQaEnvironment({...base,SUPABASE_URL:'https://tganhbbhfxcpblmgqprg.supabase.co'}).errors.length));
 test('prod database alternate variable fails',()=>assert.ok(validateQaEnvironment({...base,DATABASE_URL:'postgres://db.tganhbbhfxcpblmgqprg.supabase.co'}).errors.length));

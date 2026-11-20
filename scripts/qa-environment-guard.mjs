@@ -1,11 +1,24 @@
-// G5-01: fail-closed build gate for any Vercel Preview deployment.
+// G5-01: fail-closed build gate for Vercel and Netlify QA previews.
 // Deliberately avoids printing environment variable values.
 export function validateQaEnvironment(e) {
   const errors = [];
-  const preview = e.VERCEL_ENV === 'preview';
+  const vercelPreview = e.VERCEL_ENV === 'preview';
+  const netlifyPreview = e.NETLIFY === 'true' && e.CONTEXT === 'deploy-preview';
+  const preview = vercelPreview || netlifyPreview;
   const qa = e.RISCK_QA_ENVIRONMENT === 'true';
   if (!preview && !qa) return { checked: false, errors };
-  if (!preview) errors.push('QA must run only with VERCEL_ENV=preview');
+  if (!preview) errors.push('QA must run only in a supported isolated preview');
+  if (e.NETLIFY === 'true' && e.VERCEL_ENV) errors.push('Mixed hosting provider markers forbidden');
+  if (netlifyPreview) {
+    try {
+      const deploy = new URL(e.DEPLOY_PRIME_URL || '');
+      const app = new URL(e.NEXT_PUBLIC_APP_URL || '');
+      if (deploy.protocol !== 'https:' || !deploy.hostname.endsWith('.netlify.app') ||
+          deploy.hostname === 'netlify.app' || deploy.origin !== app.origin ||
+          deploy.pathname !== '/' || deploy.search || deploy.hash)
+        errors.push('Netlify QA app URL must match the HTTPS preview deployment');
+    } catch { errors.push('Netlify QA preview URL missing or invalid'); }
+  }
   if (!qa) errors.push('RISCK_QA_ENVIRONMENT=true is mandatory in Preview');
   const expected = 'zrxrrfbllsxtleyxjpsz';
   const prod = 'tganhbbhfxcpblmgqprg';
