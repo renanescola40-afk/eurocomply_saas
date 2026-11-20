@@ -16,6 +16,12 @@ const mocks = vi.hoisted(() => ({
   ),
   tryCreateAdminClient: vi.fn(),
   supabaseInsert: vi.fn(),
+  isEffectivePublicLegalPublication: vi.fn(),
+}));
+
+vi.mock('@/lib/legal/public-contract', () => ({
+  PUBLIC_PRIVACY_PUBLICATION: { version: '0.2-review', state: 'review', effectiveDate: null },
+  isEffectivePublicLegalPublication: mocks.isEffectivePublicLegalPublication,
 }));
 
 vi.mock('@/lib/security/rate-limit', () => ({
@@ -68,6 +74,7 @@ describe('public lead capture API hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
+    mocks.isEffectivePublicLegalPublication.mockReturnValue(true);
     mocks.checkDistributedRateLimit.mockResolvedValue({
       allowed: true,
       limit: 5,
@@ -89,6 +96,26 @@ describe('public lead capture API hardening', () => {
     mocks.tryCreateAdminClient.mockReturnValue({
       from: vi.fn(() => ({ insert: mocks.supabaseInsert })),
     });
+  });
+
+  it('rejects demo requests before reading PII or writing when the privacy notice is still a draft', async () => {
+    mocks.isEffectivePublicLegalPublication.mockReturnValue(false);
+    vi.stubEnv('RISCK_COMPLY_LEAD_WEBHOOK_URL', 'https://webhook.example.test/leads');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }));
+    const request = buildRequest(validLead());
+    const readSpy = vi.spyOn(request, 'json');
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(await response.json()).toEqual({
+      error: 'Demo requests are temporarily unavailable.',
+    });
+    expect(readSpy).not.toHaveBeenCalled();
+    expect(mocks.checkDistributedRateLimit).not.toHaveBeenCalled();
+    expect(mocks.tryCreateAdminClient).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('uses distributed IP-only rate limiting before reading and storing the lead', async () => {
