@@ -20,7 +20,7 @@ describe('privacy-safe assisted commercial contact', () => {
     expect(component).toContain("const subject = isDemo ? 'RISCK COMPLY demo request' : 'RISCK COMPLY commercial enquiry'");
     expect(component).toContain('const mailto = `mailto:${SALES_EMAIL}?subject=${encodeURIComponent(subject)}`');
     expect(component).toContain('href={mailto}');
-    expect(component).not.toMatch(/<(?:form|input|textarea)(?:\\s|>)/i);
+    expect(component).not.toMatch(/<(?:form|input|textarea)(?:\s|>)/i);
   });
 
   it('discloses the privacy limitation without implying a meeting or account activation', async () => {
