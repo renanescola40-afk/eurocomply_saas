@@ -9,18 +9,33 @@ export function validateQaEnvironment(e) {
   if (!preview && !qa) return { checked: false, errors };
   if (!preview) errors.push('QA must run only in a supported isolated preview');
   if (e.NETLIFY === 'true' && e.VERCEL_ENV) errors.push('Mixed hosting provider markers forbidden');
+  // Manual Netlify CLI draft aliases are not Git PR Deploy Previews.
+  // Require an explicitly named QA-only site. All existing credential and
+  // Production-denial rules below remain in force.
+  const netlifyManualDraft = e.RISCK_QA_NETLIFY_MANUAL_DRAFT === 'true';
+  if (netlifyManualDraft && !netlifyPreview)
+    errors.push('Manual QA drafts require the Netlify deploy-preview context');
+  if (netlifyManualDraft && e.RISCK_QA_BOOTSTRAP_NO_BILLING !== 'true')
+    errors.push('Manual QA drafts must disable billing');
   if (netlifyPreview) {
     try {
-      const deploy = new URL(e.DEPLOY_PRIME_URL || '');
+      const deploy = e.DEPLOY_PRIME_URL ? new URL(e.DEPLOY_PRIME_URL) : null;
       const app = new URL(e.NEXT_PUBLIC_APP_URL || '');
-      if (deploy.protocol !== 'https:' ||
-          !/^deploy-preview-[0-9]+--[a-z0-9][a-z0-9-]*\.netlify\.app$/.test(deploy.hostname) ||
-          deploy.username || deploy.password || app.username || app.password ||
-          deploy.pathname !== '/' || app.pathname !== '/' ||
-          deploy.search || deploy.hash || app.search || app.hash ||
-          deploy.href !== app.href)
-        errors.push('Netlify QA app URL must exactly match the HTTPS deploy-preview URL');
-    } catch { errors.push('Netlify QA preview URL missing or invalid'); }
+      const safeOrigin = (url) => url &&
+        url.protocol === 'https:' && !url.username && !url.password &&
+        url.pathname === '/' && !url.search && !url.hash;
+      const gitPreview = !netlifyManualDraft && deploy &&
+        /^deploy-preview-[0-9]+--[a-z0-9][a-z0-9-]*\.netlify\.app$/.test(deploy.hostname) &&
+        deploy.href === app.href;
+      // The CLI can omit DEPLOY_PRIME_URL for a manual draft. In that case
+      // the preconfigured HTTPS alias is verified during actual deploy smoke.
+      const manualDraft = netlifyManualDraft &&
+        /^qa-manual-[a-f0-9]{8}--risck-qa-[a-z0-9][a-z0-9-]*\.netlify\.app$/.test(app.hostname) &&
+        (!deploy || deploy.href === app.href);
+      if (!safeOrigin(app) || (deploy && !safeOrigin(deploy)) ||
+          !(gitPreview || manualDraft))
+        errors.push('Netlify QA origin must match an HTTPS Git preview or authorized QA-only draft');
+    } catch { errors.push('Netlify QA origin missing or invalid'); }
   }
   if (!qa) errors.push('RISCK_QA_ENVIRONMENT=true is mandatory in Preview');
   const expected = 'zrxrrfbllsxtleyxjpsz';
