@@ -5,6 +5,8 @@ import { ArrowRight, CalendarDays, CheckCircle2, Send } from 'lucide-react';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 import { SalesContactForm } from '@/components/marketing/sales-contact-form';
+import { CommercialContactMailtoFallback } from '@/components/marketing/commercial-contact-mailto-fallback';
+import { isEffectivePublicLegalPublication, PUBLIC_PRIVACY_PUBLICATION } from '@/lib/legal/public-contract';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 type ContactSearchParams = {
@@ -69,6 +71,7 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
   const intent = first(resolvedSearchParams.intent);
   const plan = first(resolvedSearchParams.plan)?.trim();
   const copy = copyFor(activeLocale, intent);
+  const publicLeadCaptureEnabled = isEffectivePublicLegalPublication(PUBLIC_PRIVACY_PUBLICATION);
 
 
   return (
@@ -131,11 +134,15 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
         </div>
       </section>
       <div className="border-t border-slate-800/80 bg-[#080d16]">
-      <SalesContactForm
-        locale={activeLocale}
-        intent={intent ?? 'sales'}
-        plan={plan || 'enterprise'}
-      />
+      {publicLeadCaptureEnabled ? (
+        <SalesContactForm
+          locale={activeLocale}
+          intent={intent ?? 'sales'}
+          plan={plan || 'enterprise'}
+        />
+      ) : (
+        <CommercialContactMailtoFallback intent={intent === 'demo' ? 'demo' : 'sales'} />
+      )}
       </div>
       <PublicFooter locale={activeLocale} />
     </main>
