@@ -29,6 +29,7 @@ describe('legacy waitlist privacy gate', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('rejects a same-origin contact request without persisting or emailing while the notice is a draft', async () => {
