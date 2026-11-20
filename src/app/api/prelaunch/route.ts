@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 
 import { sendInternalWaitlistNotification, sendPrelaunchWaitlistEmail } from '@/lib/email/prelaunch-waitlist';
 import type { SendEmailResult } from '@/lib/email/client';
+import { isEffectivePublicLegalPublication, PUBLIC_PRIVACY_PUBLICATION } from '@/lib/legal/public-contract';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -331,6 +332,12 @@ function shouldNotifyInternalTeam(saveResult: SaveWaitlistLeadResult) {
 export async function POST(request: NextRequest) {
   const originDenied = assertTrustedOrigin(request);
   if (originDenied) return originDenied;
+
+  // The legacy waitlist also collects contact details. Keep it closed until
+  // a privacy notice has been reviewed and published for this release.
+  if (!isEffectivePublicLegalPublication(PUBLIC_PRIVACY_PUBLICATION)) {
+    return noStoreJson({ error: 'Requests are temporarily unavailable.' }, { status: 503 });
+  }
 
   const rateLimited = await enforceRateLimit(request);
   if (rateLimited) return rateLimited;
