@@ -88,19 +88,24 @@ describe('prelaunch waitlist capture resilience', () => {
     expect(finalFailureIndex).toBeGreaterThan(salesFallbackFailureIndex);
   });
 
-  it('notifies the internal team and returns a received state when durable capture is degraded', () => {
+  it('fails closed without a persisted lead or confirmed internal delivery', () => {
     const source = routeSource();
     const saveResultIndex = source.indexOf('const saveResult = await saveWaitlistLead(request, record);');
-    const notifyPredicateIndex = source.indexOf('return saveResult.inserted || !saveResult.saved;');
-    const notifyIndex = source.indexOf('await notifyInternalTeam(request, record);');
-    const receivedStatusIndex = source.indexOf("status: saveResult.saved ? 'confirmed' : 'received'");
+    const fallbackIndex = source.indexOf('if (!saveResult.saved) {', saveResultIndex);
+    const notifyIndex = source.indexOf('const internalDelivery = await notifyInternalTeam(request, record);', fallbackIndex);
+    const deliveryCheckIndex = source.indexOf('if (!internalDelivery.sent) {', notifyIndex);
+    const unavailableIndex = source.indexOf("{ error: 'Requests are temporarily unavailable. Please contact sales directly.' }", deliveryCheckIndex);
+    const receivedStatusIndex = source.indexOf("status: saveResult.saved ? 'confirmed' : 'received'", deliveryCheckIndex);
     const receivedMessageIndex = source.indexOf("'Your request was received by the Risck Comply team.'");
     const acceptedStatusIndex = source.indexOf('{ status: saveResult.saved ? 201 : 202 }');
 
+    expect(source).toContain('return saveResult.inserted;');
     expect(saveResultIndex).toBeGreaterThan(-1);
-    expect(notifyPredicateIndex).toBeGreaterThan(-1);
-    expect(notifyIndex).toBeGreaterThan(saveResultIndex);
-    expect(receivedStatusIndex).toBeGreaterThan(notifyIndex);
+    expect(fallbackIndex).toBeGreaterThan(saveResultIndex);
+    expect(notifyIndex).toBeGreaterThan(fallbackIndex);
+    expect(deliveryCheckIndex).toBeGreaterThan(notifyIndex);
+    expect(unavailableIndex).toBeGreaterThan(deliveryCheckIndex);
+    expect(receivedStatusIndex).toBeGreaterThan(unavailableIndex);
     expect(receivedMessageIndex).toBeGreaterThan(receivedStatusIndex);
     expect(acceptedStatusIndex).toBeGreaterThan(receivedMessageIndex);
   });
