@@ -94,7 +94,9 @@ describe('legacy waitlist privacy gate', () => {
     }));
 
     expect(response.status).toBe(202);
-    expect((await response.json()).status).toBe('received');
+    const body = await response.json();
+    expect(body.status).toBe('received');
+    expect(body).not.toHaveProperty('launchAt');
     expect(mocks.sendInternalWaitlistNotification).toHaveBeenCalledTimes(1);
     expect(mocks.sendPrelaunchWaitlistEmail).not.toHaveBeenCalled();
   });
