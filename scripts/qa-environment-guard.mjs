@@ -13,10 +13,13 @@ export function validateQaEnvironment(e) {
     try {
       const deploy = new URL(e.DEPLOY_PRIME_URL || '');
       const app = new URL(e.NEXT_PUBLIC_APP_URL || '');
-      if (deploy.protocol !== 'https:' || !deploy.hostname.endsWith('.netlify.app') ||
-          deploy.hostname === 'netlify.app' || deploy.origin !== app.origin ||
-          deploy.pathname !== '/' || deploy.search || deploy.hash)
-        errors.push('Netlify QA app URL must match the HTTPS preview deployment');
+      if (deploy.protocol !== 'https:' ||
+          !/^deploy-preview-[0-9]+--[a-z0-9][a-z0-9-]*\.netlify\.app$/.test(deploy.hostname) ||
+          deploy.username || deploy.password || app.username || app.password ||
+          deploy.pathname !== '/' || app.pathname !== '/' ||
+          deploy.search || deploy.hash || app.search || app.hash ||
+          deploy.href !== app.href)
+        errors.push('Netlify QA app URL must exactly match the HTTPS deploy-preview URL');
     } catch { errors.push('Netlify QA preview URL missing or invalid'); }
   }
   if (!qa) errors.push('RISCK_QA_ENVIRONMENT=true is mandatory in Preview');

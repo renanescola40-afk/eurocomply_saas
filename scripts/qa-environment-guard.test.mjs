@@ -17,6 +17,13 @@ const netlify = {
   NEXT_PUBLIC_APP_URL: 'https://deploy-preview-2752--risck-qa.netlify.app',
 };
 test('Netlify isolated QA preview passes with exact preview origin',()=>assert.deepEqual(validateQaEnvironment(netlify),{checked:true,errors:[]}));
+
+test('Netlify QA rejects app URL with extra path',()=>assert.ok(validateQaEnvironment({...netlify,NEXT_PUBLIC_APP_URL:netlify.NEXT_PUBLIC_APP_URL+'/signup'}).errors.length));
+test('Netlify QA rejects app URL with extra query',()=>assert.ok(validateQaEnvironment({...netlify,NEXT_PUBLIC_APP_URL:netlify.NEXT_PUBLIC_APP_URL+'?test=synthetic'}).errors.length));
+test('Netlify QA rejects app URL fragment',()=>assert.ok(validateQaEnvironment({...netlify,NEXT_PUBLIC_APP_URL:netlify.NEXT_PUBLIC_APP_URL+'#fragment'}).errors.length));
+test('Netlify QA rejects credentials embedded in deploy URL',()=>assert.ok(validateQaEnvironment({...netlify,DEPLOY_PRIME_URL:'https://user:synthetic@deploy-preview-2752--risck-qa.netlify.app'}).errors.length));
+test('Netlify QA rejects non-preview Netlify hostname',()=>assert.ok(validateQaEnvironment({...netlify,DEPLOY_PRIME_URL:'https://risck-qa.netlify.app',NEXT_PUBLIC_APP_URL:'https://risck-qa.netlify.app'}).errors.length));
+test('Netlify QA rejects wrong preview slug',()=>assert.ok(validateQaEnvironment({...netlify,DEPLOY_PRIME_URL:'https://deploy-preview-other--risck-qa.netlify.app',NEXT_PUBLIC_APP_URL:'https://deploy-preview-other--risck-qa.netlify.app'}).errors.length));
 test('Netlify preview without QA flag fails',()=>assert.ok(validateQaEnvironment({...netlify,RISCK_QA_ENVIRONMENT:''}).errors.length));
 test('Netlify production cannot masquerade as QA preview',()=>assert.ok(validateQaEnvironment({...netlify,CONTEXT:'production'}).errors.length));
 test('Netlify QA rejects Production Supabase',()=>assert.ok(validateQaEnvironment({...netlify,NEXT_PUBLIC_SUPABASE_URL:'https://tganhbbhfxcpblmgqprg.supabase.co'}).errors.length));
