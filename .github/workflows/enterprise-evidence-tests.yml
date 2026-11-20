@@ -57,6 +57,7 @@ jobs:
           node --test tests/ci/enterprise-evidence-exact-sha-contract.test.mjs
           node --test tests/enterprise-evidence/validate-evidence.test.mjs
           node --test tests/enterprise-evidence/a19-acceptance.test.mjs
+          node --test tests/enterprise-evidence/privacy-lead-capture-carry.test.mjs
           node scripts/enterprise-evidence/validate-evidence.mjs --report
 
       - name: Generate exact-SHA SHA-256 evidence manifest
