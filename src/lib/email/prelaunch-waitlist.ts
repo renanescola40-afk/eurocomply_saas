@@ -8,6 +8,7 @@ type WaitlistEmailInput = {
   role: string;
   locale: string;
   joinedAt: string;
+  // Legacy persisted target is retained for call-site compatibility, not a public launch promise.
   launchAt: string;
   waitlistUrl: string;
 };
@@ -37,14 +38,6 @@ function formatJoinedAt(value: string, locale: string) {
   }).format(new Date(value));
 }
 
-function formatRemaining(joinedAt: string, launchAt: string, locale: string) {
-  const seconds = Math.max(0, Math.floor((Date.parse(launchAt) - Date.parse(joinedAt)) / 1000));
-  const days = Math.floor(seconds / 86_400);
-  const hours = Math.floor((seconds % 86_400) / 3_600);
-  const minutes = Math.floor((seconds % 3_600) / 60);
-  return `${days} days, ${hours} hours and ${minutes} minutes`;
-}
-
 function premiumEmailShell(title: string, preview: string, body: string) {
   return `
   <div style="margin:0;padding:0;background:#05070b;color:#f8fafc;font-family:Inter,Arial,sans-serif;">
@@ -68,12 +61,10 @@ function premiumEmailShell(title: string, preview: string, body: string) {
 
 export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
   const joinedAt = formatJoinedAt(input.joinedAt, 'en');
-  const launchLabel = '1 August 2026, 07:00 Europe/Lisbon';
-  const remaining = formatRemaining(input.joinedAt, input.launchAt, 'en');
-  const title = 'You are on the Risck Comply enterprise waitlist';
-  const preview = 'Your priority place has been confirmed.';
-  const cta = 'View launch page';
-  const intro = 'Your priority place has been confirmed. You are one of the contacts we want to hear from first before the official opening.';
+  const title = 'We received your interest in RISCK COMPLY';
+  const preview = 'Your request has been received.';
+  const cta = 'View RISCK COMPLY';
+  const intro = 'Thank you for your interest. Our commercial team will review your request and contact you about a guided demonstration or the next appropriate step when available.';
   const valueItems = [
     'AI inventory to map systems, vendors and owners.',
     'Initial EU AI Act readiness and risk classification.',
@@ -85,13 +76,11 @@ export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
     <div style="padding:28px 30px;">
       <p style="margin:0;color:#e2e8f0;font-size:16px;line-height:1.75;">${escapeHtml(intro)}</p>
       <div style="margin-top:22px;border:1px solid rgba(125,211,252,.22);border-radius:20px;background:rgba(8,47,73,.28);padding:18px;">
-        <div style="color:#67e8f9;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;">Registration details</div>
+        <div style="color:#67e8f9;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;">Request details</div>
         <p style="margin:12px 0 0;color:#f8fafc;line-height:1.8;font-size:14px;">
           <strong>Company:</strong> ${escapeHtml(input.companyName)}<br />
           <strong>Role:</strong> ${escapeHtml(input.role)}<br />
-          <strong>Joined:</strong> ${escapeHtml(joinedAt)}<br />
-          <strong>Launch:</strong> ${escapeHtml(launchLabel)}<br />
-          <strong>Time remaining:</strong> ${escapeHtml(remaining)}
+          <strong>Received:</strong> ${escapeHtml(joinedAt)}
         </p>
       </div>
       <div style="margin-top:22px;">
@@ -109,9 +98,7 @@ export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
     intro,
     `Company: ${input.companyName}`,
     `Role: ${input.role}`,
-    `Joined: ${joinedAt}`,
-    `Launch: ${launchLabel}`,
-    `Time remaining: ${remaining}`,
+    `Received: ${joinedAt}`,
     'What we will offer:',
     ...valueItems.map((item) => `- ${item}`),
     input.waitlistUrl,
@@ -121,7 +108,7 @@ export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
   return sendEmail({
     to: input.to,
     from: WAITLIST_COMMERCIAL_FROM,
-    subject: 'Your Risck Comply priority access is confirmed',
+    subject: 'RISCK COMPLY — we received your request',
     html: premiumEmailShell(title, preview, body),
     text,
     template: 'welcome_onboarding',
