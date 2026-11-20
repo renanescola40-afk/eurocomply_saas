@@ -360,7 +360,8 @@ export async function POST(request: NextRequest) {
 
   if (!saveResult.saved) {
     // A degraded database/webhook path may be acknowledged only when the
-    // internal mailbox confirms that it received the request.
+    // email provider reports the internal notification as sent. This is not
+    // proof that a person has opened or read the message.
     const internalDelivery = await notifyInternalTeam(request, record);
     if (!internalDelivery.sent) {
       return noStoreJson(
