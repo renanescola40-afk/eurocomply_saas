@@ -11,27 +11,27 @@ const faqs = [
     group: 'Product',
     icon: CircleHelp,
     items: [
-      ['What does RISCK COMPLY manage?', 'RISCK COMPLY centralizes compliance tasks, documents, vendors, risks, templates, audit logs, team access and executive reporting.'],
+      ['What does RISCK COMPLY manage?', 'RISCK COMPLY is designed to organize compliance tasks, documents, vendors, risks, evidence and reports. Customer access depends on the approved release and applicable plan.'],
       ['Is RISCK COMPLY advisory software?', 'RISCK COMPLY is compliance operations software. Professional interpretation should be reviewed by qualified advisors.'],
-      ['Can we generate reports for leadership?', 'Yes. The product includes executive reports, printable reports and CSV exports for operational review.'],
+      ['Can we generate reports for leadership?', 'Reports and exports are plan-dependent capabilities, available to customers only when the relevant release and entitlements are verified.'],
     ],
   },
   {
     group: 'Security and data',
     icon: LockKeyhole,
     items: [
-      ['Is the product multi-tenant?', 'Yes. Organizations are isolated by organization_id and protected through authentication, membership checks and Supabase policies.'],
-      ['How are documents handled?', 'Documents are stored in private storage with controlled upload flows and signed access patterns.'],
-      ['Do you track audit events?', 'Yes. Key actions such as document creation, invitations, billing sessions and organization creation are logged.'],
+      ['Is the product multi-tenant?', 'The application uses organization-scoped data, membership checks and database RLS. Isolation for customer use must be demonstrated on the actual deployed release.'],
+      ['How are documents handled?', 'The application is designed for private document storage and controlled signed access. Customer upload and download require tested runtime security and an approved release.'],
+      ['Do you track audit events?', 'Critical actions are designed to produce audit records. Their completeness and persistence must be verified in the deployed release.'],
     ],
   },
   {
     group: 'Billing',
     icon: ReceiptText,
     items: [
-      ['How does billing work?', 'Stripe Checkout, Stripe Customer Portal and webhook-based subscription syncing are built in.'],
-      ['What happens near a plan limit?', 'The billing screen shows current usage and warns when usage approaches or reaches plan limits.'],
-      ['Can we upgrade later?', 'Yes. Owners and admins can start checkout for a new plan or manage billing through Stripe.'],
+      ['How does billing work?', 'Stripe Checkout, Customer Portal and signed-webhook flows are implemented, but paid subscriptions cannot be activated for customers until contractual, fiscal, security and runtime release gates pass.'],
+      ['What happens near a plan limit?', 'When an authorized subscription is active, the billing interface is designed to display plan usage and limits; runtime quota enforcement still requires verification.'],
+      ['Can we upgrade later?', 'Plan changes depend on a verified subscription, entitlements and billing release approval. Instant self-service upgrades are not currently an available customer promise.'],
     ],
   },
 ];
