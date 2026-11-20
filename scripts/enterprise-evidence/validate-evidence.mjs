@@ -1633,7 +1633,7 @@ export function privacyCarryIntegrity(index,{expectedSha,root=ROOT,checkpoint=PR
     runGit(root,['merge-base','--is-ancestor',checkpoint,expectedSha]).status!==0)return false;
  const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',checkpoint,expectedSha,'--']);
  if(diff.status!==0||!Buffer.isBuffer(diff.stdout))return false;
- const names=diff.stdout.toString('utf8').split('\\0').filter(Boolean);
+ const names=diff.stdout.toString('utf8').split('\0').filter(Boolean);
  if(names.length!==PRIVACY_CARRY_FILES.size||
     !names.every(name=>PRIVACY_CARRY_FILES.has(name)))return false;
  const frozen=committedJson(root,checkpoint,INDEX_PATH);
@@ -1658,7 +1658,7 @@ export function privacyCarryIntegrity(index,{expectedSha,root=ROOT,checkpoint=PR
 /** Reject comments, self-approval, stale SHA, dismissals and non-native review URLs. */
 export function privacyCarryApprovedReview(reviews,pull){
  if(!Array.isArray(reviews)||pull?.number!==PRIVACY_CARRY_PR||!SHA40.test(pull.sha||''))return false;
- const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|PUBLIC PRIVACY LEAD CAPTURE FOUR-GATE CARRY SECURITY REVIEW).{0,85}\\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\\b/i;
+ const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|PUBLIC PRIVACY LEAD CAPTURE FOUR-GATE CARRY SECURITY REVIEW).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
  return reviews.find(r=>r?.state==='APPROVED'&&r.user?.login===QUALIFIED_REVIEWER&&
    r.commit_id===pull.sha&&CUMULATIVE_LINES.every(line=>includesReviewLine(r.body,line))&&
    includesReviewLine(r.body,CUMULATIVE_SECURITY)&&includesReviewLine(r.body,PRIVACY_CARRY_REVIEW)&&
@@ -1681,7 +1681,7 @@ export async function verifyPrivacyCarry(index,{
   if(!pull||pull.number!==PRIVACY_CARRY_PR)return false;
   if(pull.mergedAt){
    const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
-   const pair=trees.stdout?.toString('utf8').trim().split('\\n')||[];
+   const pair=trees.stdout?.toString('utf8').trim().split('\n')||[];
    if(trees.status!==0||pair.length!==2||!SHA40.test(pair[0])||pair[0]!==pair[1])return false;
   }
   const [run,artifacts,checks,ci,reviews]=await Promise.all([
@@ -1706,7 +1706,7 @@ export async function verifyPrivacyCarry(index,{
       (b.id||0)-(a.id||0));
     const check=rows[0];
     if(check?.status!=='completed'||check.conclusion!=='success'||
-      !/^https:\/\/github\\.com\/renanescola40-afk\/eurocomply_saas\/actions\/runs\/\\d+\/job\/\\d+$/.test(check.html_url||''))return false;
+      !/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/actions\/runs\/\d+\/job\/\d+$/.test(check.html_url||''))return false;
   }
   const approval=privacyCarryApprovedReview(reviews,pull);
   return approval?{approvalUrl:approval.html_url,acceptedAt:approval.submitted_at,privacyCarry:true}:false;
