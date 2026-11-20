@@ -20,6 +20,8 @@ const WAITLIST_RATE_LIMIT_MAX = 5;
 const WEBHOOK_TIMEOUT_MS = 3_500;
 const WAITLIST_ROUTE = '/api/prelaunch';
 const WAITLIST_ACTION = 'prelaunch_waitlist';
+// Legacy non-null database field only. The historic target is NOT an approved launch date.
+// Never expose it in customer responses or confirmation emails.
 const LAUNCH_TARGET_AT = '2026-08-01T07:00:00+01:00';
 const ALLOWED_LOCALES = new Set(['en', 'pt', 'es', 'fr', 'it', 'de']);
 const PUBLIC_WAITLIST_ROUTE_CONTRACT = 'requireEnterpriseApiAccess is intentionally not applied because /api/prelaunch is a public waitlist capture route; it stays bounded, rate-limited, no-store and consent-only.';
@@ -382,7 +384,6 @@ export async function POST(request: NextRequest) {
       status: saveResult.saved ? 'confirmed' : 'received',
       message: saveResult.saved ? 'You are on the Risck Comply waitlist.' : 'Your request was received by the Risck Comply team.',
       joinedAt: record.updated_at,
-      launchAt: record.launch_target_at,
     },
     { status: saveResult.saved ? 201 : 202 },
   );

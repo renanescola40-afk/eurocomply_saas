@@ -3,6 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Building2, CalendarDays, FileText, ShieldCheck, Users } from 'lucide-react';
 import { BookDemoForm } from '@/components/marketing/book-demo-form';
+import { CommercialContactMailtoFallback } from '@/components/marketing/commercial-contact-mailto-fallback';
+import { isEffectivePublicLegalPublication, PUBLIC_PRIVACY_PUBLICATION } from '@/lib/legal/public-contract';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
@@ -52,6 +54,7 @@ export default async function BookDemoPage({ params, searchParams }: PageProps) 
   const planIntent = typeof query.plan === 'string' && /^(essential|professional|business|enterprise)$/.test(query.plan)
     ? (query.plan as 'essential' | 'professional' | 'business' | 'enterprise')
     : undefined;
+  const publicLeadCaptureEnabled = isEffectivePublicLegalPublication(PUBLIC_PRIVACY_PUBLICATION);
 
   return (
     <main className="min-h-screen bg-[#050913] text-white">
@@ -99,7 +102,9 @@ export default async function BookDemoPage({ params, searchParams }: PageProps) 
           </div>
         </div>
 
-        <BookDemoForm locale={locale} planIntent={planIntent} />
+        {publicLeadCaptureEnabled
+          ? <BookDemoForm locale={locale} planIntent={planIntent} />
+          : <CommercialContactMailtoFallback intent="demo" />}
         </div>
       </section>
 

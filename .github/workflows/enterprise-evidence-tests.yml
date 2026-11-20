@@ -60,6 +60,7 @@ jobs:
           node --test tests/enterprise-evidence/privacy-lead-capture-carry.test.mjs
           node --test tests/enterprise-evidence/netlify-qa-preview-carry.test.mjs
           node --test tests/enterprise-evidence/prelaunch-intake-source-carry.test.mjs
+          node --test tests/enterprise-evidence/privacy-safe-marketing-carry.test.mjs
           node --test scripts/qa-environment-guard.test.mjs scripts/check-netlify-preview.test.mjs
           node scripts/enterprise-evidence/validate-evidence.mjs --report
 
