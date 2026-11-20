@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({
   isEffectivePublicLegalPublication: vi.fn(() => false),
@@ -23,7 +24,7 @@ import { POST } from './route';
 
 describe('legacy waitlist privacy gate', () => {
   it('rejects a same-origin contact request without persisting or emailing while the notice is a draft', async () => {
-    const request = new Request('https://example.test/api/prelaunch', {
+    const request = new NextRequest('https://example.test/api/prelaunch', {
       method: 'POST',
       headers: { origin: 'https://example.test', 'content-type': 'application/json' },
       body: JSON.stringify({ email: 'synthetic@example.test', companyName: 'Example', consentToContact: true }),
