@@ -4,7 +4,7 @@ Status: proposed. This is not a Production release or authorization to deploy.
 
 ## Decision
 
-Allow the existing QA build validator to recognise a Netlify **deploy-preview** only when Netlify's build metadata identifies that context, the explicitly configured QA flag is present, and `NEXT_PUBLIC_APP_URL` exactly matches the HTTPS `DEPLOY_PRIME_URL` under `netlify.app`. Keep the Vercel Preview branch and all existing QA database, identity, Stripe TEST and no-outbound-email checks. Run this validator before the Netlify build through `netlify.toml`.
+Allow the existing QA build validator to recognise a Netlify **deploy-preview** only when Netlify's build metadata identifies that context, the explicitly configured QA flag is present, and `NEXT_PUBLIC_APP_URL` exactly matches the HTTPS `DEPLOY_PRIME_URL` under `netlify.app`. Keep the Vercel Preview branch and all existing QA database, identity, Stripe TEST and no-outbound-email checks. Run the Netlify-specific entrypoint before the build through `netlify.toml`; this entrypoint rejects Netlify Production and branch deployments by default.
 
 ## Safety boundary
 
