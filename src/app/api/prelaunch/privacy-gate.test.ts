@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({
@@ -23,6 +23,14 @@ vi.mock('@/lib/email/prelaunch-waitlist', () => ({
 import { POST } from './route';
 
 describe('legacy waitlist privacy gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.isEffectivePublicLegalPublication.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+  });
+
   it('rejects a same-origin contact request without persisting or emailing while the notice is a draft', async () => {
     const request = new NextRequest('https://example.test/api/prelaunch', {
       method: 'POST',
@@ -64,7 +72,6 @@ describe('legacy waitlist privacy gate', () => {
     });
     expect(mocks.sendInternalWaitlistNotification).toHaveBeenCalledTimes(1);
     expect(mocks.sendPrelaunchWaitlistEmail).not.toHaveBeenCalled();
-    vi.unstubAllEnvs();
   });
 
   it('accepts degraded capture only when the internal mailbox confirms delivery', async () => {
@@ -89,7 +96,6 @@ describe('legacy waitlist privacy gate', () => {
     expect((await response.json()).status).toBe('received');
     expect(mocks.sendInternalWaitlistNotification).toHaveBeenCalledTimes(1);
     expect(mocks.sendPrelaunchWaitlistEmail).not.toHaveBeenCalled();
-    vi.unstubAllEnvs();
   });
 
 });
