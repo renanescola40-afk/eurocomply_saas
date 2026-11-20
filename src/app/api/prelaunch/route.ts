@@ -326,7 +326,7 @@ async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadReco
 }
 
 function shouldNotifyInternalTeam(saveResult: SaveWaitlistLeadResult) {
-  return saveResult.inserted || !saveResult.saved;
+  return saveResult.inserted;
 }
 
 export async function POST(request: NextRequest) {
@@ -357,10 +357,23 @@ export async function POST(request: NextRequest) {
   }
 
   const saveResult = await saveWaitlistLead(request, record);
-  await sendConfirmation(request, record);
 
-  if (shouldNotifyInternalTeam(saveResult)) {
-    await notifyInternalTeam(request, record);
+  if (!saveResult.saved) {
+    // A degraded database/webhook path may be acknowledged only when the
+    // email provider reports the internal notification as sent. This is not
+    // proof that a person has opened or read the message.
+    const internalDelivery = await notifyInternalTeam(request, record);
+    if (!internalDelivery.sent) {
+      return noStoreJson(
+        { error: 'Requests are temporarily unavailable. Please contact sales directly.' },
+        { status: 503 },
+      );
+    }
+  } else {
+    await sendConfirmation(request, record);
+    if (shouldNotifyInternalTeam(saveResult)) {
+      await notifyInternalTeam(request, record);
+    }
   }
 
   return noStoreJson(
