@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 
 import { sendEmail } from '@/lib/email/server-sender';
 import { getBillingPlan } from '@/lib/billing/plans';
+import { isEffectivePublicLegalPublication, PUBLIC_PRIVACY_PUBLICATION } from '@/lib/legal/public-contract';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -400,6 +401,15 @@ async function sendWebhook(record: LeadRecord) {
 }
 
 export async function POST(request: NextRequest) {
+  // A consent checkbox cannot substitute for a published privacy notice.
+  // Reject before reading contact details or triggering any downstream side effects.
+  if (!isEffectivePublicLegalPublication(PUBLIC_PRIVACY_PUBLICATION)) {
+    return noStoreJson(
+      { error: 'Demo requests are temporarily unavailable.' },
+      { status: 503 },
+    );
+  }
+
   const rateLimited = await enforceLeadCaptureRateLimit(request);
   if (rateLimited) return rateLimited;
 
