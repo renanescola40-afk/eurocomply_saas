@@ -5,9 +5,6 @@ import { defineConfig } from 'vitest/config';
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  // Next.js preserves JSX for its own compiler. Vitest must transform imported
-  // TSX components for actual server-rendered markup tests to execute.
-  esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
   resolve: {
     alias: {
       '@': resolve(rootDir, 'src'),
