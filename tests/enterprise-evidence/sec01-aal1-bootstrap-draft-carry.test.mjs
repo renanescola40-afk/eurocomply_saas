@@ -20,7 +20,7 @@ const PATCH=[
  '.github/workflows/enterprise-evidence-tests.yml',
 ];
 
-test('SEC-01 AAL1 MFA bootstrap SQL draft source-only source carry refuses unreviewed files, missing paths and altered accepted proof',()=>{
+test('SEC-01 AAL1 MFA bootstrap SQL draft source carry refuses unreviewed files, missing paths and altered accepted proof',()=>{
  const root=mkdtempSync(join(tmpdir(),'risck-sec01-bootstrap-carry-'));
  const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
  const put=(p,bytes)=>{const d=join(root,p);mkdirSync(dirname(d),{recursive:true});writeFileSync(d,bytes);};
@@ -86,7 +86,7 @@ test('only independently authenticated current-head GitHub PR review qualifies',
  assert.equal(pass([yes,{...yes,id:103,state:'CHANGES_REQUESTED',submitted_at:'2026-11-20T09:20:00Z'}]),false);
 });
 
-test('SEC-01 AAL1 MFA bootstrap SQL draft source-only source carry is pinned to authenticated main and exact-head mandatory source CI',()=>{
+test('SEC-01 AAL1 MFA bootstrap SQL draft source carry is pinned to authenticated main and exact-head mandatory source CI',()=>{
  const s=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
  for(const str of [
   'SEC01_BOOTSTRAP_CARRY_PR=2767',
@@ -124,6 +124,6 @@ test('PR 2767 source carry preserves exactly four accepted gates only in synthet
  assert.equal(result.valid,true);
  assert.equal(result.summary.gates_accepted,4);
  assert.equal(result.summary.controls_pass,4);
- assert.equal(result.gates.find(g=>g.gate_id==='A-01')?.accepted,false);
+ assert.equal(result.gates.find(g=>g.gate_id==='A-12')?.accepted,false);
  assert.equal(result.gates.find(g=>g.gate_id==='A-01')?.accepted,false);
 });
