@@ -69,6 +69,8 @@ jobs:
           node --test tests/enterprise-evidence/sec04-privileged-rpc-acl-carry.test.mjs
           node --test tests/enterprise-evidence/netlify-local-qa-build-carry.test.mjs
           node --test tests/enterprise-evidence/bil02-stripe-netlify-qa-carry.test.mjs
+          node --test tests/enterprise-evidence/sec01-aal1-bootstrap-draft-carry.test.mjs
+          node --test tests/security/sec01-aal1-bootstrap-draft-contract.test.mjs
           node --test tests/billing/qa-stripe-test-ledger.test.mjs
           node --test scripts/qa-environment-guard.test.mjs scripts/check-netlify-preview.test.mjs
           node scripts/enterprise-evidence/validate-evidence.mjs --report
