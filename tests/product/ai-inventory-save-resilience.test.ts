@@ -94,6 +94,13 @@ function expectRetryableFailure(container: HTMLElement) {
 }
 
 describe('AI inventory save resilience', () => {
+  it('provides an accessible label for the required use case', async () => {
+    const container = await mountInventory();
+    const useCase = container.querySelector<HTMLTextAreaElement>('textarea[required]');
+    expect(useCase).not.toBeNull();
+    expect(useCase?.getAttribute('aria-label')).toBe('Use case');
+  });
+
   it('shows a retryable error rather than remaining busy when the API request fails', async () => {
     const fetchStub = vi.fn().mockRejectedValue(new TypeError('Network request failed'));
     vi.stubGlobal('fetch', fetchStub);
