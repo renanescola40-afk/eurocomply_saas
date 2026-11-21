@@ -5,6 +5,8 @@ import { defineConfig } from 'vitest/config';
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  // Next.js preserves JSX; Vitest transforms imported TSX with Vite 8's Oxc.
+  oxc: { jsx: { runtime: 'automatic' } },
   resolve: {
     alias: {
       '@': resolve(rootDir, 'src'),
