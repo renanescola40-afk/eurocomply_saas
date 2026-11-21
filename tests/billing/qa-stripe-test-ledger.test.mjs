@@ -90,3 +90,72 @@ test('denies unexpected DB failures without leaking details',async()=>{
     env:validEnv(),nowSeconds:now,verifyStripeEvent:stripeEvent,createClientImpl:f.createClientImpl,
   }),e=>e.message==='qa_stripe_writer_database_rejected');
 });
+
+
+// Netlify's Functions runtime exposes SITE_ID/SITE_NAME/URL, but not all
+// build-only metadata. Scope the signed TEST intake to the QA site identity
+// and reviewed deploy-preview app origin, never a no-billing manual draft.
+function netlifyQaEnv(extra = {}) {
+  const env = validEnv();
+  delete env.VERCEL_ENV;
+  return {
+    ...env,
+    NETLIFY: 'true',
+    CONTEXT: 'deploy-preview',
+    SITE_ID: 'e953293d-348c-41e8-b798-fcd1ece9c427',
+    SITE_NAME: 'risck-qa-isolated',
+    URL: 'https://risck-qa-isolated.netlify.app',
+    DEPLOY_PRIME_URL: 'https://deploy-preview-27--risck-qa-isolated.netlify.app',
+    NEXT_PUBLIC_APP_URL: 'https://deploy-preview-27--risck-qa-isolated.netlify.app',
+    RISCK_QA_BOOTSTRAP_NO_BILLING: 'false',
+    ...extra,
+  };
+}
+test('bounded Netlify QA Git preview permits only scoped TEST ledger preflight', () => {
+  assert.deepEqual(inspectQaStripeTestLedgerConfig(netlifyQaEnv(),now),
+    {ready:true,reason:'qa_scoped_test_ledger_only'});
+});
+test('Netlify Functions runtime need not expose build-only variables', () => {
+  const env = netlifyQaEnv();
+  delete env.NETLIFY;
+  delete env.CONTEXT;
+  delete env.DEPLOY_PRIME_URL;
+  assert.equal(inspectQaStripeTestLedgerConfig(env,now).ready,true);
+});
+for (const [name, overrides] of [
+  ['different Netlify site ID', {SITE_ID:'00000000-0000-0000-0000-000000000000'}],
+  ['different Netlify site name', {SITE_NAME:'untrusted-qa'}],
+  ['untrusted Netlify main site origin', {URL:'https://example.org'}],
+  ['production context', {CONTEXT:'production'}],
+  ['manual QA draft', {RISCK_QA_NETLIFY_MANUAL_DRAFT:'true'}],
+  ['billing bootstrap explicitly disabled', {RISCK_QA_BOOTSTRAP_NO_BILLING:'true'}],
+  ['billing bootstrap context unspecified', {RISCK_QA_BOOTSTRAP_NO_BILLING:''}],
+  ['Netlify/Vercel mixed markers', {VERCEL_ENV:'preview'}],
+  ['Vercel production target', {VERCEL_TARGET_ENV:'production'}],
+  ['wrong preview host', {NEXT_PUBLIC_APP_URL:'https://deploy-preview-27--different.netlify.app'}],
+  ['Netlify base URL instead of preview', {NEXT_PUBLIC_APP_URL:'https://risck-qa-isolated.netlify.app'}],
+  ['tampered preview deploy metadata', {DEPLOY_PRIME_URL:'https://deploy-preview-99--risck-qa-isolated.netlify.app'}],
+  ['non-HTTPS preview', {NEXT_PUBLIC_APP_URL:'http://deploy-preview-27--risck-qa-isolated.netlify.app'}],
+  ['LIVE Stripe secret', {STRIPE_SECRET_KEY:'sk_live_invalid'}],
+  ['privileged Supabase key', {SUPABASE_SERVICE_ROLE_KEY:'unsafe-test-placeholder'}],
+]) {
+  test('Netlify QA preflight rejects '+name, () => {
+    assert.deepEqual(inspectQaStripeTestLedgerConfig(netlifyQaEnv(overrides),now),
+      {ready:false,reason: name === 'LIVE Stripe secret' ? 'stripe_test_binding_invalid'
+        : name === 'privileged Supabase key' ? 'qa_privileged_secret_forbidden'
+        : 'qa_scope_invalid'});
+  });
+}
+test('Netlify QA signed TEST intake writes only unbound processing claim', async () => {
+  const f = fakeDb();
+  const result = await recordSignedQaStripeTestEvent({rawBody:'{}', signature:'signed'}, {
+    env:netlifyQaEnv(), nowSeconds:now, verifyStripeEvent:stripeEvent,
+    createClientImpl:f.createClientImpl,
+  });
+  assert.deepEqual(result,{recorded:true,duplicate:false,status:'processing'});
+  assert.equal(f.state.rows.length,1);
+  assert.equal(f.state.rows[0].livemode,false);
+  assert.equal(Object.hasOwn(f.state.rows[0],'organization_id'),false);
+  assert.equal(Object.hasOwn(f.state.rows[0],'status'),false);
+  assert.equal(Object.hasOwn(f.state.rows[0],'entitlements'),false);
+});

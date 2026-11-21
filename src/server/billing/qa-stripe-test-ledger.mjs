@@ -1,9 +1,11 @@
 // QA-only Stripe TEST intake boundary. Not an entitlement writer and not a webhook admission switch.
-// This module is intentionally NOT called from the public webhook routes until a qualified
-// security review, approved deployment and signed-provider persistence replay exist.
+// Called only by the QA webhook intake lane; fails closed until a qualified
+// security review, approved QA identity and signed-provider persistence exist.
 const QA_SUPABASE_URL = 'https://zrxrrfbllsxtleyxjpsz.supabase.co';
 const QA_WRITER_ROLE = 'risck_qa_stripe_event_writer';
 const QA_REF = 'zrxrrfbllsxtleyxjpsz';
+const QA_NETLIFY_SITE_ID = 'e953293d-348c-41e8-b798-fcd1ece9c427';
+const QA_NETLIFY_SITE_NAME = 'risck-qa-isolated';
 const MAX_TOKEN_LIFETIME_SECONDS = 3600;
 const FORBIDDEN_QA_SECRETS = [
   'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_KEY', 'SUPABASE_ADMIN_KEY',
@@ -40,11 +42,50 @@ function decodeJwtClaims(token) {
   }
 }
 
+// Netlify build-only metadata (including CONTEXT and DEPLOY_PRIME_URL) is NOT
+// guaranteed inside serverless functions. Verify the immutable, read-only site
+// identity at runtime plus the exact reviewed preview app origin. The platform
+// build guard separately verifies the genuine preview deployment context.
+// Manual no-billing drafts and production/branch runtime remain denied.
+function isVerifiedQaRuntime(env) {
+  if (env.RISCK_QA_ENVIRONMENT !== 'true' ||
+      env.RISCK_QA_BOOTSTRAP_NO_BILLING === 'true' ||
+      env.VERCEL_TARGET_ENV === 'production') return false;
+
+  // Keep the historical verified Vercel Preview path unchanged.
+  if (env.VERCEL_ENV === 'preview' && env.NETLIFY !== 'true' &&
+      !env.SITE_ID && !env.SITE_NAME) return true;
+
+  // The Netlify path must never inherit contradictory Vercel markers.
+  if (env.VERCEL_ENV || env.VERCEL_TARGET_ENV ||
+      env.SITE_ID !== QA_NETLIFY_SITE_ID ||
+      env.SITE_NAME !== QA_NETLIFY_SITE_NAME ||
+      env.RISCK_QA_NETLIFY_MANUAL_DRAFT === 'true' ||
+      env.RISCK_QA_BOOTSTRAP_NO_BILLING !== 'false' ||
+      (env.NETLIFY && env.NETLIFY !== 'true') ||
+      (env.CONTEXT && env.CONTEXT !== 'deploy-preview')) return false;
+
+  try {
+    const site = new URL(String(env.URL || ''));
+    const app = new URL(String(env.NEXT_PUBLIC_APP_URL || ''));
+    if (site.href !== 'https://risck-qa-isolated.netlify.app/' ||
+        app.protocol !== 'https:' || app.username || app.password ||
+        app.port || app.pathname !== '/' || app.search || app.hash ||
+        !/^deploy-preview-[1-9]\d*--risck-qa-isolated\.netlify\.app$/.test(app.hostname)) return false;
+
+    // When build metadata *is* exposed in runtime, require consistency.
+    if (env.DEPLOY_PRIME_URL &&
+        new URL(env.DEPLOY_PRIME_URL).href !== app.href) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // This is only a fail-closed preflight. Supabase/PostgREST MUST verify the JWT signature.
 // Decoding unverified claims here never authorizes billing, customer access or entitlements.
 export function inspectQaStripeTestLedgerConfig(env, nowSeconds = Math.floor(Date.now() / 1000)) {
-  if (env.RISCK_QA_ENVIRONMENT !== 'true' || env.VERCEL_ENV !== 'preview' ||
-      env.VERCEL_TARGET_ENV === 'production') return { ready: false, reason: 'qa_scope_invalid' };
+  if (!isVerifiedQaRuntime(env)) return { ready: false, reason: 'qa_scope_invalid' };
   if (!exactQaUrl(env.NEXT_PUBLIC_SUPABASE_URL) ||
       !exactQaUrl(env.SUPABASE_URL)) return { ready: false, reason: 'qa_database_identity_invalid' };
   if (FORBIDDEN_QA_SECRETS.some((key) => Boolean(env[key]))) {
