@@ -231,6 +231,29 @@ const MFA_CARRY_CHECKS=[
  'Core CI, build and npm audit',
 ];
 
+/** PR #2760: source-only review of strict Netlify QA remote draft build. */
+const NETLIFY_REMOTE_CARRY_PR=2760;
+const NETLIFY_REMOTE_CARRY_BASE='c06b59167ea2e472a3d634d7fd569f9e135758c9';
+const NETLIFY_REMOTE_CARRY_RUN=44793375688;
+const NETLIFY_REMOTE_CARRY_ARTIFACT=14656769214;
+const NETLIFY_REMOTE_CARRY_DIGEST='6b1d936b7010fbddd25b287020ae9edebe86ee561ad3dfba811e116223d98cc7';
+const NETLIFY_REMOTE_CARRY_REVIEW='NETLIFY REMOTE QA DRAFT FOUR-GATE CARRY SECURITY REVIEW: APPROVED';
+const NETLIFY_REMOTE_CARRY_FILES=new Set([
+ 'netlify.toml',
+ 'scripts/check-netlify-preview.test.mjs',
+ 'scripts/netlify-qa-build.mjs',
+ 'scripts/qa-environment-guard.mjs',
+ 'scripts/enterprise-evidence/validate-evidence.mjs',
+ 'tests/enterprise-evidence/netlify-remote-draft-carry.test.mjs',
+ '.github/workflows/enterprise-evidence-tests.yml',
+]);
+const NETLIFY_REMOTE_CARRY_CHECKS=[
+ 'Run security gates, typecheck and tests',
+ 'Core CI, build and npm audit',
+ 'CI / quality',
+ 'Validate P0 runtime evidence register',
+];
+
 /** PR #2758: isolated Netlify CLI draft source-only QA guard; not real provider deployment. */
 const NETLIFY_MANUAL_CARRY_PR=2758;
 const NETLIFY_MANUAL_CARRY_BASE='72e40520d82ad13f922ec313db0b965df4d0974e';
@@ -2159,11 +2182,101 @@ export async function verifyNetlifyManualCarry(index,{
  }catch{return false;}
 }
 
+export function netlifyRemoteCarryIntegrity(index,{expectedSha,root=ROOT,checkpoint=NETLIFY_REMOTE_CARRY_BASE}={}){
+ if(!SHA40.test(expectedSha||'')||!SHA40.test(checkpoint||'')||
+    expectedSha===checkpoint||
+    index?.cumulative_acceptance?.schema!=='risck-comply.a15-cumulative-acceptance.v1'||
+    runGit(root,['merge-base','--is-ancestor',checkpoint,expectedSha]).status!==0)return false;
+ const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',checkpoint,expectedSha,'--']);
+ if(diff.status!==0||!Buffer.isBuffer(diff.stdout))return false;
+ const names=diff.stdout.toString('utf8').split('\0').filter(Boolean);
+ if(names.length!==NETLIFY_REMOTE_CARRY_FILES.size||
+    !names.every(name=>NETLIFY_REMOTE_CARRY_FILES.has(name)))return false;
+ const frozen=committedJson(root,checkpoint,INDEX_PATH);
+ if(!frozen||JSON.stringify(index)!==JSON.stringify(frozen)||
+    !CUMULATIVE_GATES.every(id=>frozen.gates?.some(g=>g.gate_id===id&&
+      (id==='A-19'||g.accepted===true))))return false;
+ const immutable=new Set([COMBINED_PROOF,A15_PROOF,A19_PROOF]);
+ for(const g of frozen.gates||[])if(g.accepted===true){
+   if(typeof g.acceptance_evidence_ref!=='string')return false;
+   immutable.add(g.acceptance_evidence_ref);
+ }
+ for(const r of frozen.evidence_records||[])if(r.status==='PASS'){
+   if(typeof r.artifact_path!=='string')return false;
+   immutable.add(r.artifact_path);
+ }
+ return [...immutable].every(file=>{
+   const before=committedDigest(root,checkpoint,file);
+   return SHA256.test(before||'')&&committedDigest(root,expectedSha,file)===before;
+ });
+}
+
+/** Reject comments, self-approval, stale SHA, dismissals and non-native review URLs. */
+export function netlifyRemoteCarryApprovedReview(reviews,pull){
+ if(!Array.isArray(reviews)||pull?.number!==NETLIFY_REMOTE_CARRY_PR||!SHA40.test(pull.sha||''))return false;
+ const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|NETLIFY REMOTE QA DRAFT FOUR-GATE CARRY SECURITY REVIEW|A-(?:09\/BIL-01|15\/QAT-01|18\/OPS-01|19\/OPS-02)).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+ return reviews.find(r=>r?.state==='APPROVED'&&r.user?.login===QUALIFIED_REVIEWER&&
+   r.commit_id===pull.sha&&CUMULATIVE_LINES.every(line=>includesReviewLine(r.body,line))&&
+   includesReviewLine(r.body,CUMULATIVE_SECURITY)&&includesReviewLine(r.body,NETLIFY_REMOTE_CARRY_REVIEW)&&
+   !rejection.test(r.body)&&!decisionWithdrawn(reviews,r,pull,rejection)&&
+   r.html_url==='https://github.com/'+REPOSITORY+'/pull/'+pull.number+
+    '#pullrequestreview-'+r.id&&Number.isFinite(Date.parse(r.submitted_at))&&
+   (!pull.mergedAt||Date.parse(r.submitted_at)<=Date.parse(pull.mergedAt)))||false;
+}
+
+/** Authenticated baseline, required current-head source CI and native independent review. */
+export async function verifyNetlifyRemoteCarry(index,{
+ expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
+}={}){
+ const explicit=prNumber!==undefined&&prNumber!==null&&String(prNumber).trim()!=='';
+ if((explicit&&Number(prNumber)!==NETLIFY_REMOTE_CARRY_PR)||!token||
+    !netlifyRemoteCarryIntegrity(index,{expectedSha,root}))return false;
+ const api=githubRead(request,token);
+ try{
+  const pull=await reviewedPull(api,expectedSha,explicit?prNumber:null,QUALIFIED_REVIEWER);
+  if(!pull||pull.number!==NETLIFY_REMOTE_CARRY_PR)return false;
+  if(pull.mergedAt){
+   const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
+   const pair=trees.stdout?.toString('utf8').trim().split('\n')||[];
+   if(trees.status!==0||pair.length!==2||!SHA40.test(pair[0])||pair[0]!==pair[1])return false;
+  }
+  const [run,artifacts,checks,ci,reviews]=await Promise.all([
+   api('/actions/runs/'+NETLIFY_REMOTE_CARRY_RUN),
+   api('/actions/runs/'+NETLIFY_REMOTE_CARRY_RUN+'/artifacts?per_page=100'),
+   api('/commits/'+pull.sha+'/check-runs?per_page=100'),
+   verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
+   api('/pulls/'+pull.number+'/reviews?per_page=100'),
+  ]);
+  const artifact=artifacts?.artifacts?.find(a=>a.id===NETLIFY_REMOTE_CARRY_ARTIFACT);
+  if(run?.head_sha!==NETLIFY_REMOTE_CARRY_BASE||run?.event!=='push'||run?.conclusion!=='success'||
+     artifact?.workflow_run?.head_sha!==NETLIFY_REMOTE_CARRY_BASE||artifact?.expired||
+     artifact?.name!=='enterprise-evidence-test-diagnostics-'+NETLIFY_REMOTE_CARRY_BASE||
+     artifact?.digest!=='sha256:'+NETLIFY_REMOTE_CARRY_DIGEST||
+     ci?.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
+     !Array.isArray(checks?.check_runs)||!Number.isSafeInteger(checks.total_count)||
+     checks.total_count!==checks.check_runs.length)return false;
+  for(const name of NETLIFY_REMOTE_CARRY_CHECKS){
+    const rows=checks.check_runs.filter(c=>c?.name===name&&
+      c?.head_sha===pull.sha&&c?.app?.slug==='github-actions');
+    rows.sort((a,b)=>Date.parse(b.completed_at||'')-Date.parse(a.completed_at||'')||
+      (b.id||0)-(a.id||0));
+    const check=rows[0];
+    if(check?.status!=='completed'||check.conclusion!=='success'||
+      !/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/actions\/runs\/\d+\/job\/\d+$/.test(check.html_url||''))return false;
+  }
+  const approval=netlifyRemoteCarryApprovedReview(reviews,pull);
+  return approval?{approvalUrl:approval.html_url,acceptedAt:approval.submitted_at,netlifyRemoteCarry:true}:false;
+ }catch{return false;}
+}
+
 export async function verifyCumulativeRelease(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
  if(!SHA40.test(expectedSha||'')||!token)return false;
  if(!cumulativeIntegrity(index,{expectedSha,root})){
+  if(netlifyRemoteCarryIntegrity(index,{expectedSha,root})){
+   return verifyNetlifyRemoteCarry(index,{expectedSha,prNumber,token,request,root});
+  }
   if(netlifyManualCarryIntegrity(index,{expectedSha,root})){
    return verifyNetlifyManualCarry(index,{expectedSha,prNumber,token,request,root});
   }
@@ -2375,14 +2488,16 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    marketingCarryIntegrity(index,{expectedSha}));
  const netlifyManualCarry=Boolean(cumulative&&cumulativeReview?.netlifyManualCarry===true&&
    netlifyManualCarryIntegrity(index,{expectedSha}));
+ const netlifyRemoteCarry=Boolean(cumulative&&cumulativeReview?.netlifyRemoteCarry===true&&
+   netlifyRemoteCarryIntegrity(index,{expectedSha}));
  const carry=Boolean(cumulative&&cumulativeReview&&
-   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||cumulativeIntegrity(index,{expectedSha})));
+   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||netlifyRemoteCarry||cumulativeIntegrity(index,{expectedSha})));
  const qatGate=(index.gates||[]).find(gate=>gate.gate_id==='A-15'&&gate.accepted===true);
  const isQatPass=record=>record.control_id==='QAT-01'&&record.status==='PASS';
  const qatEvidenceMatches=record=>qatGate&&record.gate_id==='A-15'&&
   record.artifact_path===qatGate.acceptance_evidence_ref&&
   record.artifact_sha256===qatGate.acceptance_evidence_sha256&&
-  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry)?DOCS_CHECKPOINT:expectedSha});
+  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||netlifyRemoteCarry)?DOCS_CHECKPOINT:expectedSha});
  const recordSha=record=>isQatPass(record)&&qatEvidenceMatches(record)
   ?qatGate.acceptance_sha
   :evidenceExpectedSha(record,{frozenSha:index.source?.commit_sha,candidateSha:expectedSha});
@@ -2424,7 +2539,7 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    eligible:eligible&&status===computed,
    expectedSha:carry&&gate.id==='A-19'?claim.acceptance_sha:
     carry&&['A-09','A-18'].includes(gate.id)?CUMULATIVE_CHECKPOINT:
-    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
+    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||netlifyRemoteCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
    providerApproved:carry&&CUMULATIVE_GATES.includes(gate.id)||
     (gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved),
   });
