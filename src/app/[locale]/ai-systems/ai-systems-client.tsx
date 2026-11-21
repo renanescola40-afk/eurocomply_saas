@@ -74,6 +74,7 @@ const baseInventoryCopy = {
   processedData: 'Data processed',
   vendorName: 'Vendor or model provider',
   modelName: 'Model name',
+  useCase: 'Use case',
   useCasePlaceholder: 'Example: summarises customer support tickets and suggests replies to agents.',
   role: 'Organization role',
   status: 'Lifecycle status',
@@ -311,24 +312,36 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
     setIsSubmitting(true);
     setNotice('');
 
-    const response = await fetch('/api/ai-systems', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
+    try {
+      const response = await fetch('/api/ai-systems', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const payload = await response.json().catch(() => null);
 
-    const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setNotice(payload?.error === 'ai_systems_table_missing' ? t.migration : payload?.message ?? t.error);
+        return;
+      }
 
-    if (!response.ok) {
-      setNotice(payload?.error === 'ai_systems_table_missing' ? t.migration : payload?.message ?? t.error);
+      if (
+        typeof payload?.system?.id !== 'string' ||
+        !Array.isArray(payload.system.obligations) ||
+        !Array.isArray(payload.system.next_actions)
+      ) {
+        setNotice(t.error);
+        return;
+      }
+
+      setSystems((current) => [payload.system as AiSystemRecord, ...current]);
+      setForm(defaultForm);
+      router.refresh();
+    } catch {
+      setNotice(t.error);
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    setSystems((current) => [payload.system as AiSystemRecord, ...current]);
-    setForm(defaultForm);
-    setIsSubmitting(false);
-    router.refresh();
   }
 
   return (
@@ -427,7 +440,7 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
             <select value={form.lifecycleStatus} onChange={(event) => update('lifecycleStatus', event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/40" aria-label={t.status}>{statusOptions.map((value) => <option key={value} value={value}>{options.statuses[value]}</option>)}</select>
             <select value={form.riskDomain} onChange={(event) => update('riskDomain', event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 md:col-span-2" aria-label={t.domain}>{domainOptions.map((value) => <option key={value} value={value}>{options.domains[value]}</option>)}</select>
             <textarea value={form.processedData} onChange={(event) => update('processedData', event.target.value)} placeholder={t.processedData} aria-label={t.processedData} className="min-h-24 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 md:col-span-2" />
-            <textarea required minLength={8} value={form.useCase} onChange={(event) => update('useCase', event.target.value)} placeholder={t.useCasePlaceholder} aria-label={t.useCasePlaceholder} className="min-h-28 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 md:col-span-2" />
+            <textarea required minLength={8} value={form.useCase} onChange={(event) => update('useCase', event.target.value)} placeholder={t.useCasePlaceholder} aria-label={t.useCase} className="min-h-28 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 md:col-span-2" />
           </div>
           <fieldset className="mt-5 grid gap-3 rounded-2xl border bg-background p-4 md:grid-cols-2">
             <legend className="px-2 text-sm font-medium">{t.checks}</legend>
