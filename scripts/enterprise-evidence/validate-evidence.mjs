@@ -254,7 +254,7 @@ const AI_SAVE_CARRY_CHECKS=[
 ];
 
 
-/** PR #2767: review-only AAL1 MFA bootstrap SQL draft; not applied, compiled, or runtime accepted.
+/** PR #2767: review-only AAL1 MFA bootstrap SQL draft; not applied, compiled, or runtime accepted. */
 const SEC01_BOOTSTRAP_CARRY_PR=2767;
 const SEC01_BOOTSTRAP_CARRY_BASE='62071ab13517c9782024e47ef0255d8258d969ec';
 const SEC01_BOOTSTRAP_CARRY_RUN=44935649536;
@@ -2948,7 +2948,7 @@ export async function verifyStripeQaCarry(index,{
  }catch{return false;}
 }
 
-/** SEC-01 SQL draft four-path source carry; no DDL or MFA runtime acceptance. */
+/** SEC-01 SQL draft five-path source carry; no DDL or MFA runtime acceptance. */
 export function sec01BootstrapCarryIntegrity(index,{expectedSha,root=ROOT,checkpoint=SEC01_BOOTSTRAP_CARRY_BASE}={}){
  if(!SHA40.test(expectedSha||'')||!SHA40.test(checkpoint||'')||
     expectedSha===checkpoint||
