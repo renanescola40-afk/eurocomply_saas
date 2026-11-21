@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { validateNetlifyPreview } from './check-netlify-preview.mjs';
-import { resolveNetlifyQaRemoteDraftUrl } from './qa-environment-guard.mjs';
+import { QA_NETLIFY_SITE_ID, QA_NETLIFY_SITE_NAME, resolveNetlifyQaRemoteDraftUrl } from './qa-environment-guard.mjs';
 
 // Netlify CLI --remote cannot combine with --alias. A remote draft receives an
 // immutable deployment URL which must be validated BEFORE the Next.js build.
@@ -10,7 +10,26 @@ export function prepareNetlifyQaBuildEnv(source) {
   const env = { ...source };
   const remoteUrl = resolveNetlifyQaRemoteDraftUrl(env);
 
-  if (env.NETLIFY === 'true' && env.CONTEXT === 'deploy-preview' &&
+  // Netlify CLI's *local* build is not a remotely attributed deployment.
+  // It may supply placeholder DEPLOY_ID/URL values which must never be treated
+  // as immutable provider evidence. Only the exact existing QA site, an explicit
+  // local CLI marker and the protected deploy-preview context qualify.
+  const localQaBuild = env.NETLIFY_LOCAL === 'true' &&
+    env.NETLIFY === 'true' && env.CONTEXT === 'deploy-preview' &&
+    env.SITE_ID === QA_NETLIFY_SITE_ID && env.SITE_NAME === QA_NETLIFY_SITE_NAME &&
+    env.RISCK_QA_NETLIFY_MANUAL_DRAFT === 'true' &&
+    env.RISCK_QA_BOOTSTRAP_NO_BILLING === 'true';
+
+  if (!remoteUrl && localQaBuild) {
+    // Never downgrade a real-looking but inconsistent remote deployment into
+    // a local one. Local placeholder metadata must not reach Next.js or prebuild.
+    if (/^[a-f0-9]{24,40}$/.test(env.DEPLOY_ID || '')) {
+      return { env, errors: ['Unverified Netlify QA remote draft metadata'] };
+    }
+    delete env.DEPLOY_ID;
+    delete env.DEPLOY_URL;
+    delete env.DEPLOY_PRIME_URL;
+  } else if (env.NETLIFY === 'true' && env.CONTEXT === 'deploy-preview' &&
       env.RISCK_QA_NETLIFY_MANUAL_DRAFT === 'true' && env.DEPLOY_ID && !remoteUrl) {
     return { env, errors: ['Unverified Netlify QA remote draft metadata'] };
   }

@@ -67,6 +67,7 @@ jobs:
           node --test tests/enterprise-evidence/ai-inventory-save-recovery-carry.test.mjs
           node --test tests/enterprise-evidence/sec01-qa-dsar-mfa-carry.test.mjs
           node --test tests/enterprise-evidence/sec04-privileged-rpc-acl-carry.test.mjs
+          node --test tests/enterprise-evidence/netlify-local-qa-build-carry.test.mjs
           node --test scripts/qa-environment-guard.test.mjs scripts/check-netlify-preview.test.mjs
           node scripts/enterprise-evidence/validate-evidence.mjs --report
 

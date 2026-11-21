@@ -136,3 +136,54 @@ test('remote Netlify QA draft may use the canonical QA site as prime URL', () =>
   });
   assert.deepEqual(prepared.errors, []);
 });
+
+test('Netlify CLI local QA build excludes unverified placeholder deploy metadata but keeps all QA guards', () => {
+  const prepared = prepareNetlifyQaBuildEnv({
+    ...QA_MANUAL_DRAFT_BASE,
+    NETLIFY_LOCAL: 'true',
+    SITE_ID: 'e953293d-348c-41e8-b798-fcd1ece9c427',
+    SITE_NAME: 'risck-qa-isolated',
+    DEPLOY_ID: 'local-preview-not-a-remote-deploy',
+    DEPLOY_URL: 'http://localhost:8888',
+    DEPLOY_PRIME_URL: 'http://localhost:8888',
+  });
+  assert.deepEqual(prepared.errors, []);
+  for (const field of ['DEPLOY_ID', 'DEPLOY_URL', 'DEPLOY_PRIME_URL']) {
+    assert.equal(prepared.env[field], undefined, field);
+  }
+  assert.equal(prepared.env.NEXT_PUBLIC_APP_URL, QA_MANUAL_DRAFT_BASE.NEXT_PUBLIC_APP_URL);
+  assert.deepEqual(validateNetlifyPreview(prepared.env), { checked: true, errors: [] });
+});
+
+test('Netlify local CLI path cannot bypass site/context/flag/security or misrepresent remote deployments', () => {
+  const local = {
+    ...QA_MANUAL_DRAFT_BASE,
+    NETLIFY_LOCAL: 'true',
+    SITE_ID: 'e953293d-348c-41e8-b798-fcd1ece9c427',
+    SITE_NAME: 'risck-qa-isolated',
+    DEPLOY_ID: 'local-placeholder',
+    DEPLOY_URL: 'http://localhost:8888',
+    DEPLOY_PRIME_URL: 'http://localhost:8888',
+  };
+  for (const changed of [
+    { SITE_ID: 'not-the-qa-site' },
+    { SITE_NAME: 'production-site' },
+    { NETLIFY: undefined },
+    { NETLIFY_LOCAL: undefined },
+    { CONTEXT: 'production' },
+    { CONTEXT: 'branch-deploy' },
+    { RISCK_QA_NETLIFY_MANUAL_DRAFT: undefined },
+    { RISCK_QA_BOOTSTRAP_NO_BILLING: undefined },
+    { RISCK_QA_ENVIRONMENT: 'false' },
+    { NEXT_PUBLIC_APP_URL: 'https://www.risckcomply.com' },
+    { NEXT_PUBLIC_SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co' },
+    { SUPABASE_SERVICE_ROLE_KEY: 'synthetic' },
+    { STRIPE_SECRET_KEY: 'sk_live_synthetic' },
+    { QA_ALLOW_OUTBOUND_EMAIL: 'true' },
+    // A real-looking provider ID with inconsistent URLs may never be stripped.
+    { DEPLOY_ID: '5b243e66dd6a547b4fee73ae' },
+  ]) {
+    const prepared = prepareNetlifyQaBuildEnv({ ...local, ...changed });
+    assert.ok(prepared.errors.length > 0, Object.keys(changed).join(', '));
+  }
+});
