@@ -311,24 +311,36 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
     setIsSubmitting(true);
     setNotice('');
 
-    const response = await fetch('/api/ai-systems', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
+    try {
+      const response = await fetch('/api/ai-systems', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const payload = await response.json().catch(() => null);
 
-    const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setNotice(payload?.error === 'ai_systems_table_missing' ? t.migration : payload?.message ?? t.error);
+        return;
+      }
 
-    if (!response.ok) {
-      setNotice(payload?.error === 'ai_systems_table_missing' ? t.migration : payload?.message ?? t.error);
+      if (
+        typeof payload?.system?.id !== 'string' ||
+        !Array.isArray(payload.system.obligations) ||
+        !Array.isArray(payload.system.next_actions)
+      ) {
+        setNotice(t.error);
+        return;
+      }
+
+      setSystems((current) => [payload.system as AiSystemRecord, ...current]);
+      setForm(defaultForm);
+      router.refresh();
+    } catch {
+      setNotice(t.error);
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    setSystems((current) => [payload.system as AiSystemRecord, ...current]);
-    setForm(defaultForm);
-    setIsSubmitting(false);
-    router.refresh();
   }
 
   return (
