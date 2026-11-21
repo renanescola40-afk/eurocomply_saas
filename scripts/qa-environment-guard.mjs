@@ -1,3 +1,24 @@
+// Exact Netlify project identity is mandatory for CLI remote QA drafts.
+export const QA_NETLIFY_SITE_ID = 'e953293d-348c-41e8-b798-fcd1ece9c427';
+export const QA_NETLIFY_SITE_NAME = 'risck-qa-isolated';
+
+export function resolveNetlifyQaRemoteDraftUrl(e) {
+  if (e.NETLIFY !== 'true' || e.CONTEXT !== 'deploy-preview' ||
+      e.RISCK_QA_NETLIFY_MANUAL_DRAFT !== 'true' ||
+      e.RISCK_QA_BOOTSTRAP_NO_BILLING !== 'true' ||
+      e.SITE_ID !== QA_NETLIFY_SITE_ID || e.SITE_NAME !== QA_NETLIFY_SITE_NAME ||
+      !/^[a-f0-9]{24,40}$/.test(e.DEPLOY_ID || '')) return null;
+
+  const expected = 'https://' + e.DEPLOY_ID + '--' + QA_NETLIFY_SITE_NAME + '.netlify.app';
+  // DEPLOY_URL is the immutable per-deployment HTTPS URL assigned by Netlify.
+  if (e.DEPLOY_URL !== expected) return null;
+  // The primary URL for a manual draft may resolve to the deploy URL or the
+  // canonical QA site URL. No unrelated hostname is accepted.
+  if (e.DEPLOY_PRIME_URL && e.DEPLOY_PRIME_URL !== expected &&
+      e.DEPLOY_PRIME_URL !== 'https://' + QA_NETLIFY_SITE_NAME + '.netlify.app') return null;
+  return expected;
+}
+
 // G5-01: fail-closed build gate for Vercel and Netlify QA previews.
 // Deliberately avoids printing environment variable values.
 export function validateQaEnvironment(e) {
@@ -27,13 +48,16 @@ export function validateQaEnvironment(e) {
       const gitPreview = !netlifyManualDraft && deploy &&
         /^deploy-preview-[0-9]+--[a-z0-9][a-z0-9-]*\.netlify\.app$/.test(deploy.hostname) &&
         deploy.href === app.href;
-      // The CLI can omit DEPLOY_PRIME_URL for a manual draft. In that case
-      // the preconfigured HTTPS alias is verified during actual deploy smoke.
+      // Preserve manual CLI aliases; additionally allow authenticated remote
+      // drafts only when Netlify's exact site ID, deploy ID and URL agree.
       const manualDraft = netlifyManualDraft &&
         /^qa-manual-[a-f0-9]{8}--risck-qa-[a-z0-9][a-z0-9-]*\.netlify\.app$/.test(app.hostname) &&
         (!deploy || deploy.href === app.href);
+      const remoteDraftUrl = resolveNetlifyQaRemoteDraftUrl(e);
+      const remoteDraft = netlifyManualDraft && remoteDraftUrl &&
+        app.origin === remoteDraftUrl;
       if (!safeOrigin(app) || (deploy && !safeOrigin(deploy)) ||
-          !(gitPreview || manualDraft))
+          !(gitPreview || manualDraft || remoteDraft))
         errors.push('Netlify QA origin must match an HTTPS Git preview or authorized QA-only draft');
     } catch { errors.push('Netlify QA origin missing or invalid'); }
   }

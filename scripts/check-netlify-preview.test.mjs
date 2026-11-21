@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateNetlifyPreview } from './check-netlify-preview.mjs';
+import { prepareNetlifyQaBuildEnv } from './netlify-qa-build.mjs';
 import { spawnSync } from 'node:child_process';
 
 test('Netlify Production and branch deployments fail without any QA configuration', () => {
@@ -85,4 +86,53 @@ test('CLI draft rejects production-branded or arbitrary site aliases and credent
   ]) {
     assert.ok(validateNetlifyPreview({ ...QA_MANUAL_DRAFT_BASE, ...changed }).errors.length > 0);
   }
+});
+
+const NETLIFY_REMOTE_DRAFT_BASE = {
+  ...QA_MANUAL_DRAFT_BASE,
+  SITE_ID: 'e953293d-348c-41e8-b798-fcd1ece9c427',
+  SITE_NAME: 'risck-qa-isolated',
+  DEPLOY_ID: '5b243e66dd6a547b4fee73ae',
+  DEPLOY_URL: 'https://5b243e66dd6a547b4fee73ae--risck-qa-isolated.netlify.app',
+  DEPLOY_PRIME_URL: 'https://5b243e66dd6a547b4fee73ae--risck-qa-isolated.netlify.app',
+};
+
+test('remote Netlify draft binds verified immutable QA URL before build', () => {
+  const prepared = prepareNetlifyQaBuildEnv(NETLIFY_REMOTE_DRAFT_BASE);
+  assert.deepEqual(prepared.errors, []);
+  assert.equal(prepared.env.NEXT_PUBLIC_APP_URL, NETLIFY_REMOTE_DRAFT_BASE.DEPLOY_URL);
+  assert.equal(NETLIFY_REMOTE_DRAFT_BASE.NEXT_PUBLIC_APP_URL, QA_MANUAL_DRAFT_BASE.NEXT_PUBLIC_APP_URL);
+  assert.deepEqual(validateNetlifyPreview(prepared.env), { checked: true, errors: [] });
+});
+
+test('remote Netlify QA draft rejects forged site/deploy metadata, production and secrets', () => {
+  for (const changed of [
+    { SITE_ID: 'e953293d-348c-41e8-b798-fcd1ece9c428' },
+    { SITE_NAME: 'risckcomply' },
+    { DEPLOY_ID: 'not-a-deploy-id' },
+    { DEPLOY_URL: 'https://risck-qa-isolated.netlify.app' },
+    { DEPLOY_URL: 'https://5b243e66dd6a547b4fee73ae--other.netlify.app' },
+    { DEPLOY_PRIME_URL: 'https://www.risckcomply.com' },
+    { CONTEXT: 'production' },
+    { NETLIFY: undefined },
+    { RISCK_QA_NETLIFY_MANUAL_DRAFT: undefined },
+    { RISCK_QA_BOOTSTRAP_NO_BILLING: undefined },
+    { RISCK_QA_ENVIRONMENT: 'false' },
+    { SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co' },
+    { SUPABASE_SERVICE_ROLE_KEY: 'synthetic-no-privilege' },
+    { STRIPE_SECRET_KEY: 'sk_live_synthetic' },
+    { QA_ALLOW_OUTBOUND_EMAIL: 'true' },
+    { NEXT_PUBLIC_APP_URL: 'https://www.risckcomply.com' },
+  ]) {
+    const result = prepareNetlifyQaBuildEnv({ ...NETLIFY_REMOTE_DRAFT_BASE, ...changed });
+    assert.ok(result.errors.length > 0, JSON.stringify(Object.keys(changed)));
+  }
+});
+
+test('remote Netlify QA draft may use the canonical QA site as prime URL', () => {
+  const prepared = prepareNetlifyQaBuildEnv({
+    ...NETLIFY_REMOTE_DRAFT_BASE,
+    DEPLOY_PRIME_URL: 'https://risck-qa-isolated.netlify.app',
+  });
+  assert.deepEqual(prepared.errors, []);
 });

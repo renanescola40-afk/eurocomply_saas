@@ -1,6 +1,7 @@
 [build]
-command = "node scripts/check-netlify-preview.mjs && npm run build"
+command = "node scripts/netlify-qa-build.mjs"
 
-# Netlify supplies CONTEXT and DEPLOY_PRIME_URL to preview builds. The guard
-# requires an exact isolated QA origin and rejects Production DB/keys when
-# RISCK_QA_ENVIRONMENT=true. No secrets or Production domain belong here.
+# Build wrapper validates the same fail-closed QA guard before compiling.
+# For a CLI remote draft (which cannot use --alias), it also verifies the exact
+# Netlify QA site ID and immutable deploy URL before binding NEXT_PUBLIC_APP_URL.
+# Production/branch deploys, privileged Supabase keys, emails and billing remain denied.
