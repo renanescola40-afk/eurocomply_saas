@@ -10,7 +10,9 @@ const mocks = vi.hoisted(() => ({
   checkDistributedRateLimit: vi.fn(),
   createAiSystem: vi.fn(),
   listAiSystems: vi.fn(),
+  getAiSystem: vi.fn(),
   createAuditEvent: vi.fn(),
+  createAdminClient: vi.fn(),
 }));
 
 vi.mock('@/server/queries/auth', () => ({ getCurrentUser: mocks.getCurrentUser }));
@@ -31,8 +33,10 @@ vi.mock('@/lib/security/rate-limit', () => ({
 vi.mock('@/server/queries/ai-systems', () => ({
   createAiSystem: mocks.createAiSystem,
   listAiSystems: mocks.listAiSystems,
+  getAiSystem: mocks.getAiSystem,
 }));
 vi.mock('@/server/queries/audit-events', () => ({ createAuditEvent: mocks.createAuditEvent }));
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: mocks.createAdminClient }));
 
 import { POST } from '../../src/app/api/ai-systems/route';
 
@@ -60,6 +64,7 @@ describe('AI systems API hardening', () => {
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true, remaining: 19, resetAt: Date.now() + 60000 });
     mocks.createAiSystem.mockResolvedValue({ id: 'system_a', risk_level: 'limited', lifecycle_status: 'active', risk_domain: 'general' });
     mocks.listAiSystems.mockResolvedValue([]);
+    mocks.getAiSystem.mockResolvedValue(null);
     mocks.createAuditEvent.mockResolvedValue({ persisted: true });
   });
 
@@ -127,5 +132,22 @@ describe('AI systems API hardening', () => {
     expect(response.status).toBe(400);
     expect(body).toEqual({ error: 'invalid_request', requestId: expect.any(String) });
     expect(mocks.createAiSystem).not.toHaveBeenCalled();
+  });
+
+  it('accepts a tenant-owned AI system ID beyond the first inventory page for vendor diligence', async () => {
+    const aiSystemId = '00000000-0000-4000-8000-000000001001';
+    mocks.getAiSystem.mockResolvedValue({ id: aiSystemId, organization_id: 'org_a' });
+    const vendorReview = { id: 'vendor_1', risk_level: 'medium', created_at: '2026-11-21T00:00:00Z' };
+    const query = { select: () => ({ single: async () => ({ data: vendorReview, error: null }) }) };
+    mocks.createAdminClient.mockReturnValue({ from: () => ({ insert: () => query }) });
+
+    const response = await POST(new Request('https://app.eurocomply.test/api/ai-systems?workflow=vendor_due_diligence', {
+      method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://app.eurocomply.test' },
+      body: JSON.stringify({ vendorName: 'Example Vendor', aiSystemId }),
+    }));
+
+    expect(response.status).toBe(201);
+    expect(mocks.getAiSystem).toHaveBeenCalledWith(aiSystemId, 'org_a');
+    expect(mocks.listAiSystems).not.toHaveBeenCalled();
   });
 });

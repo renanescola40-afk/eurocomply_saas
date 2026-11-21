@@ -4,7 +4,7 @@ import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/
 import { createAdminClient } from '@/lib/supabase/admin';
 import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '@/server/ai-governance/system-payload';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { createAiSystem, listAiSystems } from '@/server/queries/ai-systems';
+import { createAiSystem, getAiSystem, listAiSystems } from '@/server/queries/ai-systems';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -78,8 +78,8 @@ function normalizeCountryScope(countryScope?: string[]) {
 
 async function resolveOrganizationAiSystemId(organizationId: string, aiSystemId?: string | null) {
   if (!aiSystemId) return null;
-  const systems = await listAiSystems(organizationId);
-  return systems.some((system) => system.id === aiSystemId) ? aiSystemId : null;
+  const system = await getAiSystem(aiSystemId, organizationId);
+  return system ? system.id : null;
 }
 
 async function createEvidencePackWorkflow(input: {
@@ -90,7 +90,7 @@ async function createEvidencePackWorkflow(input: {
   readinessScoreSnapshot?: number;
 }) {
   const supabase = createAdminClient();
-  const systems = await listAiSystems(input.organizationId);
+  const systems = await listAiSystems(input.organizationId, { requireComplete: true });
   const countryScope = normalizeCountryScope(
     input.countryScope?.length
       ? input.countryScope

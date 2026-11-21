@@ -4,7 +4,7 @@ import { buildAiIncidentTriagePlan, normalizeAiIncidentCategory, normalizeAiInci
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAiIncident, listAiIncidents } from '@/server/queries/ai-incidents';
-import { listAiSystems } from '@/server/queries/ai-systems';
+import { getAiSystem, listAiSystems } from '@/server/queries/ai-systems';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
@@ -128,10 +128,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const systems = await listAiSystems(organization.id);
     const requestedSystemId = asText(body.aiSystemId) || null;
     const aiSystem = requestedSystemId
-      ? systems.find((system) => system.id === requestedSystemId) ?? null
+      ? await getAiSystem(requestedSystemId, organization.id)
       : null;
     if (requestedSystemId && !aiSystem) {
       return noStoreJson({ error: 'ai_system_not_found' }, { status: 404 });

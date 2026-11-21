@@ -28,6 +28,7 @@ describe('AI inventory API contracts', () => {
     expect(source).toContain('parseJsonBodyWithZod(request, {');
     expect(source).toContain('classifyParsedAiSystemBody(body)');
     expect(source).toContain('createAiSystem({');
+    expect(source).toContain('getAiSystem(aiSystemId, organizationId)');
     expect(source).toContain('organizationId: organization.id');
     expect(source).toContain('createdBy: user.id');
     expect(source).toContain('riskLevel: result.classification.riskLevel');
