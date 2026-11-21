@@ -74,6 +74,7 @@ const baseInventoryCopy = {
   processedData: 'Data processed',
   vendorName: 'Vendor or model provider',
   modelName: 'Model name',
+  useCase: 'Use case',
   useCasePlaceholder: 'Example: summarises customer support tickets and suggests replies to agents.',
   role: 'Organization role',
   status: 'Lifecycle status',
