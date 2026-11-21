@@ -12,16 +12,14 @@ describe('AI incident tenant linkage', () => {
 
   it('rejects missing or foreign AI systems instead of silently unlinking the incident', async () => {
     const source = await readFile(INCIDENT_ROUTE, 'utf8');
-    const tenantSystems = source.indexOf('const systems = await listAiSystems(organization.id);');
-    const tenantLookup = source.indexOf('systems.find((system) => system.id === requestedSystemId)');
+    const tenantLookup = source.indexOf('getAiSystem(requestedSystemId, organization.id)');
     const rejection = source.indexOf("return noStoreJson({ error: 'ai_system_not_found' }, { status: 404 });");
     const persistence = source.indexOf('const incident = await createAiIncident({');
 
-    expect(tenantSystems).toBeGreaterThan(-1);
-    expect(tenantLookup).toBeGreaterThan(tenantSystems);
+    expect(tenantLookup).toBeGreaterThan(-1);
     expect(rejection).toBeGreaterThan(tenantLookup);
     expect(persistence).toBeGreaterThan(rejection);
-    expect(source).not.toContain('systems.some((system) => system.id === requestedSystemId) ? requestedSystemId : null');
+    expect(source).not.toContain('systems.find((system) => system.id === requestedSystemId)');
   });
 
   it('keeps organization scope server-derived', async () => {

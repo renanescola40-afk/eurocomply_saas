@@ -174,17 +174,23 @@ function aiSystemPatch(input: Omit<CreateAiSystemInput, 'organizationId' | 'crea
   };
 }
 
-export async function listAiSystems(organizationId: string): Promise<AiSystemRecord[]> {
+export async function listAiSystems(
+  organizationId: string,
+  options: { requireComplete?: boolean } = {},
+): Promise<AiSystemRecord[]> {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from('ai_systems')
-    .select(AI_SYSTEM_COLUMNS)
+    .select(AI_SYSTEM_COLUMNS, options.requireComplete ? { count: 'exact' } : undefined)
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.warn('[ai-systems] list_failed', { code: error.code ?? 'unknown' });
+  // An evidence pack must not present a capped PostgREST response as a full inventory.
+  // The exact count and rows come from one request; pagination for large tenants is separate work.
+  if (error || (options.requireComplete &&
+      (!Array.isArray(data) || !Number.isSafeInteger(count) || count !== data.length))) {
+    console.warn('[ai-systems] list_failed', { code: error?.code ?? 'incomplete_evidence_inventory' });
     throw new Error('Unable to load AI systems.');
   }
 
