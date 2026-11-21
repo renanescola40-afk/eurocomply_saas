@@ -92,10 +92,10 @@ test('Netlify remote source carry is pinned to authenticated main and exact-head
  const s=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
  for(const str of [
   'NETLIFY_REMOTE_CARRY_PR=2760',
-  "NETLIFY_REMOTE_CARRY_BASE='c06b59167ea2e472a3d634d7fd569f9e135758c9'",
-  'NETLIFY_REMOTE_CARRY_RUN=44793375688',
-  'NETLIFY_REMOTE_CARRY_ARTIFACT=14656769214',
-  "NETLIFY_REMOTE_CARRY_DIGEST='6b1d936b7010fbddd25b287020ae9edebe86ee561ad3dfba811e116223d98cc7'",
+  "NETLIFY_REMOTE_CARRY_BASE='907e7c717c6f19d8ba16d0d9c40bd44faacf35a5'",
+  'NETLIFY_REMOTE_CARRY_RUN=44902242423',
+  'NETLIFY_REMOTE_CARRY_ARTIFACT=14706631392',
+  "NETLIFY_REMOTE_CARRY_DIGEST='8354e382ec5ce31ba28ed01bda6740fa9a0f30e71c8693e7c1ce4be107724a5e'",
   'verifyQat01AfterProviderSettles({sha:pull.sha,token,request})',
   'netlifyRemoteCarryApprovedReview(reviews,pull)',
   'checks.total_count!==checks.check_runs.length',

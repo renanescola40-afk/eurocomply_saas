@@ -62,6 +62,7 @@ jobs:
           node --test tests/enterprise-evidence/prelaunch-intake-source-carry.test.mjs
           node --test tests/enterprise-evidence/privacy-safe-marketing-carry.test.mjs
           node --test tests/enterprise-evidence/netlify-manual-draft-carry.test.mjs
+          node --test tests/enterprise-evidence/ai-inventory-completeness-carry.test.mjs
           node --test tests/enterprise-evidence/netlify-remote-draft-carry.test.mjs
           node --test scripts/qa-environment-guard.test.mjs scripts/check-netlify-preview.test.mjs
           node scripts/enterprise-evidence/validate-evidence.mjs --report

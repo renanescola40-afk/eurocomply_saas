@@ -215,7 +215,7 @@ export async function buildAuditEvidencePack({
     listDocuments(organization.id),
     listVendors(organization.id),
     listRisks(organization.id),
-    listAiSystems(organization.id),
+    listAiSystems(organization.id, { requireComplete: true }),
     listAiIncidents(organization.id),
     auditEventsPromise,
   ]);
