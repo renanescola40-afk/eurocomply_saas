@@ -5,6 +5,8 @@ import { defineConfig } from 'vitest/config';
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  // Next.js uses JSX preserve; Vitest must transform imported TSX for React DOM tests.
+  esbuild: { jsx: 'automatic' },
   resolve: {
     alias: {
       '@': resolve(rootDir, 'src'),
