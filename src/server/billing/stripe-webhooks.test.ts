@@ -48,16 +48,23 @@ type SupabaseState = {
   subscriptionError?: { code?: string; message?: string } | null;
   upsertError?: { code?: string; message?: string } | null;
   eventInsert: ReturnType<typeof vi.fn>;
+  subscriptionFilters: Array<{ column: string; value: string }>;
   eventUpdates: Array<Record<string, unknown>>;
   upsert: ReturnType<typeof vi.fn>;
 };
 
 let state: SupabaseState;
 
-function makeSelectBuilder(result: () => { data: unknown; error: unknown }) {
+function makeSelectBuilder(
+  result: () => { data: unknown; error: unknown },
+  onEq?: (column: string, value: string) => void,
+) {
   const builder = {
     select: vi.fn(() => builder),
-    eq: vi.fn(() => builder),
+    eq: vi.fn((column: string, value: string) => {
+      onEq?.(column, value);
+      return builder;
+    }),
     not: vi.fn(() => builder),
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
@@ -118,7 +125,10 @@ function buildSupabaseClient() {
       }
 
       if (table === 'subscriptions') {
-        const builder = makeSelectBuilder(() => ({ data: state.subscriptionData ?? null, error: state.subscriptionError ?? null }));
+        const builder = makeSelectBuilder(
+          () => ({ data: state.subscriptionData ?? null, error: state.subscriptionError ?? null }),
+          (column, value) => state.subscriptionFilters.push({ column, value }),
+        );
         return {
           ...builder,
           upsert: state.upsert,
@@ -189,6 +199,7 @@ describe('Stripe webhook billing hardening', () => {
       subscriptionError: null,
       upsertError: null,
       eventUpdates: [],
+      subscriptionFilters: [],
       eventInsert: vi.fn(async () => ({ error: state.eventInsertError ?? null })),
       upsert: vi.fn(async () => ({ error: state.upsertError ?? null })),
     };
@@ -362,6 +373,82 @@ describe('Stripe webhook billing hardening', () => {
         }),
       }),
     );
+  });
+
+  it('uses current invoice parent subscription reference and exact customer binding for payment failure', async () => {
+    state.subscriptionData = [{
+      organization_id: 'org_a',
+      stripe_subscription_id: 'sub_123',
+      stripe_customer_id: 'cus_123',
+    }];
+
+    const invoice = {
+      id: 'in_parent',
+      object: 'invoice',
+      customer: 'cus_123',
+      parent: { subscription_details: { subscription: 'sub_123' } },
+    };
+    await handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', invoice, 'evt_parent_payment_failed'));
+
+    expect(state.subscriptionFilters).toEqual(expect.arrayContaining([
+      { column: 'stripe_subscription_id', value: 'sub_123' },
+      { column: 'stripe_customer_id', value: 'cus_123' },
+    ]));
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'billing.payment_failed',
+        metadata: expect.objectContaining({ stripeSubscriptionId: 'sub_123' }),
+      }),
+    );
+  });
+
+  it('fails closed when legacy and current invoice references identify different subscriptions', async () => {
+    state.subscriptionData = [{
+      organization_id: 'org_a',
+      stripe_subscription_id: 'sub_123',
+      stripe_customer_id: 'cus_123',
+    }];
+    const invoice = {
+      ...makeInvoicePaymentFailed(),
+      parent: { subscription_details: { subscription: 'sub_different' } },
+    };
+
+    await expect(handleStripeWebhookEvent(
+      makeStripeEvent('invoice.payment_failed', invoice, 'evt_conflicting_payment_failed'),
+    )).rejects.toThrow('stripe_invoice_subscription_reference_mismatch');
+
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(state.subscriptionFilters).toHaveLength(0);
+  });
+
+  it('rejects ambiguous customer-only invoice binding rather than notifying the first tenant', async () => {
+    state.subscriptionData = [
+      { organization_id: 'org_a', stripe_subscription_id: 'sub_a', stripe_customer_id: 'cus_123' },
+      { organization_id: 'org_b', stripe_subscription_id: 'sub_b', stripe_customer_id: 'cus_123' },
+    ];
+    const invoice = { id: 'in_ambiguous', object: 'invoice', customer: 'cus_123' };
+
+    await expect(handleStripeWebhookEvent(
+      makeStripeEvent('invoice.payment_failed', invoice, 'evt_ambiguous_payment_failed'),
+    )).rejects.toThrow('Payment failed notification subscription lookup ambiguous');
+
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(state.subscriptionFilters).toContainEqual({ column: 'stripe_customer_id', value: 'cus_123' });
+  });
+
+  it('rejects wrong customer despite a returned matching subscription id', async () => {
+    state.subscriptionData = [{
+      organization_id: 'org_a',
+      stripe_subscription_id: 'sub_123',
+      stripe_customer_id: 'cus_wrong',
+    }];
+
+    await expect(handleStripeWebhookEvent(
+      makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed(), 'evt_wrong_customer_failed'),
+    )).rejects.toThrow('Payment failed notification subscription billing binding mismatch');
+
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
   it('marks payment-failed events failed when the email provider skips delivery', async () => {
