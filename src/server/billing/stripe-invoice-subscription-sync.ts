@@ -1,36 +1,8 @@
 import type Stripe from 'stripe';
 
+import { getInvoiceSubscriptionId } from '@/server/billing/stripe-invoice-subscription-id';
 import { getStripeClient } from '@/server/billing/stripe';
 import { upsertSubscriptionFromStripe } from '@/server/billing/stripe-webhooks';
-
-type InvoiceWithSubscriptionReference = Stripe.Invoice & {
-  subscription?: string | Stripe.Subscription | null;
-  parent?: {
-    subscription_details?: {
-      subscription?: string | Stripe.Subscription | null;
-    } | null;
-  } | null;
-};
-
-function stripeObjectId(value: string | { id?: string | null } | null | undefined) {
-  if (typeof value === 'string') {
-    const id = value.trim();
-    return id || null;
-  }
-
-  if (!value) return null;
-  const id = value.id;
-  return typeof id === 'string' && id.trim() ? id.trim() : null;
-}
-
-function invoiceSubscriptionId(invoice: Stripe.Invoice) {
-  const compatible = invoice as InvoiceWithSubscriptionReference;
-  return stripeObjectId(
-    compatible.subscription
-      ?? compatible.parent?.subscription_details?.subscription
-      ?? null,
-  );
-}
 
 /**
  * Invoice lifecycle events can arrive before the corresponding subscription
@@ -45,7 +17,7 @@ export async function syncStripeSubscriptionForInvoiceEvent(event: Stripe.Event)
   }
 
   const invoice = event.data.object as Stripe.Invoice;
-  const subscriptionId = invoiceSubscriptionId(invoice);
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
   if (!subscriptionId) {
     return { synced: false as const, reason: 'subscription_not_present' as const };
   }
