@@ -1,25 +1,41 @@
-# Public recovery site — RISCK COMPLY
+# RISCK COMPLY — isolated public recovery site
 
-This is an isolated, **temporary institutional website**, not the commercial SaaS.
+This directory contains a **temporary static institutional website**. It is NOT the commercial Next.js SaaS. Signup, billing and customer workspace access remain disabled.
 
-## Safe publishing target
+## Netlify site isolation — mandatory
 
-Deploy the **contents of this `recovery-site/` directory** to a **new, separate Netlify site**. Do **not** publish it on the existing `risck-qa-isolated` site and do **not** replace the repository's root `netlify.toml` or release guards.
+Publish this folder to a **new, separate Netlify project**, never to the existing private `risck-qa-isolated` site. Do not override or weaken the repository-root `netlify.toml` QA guard.
 
-For a manual Netlify Drop, drag the local `recovery-site/` directory containing `index.html` and `_headers`. For Git-based deployment of this monorepo, set the Netlify site's base directory to `recovery-site` and explicitly validate the effective build/publish configuration; do not connect main production automatically without review.
+### Git-backed static site
 
-Before DNS cutover, inspect the generated `*.netlify.app` URL, confirm HTTPS, the expected static page and headers, check the email destination, and confirm that no authenticated application or billing route is exposed. The email address is from the existing repository but mailbox delivery is not independently tested.
+Following Netlify's monorepo configuration rules:
 
-Only then add the public domain in the new site, obtain exact Netlify DNS values, inspect Cloudflare DNS/proxy/SSL settings and update the necessary records with rollback instructions. Preserve mail DNS records. No checkout or customer signup is permitted until separate commercial release approval.
+1. Create a separate Netlify project from the approved Git repository/ref, only once authorized and within the existing no-new-cost limit.
+2. Under Project configuration → Continuous deployment → Build settings, leave **Base directory** unset (repository root).
+3. Set **Package directory** to `recovery-site` (this makes Netlify select the dedicated `recovery-site/netlify.toml` before the root config).
+4. Use **Build command** = empty and **Publish directory** = `recovery-site`, relative to the repository root. The local `netlify.toml` declares both values.
+5. Validate the effective build configuration in provider logs before publishing. A Next.js build or `scripts/netlify-qa-build.mjs` execution means the wrong site/build config was selected; **stop** instead of bypassing guards.
+6. Use a reviewed release ref/commit. A draft PR is not an approved production artifact.
 
-## Security / scope
+### Manual static deployment
 
-- No Supabase/Stripe credentials, script dependencies, forms or customer data.
-- Content Security Policy, noindex metadata and basic security headers.
-- No claim of certification, client access, regulatory approval or completed external audit.
-- Site is a candidate, not evidence that DNS or Netlify production is configured.
-- Repository `main` is unchanged until independent review and merge.
+Alternatively, use Netlify Drop and upload only the `recovery-site` directory (or a ZIP with these files at its root). This does not require building Next.js. Never drop the entire application repository.
 
-## Recovery
+### Pre-domain checks
 
-Restore previously documented healthy DNS target if possible; do not treat the paused Vercel deployment as a working rollback.
+Visit the resulting `*.netlify.app` URL and confirm page, valid HTTPS, expected security headers, stable HTTP responses, and that signup, checkout and protected app routes are not present. The commercial email address is sourced from the repository; actual mailbox delivery has NOT been verified.
+
+Only after that, attach `www.risckcomply.com` and the apex domain to the **correct** Netlify project. Obtain Netlify's exact DNS recommendations, inspect real Cloudflare DNS/proxy/SSL records, preserve MX/TXT email records, prepare the rollback target and then perform the independently approved cutover. Do not treat a paused Vercel deployment as a healthy rollback.
+
+## Safety constraints
+
+- No application secrets, Supabase credentials, Stripe keys, scripts, cookies, forms or customer data.
+- No claims of certifications, legally guaranteed compliance, operational SaaS availability or security signoff.
+- The temporary public information site has `noindex` until the verified commercial release replaces it.
+- No PR merge, Netlify production action or Cloudflare DNS action is authorized solely by this README.
+
+## References
+
+- https://docs.netlify.com/build/configure-builds/monorepos/
+- https://docs.netlify.com/build/configure-builds/file-based-configuration/
+- https://docs.netlify.com/deploy/create-deploys/
