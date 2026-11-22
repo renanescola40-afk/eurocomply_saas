@@ -5,6 +5,7 @@ import { paymentFailedEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getInvoiceSubscriptionId } from '@/server/billing/stripe-invoice-subscription-id';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getUserEmailContextById } from '@/server/users/email';
 
@@ -130,14 +131,6 @@ export function resolveStripeSubscriptionPlan(subscription: Stripe.Subscription)
     currentPeriodEnd: typeof periodEnd === 'number' ? new Date(periodEnd * 1000).toISOString() : null,
     source: 'stripe_price_id' as const,
   };
-}
-
-function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
-  const rawInvoice = invoice as Stripe.Invoice & { subscription?: string | Stripe.Subscription | null };
-  const subscription = rawInvoice.subscription;
-
-  if (!subscription) return null;
-  return typeof subscription === 'string' ? subscription : subscription.id;
 }
 
 function stripeEventCreatedAt(event: Stripe.Event) {
@@ -522,13 +515,18 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
     throw error;
   }
 
+  // Invoice subscriptions may share a Stripe customer. Always prefer the exact
+  // provider subscription reference and additionally bind customer when present.
+  // A customer-only legacy fallback is safe only when it resolves to one tenant.
   const query = supabase
     .from('subscriptions')
     .select('organization_id, stripe_subscription_id, stripe_customer_id')
-    .limit(1);
+    .limit(2);
 
   const { data: subscriptions, error: subscriptionError } = subscriptionId
-    ? await query.eq('stripe_subscription_id', subscriptionId)
+    ? await (customerId
+      ? query.eq('stripe_subscription_id', subscriptionId).eq('stripe_customer_id', customerId)
+      : query.eq('stripe_subscription_id', subscriptionId))
     : await query.eq('stripe_customer_id', customerId!);
 
   if (subscriptionError) {
@@ -536,7 +534,22 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
     throw new Error('Payment failed notification subscription lookup failed');
   }
 
+  if ((subscriptions?.length ?? 0) > 1) {
+    const error = new Error('Payment failed notification subscription lookup ambiguous');
+    reportError(error, { area: 'payment_failed_email', invoiceId: invoice.id, subscriptionId, customerId });
+    throw error;
+  }
+
   const subscription = subscriptions?.[0];
+  if (
+    subscription
+    && ((subscriptionId && subscription.stripe_subscription_id !== subscriptionId)
+      || (customerId && subscription.stripe_customer_id !== customerId))
+  ) {
+    const error = new Error('Payment failed notification subscription billing binding mismatch');
+    reportError(error, { area: 'payment_failed_email', invoiceId: invoice.id, subscriptionId, customerId });
+    throw error;
+  }
 
   if (!subscription?.organization_id) {
     const error = new Error('Payment failed notification subscription was not found');
