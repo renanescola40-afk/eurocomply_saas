@@ -71,6 +71,9 @@ jobs:
           node --test tests/enterprise-evidence/bil02-stripe-netlify-qa-carry.test.mjs
           node --test tests/enterprise-evidence/sec01-aal1-bootstrap-draft-carry.test.mjs
           node --test tests/enterprise-evidence/billing-invoice-tenant-binding-carry.test.mjs
+          node --test tests/enterprise-evidence/netlify-git-preview-isolated-carry.test.mjs
+          node --test tests/enterprise-evidence/sec01-identity-mfa-setup-carry.test.mjs
+          node --test scripts/check-netlify-preview.test.mjs scripts/qa-environment-guard.test.mjs
           node --test tests/security/sec01-aal1-bootstrap-draft-contract.test.mjs
           node --test tests/billing/qa-stripe-test-ledger.test.mjs
           node --test scripts/qa-environment-guard.test.mjs scripts/check-netlify-preview.test.mjs

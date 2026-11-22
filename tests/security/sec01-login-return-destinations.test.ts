@@ -11,6 +11,33 @@ describe('SEC-01 post-login profile return allowlist', () => {
     },
   );
 
+  it.each(['en', 'pt', 'es', 'fr', 'it', 'de'])(
+    'preserves the authenticated /%s/mfa self-setup return across login',
+    (locale) => {
+      expect(isAllowedLoginReturnDestination(`/${locale}/mfa`, locale)).toBe(true);
+      expect(isAllowedLoginReturnDestination(`/${locale}/mfa?setup=1`, locale)).toBe(true);
+      expect(isAllowedLoginReturnDestination(`/${locale}/mfa-other`, locale)).toBe(false);
+    },
+  );
+
+  it('keeps explicit MFA enrollment identity-only before any privileged organization lookup', () => {
+    const page = readFileSync('src/app/[locale]/mfa/page.tsx', 'utf8');
+    const authCheck = page.indexOf('const user = await getCurrentUser()');
+    const setupBoundary = page.indexOf('if (!setupRequested) {');
+    const tenantLookup = page.indexOf('const organization = await getCurrentOrganizationForUser(user.id);');
+    const tenantPolicy = page.indexOf('const state = await getTenantMfaSessionState(organization.id);');
+
+    expect(authCheck).toBeGreaterThan(-1);
+    expect(setupBoundary).toBeGreaterThan(authCheck);
+    expect(tenantLookup).toBeGreaterThan(setupBoundary);
+    expect(tenantPolicy).toBeGreaterThan(tenantLookup);
+    expect(page).toContain("setupRequested ? '?setup=1' : ''");
+    expect(page).toContain('redirect(`/${safeLocale}/login?next=${encodeURIComponent(mfaPath)}`)');
+    expect(page).toContain("const setupRequested = query.setup === '1'");
+    expect(page).toContain('safeNextPath(query.next, safeLocale)');
+    expect(page).not.toContain('createAdminClient');
+  });
+
   it('preserves the existing onboarding, dashboard and checkout destinations', () => {
     for (const path of [
       '/en/onboarding',

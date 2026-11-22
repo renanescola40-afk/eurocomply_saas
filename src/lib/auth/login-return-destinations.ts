@@ -12,6 +12,8 @@ export function isAllowedLoginReturnDestination(value: string, locale: string): 
     `/${locale}/dashboard/observability`,
     `/${locale}/checkout`,
     `/${locale}/profile`,
+    // Account-level MFA enrollment is accessible only after verified Auth login.
+    `/${locale}/mfa`,
   ];
   return allowed.some((path) =>
     value === path || value.startsWith(`${path}/`) || value.startsWith(`${path}?`));
