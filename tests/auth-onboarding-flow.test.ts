@@ -106,6 +106,7 @@ describe('auth and onboarding redirect invariants', () => {
     expect(callback).toContain("'/dashboard/organizations'");
     expect(callback).toContain("'/dashboard/observability'");
     expect(callback).toContain("'/profile'");
+    expect(callback).toContain("'/mfa'");
     expect(callback).toContain('isAllowedCallbackContinuation(normalizedNext, locale)');
     expect(callback).not.toContain('rawNext.startsWith(`/${locale}/`) ? rawNext : fallback');
   });
@@ -162,6 +163,7 @@ describe('auth and onboarding redirect invariants', () => {
     expect(loginDestinations).toContain('`/${locale}/dashboard/organizations`');
     expect(loginDestinations).toContain('`/${locale}/dashboard/observability`');
     expect(loginDestinations).toContain('`/${locale}/profile`');
+    expect(loginDestinations).toContain('`/${locale}/mfa`');
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
     expect(signup).toContain('`/${locale}/onboarding`');

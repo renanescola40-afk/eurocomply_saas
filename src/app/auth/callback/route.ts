@@ -17,6 +17,8 @@ const CALLBACK_CONTINUATION_PATHS = [
   ORGANIZATION_DASHBOARD_PATH,
   '/dashboard/observability',
   '/profile',
+  // MFA self-enrollment is an authenticated identity-only continuation.
+  '/mfa',
 ] as const;
 
 type SupabaseClaimsApi = {
