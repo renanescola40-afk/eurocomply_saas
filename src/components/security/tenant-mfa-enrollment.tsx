@@ -12,7 +12,7 @@ type Factor = {
   factor_type?: string;
 };
 
-export default function TenantMfaEnrollment({ locale, nextPath }: { locale: string; nextPath: string }) {
+export default function TenantMfaEnrollment({ locale, nextPath, accountSetupOnly = false }: { locale: string; nextPath: string; accountSetupOnly?: boolean }) {
   const router = useRouter();
   const [factors, setFactors] = useState<Factor[]>([]);
   const [factorId, setFactorId] = useState('');
@@ -144,9 +144,9 @@ export default function TenantMfaEnrollment({ locale, nextPath }: { locale: stri
   return (
     <div className="mx-auto w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Workspace security</p>
-      <h1 className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">Multi-factor authentication required</h1>
+      <h1 className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{accountSetupOnly ? 'Set up multi-factor authentication' : 'Multi-factor authentication required'}</h1>
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-        This workspace requires an AAL2 session before protected workspace data can be accessed.
+        {accountSetupOnly ? 'Set up a TOTP authenticator for your account. Workspace access is controlled separately by organization policy and session assurance.' : 'This workspace requires an AAL2 session before protected workspace data can be accessed.'}
       </p>
 
       <div className="mt-6 space-y-4">
