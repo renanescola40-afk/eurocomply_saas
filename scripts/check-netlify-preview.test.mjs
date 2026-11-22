@@ -49,6 +49,43 @@ const QA_MANUAL_DRAFT_BASE = {
   NEXT_PUBLIC_APP_URL: 'https://qa-manual-72e40520--risck-qa-isolated.netlify.app',
 };
 
+test('Git PR preview binds the exact QA site and PR origin before build', () => {
+  const preview = 'https://deploy-preview-2770--risck-qa-isolated.netlify.app';
+  const source = {
+    ...QA_MANUAL_DRAFT_BASE,
+    SITE_ID: 'e953293d-348c-41e8-b798-fcd1ece9c427',
+    SITE_NAME: 'risck-qa-isolated',
+    REVIEW_ID: '2770',
+    DEPLOY_ID: '5b243e66dd6a547b4fee73ae',
+    DEPLOY_URL: 'https://5b243e66dd6a547b4fee73ae--risck-qa-isolated.netlify.app',
+    DEPLOY_PRIME_URL: preview,
+  };
+  const prepared = prepareNetlifyQaBuildEnv(source);
+  assert.deepEqual(prepared.errors, []);
+  assert.equal(prepared.env.NEXT_PUBLIC_APP_URL, preview);
+  assert.equal(prepared.env.RISCK_QA_NETLIFY_MANUAL_DRAFT, undefined);
+  assert.equal(source.NEXT_PUBLIC_APP_URL, QA_MANUAL_DRAFT_BASE.NEXT_PUBLIC_APP_URL);
+  for (const changed of [
+    { CONTEXT: 'production' },
+    { CONTEXT: 'branch-deploy' },
+    { SITE_ID: 'e953293d-348c-41e8-b798-fcd1ece9c428' },
+    { SITE_NAME: 'another-site' },
+    { REVIEW_ID: '2771' },
+    { REVIEW_ID: undefined },
+    { DEPLOY_PRIME_URL: 'https://deploy-preview-2770--another-site.netlify.app' },
+    { NEXT_PUBLIC_APP_URL: 'https://risck-qa-isolated.netlify.app' },
+    { RISCK_QA_ENVIRONMENT: undefined },
+    { RISCK_QA_BOOTSTRAP_NO_BILLING: undefined },
+    { SUPABASE_URL: 'https://tganhbbhfxcpblmgqprg.supabase.co' },
+    { SUPABASE_SERVICE_ROLE_KEY: 'synthetic-never-valid' },
+    { STRIPE_SECRET_KEY: 'sk_live_synthetic' },
+    { QA_ALLOW_OUTBOUND_EMAIL: 'true' },
+  ]) {
+    assert.ok(prepareNetlifyQaBuildEnv({ ...source, ...changed }).errors.length > 0,
+      JSON.stringify(changed));
+  }
+});
+
 test('CLI draft accepts explicit isolated QA alias without a Git import', () => {
   assert.deepEqual(validateNetlifyPreview(QA_MANUAL_DRAFT_BASE), { checked: true, errors: [] });
   assert.deepEqual(validateNetlifyPreview({

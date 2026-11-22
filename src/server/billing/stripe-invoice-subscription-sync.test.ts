@@ -57,6 +57,16 @@ describe('Stripe invoice subscription synchronization', () => {
     expect(mocks.retrieve).toHaveBeenCalledWith('sub_parent');
   });
 
+  it('rejects conflicting invoice subscription references before fetching or writing provider state', async () => {
+    await expect(syncStripeSubscriptionForInvoiceEvent(invoiceEvent('invoice.paid', {
+      subscription: 'sub_legacy',
+      parent: { subscription_details: { subscription: 'sub_other' } },
+    }))).rejects.toThrow('stripe_invoice_subscription_reference_mismatch');
+
+    expect(mocks.retrieve).not.toHaveBeenCalled();
+    expect(mocks.upsertSubscriptionFromStripe).not.toHaveBeenCalled();
+  });
+
   it('does not mutate anything for non-invoice lifecycle events or one-off invoices', async () => {
     const nonInvoice = await syncStripeSubscriptionForInvoiceEvent({ type: 'customer.subscription.updated' } as any);
     const oneOff = await syncStripeSubscriptionForInvoiceEvent(invoiceEvent('invoice.paid', {}));
