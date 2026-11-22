@@ -8,6 +8,22 @@ import { QA_NETLIFY_SITE_ID, QA_NETLIFY_SITE_NAME, resolveNetlifyQaRemoteDraftUr
 // immutable deployment URL which must be validated BEFORE the Next.js build.
 export function prepareNetlifyQaBuildEnv(source) {
   const env = { ...source };
+  // This site's preview variables were originally scoped to a manual CLI draft.
+  // A Git PR preview gets a different, provider-assigned origin. Rebind only
+  // when the PR number, exact isolated site and QA-only manual alias agree.
+  const gitPreviewUrl = `https://deploy-preview-${env.REVIEW_ID}--${QA_NETLIFY_SITE_NAME}.netlify.app`;
+  const gitPreview = env.NETLIFY === 'true' && env.CONTEXT === 'deploy-preview' &&
+    env.SITE_ID === QA_NETLIFY_SITE_ID && env.SITE_NAME === QA_NETLIFY_SITE_NAME &&
+    /^[1-9][0-9]*$/.test(env.REVIEW_ID || '') &&
+    env.DEPLOY_PRIME_URL === gitPreviewUrl &&
+    env.RISCK_QA_ENVIRONMENT === 'true' &&
+    env.RISCK_QA_BOOTSTRAP_NO_BILLING === 'true' &&
+    env.RISCK_QA_NETLIFY_MANUAL_DRAFT === 'true' &&
+    /^https:\/\/qa-manual-[a-f0-9]{8}--risck-qa-isolated\.netlify\.app$/.test(env.NEXT_PUBLIC_APP_URL || '');
+  if (gitPreview) {
+    env.NEXT_PUBLIC_APP_URL = gitPreviewUrl;
+    delete env.RISCK_QA_NETLIFY_MANUAL_DRAFT;
+  }
   const remoteUrl = resolveNetlifyQaRemoteDraftUrl(env);
 
   // Netlify CLI's *local* build is not a remotely attributed deployment.
