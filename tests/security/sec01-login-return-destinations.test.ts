@@ -38,6 +38,27 @@ describe('SEC-01 post-login profile return allowlist', () => {
     expect(page).not.toContain('createAdminClient');
   });
 
+  it('keeps the unprivileged QA MFA route as account-only enrollment, never tenant authorization', () => {
+    const page = readFileSync('src/app/[locale]/mfa/page.tsx', 'utf8');
+    const component = readFileSync('src/components/security/tenant-mfa-enrollment.tsx', 'utf8');
+    const authentication = page.indexOf('const user = await getCurrentUser()');
+    const adminKeyCheck = page.indexOf('const hasPrivilegedTenantPolicyReader = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())');
+    const privilegedBranch = page.indexOf('if (hasPrivilegedTenantPolicyReader) {');
+    const tenantLookup = page.indexOf('const organization = await getCurrentOrganizationForUser(user.id);');
+
+    expect(authentication).toBeGreaterThan(-1);
+    expect(adminKeyCheck).toBeGreaterThan(authentication);
+    expect(privilegedBranch).toBeGreaterThan(adminKeyCheck);
+    expect(tenantLookup).toBeGreaterThan(privilegedBranch);
+    expect(page).toContain('accountSetupOnly={setupRequested || !hasPrivilegedTenantPolicyReader}');
+    expect(page).toContain('const state = await getTenantMfaSessionState(organization.id);');
+    expect(component).toContain('accountSetupOnly = false');
+    expect(component).toContain("accountSetupOnly ? 'Set up multi-factor authentication'");
+    expect(component).toContain('Workspace access is controlled separately by organization policy and session assurance.');
+    expect(component).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(component).not.toContain('createAdminClient');
+  });
+
   it('preserves the existing onboarding, dashboard and checkout destinations', () => {
     for (const path of [
       '/en/onboarding',
