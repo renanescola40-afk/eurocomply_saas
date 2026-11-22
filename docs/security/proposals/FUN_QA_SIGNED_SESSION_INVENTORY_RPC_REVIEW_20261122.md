@@ -1,38 +1,28 @@
-# FUN-QA — Signed-session AI inventory RPC boundary (REVIEW-ONLY)
+# FUN-QA — Signed-session inventory assertion: review-only, non-callable milestone
 
-**Source base:** protected `main@343e5c9bd756310c10814f1aefbea9556d88e7ef`  
-**Target only after independent approval:** Supabase isolated QA `zrxrrfbllsxtleyxjpsz`  
-**Production:** NO_GO; no Production or QA SQL executed by this PR.
+**Frozen starting baseline:** protected `main@1ded3c6127a575a314849de86651685b4bf89204`. **Target after separate authorization:** Supabase isolated QA `zrxrrfbllsxtleyxjpsz`. **Production:** NO_GO. Neither script has been executed in QA or Production.
 
-## Problem addressed
+## P1 security findings addressed in this revision
 
-The current QA Netlify deployment intentionally rejects `SUPABASE_SERVICE_ROLE_KEY`, yet `src/server/queries/ai-systems.ts` invokes `createAdminClient()` for inventory access. The two existing atomic RPCs accept caller-supplied actor and organization IDs and execute as `postgres`; direct `authenticated` EXECUTE is intentionally absent. Granting either broad RPC directly would permit caller-spoofed actor/tenant assertions.
+The original proposal granted `authenticated` EXECUTE on two public `SECURITY DEFINER` bridges to `create_ai_system_atomic` and `reassess_ai_system_atomic`. A valid signed AAL2 user could supply contradictory `risk_level`, `classification_summary`, `obligations`, or `next_actions` instead of using `classifyParsedAiSystemBody` in the trusted server, and then persist rows without the separate mandatory `createAuditEvent` chained audit append or its fail-closed compensation. Both are **P1 security/data-integrity defects**. These cannot be solved by adding JWT, tenant membership, or subscription checks alone.
 
-The existing QA database does have `organization_members.user_id`, `status`, `role`, `auth.sessions`, a **RESTRICTIVE** commercial-authority policy on `ai_systems`, and `app_private.has_org_role` / `app_private.resolve_commercial_plan`. These are compatible with an explicit signed-session assertion.
+**Remediation:** this PR now proposes **only** `app_private.qa_require_ai_inventory_actor(uuid)`, an unexposed session and authorization assertion. The installer creates **no public write RPC** and makes **no grant to `authenticated` or `anon`**; the private helper has default PUBLIC EXECUTE revoked before COMMIT. Existing restricted atomic RPC ACLs remain unchanged. It also aborts rather than silently overwriting any pre-existing helper/public bridge. The rollback aborts if any exposed bridge exists and removes only the narrowly proposed helper.
 
-## Proposed narrow capability
+This is intentionally a **non-functional staged security building block**: it does **not** allow QA inventory saves and must not be advertised as an installed capability or ready-to-run migration. A SECURITY DEFINER private function still requires independent owner/privilege review before installation, with source code not being proof of privilege safety.
 
-`scripts/qa/qa-fun-inventory-signed-session-rpcs-install.sql` proposes three new functions, none executed automatically:
+## Why classification and audit need a separate design
 
-1. `app_private.qa_require_ai_inventory_actor(organization_id)` privately derives the actor from verified `auth.uid()` and requires `auth.jwt()` role authenticated, AAL2, a corresponding existing and unexpired `auth.sessions` record with verified MFA factor, active own-organization writer membership, existing tenant-MFA/role policy, and authentic licensed commercial plan. It rejects every missing or contradictory condition.
-2. `public.qa_create_ai_system_for_session(organization_id, system)` calls the existing atomic create with **server-derived** actor after the private assertion.
-3. `public.qa_reassess_ai_system_for_session(system_id, organization_id, updated_at, patch)` similarly calls the existing atomic reassess with actor derived from the signed session.
+- The existing trusted Next.js handlers in `src/app/api/ai-systems/route.ts` and `src/app/api/ai-systems/[id]/route.ts` calculate classification through `classifyParsedAiSystemBody`, validate the AI system payload, and enforce authorization.
+- They write the required `ai_system_created` / `ai_system_reassessed` chained audit through `createAuditEvent`; on audit failure they attempt compensation. A direct public DB RPC without equivalent transactional classification and signed-audit enforcement would bypass both controls.
+- A future functional design must ensure a **single atomic trusted write + derived risk decision + required audit event**, with rollback on audit failure and strict signed-session/tenant checks. Consider an unexposed trusted service boundary that can run the same TypeScript decision engine, or a rigorously reviewed SQL equivalent and transactional audit chain. It must not depend on a caller-provided risk classification or a best-effort audit call.
+- The existing application path still uses `createAdminClient()`; the QA Netlify preview intentionally has no service-role secret. No Next.js path changes or provider/Auth settings are included here.
 
-Only the two new public wrappers propose `EXECUTE` for the `authenticated` database role. They do **not** grant the old spoofable RPCs, add table DML grants, disable RLS or authorize TEST-mode Stripe data as a paid subscription. Both public wrappers are `SECURITY DEFINER`; this is an explicit **security-review risk** because these are exposed authenticated RPCs. Reviewer must assess the narrowly scoped assertions and, if necessary, reject the design for a Supabase Edge Function or other non-exposed alternative before any installation.
+## Security evidence needed before any QA rollout
 
-## Mandatory preconditions and exclusions
+Independent Security + Database review of the private helper ownership, `auth.sessions` SELECT authority, session/JWT trust model, AAL1 vs verified AAL2, revoked/expired session, anonymous caller, suspended member, different organization, writer roles, commercial authority, tenant policy, and permission grants. Then an independently authorized **QA-only** execution plan, with PostgreSQL compilation, exact project attestation, transaction rollback, and negative provider-signed session tests. A positive paid-plan path requires a legitimate provider-backed contract or explicitly authorized isolated signed-contract QA fixture; never fabricate a Stripe LIVE subscription.
 
-- Independent Database and Security approval, exact QA project attestation, schema/migration provenance, and acceptance of the public-wrapper residual risk.
-- Postgres EXPLAIN / `pgTAP` positive and negative tests against disposable QA identities: anonymous, AAL1, invalid session ID, revoked/expired session, member, suspended member, org A→B, mismatched actor, missing commercial authority, quota, concurrency/replay and reassessment `updated_at` conflict. Synthetic fixtures must be isolated and cleaned up.
-- Only after the database is approved and installed: implement **session-bound** application reads, organization selection, audit and create/reassess calls. Do not swap `createAdminClient()` to an unqualified user client without validating all dependent tenant/MFA/role/audit checks. This source PR alone does **not** fix the Next.js request path.
-- QA currently has zero `subscriptions` rows and zero `ai_systems` rows. A TEST Stripe subscription cannot be treated as LIVE commercial authority. A positive inventory test would require an independently authorized disposable QA signed-contract fixture or legitimate provider-backed licensing proof, never fabricated LIVE payment authority.
-- The Netlify PR #2770 is a working **no-billing** Git Preview and has not verified logged-in AAL2, distributed rate limiter or inventory persistence; do not use it for payment acceptance.
-- No secret keys, outgoing emails, Stripe LIVE changes, Production deploys or new costs.
+## Verification boundary and decision
 
-## Verification and rollback
+`npx vitest run tests/security/qa-fun-inventory-signed-session-rpc-contract.test.ts` exercises *static* source contracts and verifies no write grants, not a functional SQL install. Signed-session runtime, classification parity, chain audit persistence, concurrent writes, quota, RLS, rollback and customer readiness are **NOT VERIFIED**. Existing table policies and Stripe LIVE remain untouched, no emails or new costs.
 
-Source contract tests: `npx vitest run tests/security/qa-fun-inventory-signed-session-rpc-contract.test.ts`. These are **static contract tests**, not SQL execution or Supabase Auth acceptance. Full exact-HEAD GitHub CI and qualified independent review are required.
-
-Once an authorized QA installer is applied, verify ACLs and that existing RPC `authenticated_execute=false` remains unchanged. Independently run the complete signed-session runtime negative matrix. If anything fails, execute the **QA-only** `scripts/qa/qa-fun-inventory-signed-session-rpcs-rollback.sql` after its own approval; it drops only the newly introduced wrappers/helper.
-
-**Current release conclusion:** `FUN_QA_CANDIDATE_FOR_REVIEW`, not `PERMISSION_DEPLOYED`, not `AI_INVENTORY_RUNTIME_PASS`, not customer GO.
+**Decision:** `P1_WRITE_EXPOSURE_PREVENTED_IN_SOURCE` · `QA_INVENTORY_WRITES_BLOCKED` · `FUN_QA_NOT_RUNTIME_VERIFIED` · Production `NO_GO`. Any future reintroduction of exposed wrappers requires fresh independent review of classification and transactional audit *before* EXECUTE grants.

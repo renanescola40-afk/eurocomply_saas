@@ -3,8 +3,10 @@
 -- Never run against Supabase Production. Do not enable customer billing from this.
 --
 -- Install target (after approval): isolated QA project zrxrrfbllsxtleyxjpsz.
--- The existing privileged atomic procedures retain service_role-only EXECUTE.
--- Entire capability is installed transactionally; partial grants are not committed.
+-- The existing privileged atomics retain their restricted EXECUTE ACLs.
+-- This installs ONLY an unexposed private assertion, and no write capability.
+-- All statements are transactional; default PUBLIC function EXECUTE is revoked
+-- in the same transaction before it is committed.
 
 BEGIN;
 
@@ -27,13 +29,21 @@ BEGIN
        'public.reassess_ai_system_atomic(uuid,uuid,timestamp with time zone,uuid,jsonb)'::regprocedure, 'EXECUTE') THEN
     RAISE EXCEPTION 'qa_ai_inventory_privileged_rpc_acl_not_restricted' USING ERRCODE = '55000';
   END IF;
+  -- Refuse installation over an existing helper or exposed bridge. Do not
+  -- silently replace installed functions or inherit wider legacy grants.
+  IF to_regprocedure('app_private.qa_require_ai_inventory_actor(uuid)') IS NOT NULL
+     OR to_regprocedure('public.qa_create_ai_system_for_session(uuid,jsonb)') IS NOT NULL
+     OR to_regprocedure('public.qa_reassess_ai_system_for_session(uuid,uuid,timestamptz,jsonb)') IS NOT NULL THEN
+    RAISE EXCEPTION 'qa_ai_inventory_existing_bridge_requires_independent_review'
+      USING ERRCODE = '55000';
+  END IF;
 END;
 $preflight$;
 
 -- Private assertion function. It never accepts a caller-selected actor ID.
 -- PostgREST validates the incoming Supabase Auth JWT before setting auth.jwt().
 -- Auth sessions table lookup also fails closed for deleted/expired/AAL1 sessions.
-CREATE OR REPLACE FUNCTION app_private.qa_require_ai_inventory_actor(p_organization_id uuid)
+CREATE FUNCTION app_private.qa_require_ai_inventory_actor(p_organization_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -90,60 +100,13 @@ $function$;
 REVOKE ALL ON FUNCTION app_private.qa_require_ai_inventory_actor(uuid)
 FROM PUBLIC, anon, authenticated;
 
--- The public RPC exposes only an authorized, actor-derived bridge.
--- Do not grant EXECUTE on public.create_ai_system_atomic to authenticated.
-CREATE OR REPLACE FUNCTION public.qa_create_ai_system_for_session(
-  p_organization_id uuid,
-  p_system jsonb
-)
-RETURNS TABLE(outcome text, system jsonb)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $function$
-DECLARE
-  v_actor uuid;
-BEGIN
-  v_actor := app_private.qa_require_ai_inventory_actor(p_organization_id);
-  RETURN QUERY
-    SELECT created.outcome, created.system
-    FROM public.create_ai_system_atomic(p_organization_id, v_actor, p_system) AS created;
-END;
-$function$;
-
-REVOKE ALL ON FUNCTION public.qa_create_ai_system_for_session(uuid,jsonb)
-FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.qa_create_ai_system_for_session(uuid,jsonb)
-TO authenticated;
-
-CREATE OR REPLACE FUNCTION public.qa_reassess_ai_system_for_session(
-  p_system_id uuid,
-  p_organization_id uuid,
-  p_expected_updated_at timestamptz,
-  p_patch jsonb
-)
-RETURNS TABLE(outcome text, system jsonb)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $function$
-DECLARE
-  v_actor uuid;
-BEGIN
-  v_actor := app_private.qa_require_ai_inventory_actor(p_organization_id);
-  RETURN QUERY
-    SELECT reassessed.outcome, reassessed.system
-    FROM public.reassess_ai_system_atomic(
-      p_system_id, p_organization_id, p_expected_updated_at, v_actor, p_patch
-    ) AS reassessed;
-END;
-$function$;
-
-REVOKE ALL ON FUNCTION
-  public.qa_reassess_ai_system_for_session(uuid,uuid,timestamptz,jsonb)
-FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION
-  public.qa_reassess_ai_system_for_session(uuid,uuid,timestamptz,jsonb)
-TO authenticated;
+-- FAIL-CLOSED REVIEW MILESTONE. No exposed write RPCs are created here.
+-- The earlier public SECURITY DEFINER bridges would have bypassed BOTH the
+-- server's classification derivation and fail-closed chained audit append.
+-- An AAL2 session, membership and a plan do not establish classification or
+-- audit integrity. A future independently reviewed transactional write
+-- boundary must enforce those before any authenticated EXECUTE is granted.
+-- Do not create or grant public.qa_create_ai_system_for_session or
+-- public.qa_reassess_ai_system_for_session from this installer.
 
 COMMIT;

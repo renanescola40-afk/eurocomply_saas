@@ -37,17 +37,23 @@ describe('FUN-QA signed-session inventory SQL source contract', () => {
     expect(install).toContain("USING ERRCODE = '42501'");
   });
 
-  it('exposes only the two actor-derived QA RPCs to authenticated callers', () => {
-    expect(install).toContain('public.qa_create_ai_system_for_session(');
-    expect(install).toContain('public.qa_reassess_ai_system_for_session(');
-    expect(install).toContain('FROM public.create_ai_system_atomic(p_organization_id, v_actor, p_system)');
-    expect(install).toContain('p_system_id, p_organization_id, p_expected_updated_at, v_actor, p_patch');
-    const grants = [...install.matchAll(/\bGRANT\s+EXECUTE\s+ON\s+FUNCTION\b/gi)];
-    expect(grants).toHaveLength(2);
-    expect(install).toMatch(/REVOKE\s+ALL\s+ON\s+FUNCTION\s+public\.qa_create_ai_system_for_session\(uuid,jsonb\)[\s\S]*?FROM\s+PUBLIC,\s*anon,\s*authenticated;/i);
-    expect(install).toMatch(/REVOKE\s+ALL\s+ON\s+FUNCTION\s+public\.qa_reassess_ai_system_for_session\(uuid,uuid,timestamptz,jsonb\)[\s\S]*?FROM\s+PUBLIC,\s*anon,\s*authenticated;/i);
-    expect(install).not.toMatch(/\bGRANT\s+(?:ALL|SELECT|INSERT|UPDATE|DELETE)\s+ON\s+TABLE\b/i);
-    expect(install).not.toMatch(/\bDISABLE\s+ROW\s+LEVEL\s+SECURITY\b/i);
+  it('keeps all inventory writes inaccessible to public signed sessions pending classification and audit', () => {
+    expect(install).toContain('qa_ai_inventory_existing_bridge_requires_independent_review');
+    expect(install).toContain("to_regprocedure('public.qa_create_ai_system_for_session(uuid,jsonb)')");
+    expect(install).toContain("to_regprocedure('public.qa_reassess_ai_system_for_session(uuid,uuid,timestamptz,jsonb)')");
+    expect(install).not.toMatch(/CREATE\\s+(?:OR\\s+REPLACE\\s+)?FUNCTION\\s+public\\.qa_(?:create|reassess)_ai_system_for_session/i);
+    expect(install).not.toMatch(/GRANT\\s+EXECUTE\\s+ON\\s+FUNCTION/i);
+    expect(install).not.toMatch(/\\bGRANT\\s+(?:ALL|SELECT|INSERT|UPDATE|DELETE)\\s+ON\\s+TABLE\\b/i);
+    expect(install).not.toMatch(/\\bDISABLE\\s+ROW\\s+LEVEL\\s+SECURITY\\b/i);
+    expect(install).toContain('CREATE FUNCTION app_private.qa_require_ai_inventory_actor');
+    expect(install).not.toContain('CREATE OR REPLACE FUNCTION app_private.qa_require_ai_inventory_actor');
+    const apiCreate = readFileSync('src/app/api/ai-systems/route.ts', 'utf8');
+    const apiReassess = readFileSync('src/app/api/ai-systems/[id]/route.ts', 'utf8');
+    for (const route of [apiCreate, apiReassess]) {
+      expect(route).toContain('classifyParsedAiSystemBody');
+      expect(route).toContain('createAuditEvent');
+      expect(route).toContain('if (!audit.persisted)');
+    }
   });
 
   it('keeps the QA installer transactional and rollback scoped to new functions', () => {
@@ -57,8 +63,8 @@ describe('FUN-QA signed-session inventory SQL source contract', () => {
     expect(rollback).toMatch(/COMMIT;\s*$/);
     expect(rollback).toContain('DROP FUNCTION IF EXISTS');
     expect(rollback).toContain('qa_require_ai_inventory_actor(uuid)');
-    expect(rollback).toContain('qa_create_ai_system_for_session(uuid,jsonb)');
-    expect(rollback).toContain('qa_reassess_ai_system_for_session(uuid,uuid,timestamptz,jsonb)');
+    expect(rollback).toContain('qa_inventory_exposed_bridge_requires_separate_rollback');
+    expect(rollback).not.toMatch(/\\bDROP\\s+FUNCTION\\s+(?:IF\\s+EXISTS\\s+)?public\\.qa_(?:create|reassess)_ai_system_for_session/i);
     expect(rollback).not.toMatch(/\bDROP\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?public\.(?:create_ai_system_atomic|reassess_ai_system_atomic)/i);
   });
 });
