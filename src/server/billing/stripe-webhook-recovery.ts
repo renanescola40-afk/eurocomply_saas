@@ -196,7 +196,8 @@ async function findExistingStripeEntitlementReplay(eventId: string) {
 
 async function reconcileEntitlementWhenEligible(event: Stripe.Event) {
   const entitlement = await reconcileStripeEntitlementEvent(event);
-  if (entitlement.outcome === 'metadata_missing' || entitlement.outcome === 'unsupported') {
+  if (entitlement.outcome === 'metadata_missing' || entitlement.outcome === 'unsupported'
+      || entitlement.outcome === 'billing_not_eligible') {
     return null;
   }
   return entitlement;
