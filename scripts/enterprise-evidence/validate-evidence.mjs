@@ -254,6 +254,34 @@ const AI_SAVE_CARRY_CHECKS=[
 ];
 
 
+/** PR #2781: manual QA MFA provider proof behind the already-protected QA-Supabase environment.
+ * Preserve four historical gates on exact-head authenticated CI, immutable
+ * evidence and independent CODEOWNER review; this is not SEC-01 runtime PASS.
+ */
+const SEC01_QA_MFA_ACTIONS_CARRY_PR=2781;
+const SEC01_QA_MFA_ACTIONS_REVIEWER='renanescola40-afk';
+const SEC01_QA_MFA_ACTIONS_CARRY_BASE='a8f6e1c935e63d8ea85e8f4e68f14792cac5d884';
+const SEC01_QA_MFA_ACTIONS_ORIGIN_BASE='26f171972543c4366a775fe55e970c14e0ef920e';
+const SEC01_QA_MFA_ACTIONS_CARRY_RUN=45024564260;
+const SEC01_QA_MFA_ACTIONS_CARRY_ARTIFACT=14755102859;
+const SEC01_QA_MFA_ACTIONS_CARRY_DIGEST='00b7771a05d68ee5444538b614bb175895e62367f7116c64fc32af57d2d91ff0';
+const SEC01_QA_MFA_ACTIONS_CARRY_REVIEW='SEC-01 QA-ONLY SIGNED MFA GITHUB ACTIONS FOUR-GATE SOURCE CARRY SECURITY REVIEW: APPROVED';
+const SEC01_QA_MFA_ACTIONS_CARRY_FILES=new Set([
+ 'scripts/enterprise-evidence/validate-evidence.mjs',
+ '.github/workflows/sec01-isolated-qa-mfa-provider.yml',
+ 'scripts/enterprise-gates/a01-sec01-qa-mfa-provider-proof.mjs',
+ 'scripts/security/run-step-up-mfa-runtime-validation.mjs',
+ 'tests/security/sec01-qa-mfa-provider-proof-workflow.test.ts',
+ 'tests/enterprise-evidence/sec01-qa-mfa-actions-carry.test.mjs',
+ '.github/workflows/enterprise-evidence-tests.yml',
+]);
+const SEC01_QA_MFA_ACTIONS_CARRY_CHECKS=[
+ 'Run security gates, typecheck and tests',
+ 'Core CI, build and npm audit',
+ 'CI / quality',
+ 'Validate P0 runtime evidence register',
+];
+
 /** PR #2780: deny unpaid/TEST Stripe events as automatic Enterprise grants.
  * Preserve four previously accepted gates only with exact HEAD CI, strict
  * nine-file changes, immutable provider artifacts and independent CODEOWNER review.
@@ -4305,6 +4333,9 @@ export async function verifyCumulativeRelease(index,{
 }={}){
  if(!SHA40.test(expectedSha||'')||!token)return false;
  if(!cumulativeIntegrity(index,{expectedSha,root})){
+  if(sec01QaMfaActionsCarryIntegrity(index,{expectedSha,root})){
+   return verifySec01QaMfaActionsCarry(index,{expectedSha,prNumber,token,request,root});
+  }
   if(bil03PaidGuardCarryIntegrity(index,{expectedSha,root})){
    return verifyBil03PaidGuardCarry(index,{expectedSha,prNumber,token,request,root});
   }
@@ -4592,6 +4623,8 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    netlifyGitPreviewCarryIntegrity(index,{expectedSha}));
  const sec01IdentitySetupCarry=Boolean(cumulative&&cumulativeReview?.sec01IdentitySetupCarry===true&&
    sec01IdentitySetupCarryIntegrity(index,{expectedSha}));
+ const sec01QaMfaActionsCarry=Boolean(cumulative&&cumulativeReview?.sec01QaMfaActionsCarry===true&&
+   sec01QaMfaActionsCarryIntegrity(index,{expectedSha}));
  const bil03PaidGuardCarry=Boolean(cumulative&&cumulativeReview?.bil03PaidGuardCarry===true&&
    bil03PaidGuardCarryIntegrity(index,{expectedSha}));
  const sec01RlsRevokeCarry=Boolean(cumulative&&cumulativeReview?.sec01RlsRevokeCarry===true&&
@@ -4607,13 +4640,13 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
  const funQaPrivateGuardCarry=Boolean(cumulative&&cumulativeReview?.funQaPrivateGuardCarry===true&&
    funQaPrivateGuardCarryIntegrity(index,{expectedSha}));
  const carry=Boolean(cumulative&&cumulativeReview&&
-   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry||sec01RlsRevokeCarry||bil03PaidGuardCarry||cumulativeIntegrity(index,{expectedSha})));
+   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry||sec01RlsRevokeCarry||bil03PaidGuardCarry||sec01QaMfaActionsCarry||cumulativeIntegrity(index,{expectedSha})));
  const qatGate=(index.gates||[]).find(gate=>gate.gate_id==='A-15'&&gate.accepted===true);
  const isQatPass=record=>record.control_id==='QAT-01'&&record.status==='PASS';
  const qatEvidenceMatches=record=>qatGate&&record.gate_id==='A-15'&&
   record.artifact_path===qatGate.acceptance_evidence_ref&&
   record.artifact_sha256===qatGate.acceptance_evidence_sha256&&
-  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry||sec01RlsRevokeCarry||bil03PaidGuardCarry)?DOCS_CHECKPOINT:expectedSha});
+  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry||sec01RlsRevokeCarry||bil03PaidGuardCarry||sec01QaMfaActionsCarry)?DOCS_CHECKPOINT:expectedSha});
  const recordSha=record=>isQatPass(record)&&qatEvidenceMatches(record)
   ?qatGate.acceptance_sha
   :evidenceExpectedSha(record,{frozenSha:index.source?.commit_sha,candidateSha:expectedSha});
@@ -4655,7 +4688,7 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    eligible:eligible&&status===computed,
    expectedSha:carry&&gate.id==='A-19'?claim.acceptance_sha:
     carry&&['A-09','A-18'].includes(gate.id)?CUMULATIVE_CHECKPOINT:
-    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry||sec01RlsRevokeCarry||bil03PaidGuardCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
+    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry||sec01RlsRevokeCarry||bil03PaidGuardCarry||sec01QaMfaActionsCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
    providerApproved:carry&&CUMULATIVE_GATES.includes(gate.id)||
     (gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved),
   });

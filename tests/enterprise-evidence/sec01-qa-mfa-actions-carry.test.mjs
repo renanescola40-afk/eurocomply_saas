@@ -22,7 +22,7 @@ const PATCH=[
  '.github/workflows/enterprise-evidence-tests.yml',
 ];
 
-test('SEC-01 QA MFA Actions workflow carry is limited to review-only SQL and immutable accepted evidence',()=>{
+test('SEC-01 QA MFA Actions workflow carry is scoped and preserves immutable accepted evidence',()=>{
  const root=mkdtempSync(join(tmpdir(),'risck-sec01-qa-mfa-actions-carry-'));
  const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
  const put=(p,bytes)=>{const file=join(root,p);mkdirSync(dirname(file),{recursive:true});writeFileSync(file,bytes);};
@@ -61,7 +61,7 @@ test('SEC-01 QA MFA Actions workflow carry is limited to review-only SQL and imm
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 
-test('SEC-01 revoked-session RLS native exact-head security review must be substantive, valid and not withdrawn',()=>{
+test('SEC-01 QA MFA Actions native exact-head security review must be substantive, valid and not withdrawn',()=>{
  const sha='a'.repeat(40),pull={number:2781,sha,mergedAt:null};
  const reviewLabel='SEC-01 QA-ONLY SIGNED MFA GITHUB ACTIONS FOUR-GATE SOURCE CARRY SECURITY REVIEW: APPROVED';
  const body=[
@@ -95,7 +95,7 @@ test('source carry is bound to actual historical main provider evidence and curr
  for(const str of [
   'SEC01_QA_MFA_ACTIONS_CARRY_PR=2781',
   "SEC01_QA_MFA_ACTIONS_REVIEWER='renanescola40-afk'",
-  "SEC01_QA_MFA_ACTIONS_CARRY_BASE='1f070a38ddc40c08388cab699ab909997fa92c57'",
+  "SEC01_QA_MFA_ACTIONS_CARRY_BASE='a8f6e1c935e63d8ea85e8f4e68f14792cac5d884'",
   "SEC01_QA_MFA_ACTIONS_ORIGIN_BASE='26f171972543c4366a775fe55e970c14e0ef920e'",
   'SEC01_QA_MFA_ACTIONS_CARRY_RUN=45024564260',
   'SEC01_QA_MFA_ACTIONS_CARRY_ARTIFACT=14755102859',
@@ -145,6 +145,9 @@ test('new workflow is manual QA-only and its positive AAL1->AAL2 proof cannot gr
  assert.match(workflow,/workflow_dispatch:/);
  assert.doesNotMatch(workflow,/^\s+(?:push|pull_request|workflow_run|schedule):/m);
  assert.doesNotMatch(workflow,/environment:\s*Production/);
+ assert.match(workflow,/environment: QA-Supabase/);
+ assert.match(workflow,/needs: qa-environment-governance/);
+ assert.match(workflow,/check-github-environment-governance\\.mjs/);
  assert.match(workflow,/secrets\.E2E_QA_SUPABASE_SERVICE_ROLE_KEY/);
  assert.match(workflow,/secrets\.E2E_QA_SUPABASE_URL/);
  assert.match(workflow,/STEP_UP_QA_PROJECT_REF: zrxrrfbllsxtleyxjpsz/);

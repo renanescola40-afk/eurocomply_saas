@@ -12,18 +12,48 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: sec01-isolated-qa-provider-${{ inputs.release_sha }}
   cancel-in-progress: false
 
 jobs:
+  qa-environment-governance:
+    name: Verify protected QA environment before secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify exact current main revision
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_REF_NAME" = "main"
+          test "$GITHUB_REPOSITORY" = "renanescola40-afk/eurocomply_saas"
+          test "$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+      - name: Checkout without repository credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+      - name: Verify independent QA-Supabase environment protections
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: QA-Supabase
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
   qa-signed-mfa:
+    needs: qa-environment-governance
+    environment: QA-Supabase
     name: Validate actual QA TOTP AAL1-to-AAL2 and delete fixture
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # Intentionally NO Production environment, Production secrets, or deploy.
-    # Use the same independently QA-scoped credentials as the existing E2E job.
+    # ONLY the independently reviewed QA-Supabase protected environment can release
+    # QA-scoped credentials to this job; NO Production environment or deployment.
     env:
       SEC01_EXPECTED_MAIN_SHA: ${{ inputs.release_sha }}
       STEP_UP_PROVIDER_MODE: supabase_mfa

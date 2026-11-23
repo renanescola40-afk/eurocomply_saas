@@ -112,6 +112,14 @@ describe('SEC-01 manual QA-only signed MFA provider workflow', () => {
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).not.toMatch(/^\s+(?:push|pull_request|workflow_run|schedule):/m);
     expect(workflow).not.toContain('environment: Production');
+    // The QA Auth mutation job must be gated by the same protected environment
+    // used by the existing independently reviewed #2778 MFA workflow.
+    expect(workflow).toContain('environment: QA-Supabase');
+    expect(workflow).toContain('needs: qa-environment-governance');
+    expect(workflow).toContain('Verify protected QA environment before secrets');
+    expect(workflow).toContain('check-github-environment-governance.mjs');
+    expect(workflow).toContain("GITHUB_ENVIRONMENT_NAME: QA-Supabase");
+    expect(workflow).toContain("REQUIRE_PROTECTED_BRANCHES: 'true'");
     expect(workflow).not.toContain('secrets.SUPABASE_SERVICE_ROLE_KEY');
     expect(workflow).toContain('secrets.E2E_QA_SUPABASE_SERVICE_ROLE_KEY');
     expect(workflow).toContain('secrets.E2E_QA_SUPABASE_URL');
