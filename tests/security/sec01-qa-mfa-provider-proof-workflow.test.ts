@@ -33,7 +33,7 @@ const passed = {
   fixtureCleanupVerified: true,
 };
 
-function result(runtime = passed, env = goodEnv, actualSha = SHA) {
+function result(runtime: typeof passed | null = passed, env: Record<string, string> = goodEnv, actualSha: string = SHA) {
   return classifyQaMfaProviderProof({ runtime, env, actualSha });
 }
 
