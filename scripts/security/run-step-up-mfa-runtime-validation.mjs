@@ -320,7 +320,7 @@ async function executeSupabaseMfaFlow(supabase, { email, password, providerMode,
   };
 }
 
-async function runSupabaseMfaLiveValidation() {
+export async function runSupabaseMfaLiveValidation() {
   const providerMode = readRuntimeSetting(stepUpProviderEnv);
   const supabaseUrl = readRuntimeSetting(supabaseUrlEnv);
   const supabaseAnonKey = readRuntimeSetting(supabaseAnonEnv);
