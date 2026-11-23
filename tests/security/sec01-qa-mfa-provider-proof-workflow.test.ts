@@ -21,6 +21,7 @@ const passed = {
   status: 'Complete',
   ephemeralFixtureCreated: true,
   signedIn: true,
+  initialAal1Observed: true,
   factorEnrolled: true,
   verifiedFactorAvailable: true,
   verifiedTotpFactorCount: 1,
@@ -41,8 +42,8 @@ describe('SEC-01 manual QA-only signed MFA provider workflow', () => {
     expect(result()).toMatchObject({
       pass: true,
       outcome: 'QA_PROVIDER_AAL2_PASS',
-      verifiedCount: 10,
-      requiredCount: 10,
+      verifiedCount: 11,
+      requiredCount: 11,
       qaRef: 'zrxrrfbllsxtleyxjpsz',
       gate: 'NOT_ACCEPTED',
       control: 'NOT_VERIFIED',
@@ -59,6 +60,7 @@ describe('SEC-01 manual QA-only signed MFA provider workflow', () => {
       { status: 'Failed' },
       { ephemeralFixtureCreated: false },
       { signedIn: false },
+      { initialAal1Observed: false },
       { factorEnrolled: false },
       { verifiedFactorAvailable: false },
       { verifiedTotpFactorCount: 0 },
@@ -122,6 +124,8 @@ describe('SEC-01 manual QA-only signed MFA provider workflow', () => {
     expect(workflow).toContain('node scripts/enterprise-gates/a01-sec01-qa-mfa-provider-proof.mjs');
     expect(runner).toContain('runSupabaseMfaLiveValidation()');
     expect(existing).toContain('export async function runSupabaseMfaLiveValidation()');
+    expect(existing).toContain('initial_aal1_not_observed');
+    expect(existing).toContain('initialAal1Observed: true');
     expect(existing).toContain("projectRef: readRuntimeSetting('STEP_UP_QA_PROJECT_REF')");
     expect(existing).toContain("executionIntent: readRuntimeSetting('STEP_UP_QA_EXECUTE')");
     expect(runner).not.toMatch(/auth\.admin\.createUser/);
