@@ -45,6 +45,7 @@ export function classifyQaMfaProviderProof({ runtime, actualSha, env = {} } = {}
   const checks = {
     fixtureCreated: runtime?.ephemeralFixtureCreated === true,
     signedIn: runtime?.signedIn === true,
+    initialAal1Observed: runtime?.initialAal1Observed === true,
     totpEnrolled: runtime?.factorEnrolled === true,
     totpFactorVerified: runtime?.verifiedFactorAvailable === true
       && Number.isInteger(runtime?.verifiedTotpFactorCount)
