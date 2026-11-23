@@ -24,6 +24,11 @@ function sha40(v) {
   return typeof v === 'string' && /^[0-9a-f]{40}$/.test(v);
 }
 
+/**
+ * Pure fail-closed evidence reducer. The provider result is held in memory;
+ * never log or persist raw session, identity, password, token or TOTP values.
+ * @param {{runtime?: Record<string, any> | null, actualSha?: string, env?: Record<string, string | undefined>}} [options]
+ */
 export function classifyQaMfaProviderProof({ runtime, actualSha, env = {} } = {}) {
   const validContext = sha40(actualSha)
     && env.GITHUB_ACTIONS === 'true'
