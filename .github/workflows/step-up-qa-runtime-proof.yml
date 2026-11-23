@@ -1,0 +1,97 @@
+name: Isolated QA MFA Provider Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character current main SHA to validate in isolated QA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: isolated-qa-mfa-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  qa-environment-governance:
+    name: Verify protected QA environment before secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Bind request to current main
+        env:
+          TARGET_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_REF_NAME" = main
+          test "$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1)" = "$TARGET_SHA"
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+      - name: Verify required QA environment protections
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ENVIRONMENT_NAME: QA-Supabase
+          REQUIRE_PROTECTED_BRANCHES: 'true'
+        run: node scripts/security/check-github-environment-governance.mjs
+
+  qa-mfa-provider:
+    name: Enroll, verify AAL2 and clean up QA fixture
+    needs: qa-environment-governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: QA-Supabase
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+      - name: Verify exact current main checkout
+        env:
+          TARGET_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1)" = "$TARGET_SHA"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Verify QA key against QA Auth before any mutation
+        env:
+          QA_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { createClient } from '@supabase/supabase-js';
+          const key = process.env.QA_SUPABASE_SERVICE_ROLE_KEY;
+          if (!key) throw new Error('qa_admin_secret_missing');
+          const admin = createClient('https://zrxrrfbllsxtleyxjpsz.supabase.co', key,
+            { auth: { persistSession: false, autoRefreshToken: false } });
+          const { error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 });
+          if (error) throw new Error('qa_admin_secret_not_accepted_by_isolated_project');
+          console.log('QA Auth accepted the protected QA-only admin credential.');
+          NODE
+      - name: Execute disposable QA provider proof
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
+          NEXT_PUBLIC_SUPABASE_URL: https://zrxrrfbllsxtleyxjpsz.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.QA_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          STEP_UP_PROVIDER_MODE: supabase_mfa
+          STEP_UP_QA_PROJECT_REF: zrxrrfbllsxtleyxjpsz
+          STEP_UP_QA_EXECUTE: QA_ONLY_MFA_RUNTIME_PROOF
+        run: node scripts/security/run-qa-mfa-provider-proof.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: isolated-qa-mfa-provider-${{ inputs.release_sha }}
+          path: test-results/qa-mfa-provider-proof.json
+          if-no-files-found: ignore
+          retention-days: 30

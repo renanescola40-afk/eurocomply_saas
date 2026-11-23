@@ -39,6 +39,7 @@ function stripeEvent(
 function legacySubscriptionEvent(type: Stripe.Event.Type = 'customer.subscription.updated') {
   return stripeEvent(type, {
     metadata,
+    status: 'active',
     current_period_end: Math.floor(now.valueOf() / 1000) + oneDay,
   });
 }
@@ -56,6 +57,7 @@ describe('Stripe entitlement billing period extraction', () => {
     const second = Math.floor(now.valueOf() / 1000) + oneDay * 14;
     const event = stripeEvent('customer.subscription.updated', {
       metadata,
+      status: 'active',
       items: {
         data: [
           { current_period_end: first },
@@ -79,6 +81,7 @@ describe('Stripe entitlement billing period extraction', () => {
   it('prefers canonical Basil subscription metadata even when invoice metadata is non-empty', () => {
     const periodEnd = Math.floor(now.valueOf() / 1000) + oneDay * 20;
     const event = stripeEvent('invoice.paid', {
+      amount_paid: 4900,
       metadata: { invoice_note: 'ordinary merchant metadata' },
       parent: {
         subscription_details: { metadata },
@@ -104,6 +107,7 @@ describe('Stripe entitlement billing period extraction', () => {
     const standaloneEnd = Math.floor(now.valueOf() / 1000) + 60;
     const subscriptionEnd = Math.floor(now.valueOf() / 1000) + oneDay * 30;
     const event = stripeEvent('invoice.paid', {
+      amount_paid: 4900,
       parent: { subscription_details: { metadata } },
       lines: {
         data: [
@@ -126,6 +130,7 @@ describe('Stripe entitlement billing period extraction', () => {
   it('keeps legacy invoice subscription_details and subscription line shape compatible', () => {
     const periodEnd = Math.floor(now.valueOf() / 1000) + oneDay * 10;
     const event = stripeEvent('invoice.paid', {
+      amount_paid: 4900,
       subscription_details: { metadata },
       lines: {
         data: [
@@ -156,13 +161,14 @@ describe('normalizeStripeEntitlementEvent', () => {
   });
 
   it('fails closed instead of inventing a period when a billable event has no billing window', () => {
-    const event = stripeEvent('customer.subscription.updated', { metadata });
+    const event = stripeEvent('customer.subscription.updated', { metadata, status: 'active' });
     expect(normalizeStripeEntitlementEvent(event, now)).toEqual({ outcome: 'billing_period_missing' });
   });
 
   it('fails closed when the recovered billing period is already expired', () => {
     const event = stripeEvent('customer.subscription.updated', {
       metadata,
+      status: 'active',
       items: {
         data: [{ current_period_end: Math.floor(now.valueOf() / 1000) - 1 }],
       },
@@ -218,6 +224,43 @@ describe('normalizeStripeEntitlementEvent', () => {
         now,
       ),
     ).toEqual({ outcome: 'metadata_missing' });
+  });
+
+  it('denies Enterprise seat grants from zero-amount invoice.paid trial events', () => {
+    const event = stripeEvent('invoice.paid', {
+      status: 'paid',
+      amount_paid: 0,
+      amount_due: 0,
+      total: 0,
+      metadata: {},
+      parent: { subscription_details: { metadata } },
+      lines: { data: [basilSubscriptionLine(Math.floor(now.valueOf() / 1000) + oneDay)] },
+    });
+    expect(normalizeStripeEntitlementEvent(event, now)).toEqual({ outcome: 'billing_not_eligible' });
+  });
+
+  it('denies trialing subscriptions as Enterprise grant authority', () => {
+    const event = stripeEvent('customer.subscription.created', {
+      status: 'trialing',
+      metadata,
+      current_period_end: Math.floor(now.valueOf() / 1000) + oneDay,
+    });
+    expect(normalizeStripeEntitlementEvent(event, now)).toEqual({ outcome: 'billing_not_eligible' });
+  });
+
+  it('denies incomplete subscription updates as Enterprise grant authority', () => {
+    const event = stripeEvent('customer.subscription.updated', {
+      status: 'incomplete',
+      metadata,
+      current_period_end: Math.floor(now.valueOf() / 1000) + oneDay,
+    });
+    expect(normalizeStripeEntitlementEvent(event, now)).toEqual({ outcome: 'billing_not_eligible' });
+  });
+
+  it('denies TEST events even when Enterprise metadata is otherwise complete', () => {
+    const event = legacySubscriptionEvent('customer.subscription.created');
+    event.livemode = false;
+    expect(normalizeStripeEntitlementEvent(event, now)).toEqual({ outcome: 'billing_not_eligible' });
   });
 
   it('does not reconcile unrelated Stripe events', () => {

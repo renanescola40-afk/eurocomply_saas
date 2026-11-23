@@ -11,18 +11,22 @@ const recoverySource = readFileSync(
   'utf8',
 );
 
-function makeInvoicePaidEvent(): Stripe.Event {
+function makeInvoicePaidEvent({
+  livemode = true,
+  amountPaid = 4900,
+}: { livemode?: boolean; amountPaid?: number | null } = {}): Stripe.Event {
   return {
     id: 'evt_test_invoice_paid_recovery_contract',
     object: 'event',
     type: 'invoice.paid',
     created: 1_800_000_000,
-    livemode: false,
+    livemode,
     api_version: '2026-05-27.dahlia',
     data: {
       object: {
         id: 'in_test_invoice_paid_recovery_contract',
         object: 'invoice',
+        amount_paid: amountPaid,
         parent: {
           subscription_details: {
             metadata: {
@@ -83,12 +87,25 @@ describe('Stripe invoice.paid recovery lane', () => {
       entitlements: {
         billing_provider: 'stripe',
         stripe_event_type: 'invoice.paid',
-        stripe_livemode: false,
+        stripe_livemode: true,
         billing_delinquent: false,
         billing_recovered: true,
         subscription_terminated: false,
       },
     });
     expect(normalized.snapshot.validUntil).toBe(new Date(1_900_000_000 * 1000).toISOString());
+  });
+
+  it('denies all TEST and zero-paid invoice.paid events even with complete tenant metadata', () => {
+    const now = new Date('2026-08-13T20:00:00.000Z');
+    for (const candidate of [
+      makeInvoicePaidEvent({ livemode: false, amountPaid: 4900 }),
+      makeInvoicePaidEvent({ livemode: false, amountPaid: 0 }),
+      makeInvoicePaidEvent({ livemode: true, amountPaid: 0 }),
+      makeInvoicePaidEvent({ livemode: true, amountPaid: null }),
+    ]) {
+      expect(normalizeStripeEntitlementEvent(candidate, now))
+        .toEqual({ outcome: 'billing_not_eligible' });
+    }
   });
 });
