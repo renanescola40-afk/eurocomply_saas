@@ -23,15 +23,21 @@ const metadata = {
   grace_period_days: '7',
 };
 
-function event(options: { periodEnd?: number; metadataOverride?: Record<string, string> } = {}) {
+function event(options: {
+  periodEnd?: number;
+  metadataOverride?: Record<string, string>;
+  status?: 'active' | 'trialing';
+  livemode?: boolean;
+} = {}) {
   return {
     id: 'evt_basil_reconcile',
     object: 'event',
     type: 'customer.subscription.updated',
     created: nowSeconds,
-    livemode: false,
+    livemode: options.livemode ?? true,
     data: {
       object: {
+        status: options.status ?? 'active',
         metadata: options.metadataOverride ?? metadata,
         items: options.periodEnd === undefined
           ? { data: [] }
@@ -103,6 +109,24 @@ describe('reconcileStripeEntitlementEvent', () => {
 
   it('fails before the canonical RPC when a billable Stripe event has no billing period', async () => {
     await expect(reconcileStripeEntitlementEvent(event())).rejects.toThrow('stripe_entitlement_billing_period_missing');
+    expect(mocks.reconcileEntitlementSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('denies trialing reconciliation before calling the atomic entitlement RPC', async () => {
+    const result = await reconcileStripeEntitlementEvent(event({
+      status: 'trialing',
+      periodEnd: nowSeconds + 86_400,
+    }));
+    expect(result).toEqual({ outcome: 'billing_not_eligible' });
+    expect(mocks.reconcileEntitlementSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('denies TEST-mode reconciliation before calling the atomic entitlement RPC', async () => {
+    const result = await reconcileStripeEntitlementEvent(event({
+      livemode: false,
+      periodEnd: nowSeconds + 86_400,
+    }));
+    expect(result).toEqual({ outcome: 'billing_not_eligible' });
     expect(mocks.reconcileEntitlementSnapshot).not.toHaveBeenCalled();
   });
 
