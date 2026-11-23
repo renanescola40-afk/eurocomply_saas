@@ -242,6 +242,7 @@ function emptyLiveResult(providerMode, providerHost) {
     providerHost,
     ephemeralFixtureCreated: false,
     signedIn: false,
+    initialAal1Observed: false,
     factorEnrolled: false,
     verifiedFactorAvailable: false,
     challengeCreated: false,
@@ -264,6 +265,17 @@ async function executeSupabaseMfaFlow(supabase, { email, password, providerMode,
   }
 
   result = { ...result, signedIn: true };
+  // An AAL2-only result is not an observed transition. The disposable QA
+  // identity MUST initially be at AAL1 before any TOTP factor is enrolled.
+  const initialAssurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (initialAssurance.error || initialAssurance.data?.currentLevel !== 'aal1') {
+    return {
+      ...result,
+      reason: 'initial_aal1_not_observed',
+      providerCode: stableProviderCode(initialAssurance.error),
+    };
+  }
+  result = { ...result, initialAal1Observed: true };
   const enrollment = await supabase.auth.mfa.enroll({
     factorType: 'totp',
     friendlyName: `risck-comply-proof-${Date.now()}`,
