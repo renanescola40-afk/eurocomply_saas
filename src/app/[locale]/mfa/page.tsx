@@ -36,27 +36,38 @@ export default async function TenantMfaPage({ params, searchParams }: Props) {
 
   const nextPath = safeNextPath(query.next, safeLocale);
 
+  // A restricted QA preview deliberately has no privileged Supabase key.
+  // The MFA page is an authenticated *account* enrollment surface, never
+  // tenant authorization: it is safe to expose TOTP setup without org metadata.
+  // Workspace/API operations continue to enforce their own tenant and AAL2 checks.
+  const hasPrivilegedTenantPolicyReader = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+
   if (!setupRequested) {
-    // Normal tenant-required MFA continues to enforce all existing server-side
-    // organization and policy checks. Missing or malformed policy fails closed.
-    const organization = await getCurrentOrganizationForUser(user.id);
-    if (!organization) {
-      redirect(`/${safeLocale}/onboarding`);
-    }
+    if (hasPrivilegedTenantPolicyReader) {
+      // Keep the established policy-aware behavior when a trusted server-side
+      // reader is available. Unknown or malformed policy must still fail closed.
+      const organization = await getCurrentOrganizationForUser(user.id);
+      if (!organization) {
+        redirect(`/${safeLocale}/onboarding`);
+      }
 
-    const state = await getTenantMfaSessionState(organization.id);
-    if (!state.required || state.satisfied) {
-      redirect(nextPath);
+      const state = await getTenantMfaSessionState(organization.id);
+      if (!state.required || state.satisfied) {
+        redirect(nextPath);
+      }
     }
+    // Otherwise: authenticated self-enrollment only. Never infer tenant policy
+    // or grant access from a missing admin key. The separate ?setup=1 route
+    // remains available regardless of tenant or commercial entitlements.
   }
-
-  // Explicit account-level setup only: a verified Supabase Auth user may enroll
-  // their own TOTP factor without a service-role client. This is not authority
-  // to access any workspace; every subsequent tenant/API route rechecks it.
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-16 dark:bg-slate-950">
-      <TenantMfaEnrollment locale={safeLocale} nextPath={nextPath} />
+      <TenantMfaEnrollment
+        locale={safeLocale}
+        nextPath={nextPath}
+        accountSetupOnly={setupRequested || !hasPrivilegedTenantPolicyReader}
+      />
     </main>
   );
 }

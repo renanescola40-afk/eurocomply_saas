@@ -75,6 +75,7 @@ jobs:
           node --test tests/enterprise-evidence/sec01-identity-mfa-setup-carry.test.mjs
           node --test tests/enterprise-evidence/fun-qa-private-aal2-assertion-carry.test.mjs
           node --test tests/enterprise-evidence/public-recovery-static-carry.test.mjs
+          node --test tests/enterprise-evidence/sec01-no-admin-mfa-carry.test.mjs
           node --test scripts/check-netlify-preview.test.mjs scripts/qa-environment-guard.test.mjs
           node --test tests/security/sec01-aal1-bootstrap-draft-contract.test.mjs
           node --test tests/billing/qa-stripe-test-ledger.test.mjs
