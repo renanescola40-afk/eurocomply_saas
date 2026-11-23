@@ -1,0 +1,7 @@
+# Dedicated static recovery site. Requires Netlify PACKAGE directory = recovery-site.
+# Keep base directory at repository root (unset in the UI) to ensure that this
+# publish path is evaluated relative to the repository root.
+# Do not connect this configuration to the restricted risck-qa-isolated project.
+[build]
+  command = ""
+  publish = "recovery-site"
