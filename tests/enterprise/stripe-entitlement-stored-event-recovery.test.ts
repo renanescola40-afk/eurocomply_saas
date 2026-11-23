@@ -160,7 +160,7 @@ function fakeSupabase({
 }
 
 describe('stored Stripe entitlement recovery', () => {
-  it('builds the same snapshot and digest as the canonical runtime for a Dahlia item-level period', () => {
+  it('keeps manually gated TEST stored recovery distinct from automatic paid LIVE grant authority', () => {
     const row = storedRow();
     const prepared = buildSnapshotFromStoredStripeEvent(row, {
       expectedEventId: EVENT_ID,
@@ -169,11 +169,12 @@ describe('stored Stripe entitlement recovery', () => {
     });
     const canonical = normalizeStripeEntitlementEvent(eventPayload() as unknown as Stripe.Event, NOW);
 
-    expect(canonical.outcome).toBe('normalized');
-    if (canonical.outcome !== 'normalized') throw new Error('canonical normalization unexpectedly failed');
-    expect(prepared.snapshot).toEqual(canonical.snapshot);
+    // Manual recovery reconstructs an explicitly operator-gated TEST snapshot.
+    // The automatic commercial authorizer must never interpret this as paid LIVE.
+    expect(canonical).toEqual({ outcome: 'billing_not_eligible' });
+    expect(prepared.snapshot.entitlements.stripe_livemode).toBe(false);
     expect(entitlementPayloadDigestForRecovery(prepared.snapshot))
-      .toBe(entitlementPayloadDigest(canonical.snapshot));
+      .toBe(entitlementPayloadDigest(prepared.snapshot));
     expect(prepared.snapshot.validUntil).toBe('2026-08-29T22:40:56.000Z');
   });
 
