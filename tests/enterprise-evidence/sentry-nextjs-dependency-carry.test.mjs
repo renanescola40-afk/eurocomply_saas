@@ -93,7 +93,7 @@ test('source carry is bound to actual historical main provider evidence and curr
  const s=readFileSync('scripts/enterprise-evidence/validate-evidence.mjs','utf8');
  for(const str of [
   'SENTRY_NEXTJS_CARRY_PR=2774',
-  "SENTRY_NEXTJS_CARRY_BASE='37926ccb8567ee584507831aac1b3901b3c4cd38'",
+  "SENTRY_NEXTJS_CARRY_BASE='643de6c84c70598ee55123c052932cb13fe3ad0a'",
   "SENTRY_NEXTJS_ORIGIN_BASE='26f171972543c4366a775fe55e970c14e0ef920e'",
   'SENTRY_NEXTJS_CARRY_RUN=45024564260',
   'SENTRY_NEXTJS_CARRY_ARTIFACT=14755102859',
