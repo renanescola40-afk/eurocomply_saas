@@ -254,6 +254,33 @@ const AI_SAVE_CARRY_CHECKS=[
 ];
 
 
+/** PR #2778: provide explicit reviewed QA-only disposable MFA provider proof.
+ * This source-only carry requires exact-HEAD CI and authenticated independent
+ * owner/CODEOWNER review; no production writes or new enterprise gate PASS.
+ */
+const SEC01_QA_RUNNER_CARRY_PR=2778;
+const SEC01_QA_RUNNER_REVIEWER='renanescola40-afk';
+const SEC01_QA_RUNNER_CARRY_BASE='257199e1f7d9c3666e0192dc9e7eec7eb1bb698f';
+const SEC01_QA_RUNNER_ORIGIN_BASE='26f171972543c4366a775fe55e970c14e0ef920e';
+const SEC01_QA_RUNNER_CARRY_RUN=45024564260;
+const SEC01_QA_RUNNER_CARRY_ARTIFACT=14755102859;
+const SEC01_QA_RUNNER_CARRY_DIGEST='00b7771a05d68ee5444538b614bb175895e62367f7116c64fc32af57d2d91ff0';
+const SEC01_QA_RUNNER_CARRY_REVIEW='SEC-01 PROTECTED QA-ONLY MFA PROVIDER RUNNER FOUR-GATE SOURCE CARRY SECURITY REVIEW: APPROVED';
+const SEC01_QA_RUNNER_CARRY_FILES=new Set([
+ '.github/workflows/step-up-qa-runtime-proof.yml',
+ 'scripts/security/run-qa-mfa-provider-proof.mjs',
+ 'scripts/security/run-step-up-mfa-runtime-validation.mjs',
+ 'scripts/enterprise-evidence/validate-evidence.mjs',
+ 'tests/enterprise-evidence/sec01-qa-provider-runner-carry.test.mjs',
+ '.github/workflows/enterprise-evidence-tests.yml',
+]);
+const SEC01_QA_RUNNER_CARRY_CHECKS=[
+ 'Run security gates, typecheck and tests',
+ 'Core CI, build and npm audit',
+ 'CI / quality',
+ 'Validate P0 runtime evidence register',
+];
+
 /** PR #2777: refuse MFA Auth fixture writes outside isolated Supabase QA.
  * Frozen four-gate acceptance is preserved only by exact HEAD source checks,
  * immutable authenticated main evidence, and independent security review.
@@ -3837,11 +3864,108 @@ export async function verifySec01QaWriteCarry(index,{
  }catch{return false;}
 }
 
+export function sec01QaRunnerCarryIntegrity(index,{expectedSha,root=ROOT,checkpoint=SEC01_QA_RUNNER_CARRY_BASE}={}){
+ if(!SHA40.test(expectedSha||'')||!SHA40.test(checkpoint||'')||
+    expectedSha===checkpoint||
+    index?.cumulative_acceptance?.schema!=='risck-comply.a15-cumulative-acceptance.v1'||
+    runGit(root,['merge-base','--is-ancestor',checkpoint,expectedSha]).status!==0)return false;
+ const diff=runGit(root,['diff','--no-ext-diff','--name-only','--no-renames','-z',checkpoint,expectedSha,'--']);
+ if(diff.status!==0||!Buffer.isBuffer(diff.stdout))return false;
+ const names=diff.stdout.toString('utf8').split('\0').filter(Boolean);
+ if(names.length!==SEC01_QA_RUNNER_CARRY_FILES.size||
+    !names.every(name=>SEC01_QA_RUNNER_CARRY_FILES.has(name)))return false;
+ // The actual source branch must descend from the known prior accepted main.
+ // An override checkpoint is permitted for synthetic unit tests only.
+ if(checkpoint===SEC01_QA_RUNNER_CARRY_BASE){
+  if(runGit(root,['merge-base','--is-ancestor',SEC01_QA_RUNNER_ORIGIN_BASE,checkpoint]).status!==0)return false;
+  const original=committedJson(root,SEC01_QA_RUNNER_ORIGIN_BASE,INDEX_PATH);
+  if(!original||JSON.stringify(original)!==JSON.stringify(index))return false;
+ }
+ const frozen=committedJson(root,checkpoint,INDEX_PATH);
+ if(!frozen||JSON.stringify(index)!==JSON.stringify(frozen)||
+    !CUMULATIVE_GATES.every(id=>frozen.gates?.some(g=>g.gate_id===id&&
+      (id==='A-19'||g.accepted===true))))return false;
+ const immutable=new Set([COMBINED_PROOF,A15_PROOF,A19_PROOF]);
+ for(const g of frozen.gates||[])if(g.accepted===true){
+   if(typeof g.acceptance_evidence_ref!=='string')return false;
+   immutable.add(g.acceptance_evidence_ref);
+ }
+ for(const record of frozen.evidence_records||[])if(record.status==='PASS'){
+   if(typeof record.artifact_path!=='string')return false;
+   immutable.add(record.artifact_path);
+ }
+ return [...immutable].every(file=>{
+   const before=committedDigest(root,checkpoint,file);
+   return SHA256.test(before||'')&&committedDigest(root,expectedSha,file)===before;
+ });
+}
+
+/** Only a native, substantive qualified review of exact source HEAD qualifies. */
+export function sec01QaRunnerCarryApprovedReview(reviews,pull){
+ if(!Array.isArray(reviews)||pull?.number!==SEC01_QA_RUNNER_CARRY_PR||!SHA40.test(pull.sha||''))return false;
+ const rejection=/(?:FORMAL GATE ACCEPTANCE|CUMULATIVE ACCEPTANCE SECURITY REVIEW|SEC-01 PROTECTED QA-ONLY MFA PROVIDER RUNNER FOUR-GATE SOURCE CARRY SECURITY REVIEW|A-(?:09\/BIL-01|15\/QAT-01|18\/OPS-01|19\/OPS-02)).{0,85}\b(?:NOT APPROVED|REJECTED|WITHHELD|DENIED|PENDING|BLOCKED)\b/i;
+ return reviews.find(r=>r?.state==='APPROVED'&&r.user?.login===SEC01_QA_RUNNER_REVIEWER&&
+   r.commit_id===pull.sha&&CUMULATIVE_LINES.every(line=>includesReviewLine(r.body,line))&&
+   includesReviewLine(r.body,CUMULATIVE_SECURITY)&&includesReviewLine(r.body,SEC01_QA_RUNNER_CARRY_REVIEW)&&
+   !rejection.test(r.body)&&!decisionWithdrawn(reviews,r,pull,rejection)&&
+   r.html_url==='https://github.com/'+REPOSITORY+'/pull/'+pull.number+
+     '#pullrequestreview-'+r.id&&Number.isFinite(Date.parse(r.submitted_at))&&
+   (!pull.mergedAt||Date.parse(r.submitted_at)<=Date.parse(pull.mergedAt)))||false;
+}
+
+/** Historical main run+digest and exact-head checks are provider-verified; never self-approve. */
+export async function verifySec01QaRunnerCarry(index,{
+ expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
+}={}){
+ const explicit=prNumber!==undefined&&prNumber!==null&&String(prNumber).trim()!=='';
+ if((explicit&&Number(prNumber)!==SEC01_QA_RUNNER_CARRY_PR)||!token||
+    !sec01QaRunnerCarryIntegrity(index,{expectedSha,root}))return false;
+ const api=githubRead(request,token);
+ try{
+  const pull=await reviewedPull(api,expectedSha,explicit?prNumber:null,SEC01_QA_RUNNER_REVIEWER);
+  if(!pull||pull.number!==SEC01_QA_RUNNER_CARRY_PR)return false;
+  if(pull.mergedAt){
+   const trees=runGit(root,['rev-parse',pull.sha+'^{tree}',expectedSha+'^{tree}']);
+   const pair=trees.stdout?.toString('utf8').trim().split('\n')||[];
+   if(trees.status!==0||pair.length!==2||!SHA40.test(pair[0])||pair[0]!==pair[1])return false;
+  }
+  const [run,artifacts,checks,ci,reviews]=await Promise.all([
+   api('/actions/runs/'+SEC01_QA_RUNNER_CARRY_RUN),
+   api('/actions/runs/'+SEC01_QA_RUNNER_CARRY_RUN+'/artifacts?per_page=100'),
+   api('/commits/'+pull.sha+'/check-runs?per_page=100'),
+   verifyQat01AfterProviderSettles({sha:pull.sha,token,request}),
+   api('/pulls/'+pull.number+'/reviews?per_page=100'),
+  ]);
+  const artifact=artifacts?.artifacts?.find(a=>a.id===SEC01_QA_RUNNER_CARRY_ARTIFACT);
+  if(run?.head_sha!==SEC01_QA_RUNNER_ORIGIN_BASE||run?.event!=='push'||run?.conclusion!=='success'||
+     artifact?.workflow_run?.head_sha!==SEC01_QA_RUNNER_ORIGIN_BASE||artifact?.expired||
+     artifact?.name!=='enterprise-evidence-test-diagnostics-'+SEC01_QA_RUNNER_ORIGIN_BASE||
+     artifact?.digest!=='sha256:'+SEC01_QA_RUNNER_CARRY_DIGEST||
+     ci?.decision!=='SOURCE_CI_VERIFIED_PENDING_INDEPENDENT_ACCEPTANCE'||
+     !Array.isArray(checks?.check_runs)||!Number.isSafeInteger(checks.total_count)||
+     checks.total_count!==checks.check_runs.length)return false;
+  for(const name of SEC01_QA_RUNNER_CARRY_CHECKS){
+   const rows=checks.check_runs.filter(c=>c?.name===name&&
+     c?.head_sha===pull.sha&&c?.app?.slug==='github-actions');
+   rows.sort((a,b)=>Date.parse(b.completed_at||'')-Date.parse(a.completed_at||'')||
+     (b.id||0)-(a.id||0));
+   const check=rows[0];
+   if(check?.status!=='completed'||check.conclusion!=='success'||
+      !/^https:\/\/github\.com\/renanescola40-afk\/eurocomply_saas\/actions\/runs\/\d+\/job\/\d+$/.test(check.html_url||''))return false;
+  }
+  const approval=sec01QaRunnerCarryApprovedReview(reviews,pull);
+  return approval?{approvalUrl:approval.html_url,acceptedAt:approval.submitted_at,sec01QaRunnerCarry:true}:false;
+ }catch{return false;}
+}
+
 export async function verifyCumulativeRelease(index,{
  expectedSha,prNumber,token,request=globalThis.fetch,root=ROOT,
 }={}){
  if(!SHA40.test(expectedSha||'')||!token)return false;
  if(!cumulativeIntegrity(index,{expectedSha,root})){
+  if(sec01QaRunnerCarryIntegrity(index,{expectedSha,root})){
+   return verifySec01QaRunnerCarry(index,{expectedSha,prNumber,token,request,root});
+  }
   if(sec01QaWriteCarryIntegrity(index,{expectedSha,root})){
    return verifySec01QaWriteCarry(index,{expectedSha,prNumber,token,request,root});
   }
@@ -4120,6 +4244,8 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    netlifyGitPreviewCarryIntegrity(index,{expectedSha}));
  const sec01IdentitySetupCarry=Boolean(cumulative&&cumulativeReview?.sec01IdentitySetupCarry===true&&
    sec01IdentitySetupCarryIntegrity(index,{expectedSha}));
+ const sec01QaRunnerCarry=Boolean(cumulative&&cumulativeReview?.sec01QaRunnerCarry===true&&
+   sec01QaRunnerCarryIntegrity(index,{expectedSha}));
  const sec01QaWriteCarry=Boolean(cumulative&&cumulativeReview?.sec01QaWriteCarry===true&&
    sec01QaWriteCarryIntegrity(index,{expectedSha}));
  const sec01NoAdminMfaCarry=Boolean(cumulative&&cumulativeReview?.sec01NoAdminMfaCarry===true&&
@@ -4129,13 +4255,13 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
  const funQaPrivateGuardCarry=Boolean(cumulative&&cumulativeReview?.funQaPrivateGuardCarry===true&&
    funQaPrivateGuardCarryIntegrity(index,{expectedSha}));
  const carry=Boolean(cumulative&&cumulativeReview&&
-   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||cumulativeIntegrity(index,{expectedSha})));
+   (docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry||cumulativeIntegrity(index,{expectedSha})));
  const qatGate=(index.gates||[]).find(gate=>gate.gate_id==='A-15'&&gate.accepted===true);
  const isQatPass=record=>record.control_id==='QAT-01'&&record.status==='PASS';
  const qatEvidenceMatches=record=>qatGate&&record.gate_id==='A-15'&&
   record.artifact_path===qatGate.acceptance_evidence_ref&&
   record.artifact_sha256===qatGate.acceptance_evidence_sha256&&
-  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry)?DOCS_CHECKPOINT:expectedSha});
+  sourceCommitIsReviewedAncestor(qatGate,{expectedSha:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry)?DOCS_CHECKPOINT:expectedSha});
  const recordSha=record=>isQatPass(record)&&qatEvidenceMatches(record)
   ?qatGate.acceptance_sha
   :evidenceExpectedSha(record,{frozenSha:index.source?.commit_sha,candidateSha:expectedSha});
@@ -4177,7 +4303,7 @@ export function reconcile({scope,gates,index,expectedSha,now=new Date(),provider
    eligible:eligible&&status===computed,
    expectedSha:carry&&gate.id==='A-19'?claim.acceptance_sha:
     carry&&['A-09','A-18'].includes(gate.id)?CUMULATIVE_CHECKPOINT:
-    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
+    gate.id==='A-19'&&a19Approved?a19Target:(docsCarry||sec01Carry||qaBrowserCarry||loginCarry||hydrationCarry||clickCarry||profileCarry||consentCarry||alertCarry||tenantMfaCarry||assistedCarry||privacyCarry||netlifyCarry||prelaunchCarry||marketingCarry||netlifyManualCarry||aiInventoryCarry||netlifyRemoteCarry||aiSaveCarry||sec01QaCarry||sec04RpcCarry||netlifyLocalCarry||stripeQaCarry||sec01BootstrapCarry||invoiceTenantCarry||netlifyGitPreviewCarry||sec01IdentitySetupCarry||funQaPrivateGuardCarry||publicRecoveryCarry||sec01NoAdminMfaCarry||sec01QaWriteCarry||sec01QaRunnerCarry)&&gate.id==='A-15'?DOCS_CHECKPOINT:expectedSha,now,
    providerApproved:carry&&CUMULATIVE_GATES.includes(gate.id)||
     (gate.id==='A-19'?a19Approved:gate.id==='A-09'?providerA09Approved:gate.id==='A-15'?providerA15Approved:providerA18Approved),
   });
