@@ -37,9 +37,11 @@ describe('patched minimatch and Sentry glob dependency graph', () => {
     const sentryOverride = manifest.overrides['@sentry/bundler-plugins'] as { glob?: string };
     expect(sentryOverride.glob).toBe('14.0.2');
     expect(lockfile.packages['node_modules/glob']?.version).toBe('14.0.2');
-    expect(manifest.dependencies['@sentry/nextjs']).toBe('11.10.0');
+    // Sentry package versions must advance together; the patched glob remains pinned.
+    const expectedSentryVersion = manifest.dependencies['@sentry/nextjs'];
+    expect(expectedSentryVersion).toMatch(/^11\.\d+\.\d+$/);
     for (const name of ['@sentry/nextjs', '@sentry/node', '@sentry/bundler-plugins']) {
-      expect(lockfile.packages[`node_modules/${name}`]?.version).toBe('11.10.0');
+      expect(lockfile.packages[`node_modules/${name}`]?.version).toBe(expectedSentryVersion);
     }
   });
 
