@@ -25,6 +25,7 @@ const metadataSchema = z.object({
 export type StripeEntitlementRuntimeOutcome =
   | 'unsupported'
   | 'metadata_missing'
+  | 'billing_not_eligible'
   | 'billing_period_missing'
   | 'reconciled'
   | 'idempotent_replay'
@@ -47,6 +48,8 @@ type InvoiceLineCandidate = {
 
 type EntitlementEventObject = {
   metadata?: StripeMetadata | null;
+  status?: string | null;
+  amount_paid?: number | null;
   current_period_end?: number | null;
   items?: {
     data?: Array<{
@@ -148,6 +151,22 @@ export function normalizeStripeEntitlementEvent(event: Stripe.Event, now = new D
   const cancelled = event.type === 'customer.subscription.deleted';
   const delinquent = event.type === 'invoice.payment_failed';
   const paid = event.type === 'invoice.paid';
+  const subscriptionGrantEvent = event.type === 'customer.subscription.created'
+    || event.type === 'customer.subscription.updated';
+  const object = event.data.object as EntitlementEventObject;
+  const positiveInvoicePayment = typeof object.amount_paid === 'number'
+    && Number.isSafeInteger(object.amount_paid)
+    && object.amount_paid > 0;
+
+  // Stripe emits invoice.paid for zero-value trial invoices. These are not
+  // payment evidence for Enterprise seat entitlements. Trialing/incomplete
+  // subscription events and TEST events cannot grant commercial seats either.
+  // A LIVE customer.subscription.deleted event still revokes seats.
+  if (!event.livemode || (subscriptionGrantEvent && object.status !== 'active')
+      || (paid && !positiveInvoicePayment)) {
+    return { outcome: 'billing_not_eligible' as const };
+  }
+
   const periodEndSeconds = cancelled ? null : stripeEntitlementPeriodEnd(event);
 
   if (!cancelled && !periodEndSeconds) {
