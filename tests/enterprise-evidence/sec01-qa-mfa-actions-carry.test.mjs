@@ -147,7 +147,7 @@ test('new workflow is manual QA-only and its positive AAL1->AAL2 proof cannot gr
  assert.doesNotMatch(workflow,/environment:\s*Production/);
  assert.match(workflow,/environment: QA-Supabase/);
  assert.match(workflow,/needs: qa-environment-governance/);
- assert.match(workflow,/check-github-environment-governance\\.mjs/);
+ assert.match(workflow,/check-github-environment-governance\.mjs/);
  assert.match(workflow,/secrets\.E2E_QA_SUPABASE_SERVICE_ROLE_KEY/);
  assert.match(workflow,/secrets\.E2E_QA_SUPABASE_URL/);
  assert.match(workflow,/STEP_UP_QA_PROJECT_REF: zrxrrfbllsxtleyxjpsz/);
