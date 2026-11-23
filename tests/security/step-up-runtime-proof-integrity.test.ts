@@ -4,6 +4,7 @@ import {
   decodeBase32,
   evaluateStepUpRuntimeEvidence,
   generateTotpCode,
+  isApprovedQaMfaRuntimeTarget,
   normalizeProviderHost,
   normalizeSha,
 } from '../../scripts/security/run-step-up-mfa-runtime-validation.mjs';
@@ -44,6 +45,38 @@ describe('step-up runtime proof integrity', () => {
     expect(normalizeSha('abc1234')).toBeNull();
     expect(normalizeProviderHost('https://example.supabase.co/auth/v1')).toBe('example.supabase.co');
     expect(normalizeProviderHost('javascript:alert(1)')).toBeNull();
+  });
+
+  it('rejects every Production and unapproved origin before any disposable MFA Auth writes', () => {
+    const approved = {
+      url: 'https://zrxrrfbllsxtleyxjpsz.supabase.co',
+      projectRef: 'zrxrrfbllsxtleyxjpsz',
+      executionIntent: 'QA_ONLY_MFA_RUNTIME_PROOF',
+    };
+    expect(isApprovedQaMfaRuntimeTarget(approved)).toBe(true);
+
+    for (const override of [
+      { url: 'https://tganhbbhfxcpblmgqprg.supabase.co' },
+      { url: 'http://zrxrrfbllsxtleyxjpsz.supabase.co' },
+      { url: 'https://zrxrrfbllsxtleyxjpsz.supabase.co.evil.test' },
+      { url: 'https://zrxrrfbllsxtleyxjpsz.supabase.co/auth/v1' },
+      { url: 'https://zrxrrfbllsxtleyxjpsz.supabase.co?redirect=evil' },
+      { url: 'https://user:pass@zrxrrfbllsxtleyxjpsz.supabase.co' },
+      { url: '' },
+      { projectRef: 'tganhbbhfxcpblmgqprg' },
+      { projectRef: '' },
+      { executionIntent: '' },
+      { executionIntent: 'PRODUCTION_AUTH_PROOF' },
+    ]) {
+      expect(isApprovedQaMfaRuntimeTarget({ ...approved, ...override })).toBe(false);
+    }
+
+    const script = readFileSync('scripts/security/run-step-up-mfa-runtime-validation.mjs', 'utf8');
+    const targetCheck = script.indexOf('if (!isApprovedQaMfaRuntimeTarget({');
+    const firstAuthWrite = script.indexOf('fixture = await createEphemeralMfaUser(admin,');
+    expect(targetCheck).toBeGreaterThan(-1);
+    expect(firstAuthWrite).toBeGreaterThan(targetCheck);
+    expect(script).toContain("reason: 'qa_only_mfa_auth_write_boundary_not_satisfied'");
   });
 
   it('marks evidence Complete only for protected exact-SHA main-branch workflow proof and verified cleanup', () => {
