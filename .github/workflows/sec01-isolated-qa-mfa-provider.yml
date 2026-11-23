@@ -1,0 +1,96 @@
+name: SEC-01 Isolated QA MFA Provider Proof
+
+run-name: SEC-01 QA-only signed AAL2 proof for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA (40 lowercase hex characters)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sec01-isolated-qa-provider-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  qa-signed-mfa:
+    name: Validate actual QA TOTP AAL1-to-AAL2 and delete fixture
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Intentionally NO Production environment, Production secrets, or deploy.
+    # Use the same independently QA-scoped credentials as the existing E2E job.
+    env:
+      SEC01_EXPECTED_MAIN_SHA: ${{ inputs.release_sha }}
+      STEP_UP_PROVIDER_MODE: supabase_mfa
+      STEP_UP_QA_PROJECT_REF: zrxrrfbllsxtleyxjpsz
+      STEP_UP_QA_EXECUTE: QA_ONLY_MFA_RUNTIME_PROOF
+      E2E_QA_MAIL_SINK_CONFIRMED: ${{ vars.E2E_QA_MAIL_SINK_CONFIRMED }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_QA_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_QA_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_QA_SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Validate exact reviewed current-main SHA before reading QA secrets
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_REF_NAME" = "main"
+          test "$GITHUB_REPOSITORY" = "renanescola40-afk/eurocomply_saas"
+          current="$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" refs/heads/main | awk '{print $1}')"
+          test "$current" = "$EXPECTED_SHA"
+
+      - name: Check out exact trusted source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Fail closed unless isolated QA credentials and mail sink are available
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SEC01_EXPECTED_MAIN_SHA"
+          test "$NEXT_PUBLIC_SUPABASE_URL" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
+          test -n "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          test "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != "$SUPABASE_SERVICE_ROLE_KEY"
+          test "$STEP_UP_QA_PROJECT_REF" = "zrxrrfbllsxtleyxjpsz"
+          test "$STEP_UP_QA_EXECUTE" = "QA_ONLY_MFA_RUNTIME_PROOF"
+          test "$E2E_QA_MAIL_SINK_CONFIRMED" = "true"
+          test -z "${RESEND_API_KEY:-}"
+          test -z "${SMTP_HOST:-}"
+          test "${VERCEL_ENV:-}" != "production"
+          case "${STRIPE_SECRET_KEY:-}" in sk_live_*)
+            echo 'LIVE billing credentials forbidden in QA'
+            exit 1
+          esac
+          echo 'Isolated QA provider preflight PASS; no sensitive values printed.'
+
+      - name: Use pinned Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install lockfile dependencies without package scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Execute real signed Supabase Auth TOTP enrollment / challenge / AAL2
+        run: node scripts/enterprise-gates/a01-sec01-qa-mfa-provider-proof.mjs
+
+      - name: Preserve redacted QA-only evidence, even on failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sec01-qa-signed-mfa-provider-${{ inputs.release_sha }}
+          path: artifacts/enterprise-sec01/qa-mfa-provider-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
