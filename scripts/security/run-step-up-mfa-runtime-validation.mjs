@@ -19,6 +19,8 @@ loadLocalEnv();
 
 const evidencePath = 'docs/security/evidence/runtime/step-up-mfa-validation.json';
 const repositoryName = 'renanescola40-afk/eurocomply_saas';
+const APPROVED_QA_PROJECT_REF = 'zrxrrfbllsxtleyxjpsz';
+const APPROVED_QA_ORIGIN = `https://${APPROVED_QA_PROJECT_REF}.supabase.co`;
 const evidenceFreshnessMs = 24 * 60 * 60 * 1000;
 const env = (...parts) => parts.join('_');
 const stepUpProviderEnv = env('STEP', 'UP', 'PROVIDER', 'MODE');
@@ -112,6 +114,21 @@ function supabaseClient(url, key) {
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
+}
+
+/**
+ * Security boundary for Auth fixture mutations, independent of the GitHub
+ * environment's display name. A protected Production approval is NOT consent
+ * to create/delete Auth users in Production.
+ *
+ * Require the exact existing QA endpoint, independently agreed project ref,
+ * and an unambiguous QA-only execution opt-in before any network client or
+ * administrative Auth write is constructed. Never log keys or credentials.
+ */
+export function isApprovedQaMfaRuntimeTarget({ url, projectRef, executionIntent } = {}) {
+  return url === APPROVED_QA_ORIGIN
+    && projectRef === APPROVED_QA_PROJECT_REF
+    && executionIntent === 'QA_ONLY_MFA_RUNTIME_PROOF';
 }
 
 export function normalizeSha(value) {
@@ -334,6 +351,24 @@ async function runSupabaseMfaLiveValidation() {
       attempted: false,
       reason: !providerHost && supabaseUrl ? 'invalid_supabase_provider_url' : 'missing_ephemeral_fixture_provider_configuration',
       missingConfiguration,
+    };
+  }
+
+  // Fail closed before constructing *any* client: the caller may have
+  // retrieved Production secrets from a protected GitHub environment.
+  // Under the owner's Production READ-ONLY policy, fixture creation and
+  // TOTP enrollment may target the isolated QA project only.
+  if (!isApprovedQaMfaRuntimeTarget({
+    url: supabaseUrl,
+    projectRef: readRuntimeSetting('STEP_UP_QA_PROJECT_REF'),
+    executionIntent: readRuntimeSetting('STEP_UP_QA_EXECUTE'),
+  })) {
+    return {
+      ...emptyLiveResult(providerMode, providerHost),
+      status: 'Skipped',
+      attempted: false,
+      reason: 'qa_only_mfa_auth_write_boundary_not_satisfied',
+      missingConfiguration: [],
     };
   }
 
