@@ -1,6 +1,6 @@
 name: SEC-01 Isolated QA MFA Provider Proof
 
-run-name: SEC-01 QA-only signed AAL2 proof for ${{ inputs.release_sha }}
+run-name: SEC-01 QA-only ${{ inputs.proof_mode }} proof for ${{ inputs.release_sha }}
 
 on:
   workflow_dispatch:
@@ -9,6 +9,14 @@ on:
         description: Exact current main SHA (40 lowercase hex characters)
         required: true
         type: string
+      proof_mode:
+        description: Run the existing provider MFA or application browser proof
+        required: true
+        default: provider_mfa
+        type: choice
+        options:
+          - provider_mfa
+          - app_browser
 
 permissions:
   contents: read
@@ -47,6 +55,7 @@ jobs:
         run: node scripts/security/check-github-environment-governance.mjs
 
   qa-signed-mfa:
+    if: inputs.proof_mode == 'provider_mfa'
     needs: qa-environment-governance
     environment: QA-Supabase
     name: Validate actual QA TOTP AAL1-to-AAL2 and delete fixture
@@ -125,5 +134,93 @@ jobs:
         with:
           name: sec01-qa-signed-mfa-provider-${{ inputs.release_sha }}
           path: artifacts/enterprise-sec01/qa-mfa-provider-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  qa-app-browser:
+    if: inputs.proof_mode == 'app_browser'
+    needs: qa-environment-governance
+    environment: QA-Supabase
+    name: Validate isolated application browser and session lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact trusted source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Recheck reviewed source and clean application environment
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_REF_NAME" = main
+          test "$GITHUB_REPOSITORY" = renanescola40-afk/eurocomply_saas
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+          for file in .env .env.local .env.development .env.development.local; do
+            test ! -e "$file"
+            test ! -L "$file"
+          done
+
+      - name: Use pinned Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked application dependencies without package scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Chromium using the existing CI installer
+        run: bash scripts/quality/install-playwright-ci.sh
+
+      - name: Execute and validate existing application proof (no Stripe)
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+          SEC01_APP_EXECUTE: QA_ONLY_APP_BROWSER_PROOF
+          SEC01_QA_PROJECT_REF: zrxrrfbllsxtleyxjpsz
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_QA_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_QA_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_QA_SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_QA_MAIL_SINK_CONFIRMED: ${{ vars.E2E_QA_MAIL_SINK_CONFIRMED }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" refs/heads/main | cut -f1)" = "$EXPECTED_SHA"
+          test "$NEXT_PUBLIC_SUPABASE_URL" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != "$SUPABASE_SERVICE_ROLE_KEY"
+          test "$E2E_QA_MAIL_SINK_CONFIRMED" = true
+          test "${VERCEL_ENV:-}" != production
+          test "${E2E_ALLOW_SYNTHETIC_APP_WRITES:-}" != true
+          for key in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET RESEND_API_KEY SMTP_HOST SMTP_PASSWORD SMTP_URL SENDGRID_API_KEY MAILGUN_API_KEY VERCEL_TOKEN; do
+            test -z "${!key:-}"
+          done
+          for file in .env .env.local .env.development .env.development.local; do
+            test ! -e "$file"
+            test ! -L "$file"
+          done
+          mkdir -p artifacts/enterprise-sec01
+          set +e
+          node scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs > artifacts/enterprise-sec01/next-app-browser-proof.json
+          qa_status=$?
+          set -e
+          # A partial proof is accepted only by the existing strict verifier.
+          # Never interpret this as complete SEC-01 or a hosted QA test.
+          node scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs "$qa_status"
+
+      - name: Preserve only redacted application proof
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sec01-qa-app-browser-${{ inputs.release_sha }}
+          path: artifacts/enterprise-sec01/next-app-browser-proof.json
           if-no-files-found: warn
           retention-days: 14
