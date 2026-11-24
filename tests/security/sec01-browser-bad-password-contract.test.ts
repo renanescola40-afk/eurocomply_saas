@@ -135,7 +135,25 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     }
     expect(badPassword).toContain('page.waitForResponse(');
     expect(badPassword).toContain("denialCode === 'invalid_credentials'");
-    expect(validPassword).toContain("() => window.location.pathname !== '/en/login'");
+    expect(validPassword).toContain("page.goto('/en/login?next=%2Fen%2Fmfa%3Fsetup%3D1'");
+    expect(validPassword).toContain("page.waitForResponse(");
+    expect(validPassword).toContain("validResponse.status() === 200");
+    expect(validPassword).toContain("() => window.location.pathname === '/en/mfa'");
+    expect(validPassword).toContain("new URLSearchParams(window.location.search).get('setup') === '1'");
+    expect(validPassword).toContain("loginSessionCookies.length > 0");
+    expect(validPassword).toContain("button instanceof HTMLButtonElement && !button.disabled");
+    expect(validPassword).not.toContain("validResponse.json()");
+    expect(validPassword).not.toContain("page.route(");
+    expect(validPassword.indexOf("validResponse.status() === 200")).toBeLessThan(validPassword.indexOf("check(stage, loginSessionCookies.length > 0)"));
+    for (const suffix of ['form_not_ready', 'identity_route_unavailable', 'request_failed', 'provider_response_missing', 'request_not_sent', 'provider_denied', 'navigation_failed', 'session_cookie_missing']) {
+      expect(verifier).toContain("'valid_password_" + suffix + "'");
+      expect(validPassword).toContain("'valid_password_" + suffix + "'");
+    }
+    // Identity-only login is not a substitute for protected profile/API checks.
+    expect(runner).toContain("stage = 'authenticated_private_profile_available';");
+    expect(runner).toContain("stage = 'authenticated_api_identity_distinguished';");
+    expect(runner).toContain("isApiAuthResult(authApi, 403, 'organization_required')");
+    expect(runner).toContain("stage = 'revoked_cookie_replay_api_denied';");
   });
 
   it('retains fail-closed QA-only evidence and fixed non-sensitive failure detail', () => {
@@ -161,9 +179,9 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(runner).toContain('passwordForm.locator(\'input[type="email"]\').fill(email)');
     expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password + \'wrong\')');
     expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password)');
-    // Five original credential/submit actions plus one read-only disabled
-    // state check for sanitized post-denial diagnostics.
-    expect(runner.match(/passwordForm\.locator\(/g)).toHaveLength(6);
+    // Six credential/submit actions (including positive email refill after navigation)
+    // plus one read-only disabled-state check for post-denial diagnostics.
+    expect(runner.match(/passwordForm\.locator\(/g)).toHaveLength(7);
     expect(runner).toContain("await passwordForm.locator('button[type=\"submit\"]').isDisabled()");
     expect(runner).not.toContain("page.locator('form input[type=");
     expect(runner).not.toContain("page.locator('form button[type=");

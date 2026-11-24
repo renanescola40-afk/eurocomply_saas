@@ -351,26 +351,81 @@ try {
   failureDetail = null;
 
   stage = 'real_browser_password_login';
-  failureDetail = 'valid_password_input_unavailable';
-  await passwordForm.locator('input[type="password"]').fill(password);
-  // A valid login can navigate away: its destination and server-side identity
-  // are verified separately below, without racing Playwright's click wait.
-  failureDetail = 'valid_password_submit_unavailable';
-  const validSubmit = passwordForm.locator('button[type="submit"]');
-  try {
-    await validSubmit.click({ noWaitAfter: true });
-  } catch {
-    failureDetail = await classifyRealSubmitFailure(validSubmit, 'valid_password');
-    throw new Error('valid_password_click_failed');
-  }
-  // The onboarding screen may immediately redirect (e.g. payment-first).
-  // Prove that navigation left login and that SSR session cookies exist;
-  // actual authority is separately verified on the protected profile + API.
+  // Prove the rejected attempt released the real password form before retrying.
+  failureDetail = 'valid_password_form_not_ready';
   await page.waitForFunction(
-    () => window.location.pathname !== '/en/login',
+    () => {
+      const button = document.querySelector('form[data-auth-hydrated="true"]:has(input[type="password"]) button[type="submit"]');
+      return button instanceof HTMLButtonElement && !button.disabled;
+    },
+    undefined,
+    { timeout: 30000 },
+  );
+
+  // Isolate the Auth provider proof from organization selection: the existing
+  // account-only MFA setup route deliberately requires no administrative key.
+  // The protected profile and tenant API assertions remain separate and strict.
+  failureDetail = 'valid_password_identity_route_unavailable';
+  await page.goto('/en/login?next=%2Fen%2Fmfa%3Fsetup%3D1', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(
+    () => Boolean(document.querySelector('form[data-auth-hydrated="true"] input[type="password"]')),
     undefined,
     { timeout: 60000 },
   );
+  requireTrue(isLoginPath(page.url()), 'valid_password_login_route_unavailable');
+
+  failureDetail = 'valid_password_input_unavailable';
+  await passwordForm.locator('input[type="email"]').fill(email);
+  await passwordForm.locator('input[type="password"]').fill(password);
+
+  const validSubmit = passwordForm.locator('button[type="submit"]');
+  let validRequestSent = false;
+  let validRequestFailed = false;
+  const observeValidRequest = (request) => {
+    if (isPasswordRequest(request)) validRequestSent = true;
+  };
+  const observeValidRequestFailure = (request) => {
+    if (isPasswordRequest(request)) validRequestFailed = true;
+  };
+  page.on('request', observeValidRequest);
+  page.on('requestfailed', observeValidRequestFailure);
+  let validResponse;
+  try {
+    const response = page.waitForResponse(
+      (response) => isPasswordRequest(response.request()),
+      { timeout: 45000 },
+    ).catch(() => null);
+    failureDetail = 'valid_password_submit_unavailable';
+    try {
+      await validSubmit.click({ noWaitAfter: true });
+    } catch {
+      failureDetail = await classifyRealSubmitFailure(validSubmit, 'valid_password');
+      throw new Error('valid_password_click_failed');
+    }
+    validResponse = await response;
+    if (!validResponse) {
+      failureDetail = validRequestFailed ? 'valid_password_request_failed'
+        : validRequestSent ? 'valid_password_provider_response_missing'
+          : 'valid_password_request_not_sent';
+      throw new Error(failureDetail);
+    }
+  } finally {
+    page.off('request', observeValidRequest);
+    page.off('requestfailed', observeValidRequestFailure);
+  }
+
+  // Real provider success is necessary, but is not sufficient to prove a
+  // usable application session. Never read or persist its token payload.
+  failureDetail = 'valid_password_provider_denied';
+  requireTrue(validResponse.status() === 200, 'valid_password_provider_denied');
+  failureDetail = 'valid_password_navigation_failed';
+  await page.waitForFunction(
+    () => window.location.pathname === '/en/mfa' &&
+      new URLSearchParams(window.location.search).get('setup') === '1',
+    undefined,
+    { timeout: 60000 },
+  );
+  failureDetail = 'valid_password_session_cookie_missing';
   const loginSessionCookies = (await context.cookies(LOCAL_URL))
     .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
   check(stage, loginSessionCookies.length > 0);
