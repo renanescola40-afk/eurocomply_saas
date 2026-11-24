@@ -87,20 +87,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$SEC01_EXPECTED_MAIN_SHA"
-          test "$NEXT_PUBLIC_SUPABASE_URL" = "https://zrxrrfbllsxtleyxjpsz.supabase.co"
-          test -n "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
-          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
-          test "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != "$SUPABASE_SERVICE_ROLE_KEY"
-          test "$STEP_UP_QA_PROJECT_REF" = "zrxrrfbllsxtleyxjpsz"
-          test "$STEP_UP_QA_EXECUTE" = "QA_ONLY_MFA_RUNTIME_PROOF"
-          test "$E2E_QA_MAIL_SINK_CONFIRMED" = "true"
-          test -z "${RESEND_API_KEY:-}"
-          test -z "${SMTP_HOST:-}"
-          test "${VERCEL_ENV:-}" != "production"
-          case "${STRIPE_SECRET_KEY:-}" in sk_live_*)
-            echo 'LIVE billing credentials forbidden in QA'
+          fail_preflight() {
+            printf '::error title=QA MFA preflight::%s\n' "$1"
             exit 1
+          }
+          test "$(git rev-parse HEAD)" = "$SEC01_EXPECTED_MAIN_SHA" || fail_preflight 'exact_source_sha_mismatch'
+          test "$NEXT_PUBLIC_SUPABASE_URL" = "https://zrxrrfbllsxtleyxjpsz.supabase.co" || fail_preflight 'qa_supabase_origin_mismatch'
+          test -n "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" || fail_preflight 'qa_publishable_key_missing'
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}" || fail_preflight 'qa_secret_key_missing'
+          test "$NEXT_PUBLIC_SUPABASE_ANON_KEY" != "$SUPABASE_SERVICE_ROLE_KEY" || fail_preflight 'qa_keys_identical'
+          test "$STEP_UP_QA_PROJECT_REF" = "zrxrrfbllsxtleyxjpsz" || fail_preflight 'qa_project_ref_mismatch'
+          test "$STEP_UP_QA_EXECUTE" = "QA_ONLY_MFA_RUNTIME_PROOF" || fail_preflight 'qa_execution_intent_mismatch'
+          test "$E2E_QA_MAIL_SINK_CONFIRMED" = "true" || fail_preflight 'qa_mail_sink_not_confirmed'
+          test -z "${RESEND_API_KEY:-}" || fail_preflight 'resend_credentials_present'
+          test -z "${SMTP_HOST:-}" || fail_preflight 'smtp_host_present'
+          test "${VERCEL_ENV:-}" != "production" || fail_preflight 'production_vercel_context_forbidden'
+          case "${STRIPE_SECRET_KEY:-}" in sk_live_*)
+            fail_preflight 'live_stripe_key_forbidden'
           esac
           echo 'Isolated QA provider preflight PASS; no sensitive values printed.'
 
