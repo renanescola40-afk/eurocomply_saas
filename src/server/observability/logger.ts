@@ -36,7 +36,13 @@ const SECURITY_ALERT_POLICY: Record<StandardSecurityEvent, SecurityAlertSeverity
   audit_chain_invalid: 'critical',
 };
 
-const SENSITIVE_KEY_PATTERN = /(password|passwd|secret|token|access_token|refresh_token|id_token|authorization|bearer|cookie|set-cookie|session|api[_-]?key|x[_-]?api[_-]?key|client[_-]?secret|private[_-]?key|connection[_-]?string|database[_-]?url|dsn|service[_-]?role|supabase|stripe_signature|stripe[_-]?secret|webhook[_-]?secret|card|iban|ssn|email|phone|address|jwt)/i;
+// Match the audit metadata boundary: normalize Unicode width and separators
+// before checking credential/PII keys. Keep the existing blocked categories.
+const SENSITIVE_KEY_PATTERN = /(password|passwd|secret|token|authorization|bearer|cookie|session|apikey|clientsecret|privatekey|connectionstring|databaseurl|dsn|servicerole|supabase|stripesignature|card|iban|ssn|email|phone|address|jwt|csrf|mfacode|otp)/i;
+
+function isSensitiveLogKey(key: string) {
+  return SENSITIVE_KEY_PATTERN.test(key.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, ''));
+}
 const ORGANIZATION_ID_PATTERN = /^(org_[A-Za-z0-9_-]{3,64}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_.:/@-]{1,128}$/;
 const MAX_STRING_LENGTH = 160;
@@ -143,7 +149,7 @@ export function sanitizeContext(context: LogContext = {}, depth = 0): Record<str
           return [key, sanitizeRequestId(value)];
         }
 
-        if (SENSITIVE_KEY_PATTERN.test(key)) {
+        if (isSensitiveLogKey(key)) {
           return [key, REDACTED_VALUE];
         }
 
