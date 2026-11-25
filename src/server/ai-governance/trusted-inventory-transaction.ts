@@ -107,6 +107,12 @@ export async function executeTrustedInventoryMutation(transport: VerifiedInvento
     ), 'inventory_authority_unavailable');
     if (auth.actor !== actor || typeof auth.plan !== 'string' || !knownPlans.has(auth.plan)) reject('inventory_authority_denied');
 
+    const membership = single(await tx.query(
+      "select role from public.organization_members where organization_id=$1::uuid and user_id=$2::uuid and status='active' for share",
+      [org,actor],
+    ), 'inventory_membership_unavailable');
+    if (typeof membership.role !== 'string' || !['owner','admin','editor','compliance_manager'].includes(membership.role)) reject('inventory_membership_denied');
+
     // Read canonical mandatory policy in the same transaction. No missing-schema
     // compatibility fallback here. Use the existing signed AMR SAML policy logic.
     const policies = await tx.query<Row>(
@@ -122,6 +128,11 @@ export async function executeTrustedInventoryMutation(transport: VerifiedInvento
     // Canonical create RPC enforces quota and inserts history atomically; the
     // table trigger independently protects other writers. Reassess has optimistic
     // version check; the guard above reasserts commercial authority for BOTH.
+    const previous = op.kind === 'reassess' ? single(await tx.query(
+      'select risk_level,lifecycle_status from public.ai_systems where organization_id=$1::uuid and id=$2::uuid for update',
+      [org,op.systemId],
+    ), 'inventory_previous_state_unavailable') : null;
+    if (previous && (typeof previous.risk_level !== 'string' || typeof previous.lifecycle_status !== 'string')) reject('inventory_previous_state_invalid');
     const payload = JSON.stringify(derived.patch);
     const rows = op.kind === 'create'
       ? await tx.query('select outcome,system from public.create_ai_system_atomic($1::uuid,$2::uuid,$3::jsonb)', [org,actor,payload])
@@ -134,6 +145,15 @@ export async function executeTrustedInventoryMutation(transport: VerifiedInvento
       || (op.kind === 'reassess' && system.id !== op.systemId.toLowerCase())
       || system.risk_level !== derived.patch.risk_level
       || system.classification_summary !== derived.patch.classification_summary) reject('inventory_mutation_readback_invalid');
+
+    const history = single(await tx.query(
+      'select organization_id::text,actor_user_id::text,ai_system_id::text,action,snapshot from public.ai_system_history where organization_id=$1::uuid and ai_system_id=$2::uuid and actor_user_id=$3::uuid and action=$4::text and created_at>=transaction_timestamp()',
+      [org,system.id,actor,op.kind === 'create' ? 'created' : 'reassessed'],
+    ), 'inventory_history_readback_invalid');
+    if (history.organization_id !== org || history.actor_user_id !== actor || history.ai_system_id !== system.id
+      || history.action !== (op.kind === 'create' ? 'created' : 'reassessed')
+      || !isRecord(history.snapshot) || history.snapshot.riskLevel !== derived.patch.risk_level
+      || history.snapshot.lifecycleStatus !== derived.patch.lifecycle_status || history.snapshot.riskDomain !== derived.patch.risk_domain) reject('inventory_history_readback_invalid');
 
     // Same transaction and same tenant lock: derive audit from trusted result,
     // never from browser actor, event hash, metadata or signature.
@@ -151,7 +171,14 @@ export async function executeTrustedInventoryMutation(transport: VerifiedInvento
     const audit = buildAuditChainRecord({
       id: randomUUID(), organizationId: org, actorUserId: actor, action,
       entityType: 'ai_system', entityId: system.id, createdAt: clock.created_at,
-      metadata: { riskLevel: derived.patch.risk_level, lifecycleStatus: derived.patch.lifecycle_status, riskDomain: derived.patch.risk_domain },
+      metadata: {
+        riskLevel: derived.patch.risk_level, lifecycleStatus: derived.patch.lifecycle_status,
+        riskDomain: derived.patch.risk_domain, actorRole: membership.role,
+        ...(previous ? { previousRiskLevel: previous.risk_level, previousLifecycleStatus: previous.lifecycle_status } : {
+          selectedRole: derived.patch.role, recommendedRole: derived.roleAssessment.recommendedRole,
+          roleConfidence: derived.roleAssessment.confidence, needsLegalReview: derived.roleAssessment.needsLegalReview,
+        }),
+      },
     }, head ? String(head.event_hash) : null);
     if (!HASH.test(audit.eventHash) || typeof audit.signature !== 'string' || !HASH.test(audit.signature)) reject('inventory_audit_signing_unavailable');
     const persisted = single(await tx.query(
