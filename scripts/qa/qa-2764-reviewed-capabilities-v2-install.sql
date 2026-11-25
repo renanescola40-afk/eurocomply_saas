@@ -21,15 +21,17 @@ BEGIN
  OR (n.nspname='app_private' AND p.proname='qa_require_ai_inventory_actor'))
  THEN RAISE EXCEPTION 'qa_install_existing_name_refused'; END IF;
  FOR d IN SELECT * FROM (VALUES
- ('app_private.has_org_role(uuid,text[])','15a1ae5544a33c6beeb584aa8d55657039429276c389f40d153925328d92d5c8'),
- ('public.tenant_mfa_satisfied(uuid)','b56fc87ef78cb5d2c274de70e52eca8b93b2088e61cbfd931a9484abc21e0158'),
- ('public.current_clerk_user_id()','24833857ce57e88e907c63f0c205b857dc5ab7aa3c0a790ec30d66a6c8d2978b'),
- ('public.current_legacy_user_id()','67b40732672bb5a01b66d5ea91349136a8dfad374e1ca63e8a64ee4a90e7a454'),
- ('app_private.resolve_commercial_plan(uuid)','36186b8f0b95bf3232bfab6b086f3bf88911c53365e9fd688f58f21f50e4451d')
- ) AS expected(signature,fingerprint) LOOP
+ ('app_private.has_org_role(uuid,text[])','15a1ae5544a33c6beeb584aa8d55657039429276c389f40d153925328d92d5c8',true),
+ ('public.tenant_mfa_satisfied(uuid)','b56fc87ef78cb5d2c274de70e52eca8b93b2088e61cbfd931a9484abc21e0158',true),
+ ('public.current_clerk_user_id()','24833857ce57e88e907c63f0c205b857dc5ab7aa3c0a790ec30d66a6c8d2978b',false),
+ ('public.current_legacy_user_id()','67b40732672bb5a01b66d5ea91349136a8dfad374e1ca63e8a64ee4a90e7a454',false),
+ ('app_private.resolve_commercial_plan(uuid)','36186b8f0b95bf3232bfab6b086f3bf88911c53365e9fd688f58f21f50e4451d',true)
+ ,
+ ('public.current_jwt_subject()','2b5fe0e688c09e26a8ad68df5ac19673365022aa419767b6e747710cdcc8e666',false)
+ ) AS expected(signature,fingerprint,is_definer) LOOP
   fn:=to_regprocedure(d.signature);
   IF fn IS NULL OR encode(sha256(convert_to(pg_get_functiondef(fn),'UTF8')),'hex') IS DISTINCT FROM d.fingerprint
-    OR NOT EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid=fn AND p.prosecdef AND pg_get_userbyid(p.proowner)='postgres')
+    OR NOT EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid=fn AND p.prosecdef=d.is_definer AND pg_get_userbyid(p.proowner)='postgres')
     OR has_function_privilege('anon',fn,'EXECUTE')
   THEN RAISE EXCEPTION 'qa_install_dependency_drift: %',d.signature; END IF;
  END LOOP;
