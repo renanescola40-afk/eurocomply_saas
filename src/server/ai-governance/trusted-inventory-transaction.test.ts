@@ -13,7 +13,7 @@ const stamp = '2026-11-25T10:00:00.000Z';
 type Options = {
   aal?: string; sessionId?: string; plan?: string | null; sso?: boolean;
   matchingProvider?: boolean; mutationOutcome?: string; wrongTenant?: boolean; badAudit?: boolean;
-  reassess?: boolean;
+  reassess?: boolean; badHistory?: boolean;
 };
 function harness(options: Options = {}) {
   const sequence: string[] = [];
@@ -35,9 +35,14 @@ function harness(options: Options = {}) {
       sequence.push('authority');
       return [{ actor, plan: options.plan === undefined ? 'starter' : options.plan }];
     }
+    if (sql.includes('from public.organization_members')) { sequence.push('membership'); return [{ role: 'owner' }]; }
     if (sql.includes('enterprise_identity_connections')) {
       sequence.push('sso');
       return options.sso ? [{ organization_id: org, supabase_provider_id: provider, enforce_sso: true, status: 'active', protocol: 'saml' }] : [];
+    }
+    if (sql.includes('from public.ai_systems')) {
+      sequence.push('previous');
+      return [{ risk_level: 'minimal', lifecycle_status: 'planned' }];
     }
     if (sql.includes('create_ai_system_atomic') || sql.includes('reassess_ai_system_atomic')) {
       sequence.push('mutation');
@@ -48,6 +53,13 @@ function harness(options: Options = {}) {
         id: system, organization_id: options.wrongTenant ? other : org, created_by: actor,
         risk_level: derived.patch.risk_level, classification_summary: derived.patch.classification_summary,
       } }];
+    }
+    if (sql.includes('from public.ai_system_history')) {
+      sequence.push('history');
+      return options.badHistory ? [] : [{ organization_id: org, actor_user_id: actor, ai_system_id: system,
+        action: options.reassess ? 'reassessed' : 'created', snapshot: {
+          riskLevel: derived.patch.risk_level, lifecycleStatus: derived.patch.lifecycle_status, riskDomain: derived.patch.risk_domain,
+        } }];
     }
     if (sql.includes('from public.audit_events')) { sequence.push('head'); return []; }
     if (sql.includes('clock_timestamp')) { sequence.push('clock'); return [{ created_at: stamp }]; }
@@ -80,7 +92,7 @@ describe('trusted inventory transaction candidate (simulated transport)', () => 
   it('uses canonical classification and signs audit before callback completion', async () => {
     const h = harness({ sso: true, matchingProvider: true });
     await expect(executeTrustedInventoryMutation(h.transport, { kind: 'create', organizationId: org, body })).resolves.toMatchObject({ system: { id: system } });
-    expect(h.sequence).toEqual(['identity','lock','authority','sso','mutation','head','clock','audit']);
+    expect(h.sequence).toEqual(['identity','lock','authority','membership','sso','mutation','history','head','clock','audit']);
     expect(h.auditParams?.[10]).toMatch(/^[0-9a-f]{64}$/);
     expect(h.auditParams?.[3]).toBe('ai_system_created');
     expect(h.returned).toBe(true);
@@ -109,6 +121,7 @@ describe('trusted inventory transaction candidate (simulated transport)', () => 
   it.each([
     [{ mutationOutcome: 'quota_exceeded' }, 'inventory_mutation_denied'],
     [{ wrongTenant: true }, 'inventory_mutation_readback_invalid'],
+    [{ badHistory: true }, 'inventory_history_readback_invalid'],
     [{ badAudit: true }, 'inventory_audit_readback_invalid'],
   ] as const)('propagates failures to the transaction driver, never reports success', async (options, code) => {
     const h = harness(options);
