@@ -41,11 +41,11 @@ describe('central observability logger', () => {
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const synthetic = 'synthetic-credential-redaction-canary';
     const keys = ['API.KEY', 'ＡＵＴＨＯＲＩＺＡＴＩＯＮ', 'private.key',
-      'service.role', 'connection.string', 'database.url', 'mfa.code', 'csrf', 'otp'];
+      'service.role', 'connection.string', 'database.url', 'mfa.code', 'csrf', 'otp', 'TOTP.code', 'HOTP_value'];
     logger.warn('security_denied', {
       requestId: 'req_123',
       organizationId: 'org_123',
-      nested: { ...Object.fromEntries(keys.map((key) => [key, synthetic])), safe: 'ok' },
+      nested: { ...Object.fromEntries(keys.map((key) => [key, synthetic])), safe: 'ok', snapshotPath: 'ok', hotPath: 'ok' },
     });
     expect(spy).toHaveBeenCalledTimes(1);
     const serialized = String(spy.mock.calls[0][0]);
@@ -53,6 +53,8 @@ describe('central observability logger', () => {
     expect(serialized).not.toContain(synthetic);
     for (const key of keys) expect(payload.context.nested[key]).toBe('[redacted]');
     expect(payload.context.nested.safe).toBe('ok');
+    expect(payload.context.nested.snapshotPath).toBe('ok');
+    expect(payload.context.nested.hotPath).toBe('ok');
     expect(payload.requestId).toBe('req_123');
     expect(payload.organizationId).toBe('org_123');
   });
