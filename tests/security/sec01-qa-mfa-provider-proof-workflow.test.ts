@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { classifyQaMfaProviderProof } from '../../scripts/enterprise-gates/a01-sec01-qa-mfa-provider-proof.mjs';
+import { verifyQaSignedSessionId } from '../../scripts/security/lib/qa-signed-session-id-proof.mjs';
 
 const SHA = 'a'.repeat(40);
 const QA_URL = 'https://zrxrrfbllsxtleyxjpsz.supabase.co';
@@ -153,5 +154,34 @@ describe('SEC-01 manual QA-only signed MFA provider workflow', () => {
     expect(runner).toContain("gate: 'NOT_ACCEPTED'");
     expect(runner).toContain("control: 'NOT_VERIFIED'");
     expect(runner).toContain('qa-mfa-provider-evidence.json');
+  });
+});
+
+describe('QA signed session_id assertion (simulated provider responses)', () => {
+  const actor = '11111111-1111-4111-8111-111111111111';
+  const session = '22222222-2222-4222-8222-222222222222';
+  const token = 'synthetic-test-only-not-a-jwt';
+  const claims = {
+    iss: QA_URL + '/auth/v1', sub: actor, role: 'authenticated', aal: 'aal2',
+    aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 600,
+    is_anonymous: false, session_id: session,
+  };
+  const auth = (patch = {}, error: unknown = null, userPatch = {}) => ({
+    getClaims: async (_token: string) => ({ data: { claims: { ...claims, ...patch } }, error }),
+    getUser: async (_token: string) => ({ data: { user: { id: actor, is_anonymous: false, ...userPatch } }, error: null }),
+  });
+  it('accepts only a successful verification result with valid QA issuer, actor, AAL and UUID session', async () => {
+    expect(await verifyQaSignedSessionId(auth(), token, actor, 'aal2')).toBe(true);
+    expect(await verifyQaSignedSessionId(auth({ aal: 'aal1' }), token, actor, 'aal1')).toBe(true);
+  });
+  it('fails closed on missing/malformed claims, provider error, identity mismatch and anonymous user', async () => {
+    for (const patch of [
+      { session_id: undefined }, { session_id: 'not-uuid' }, { iss: 'https://other.invalid/auth/v1' },
+      { sub: session }, { aal: 'aal1' }, { aud: 'anon' }, { role: 'service_role' },
+      { is_anonymous: true }, { exp: 1 },
+    ]) expect(await verifyQaSignedSessionId(auth(patch), token, actor, 'aal2')).toBe(false);
+    expect(await verifyQaSignedSessionId(auth({}, new Error('synthetic verification failed')), token, actor, 'aal2')).toBe(false);
+    expect(await verifyQaSignedSessionId(auth({}, null, { id: session }), token, actor, 'aal2')).toBe(false);
+    expect(await verifyQaSignedSessionId(auth({}, null, { is_anonymous: true }), token, actor, 'aal2')).toBe(false);
   });
 });
