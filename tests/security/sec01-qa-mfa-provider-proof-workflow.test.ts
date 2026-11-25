@@ -22,6 +22,8 @@ const passed = {
   ephemeralFixtureCreated: true,
   signedIn: true,
   initialAal1Observed: true,
+  signedAal1SessionIdVerified: true,
+  signedAal2SessionIdVerified: true,
   factorEnrolled: true,
   verifiedFactorAvailable: true,
   verifiedTotpFactorCount: 1,
@@ -52,6 +54,8 @@ describe('SEC-01 manual QA-only signed MFA provider workflow', () => {
       tokensRetained: false,
       identitiesRetained: false,
       cleanupVerified: true,
+      signedSessionIdVerified: true,
+      signedSessionIdProof: { aal1: true, aal2: true },
     });
   });
 
@@ -75,6 +79,14 @@ describe('SEC-01 manual QA-only signed MFA provider workflow', () => {
       expect(result({ ...passed, ...patch }).outcome).toBe('NOT_VERIFIED');
     }
     expect(result(null).pass).toBe(false);
+  });
+
+  it('does not conflate provider MFA success with supplemental signed session_id evidence', () => {
+    const incomplete = result({ ...passed, signedAal2SessionIdVerified: false });
+    expect(incomplete).toMatchObject({ pass: true, signedSessionIdVerified: false, signedSessionIdProof: { aal1: true, aal2: false } });
+    const invalidContext = result(passed, { ...goodEnv, GITHUB_REF_NAME: 'release' });
+    expect(invalidContext.signedSessionIdVerified).toBe(false);
+    expect(invalidContext.signedSessionIdProof).toEqual({ aal1: false, aal2: false });
   });
 
   it('rejects Production, wrong project, inherited credentials, unreviewed SHA, and missing mail sink', () => {
