@@ -37,6 +37,26 @@ describe('central observability logger', () => {
     expect(JSON.stringify(payload)).not.toContain('person@example.com');
   });
 
+  it('redacts separator and Unicode-width credential keys in emitted logs', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const synthetic = 'synthetic-credential-redaction-canary';
+    const keys = ['API.KEY', 'ＡＵＴＨＯＲＩＺＡＴＩＯＮ', 'private.key',
+      'service.role', 'connection.string', 'database.url', 'mfa.code', 'csrf', 'otp'];
+    logger.warn('security_denied', {
+      requestId: 'req_123',
+      organizationId: 'org_123',
+      nested: { ...Object.fromEntries(keys.map((key) => [key, synthetic])), safe: 'ok' },
+    });
+    expect(spy).toHaveBeenCalledTimes(1);
+    const serialized = String(spy.mock.calls[0][0]);
+    const payload = JSON.parse(serialized);
+    expect(serialized).not.toContain(synthetic);
+    for (const key of keys) expect(payload.context.nested[key]).toBe('[redacted]');
+    expect(payload.context.nested.safe).toBe('ok');
+    expect(payload.requestId).toBe('req_123');
+    expect(payload.organizationId).toBe('org_123');
+  });
+
   it('redacts unsafe organization ids instead of logging untrusted tenant context', () => {
     expect(sanitizeContext({ organizationId: '../org_123', requestId: 'req_456' })).toEqual({
       organizationId: '[redacted]',
