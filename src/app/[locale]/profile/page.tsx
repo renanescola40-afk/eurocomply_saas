@@ -64,6 +64,29 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
 
   if (!user) redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/profile`)}`);
 
+  // Identity-only surface: the authenticated account must be able to sign out
+  // even when the workspace authority reader is deliberately unavailable.
+  // Never interpret missing credentials as verified absence of memberships,
+  // expose workspace details, or assign a role/plan in this branch.
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    return (
+      <main className="min-h-screen bg-[#07101a] p-4 text-white md:p-6">
+        <div className="mx-auto w-full max-w-5xl space-y-6">
+          <header className="border-b border-white/[0.07] pb-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-300">{copy.eyebrow}</p>
+            <h1 className="mt-2 text-3xl font-semibold">{copy.title}</h1>
+            <p className="mt-2 text-sm text-white/60">{copy.personalBody}</p>
+          </header>
+          <section role="status" className="rounded-xl border border-amber-300/20 bg-[#0d1522] p-4">
+            <h2 className="font-semibold">Workspace access unavailable</h2>
+            <p className="mt-1 text-sm text-white/70">Workspace membership and permissions could not be verified. Only personal account controls are available.</p>
+          </section>
+          <ProfilePersonalControls locale={safeLocale} />
+        </div>
+      </main>
+    );
+  }
+
   const organization = await getCurrentOrganizationForUser(user.id);
   const authority = organization ? await getOrganizationBillingAuthority(organization.id) : null;
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || 'RISCK COMPLY user';
