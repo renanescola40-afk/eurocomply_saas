@@ -200,6 +200,9 @@ try {
   browser = await chromium.launch({ headless: true });
   context = await browser.newContext({
     baseURL: LOCAL_URL,
+    // Explicit ordinary desktop viewport: keep the sign-in form usable without
+    // hiding real consent dialogs or forcing pointer events.
+    viewport: { width: 1440, height: 1000 },
     serviceWorkers: 'block',
     acceptDownloads: false,
   });
@@ -216,6 +219,12 @@ try {
   check(stage, isLoginPath(page.url()));
 
   stage = 'bad_password_denied_in_real_browser';
+  // Use the identity-only destination for BOTH password attempts. The anonymous
+  // profile redirect above has already been verified. Do not reload or remount
+  // the form between the rejected attempt and the valid credential attempt.
+  failureDetail = 'password_form_hydration_unavailable';
+  await page.goto('/en/login?next=%2Fen%2Fmfa%3Fsetup%3D1', { waitUntil: 'domcontentloaded' });
+  requireTrue(isLoginPath(page.url()), 'password_login_route_unavailable');
   // Login renders two independent forms (SSO and password). Scope all password
   // QA interactions to the only form with a password input: a generic "form
   // input[type=email]" selector resolves to both forms and fails Playwright strict mode.
@@ -362,23 +371,32 @@ try {
     { timeout: 30000 },
   );
 
-  // Isolate the Auth provider proof from organization selection: the existing
-  // account-only MFA setup route deliberately requires no administrative key.
-  // The protected profile and tenant API assertions remain separate and strict.
+  // Retain the same hydrated form and the user-selected privacy preference.
+  // A second full navigation can recreate transient overlays and reset focus.
   failureDetail = 'valid_password_identity_route_unavailable';
-  await page.goto('/en/login?next=%2Fen%2Fmfa%3Fsetup%3D1', { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(
-    () => Boolean(document.querySelector('form[data-auth-hydrated="true"] input[type="password"]')),
-    undefined,
-    { timeout: 60000 },
-  );
-  requireTrue(isLoginPath(page.url()), 'valid_password_login_route_unavailable');
+  requireTrue(isLoginPath(page.url()) &&
+    new URL(page.url()).searchParams.get('next') === '/en/mfa?setup=1',
+    'valid_password_login_route_unavailable');
+  failureDetail = 'analytics_consent_not_denied';
+  await consentDialog.waitFor({ state: 'hidden', timeout: 15000 });
+  requireTrue(await page.evaluate(() =>
+    window.localStorage.getItem('risckcomply.analytics.consent') === 'denied'),
+    'analytics_consent_not_denied');
 
   failureDetail = 'valid_password_input_unavailable';
   await passwordForm.locator('input[type="email"]').fill(email);
   await passwordForm.locator('input[type="password"]').fill(password);
 
   const validSubmit = passwordForm.locator('button[type="submit"]');
+  // Use the actual scroll/actionability path, never a forced click or DOM
+  // dispatch. A covered button remains a genuine failure.
+  failureDetail = 'valid_password_submit_unavailable';
+  try {
+    await validSubmit.scrollIntoViewIfNeeded({ timeout: 15000 });
+  } catch {
+    failureDetail = await classifyRealSubmitFailure(validSubmit, 'valid_password');
+    throw new Error('valid_password_scroll_failed');
+  }
   let validRequestSent = false;
   let validRequestFailed = false;
   const observeValidRequest = (request) => {

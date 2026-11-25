@@ -135,7 +135,14 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     }
     expect(badPassword).toContain('page.waitForResponse(');
     expect(badPassword).toContain("denialCode === 'invalid_credentials'");
-    expect(validPassword).toContain("page.goto('/en/login?next=%2Fen%2Fmfa%3Fsetup%3D1'");
+    expect(badPassword).toContain("page.goto('/en/login?next=%2Fen%2Fmfa%3Fsetup%3D1'");
+    expect(validPassword).not.toContain('page.goto(');
+    expect(validPassword).toContain("new URL(page.url()).searchParams.get('next') === '/en/mfa?setup=1'");
+    expect(validPassword).toContain("consentDialog.waitFor({ state: 'hidden'");
+    expect(validPassword).toContain("window.localStorage.getItem('risckcomply.analytics.consent') === 'denied'");
+    expect(validPassword).toContain('await validSubmit.scrollIntoViewIfNeeded(');
+    expect(runner).toContain('viewport: { width: 1440, height: 1000 }');
+    expect(validPassword).not.toContain('localStorage.setItem');
     expect(validPassword).toContain("page.waitForResponse(");
     expect(validPassword).toContain("validResponse.status() === 200");
     expect(validPassword).toContain("() => window.location.pathname === '/en/mfa'");
@@ -179,7 +186,7 @@ describe('SEC-01 QA browser: invalid-password denial', () => {
     expect(runner).toContain('passwordForm.locator(\'input[type="email"]\').fill(email)');
     expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password + \'wrong\')');
     expect(runner).toContain('passwordForm.locator(\'input[type="password"]\').fill(password)');
-    // Six credential/submit actions (including positive email refill after navigation)
+    // Six credential/submit actions (including positive email refill on the same form)
     // plus one read-only disabled-state check for post-denial diagnostics.
     expect(runner.match(/passwordForm\.locator\(/g)).toHaveLength(7);
     expect(runner).toContain("await passwordForm.locator('button[type=\"submit\"]').isDisabled()");
