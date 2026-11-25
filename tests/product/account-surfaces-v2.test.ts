@@ -48,6 +48,24 @@ describe('RISCK COMPLY UI V2 account surfaces', () => {
     expect(controls).toContain("message.tone === 'success'");
   });
 
+  it('keeps personal account controls available without conferring workspace authority', async () => {
+    const profile = await readFile(PROFILE, 'utf8');
+    const guard = 'if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {';
+    const tenantLookup = 'const organization = await getCurrentOrganizationForUser(user.id);';
+    expect(profile).toContain(guard);
+    const identityOnly = profile.split(guard)[1]?.split(tenantLookup)[0];
+    expect(identityOnly).toBeTruthy();
+    expect(profile.indexOf('if (!user) redirect(')).toBeLessThan(profile.indexOf(guard));
+    expect(profile.indexOf(guard)).toBeLessThan(profile.indexOf(tenantLookup));
+    expect(identityOnly).toContain('return (');
+    expect(identityOnly).toContain('<ProfilePersonalControls locale={safeLocale} />');
+    expect(identityOnly).toContain('Workspace membership and permissions could not be verified.');
+    expect(identityOnly).not.toMatch(/getCurrentOrganizationForUser\(|getOrganizationBillingAuthority\(|roleHasPermission\(|canManageDashboardBilling\(/);
+    expect(identityOnly).not.toContain('<EnterpriseDashboardShell');
+    expect(identityOnly).not.toContain('<Link');
+    expect(profile).toContain('getOrganizationBillingAuthority(organization.id)');
+  });
+
   it('renders notifications from server-loaded activity without demo counts', async () => {
     const [page, client] = await Promise.all([
       readFile(NOTIFICATIONS_PAGE, 'utf8'),
