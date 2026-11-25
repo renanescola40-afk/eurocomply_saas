@@ -155,7 +155,14 @@ test('signed positive browser login preserves real QA provider proof and all dow
   'recovery_without_session_denied_in_browser'
  ];
  for(const stage of expectedStages)assert.ok(runner.includes("stage = '"+stage+"';"),stage);
- assert.ok(positive.includes("page.goto('/en/login?next=%2Fen%2Fmfa%3Fsetup%3D1'"));
+ const negative=runner.slice(runner.indexOf("  stage = 'bad_password_denied_in_real_browser';"),start);
+ assert.ok(negative.includes("page.goto('/en/login?next=%2Fen%2Fmfa%3Fsetup%3D1'"));
+ assert.ok(!positive.includes('page.goto('));
+ assert.ok(positive.includes("new URL(page.url()).searchParams.get('next') === '/en/mfa?setup=1'"));
+ assert.ok(positive.includes("consentDialog.waitFor({ state: 'hidden'"));
+ assert.ok(positive.includes("window.localStorage.getItem('risckcomply.analytics.consent') === 'denied'"));
+ assert.ok(positive.includes('await validSubmit.scrollIntoViewIfNeeded('));
+ assert.doesNotMatch(positive,/force:\s*true|\.dispatchEvent\(|localStorage\.setItem\(/);
  assert.ok(positive.includes("page.waitForResponse("));
  assert.ok(positive.includes("validResponse.status() === 200"));
  assert.ok(positive.includes("window.location.pathname === '/en/mfa'"));
