@@ -2,7 +2,7 @@
 // New V2 RPC proof, not a replay of provider_mfa evidence. QA protected job only.
 // All fixture identities, credentials and raw response bodies remain in memory.
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { createEphemeralAuthFixtures, cleanupEphemeralAuthFixtures } from '../security/lib/ephemeral-auth-fixtures.mjs';
 import { createEphemeralMfaUser, cleanupEphemeralMfaUser } from '../security/lib/ephemeral-mfa-fixture.mjs';
