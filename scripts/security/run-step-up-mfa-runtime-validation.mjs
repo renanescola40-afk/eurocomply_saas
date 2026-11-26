@@ -10,6 +10,7 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import { loadLocalEnv } from '../lib/load-local-env.mjs';
+import { verifyQaSignedSessionId } from './lib/qa-signed-session-id-proof.mjs';
 import {
   cleanupEphemeralMfaUser,
   createEphemeralMfaUser,
@@ -243,6 +244,8 @@ function emptyLiveResult(providerMode, providerHost) {
     ephemeralFixtureCreated: false,
     signedIn: false,
     initialAal1Observed: false,
+    signedAal1SessionIdVerified: false,
+    signedAal2SessionIdVerified: false,
     factorEnrolled: false,
     verifiedFactorAvailable: false,
     challengeCreated: false,
@@ -276,6 +279,9 @@ async function executeSupabaseMfaFlow(supabase, { email, password, providerMode,
     };
   }
   result = { ...result, initialAal1Observed: true };
+  // Additional evidence only; existing provider flow and cleanup are retained.
+  const signedAal1SessionIdVerified = await verifyQaSignedSessionId(supabase.auth, signIn.data?.session?.access_token, signedInUserId, 'aal1');
+  result = { ...result, signedAal1SessionIdVerified };
   const enrollment = await supabase.auth.mfa.enroll({
     factorType: 'totp',
     friendlyName: `risck-comply-proof-${Date.now()}`,
@@ -321,12 +327,15 @@ async function executeSupabaseMfaFlow(supabase, { email, password, providerMode,
   }
 
   const currentUser = await supabase.auth.getUser();
+  const session = await supabase.auth.getSession();
+  const signedAal2SessionIdVerified = !session.error && await verifyQaSignedSessionId(supabase.auth, session.data?.session?.access_token, signedInUserId, 'aal2');
   const sessionUserMatched = !currentUser.error && currentUser.data?.user?.id === signedInUserId;
   return {
     ...result,
     status: sessionUserMatched ? 'Complete' : 'Failed',
     reason: sessionUserMatched ? null : 'post_verification_session_user_mismatch',
     aal2Observed: true,
+    signedAal2SessionIdVerified,
     sessionUserMatched,
     providerCode: stableProviderCode(currentUser.error),
   };
