@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '@/server/ai-governance/system-payload';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { aiSystemPatch, createAiSystem, getAiSystem, isQaInventory, listAiSystems } from '@/server/queries/ai-systems';
-import { mutateQaInventory, requireQaInventoryRole } from '@/server/queries/qa-inventory-transaction';
+import { assertQaInventoryNoAdmin, mutateQaInventory, requireQaInventoryRole } from '@/server/queries/qa-inventory-transaction';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -200,6 +200,7 @@ function getWorkflowMinimumPlan(workflow: string) {
 
 export async function GET() {
   try {
+    if (isQaInventory()) assertQaInventoryNoAdmin();
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
 
@@ -226,6 +227,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    if (isQaInventory()) assertQaInventoryNoAdmin();
     const originDenied = assertTrustedOrigin(request);
     if (originDenied) return originDenied;
 

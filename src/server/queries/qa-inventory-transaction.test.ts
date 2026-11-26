@@ -30,6 +30,7 @@ beforeEach(() => {
   process.env.QA_INVENTORY_DATABASE_URL = `postgresql://qa_inventory_writer.zrxrrfbllsxtleyxjpsz:secret@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=verify-full`;
   process.env.AUDIT_CHAIN_SIGNING_SECRET = 'test-signing-secret';
   delete process.env.VERCEL_ENV;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   getSession.mockResolvedValue({ data: { session: { access_token: 'signed-access-token' } }, error: null });
   getClaims.mockResolvedValue({ data: { claims }, error: null });
   getUser.mockResolvedValue({ data: { user: { id: actorUserId } }, error: null });
@@ -87,6 +88,13 @@ describe('QA inventory transaction boundary', () => {
     process.env.QA_INVENTORY_DATABASE_URL = 'postgresql://postgres:secret@db.zrxrrfbllsxtleyxjpsz.supabase.co:5432/postgres';
     const { mutateQaInventory } = await import('./qa-inventory-transaction');
     await expect(mutateQaInventory(input)).rejects.toThrow('qa_inventory_transport_unavailable');
+    expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('refuses any QA preview with a service-role secret', async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'forbidden-preview-key';
+    const { mutateQaInventory } = await import('./qa-inventory-transaction');
+    await expect(mutateQaInventory(input)).rejects.toThrow('qa_inventory_admin_key_forbidden');
     expect(connect).not.toHaveBeenCalled();
   });
 });

@@ -10,7 +10,12 @@ import type { AiSystemRecord } from '@/server/queries/ai-systems';
 import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
 import { parseOrganizationRole, roleHasPermission } from '@/lib/security/permissions';
 
+export function assertQaInventoryNoAdmin() {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) throw new Error('qa_inventory_admin_key_forbidden');
+}
+
 export async function requireQaInventoryRole(userId: string, organizationId: string, permission: 'read_ai_governance' | 'manage_ai_governance') {
+  assertQaInventoryNoAdmin();
   const memberships = await getUserOrganizationMemberships(userId);
   const membership = memberships.find((value) => value.organization_id === organizationId);
   const role = membership && parseOrganizationRole(membership.role);
@@ -23,6 +28,7 @@ export async function requireQaInventoryRole(userId: string, organizationId: str
 const QA_PROJECT = 'zrxrrfbllsxtleyxjpsz';
 
 function databaseConnection() {
+  assertQaInventoryNoAdmin();
   const raw = process.env.QA_INVENTORY_DATABASE_URL;
   const authUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!raw || !authUrl || new URL(authUrl).hostname !== `${QA_PROJECT}.supabase.co`

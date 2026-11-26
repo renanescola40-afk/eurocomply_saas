@@ -3,7 +3,7 @@ import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '@/server
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { compensateAiSystemReassessmentAuditFailure } from '@/server/queries/ai-system-compensation';
 import { aiSystemPatch, getAiSystem, isQaInventory, listAiSystemHistory, updateAiSystem } from '@/server/queries/ai-systems';
-import { mutateQaInventory, requireQaInventoryRole } from '@/server/queries/qa-inventory-transaction';
+import { assertQaInventoryNoAdmin, mutateQaInventory, requireQaInventoryRole } from '@/server/queries/qa-inventory-transaction';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/security/api-guards';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -37,6 +37,7 @@ type AiSystemRouteParams = {
 
 export async function GET(_request: Request, { params }: AiSystemRouteParams) {
   try {
+    if (isQaInventory()) assertQaInventoryNoAdmin();
     const { id } = await params;
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
@@ -72,6 +73,7 @@ export async function GET(_request: Request, { params }: AiSystemRouteParams) {
 
 export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
   try {
+    if (isQaInventory()) assertQaInventoryNoAdmin();
     const originDenied = assertTrustedOrigin(request);
     if (originDenied) return originDenied;
 
