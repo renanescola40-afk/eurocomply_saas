@@ -62,6 +62,10 @@ export function classifyQaMfaProviderProof({ runtime, actualSha, env = {} } = {}
     signedOut: runtime?.signedOut === true,
     fixtureDeleted: runtime?.fixtureCleanupVerified === true,
   };
+  const signedSessionIdProof = {
+    aal1: validContext && runtime?.signedAal1SessionIdVerified === true,
+    aal2: validContext && runtime?.signedAal2SessionIdVerified === true,
+  };
   const pass = validContext
     && runtime?.status === 'Complete'
     && Object.values(checks).every(Boolean);
@@ -75,6 +79,8 @@ export function classifyQaMfaProviderProof({ runtime, actualSha, env = {} } = {}
     verifiedCount: Object.values(checks).filter(Boolean).length,
     requiredCount: Object.keys(checks).length,
     checks,
+    signedSessionIdProof,
+    signedSessionIdVerified: pass && Object.values(signedSessionIdProof).every(Boolean),
     cleanupVerified: checks.fixtureDeleted,
     noProductionMutation: true,
     emailSent: false,
@@ -140,11 +146,13 @@ async function main() {
     verifiedCount: proof.verifiedCount,
     requiredCount: proof.requiredCount,
     cleanupVerified: proof.cleanupVerified,
+    signedSessionIdVerified: proof.signedSessionIdVerified,
+    signedSessionIdProof: proof.signedSessionIdProof,
     gate: proof.gate,
     control: proof.control,
     evidenceClass: proof.evidenceClass,
   }));
-  if (!pass) process.exitCode = 1;
+  if (!pass || !proof.signedSessionIdVerified) process.exitCode = 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
