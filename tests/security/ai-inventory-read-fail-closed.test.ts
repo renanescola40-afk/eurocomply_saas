@@ -5,11 +5,12 @@ import { describe, expect, it } from 'vitest';
 const QUERY_FILE = new URL('../../src/server/queries/ai-systems.ts', import.meta.url);
 
 describe('AI inventory read failure contract', () => {
-  it('uses the required admin client for inventory and history reads', async () => {
+  it('uses authenticated QA reads and retains the required admin client outside QA', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
 
     expect(source).not.toContain('tryCreateAdminClient');
-    expect(source.match(/const supabase = createAdminClient\(\);/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(source.match(/const supabase = isQaInventory\(\) \? await createServerSupabaseClient\(\) : createAdminClient\(\);/g)?.length).toBe(3);
+    expect(source).toContain("return process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://zrxrrfbllsxtleyxjpsz.supabase.co'");
   });
 
   it('does not convert database read failures into empty governance records or expose provider errors', async () => {
