@@ -4,7 +4,8 @@ import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/
 import { createAdminClient } from '@/lib/supabase/admin';
 import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '@/server/ai-governance/system-payload';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { createAiSystem, getAiSystem, listAiSystems } from '@/server/queries/ai-systems';
+import { aiSystemPatch, createAiSystem, getAiSystem, isQaInventory, listAiSystems } from '@/server/queries/ai-systems';
+import { mutateQaInventory, requireQaInventoryRole } from '@/server/queries/qa-inventory-transaction';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -206,7 +207,7 @@ export async function GET() {
       return noStoreJson({ error: 'organization_required' }, { status: 403 });
     }
 
-    const permission = await assertOrganizationPermission({
+    const permission = isQaInventory() ? { ok: true as const, role: await requireQaInventoryRole(user.id, organization.id, 'read_ai_governance') } : await assertOrganizationPermission({
       userId: user.id,
       organizationId: organization.id,
       permission: 'read_ai_governance',
@@ -240,7 +241,11 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'unsupported_workflow' }, { status: 400 });
     }
 
-    const permission = await assertOrganizationPermission({
+    if (isQaInventory() && workflow !== 'ai_system') {
+      return noStoreJson({ error: 'qa_workflow_unavailable' }, { status: 503 });
+    }
+
+    const permission = isQaInventory() ? { ok: true as const, role: await requireQaInventoryRole(user.id, organization.id, 'manage_ai_governance') } : await assertOrganizationPermission({
       userId: user.id,
       organizationId: organization.id,
       permission: getWorkflowPermission(workflow),
@@ -395,7 +400,7 @@ export async function POST(request: Request) {
     });
     const result = classifyParsedAiSystemBody(body);
 
-    const system = await createAiSystem({
+    const createInput = {
       organizationId: organization.id,
       createdBy: user.id,
       name: body.name,
@@ -418,7 +423,29 @@ export async function POST(request: Request) {
       classificationSummary: result.classification.summary,
       obligations: result.classification.obligations,
       nextActions: result.classification.nextActions,
-    });
+    };
+
+    if (isQaInventory()) {
+      const transition = await mutateQaInventory({
+        organizationId: organization.id, actorUserId: user.id,
+        patch: aiSystemPatch(createInput),
+        auditMetadata: (system) => ({
+          riskLevel: system.risk_level, selectedRole: result.role,
+          recommendedRole: result.roleAssessment.recommendedRole,
+          roleConfidence: result.roleAssessment.confidence,
+          needsLegalReview: result.roleAssessment.needsLegalReview,
+          lifecycleStatus: system.lifecycle_status, riskDomain: system.risk_domain,
+          actorRole: permission.role,
+        }),
+      });
+      if (transition.outcome === 'subscription_required' || transition.outcome === 'quota_exceeded') {
+        return noStoreJson({ error: transition.outcome }, { status: 403 });
+      }
+      if (transition.outcome !== 'created' || !transition.system) throw new Error('qa_inventory_create_invalid');
+      return noStoreJson({ system: transition.system, roleAssessment: result.roleAssessment });
+    }
+
+    const system = await createAiSystem(createInput);
 
     const audit = await createAuditEvent({
       organizationId: organization.id,
