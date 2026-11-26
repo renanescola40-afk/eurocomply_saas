@@ -17,6 +17,7 @@ BEGIN
     OR to_regprocedure('app_private.qa_inventory_audit_head(uuid)') IS NOT NULL
     OR to_regprocedure('app_private.qa_inventory_mutate(uuid,uuid,timestamptz,jsonb)') IS NOT NULL
     OR to_regprocedure('app_private.qa_inventory_append(uuid,jsonb)') IS NOT NULL
+    OR to_regclass('app_private.qa_inventory_pending') IS NOT NULL
     OR EXISTS(SELECT 1 FROM pg_roles WHERE rolname='qa_inventory_writer')
     OR (SELECT count(*) FROM supabase_migrations.schema_migrations
       WHERE version IN ('20261120134634','20261120134701','20261126172143'))<>3
@@ -28,6 +29,32 @@ END $preflight$;
 CREATE ROLE qa_inventory_writer LOGIN NOINHERIT NOBYPASSRLS;
 GRANT CONNECT ON DATABASE postgres TO qa_inventory_writer;
 GRANT USAGE ON SCHEMA app_private, public TO qa_inventory_writer;
+
+-- A deferred constraint prevents the restricted login from committing an
+-- inventory transition without an audit append, even if it bypasses the app.
+CREATE TABLE app_private.qa_inventory_pending (
+  id uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
+  transaction_id bigint NOT NULL,
+  organization_id uuid NOT NULL,
+  actor_user_id uuid NOT NULL,
+  system_id uuid NOT NULL,
+  action text NOT NULL CHECK (action IN ('ai_system_created','ai_system_reassessed'))
+);
+REVOKE ALL ON TABLE app_private.qa_inventory_pending FROM PUBLIC,anon,authenticated,service_role,qa_inventory_writer;
+CREATE FUNCTION app_private.qa_inventory_pending_commit_guard()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
+AS $guard$
+BEGIN
+  IF EXISTS(SELECT 1 FROM app_private.qa_inventory_pending p WHERE p.id=NEW.id) THEN
+    RAISE EXCEPTION 'qa_inventory_audit_required' USING ERRCODE='23514';
+  END IF;
+  RETURN NULL;
+END $guard$;
+REVOKE ALL ON FUNCTION app_private.qa_inventory_pending_commit_guard() FROM PUBLIC,anon,authenticated,service_role,qa_inventory_writer;
+CREATE CONSTRAINT TRIGGER qa_inventory_audit_required
+AFTER INSERT ON app_private.qa_inventory_pending
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION app_private.qa_inventory_pending_commit_guard();
 
 CREATE FUNCTION app_private.qa_inventory_audit_head(p_organization_id uuid)
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
@@ -82,6 +109,9 @@ BEGIN
     THEN
     RAISE EXCEPTION 'qa_inventory_transition_mismatch';
   END IF;
+  INSERT INTO app_private.qa_inventory_pending(transaction_id,organization_id,actor_user_id,system_id,action)
+    VALUES(pg_catalog.txid_current(),p_organization_id,v_actor,(v_system->>'id')::uuid,
+      CASE WHEN p_system_id IS NULL THEN 'ai_system_created' ELSE 'ai_system_reassessed' END);
   RETURN pg_catalog.jsonb_build_object('outcome',v_transition.outcome,'system',v_system);
 END $mutate$;
 
@@ -89,7 +119,7 @@ CREATE FUNCTION app_private.qa_inventory_append(p_organization_id uuid,p_audit j
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
 AS $append$
 DECLARE v_actor uuid; v_id uuid; v_created timestamptz; v_previous text;
-  v_hash text; v_signature text;
+  v_hash text; v_signature text; v_pending uuid;
 BEGIN
   v_actor:=app_private.qa_require_ai_inventory_actor(p_organization_id);
   IF NOT EXISTS(SELECT 1 FROM public.get_my_qa_organization_context() c
@@ -117,9 +147,17 @@ BEGIN
       AND s.organization_id=p_organization_id) THEN
     RAISE EXCEPTION 'qa_inventory_invalid_audit' USING ERRCODE='22023';
   END IF;
+  SELECT p.id INTO v_pending FROM app_private.qa_inventory_pending p
+    WHERE p.transaction_id=pg_catalog.txid_current()
+      AND p.organization_id=p_organization_id AND p.actor_user_id=v_actor
+      AND p.system_id::text=p_audit->>'entityId' AND p.action=p_audit->>'action'
+    ORDER BY p.id LIMIT 1 FOR UPDATE;
+  IF v_pending IS NULL THEN RAISE EXCEPTION 'qa_inventory_pending_mutation_required' USING ERRCODE='42501'; END IF;
   PERFORM public.append_audit_event_chained(v_id,p_organization_id,v_actor,
     p_audit->>'action','ai_system',p_audit->>'entityId',p_audit->'metadata',
     v_created,v_previous,v_hash,v_signature,'sha256');
+  DELETE FROM app_private.qa_inventory_pending p WHERE p.id=v_pending;
+  IF NOT FOUND THEN RAISE EXCEPTION 'qa_inventory_pending_disappeared'; END IF;
 END $append$;
 
 REVOKE ALL ON FUNCTION app_private.qa_inventory_audit_head(uuid) FROM PUBLIC,anon,authenticated,service_role;
@@ -139,6 +177,8 @@ BEGIN
   OR NOT has_function_privilege('qa_inventory_writer','app_private.qa_inventory_append(uuid,jsonb)','EXECUTE')
   OR has_function_privilege('qa_inventory_writer','public.create_ai_system_atomic(uuid,uuid,jsonb)','EXECUTE')
   OR has_table_privilege('qa_inventory_writer','public.ai_systems','INSERT')
+  OR has_table_privilege('qa_inventory_writer','app_private.qa_inventory_pending','DELETE')
+  OR has_table_privilege('qa_inventory_writer','app_private.qa_inventory_pending','INSERT')
   THEN RAISE EXCEPTION 'qa_inventory_acl_refused'; END IF;
 END $post$;
 COMMIT;

@@ -10,6 +10,8 @@ BEGIN
     OR to_regprocedure('app_private.qa_inventory_audit_head(uuid)') IS NULL
     OR to_regprocedure('app_private.qa_inventory_mutate(uuid,uuid,timestamptz,jsonb)') IS NULL
     OR to_regprocedure('app_private.qa_inventory_append(uuid,jsonb)') IS NULL
+    OR to_regclass('app_private.qa_inventory_pending') IS NULL
+    OR EXISTS(SELECT 1 FROM app_private.qa_inventory_pending)
     OR to_regprocedure('app_private.qa_require_ai_inventory_actor(uuid)') IS NULL
     OR to_regprocedure('public.get_my_qa_organization_context()') IS NULL
     OR NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='qa_inventory_writer')
@@ -22,6 +24,8 @@ REVOKE EXECUTE ON FUNCTION app_private.qa_inventory_audit_head(uuid) FROM qa_inv
 DROP FUNCTION app_private.qa_inventory_append(uuid,jsonb) RESTRICT;
 DROP FUNCTION app_private.qa_inventory_mutate(uuid,uuid,timestamptz,jsonb) RESTRICT;
 DROP FUNCTION app_private.qa_inventory_audit_head(uuid) RESTRICT;
+DROP TABLE app_private.qa_inventory_pending RESTRICT;
+DROP FUNCTION app_private.qa_inventory_pending_commit_guard() RESTRICT;
 REVOKE USAGE ON SCHEMA app_private,public FROM qa_inventory_writer;
 REVOKE CONNECT ON DATABASE postgres FROM qa_inventory_writer;
 DROP ROLE qa_inventory_writer;
