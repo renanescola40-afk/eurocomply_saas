@@ -24,6 +24,7 @@ let sourceSha = null;
 let fixtures = null;
 let unscoped = null;
 let admin = null;
+let baseline = null;
 const clients = [];
 let failure = 'preflight_failed';
 const stop = code => { throw new Error(code); };
@@ -38,6 +39,21 @@ async function login(fixture, publishableKey) {
   if (error || data?.user?.id !== fixture.id || !data?.session?.access_token
     || !await verifyQaSignedSessionId(supabase.auth, data.session.access_token, fixture.id, 'aal1')) stop('signed_aal1_failed');
   return { supabase, token: data.session.access_token };
+}
+async function readBaseline() {
+  const tables = ['organizations','organization_members','organization_security_settings',
+    'enterprise_contracts','organization_entitlements','organization_usage',
+    'enterprise_entitlement_sources','enterprise_entitlement_snapshots','subscriptions','stripe_events_processed'];
+  const counts = {};
+  for (const table of tables) {
+    const result = await admin.from(table).select('*', { head:true, count:'exact' });
+    if (result.error || !Number.isInteger(result.count)) stop('fixture_baseline_unavailable');
+    counts[table] = result.count;
+  }
+  const users = await admin.auth.admin.listUsers({page:1,perPage:100});
+  if (users.error || !Array.isArray(users.data?.users) || users.data.users.length !== 5) stop('fixture_auth_baseline_unavailable');
+  counts.authUsers = users.data.users.length;
+  return counts;
 }
 async function readPolicies(fixture, expectedOrg) {
   const members = await admin.from('organization_members').select('organization_id,user_id,status,role').eq('user_id', fixture.id);
@@ -72,6 +88,10 @@ try {
     : !publicKey.startsWith('sb_publishable_')) stop('publishable_key_refused');
   checks.isolatedContext = true;
   admin = client(env.SUPABASE_SERVICE_ROLE_KEY);
+  baseline = await readBaseline();
+  if (baseline.organizations !== 2 || baseline.enterprise_entitlement_sources !== 0
+    || baseline.enterprise_entitlement_snapshots !== 0 || baseline.subscriptions !== 0
+    || baseline.stripe_events_processed !== 0) stop('unexpected_qa_fixture_baseline');
   // Existing synthetic fixture helper only: its legacy compatibility envelope
   // is not commercial authority. No entitlement sources/snapshots or Stripe writes.
   failure = 'fixture_setup_failed';
@@ -137,7 +157,11 @@ try {
       emptyClean = lookup.error ? Number(lookup.error.status) === 404 : !lookup.data?.user;
     } catch { emptyClean = false; }
   }
-  checks.cleanupVerified = revoked && scopedClean && emptyClean;
+  let baselineRestored = false;
+  if (admin && baseline && scopedClean && emptyClean) {
+    try { baselineRestored = JSON.stringify(await readBaseline()) === JSON.stringify(baseline); } catch { baselineRestored = false; }
+  }
+  checks.cleanupVerified = revoked && scopedClean && emptyClean && baselineRestored;
   const pass = failure === null && Object.values(checks).every(Boolean);
   const evidence = { schema:'qa-v2-bootstrap-rpc-v1', qaRef, sourceSha, outcome:pass?'QA_V2_BOOTSTRAP_RPC_PASS':'NOT_VERIFIED',
     checks, verifiedCount:Object.values(checks).filter(Boolean).length, requiredCount:Object.keys(checks).length,
