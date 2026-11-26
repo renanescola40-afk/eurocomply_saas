@@ -27,7 +27,9 @@ describe('AI inventory API contracts', () => {
     expect(source).toContain('checkDistributedRateLimit({');
     expect(source).toContain('parseJsonBodyWithZod(request, {');
     expect(source).toContain('classifyParsedAiSystemBody(body)');
-    expect(source).toContain('createAiSystem({');
+    expect(source).toContain('createAiSystem(createInput)');
+    expect(source).toContain('patch: aiSystemPatch(createInput)');
+    expect(source).toContain('await mutateQaInventory({');
     expect(source).toContain('getAiSystem(aiSystemId, organizationId)');
     expect(source).toContain('organizationId: organization.id');
     expect(source).toContain('createdBy: user.id');
@@ -53,7 +55,9 @@ describe('AI inventory API contracts', () => {
     expect(source).toContain('checkDistributedRateLimit({');
     expect(source).toContain('parseJsonBodyWithZod(request, {');
     expect(source).toContain('classifyParsedAiSystemBody(body)');
-    expect(source).toContain('updateAiSystem(id, organization.id, {');
+    expect(source).toContain('updateAiSystem(id, organization.id, updateInput)');
+    expect(source).toContain('patch: aiSystemPatch(updateInput)');
+    expect(source).toContain('await mutateQaInventory({');
     expect(source).toContain('reassessedBy: user.id');
     expect(source).toContain('expectedUpdatedAt: existing.updated_at');
     expect(source).toContain('riskLevel: result.classification.riskLevel');
