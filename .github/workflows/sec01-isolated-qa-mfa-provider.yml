@@ -10,12 +10,13 @@ on:
         required: true
         type: string
       proof_mode:
-        description: Run the existing provider MFA or application browser proof
+        description: Run the existing provider MFA, V2 bootstrap RPC, or application browser proof
         required: true
         default: provider_mfa
         type: choice
         options:
           - provider_mfa
+          - bootstrap_rpc
           - app_browser
 
 permissions:
@@ -55,7 +56,7 @@ jobs:
         run: node scripts/security/check-github-environment-governance.mjs
 
   qa-signed-mfa:
-    if: inputs.proof_mode == 'provider_mfa'
+    if: inputs.proof_mode == 'provider_mfa' || inputs.proof_mode == 'bootstrap_rpc'
     needs: qa-environment-governance
     environment: QA-Supabase
     name: Validate actual QA TOTP AAL1-to-AAL2 and delete fixture
@@ -126,14 +127,30 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Execute real signed Supabase Auth TOTP enrollment / challenge / AAL2
+        if: inputs.proof_mode == 'provider_mfa'
         run: node scripts/enterprise-gates/a01-sec01-qa-mfa-provider-proof.mjs
 
+      - name: Verify installed V2 bootstrap RPC with genuine signed sessions
+        if: inputs.proof_mode == 'bootstrap_rpc'
+        env:
+          SEC01_V2_BOOTSTRAP_EXECUTE: QA_ONLY_V2_BOOTSTRAP_RPC_PROOF
+        run: node scripts/enterprise-gates/a01-sec01-qa-v2-bootstrap-rpc-proof.mjs
+
       - name: Preserve redacted QA-only evidence, even on failure
-        if: always()
+        if: always() && inputs.proof_mode == 'provider_mfa'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: sec01-qa-signed-mfa-provider-${{ inputs.release_sha }}
           path: artifacts/enterprise-sec01/qa-mfa-provider-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve redacted V2 bootstrap RPC evidence
+        if: always() && inputs.proof_mode == 'bootstrap_rpc'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sec01-qa-v2-bootstrap-rpc-${{ inputs.release_sha }}
+          path: artifacts/enterprise-sec01/qa-v2-bootstrap-rpc-evidence.json
           if-no-files-found: warn
           retention-days: 14
 
