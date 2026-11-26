@@ -1,4 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { parseOrganizationRole } from '@/lib/security/permissions';
 import { enforceMandatoryEnterpriseSsoAccess } from '@/server/security/enterprise-sso-access';
 
 export type NormalizedOnboardingStatus = 'not_started' | 'in_progress' | 'completed';
@@ -123,9 +125,61 @@ async function finalizeTenantMemberships(data: unknown) {
   return enforceMandatoryEnterpriseSsoAccess(normalizeMemberships(data));
 }
 
+const QA_ORIGIN = 'https://zrxrrfbllsxtleyxjpsz.supabase.co';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isRestrictedQaOrganizationReader() {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL === QA_ORIGIN
+    && !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+    && process.env.VERCEL_ENV !== 'production';
+}
+
+/** Own live-AAL2 context only. The reviewed SQL enforces active membership and
+ * mandatory SAML binding before returning any tenant fields; it is not paid
+ * product authority or a replacement for transactional mutation checks.
+ * A failed/unavailable RPC must never fall back to a privileged client. */
+async function readRestrictedQaMemberships(userId: string, safeLimit: number): Promise<CurrentOrganizationMembership[]> {
+  const unavailable = () => new Error('organization_memberships_unavailable');
+  if (!UUID.test(userId) || !Number.isInteger(safeLimit) || safeLimit < 1 || safeLimit > 100) throw unavailable();
+  const supabase = await createServerSupabaseClient();
+  const { data: identity, error: identityError } = await supabase.auth.getUser();
+  if (identityError || identity.user?.id !== userId || identity.user?.is_anonymous !== false) throw unavailable();
+  const { data, error } = await supabase.rpc('get_my_qa_organization_context');
+  if (error || !Array.isArray(data) || data.length > 100) throw unavailable();
+  const seen = new Set<string>();
+  const memberships: CurrentOrganizationMembership[] = [];
+  for (const value of data as unknown[]) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw unavailable();
+    const row = value as Record<string, unknown>;
+    if (Object.keys(row).length !== 8 || typeof row.organization_id !== 'string' || !UUID.test(row.organization_id)
+      || typeof row.role !== 'string' || !parseOrganizationRole(row.role) || row.status !== 'active'
+      || typeof row.name !== 'string' || !row.name.trim()
+      || !(row.slug === null || typeof row.slug === 'string')
+      || typeof row.onboarding_status !== 'string' || !['not_started','in_progress','completed'].includes(row.onboarding_status)
+      || !(row.onboarding_completed_at === null || (typeof row.onboarding_completed_at === 'string' && Number.isFinite(Date.parse(row.onboarding_completed_at))))
+      || !(row.selected_plan === null || typeof row.selected_plan === 'string')) throw unavailable();
+    const id = row.organization_id.toLowerCase();
+    if (seen.has(id)) throw unavailable();
+    seen.add(id);
+    const membership = normalizeMembership({
+      organization_id: id, role: row.role, status: 'active',
+      organizations: {
+        id, name: row.name, slug: row.slug as string | null,
+        onboarding_status: row.onboarding_status as string,
+        onboarding_completed_at: row.onboarding_completed_at as string | null,
+        selected_plan: row.selected_plan as string | null,
+      },
+    });
+    if (!membership) throw unavailable();
+    memberships.push(membership);
+  }
+  return memberships.slice(0, safeLimit);
+}
+
 export async function getUserOrganizationMemberships(userId: string, options: { limit?: number } = {}) {
-  const supabase = createAdminClient();
   const safeLimit = Math.max(1, Math.min(options.limit ?? 25, 100));
+  if (isRestrictedQaOrganizationReader()) return readRestrictedQaMemberships(userId, safeLimit);
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('organization_members')
