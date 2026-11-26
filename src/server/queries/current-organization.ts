@@ -155,7 +155,7 @@ async function readRestrictedQaMemberships(userId: string, safeLimit: number): P
       || typeof row.role !== 'string' || !parseOrganizationRole(row.role) || row.status !== 'active'
       || typeof row.name !== 'string' || !row.name.trim()
       || !(row.slug === null || typeof row.slug === 'string')
-      || !['not_started','in_progress','completed'].includes(String(row.onboarding_status))
+      || typeof row.onboarding_status !== 'string' || !['not_started','in_progress','completed'].includes(row.onboarding_status)
       || !(row.onboarding_completed_at === null || (typeof row.onboarding_completed_at === 'string' && Number.isFinite(Date.parse(row.onboarding_completed_at))))
       || !(row.selected_plan === null || typeof row.selected_plan === 'string')) throw unavailable();
     const id = row.organization_id.toLowerCase();
