@@ -106,7 +106,7 @@ jobs:
             SEC01_QA_EXECUTE=QA_ONLY_AUTH_PROOF node scripts/enterprise-gates/a01-sec01-supabase-qa-provider-proof.mjs > artifacts/enterprise-sec01/provider-proof.json
             provider_status=$?
             set -e
-            node --input-type=module - "$provider_status" <<'NODE'
+            node --input-type=module - "$provider_status" \<<'NODE'
             import { readFileSync } from 'node:fs';
             const status = Number(process.argv[2]);
             let p;
@@ -507,7 +507,7 @@ jobs:
               2>&1 | tee artifacts/qa-preflight/stripe-webhook-contract.txt
             node scripts/security/run-stripe-runtime-validation.mjs \
               2>&1 | tee artifacts/qa-preflight/stripe-runtime-source-only.json
-            node --input-type=module <<'NODE'
+            node --input-type=module \<<'NODE'
             import { writeFileSync } from 'node:fs';
             import { createHash } from 'node:crypto';
             import { readFileSync } from 'node:fs';
@@ -592,7 +592,7 @@ jobs:
             set -euo pipefail
             report="/tmp/gitleaks-ci.json"
             /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
-            node - "$report" <<'NODE'
+            node - "$report" \<<'NODE'
             const fs=require('fs');
             const p=process.argv[2];
             const rows=JSON.parse(fs.readFileSync(p,'utf8'));
@@ -631,7 +631,7 @@ jobs:
             set -euo pipefail
             report="/tmp/gitleaks-app.json"
             /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
-            node - "$report" <<'NODE'
+            node - "$report" \<<'NODE'
             const fs=require('fs');
             const p=process.argv[2];
             const rows=JSON.parse(fs.readFileSync(p,'utf8'));
@@ -670,7 +670,7 @@ jobs:
             set -euo pipefail
             report="/tmp/gitleaks-assurance.json"
             /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
-            node - "$report" <<'NODE'
+            node - "$report" \<<'NODE'
             const fs=require('fs');
             const p=process.argv[2];
             const rows=JSON.parse(fs.readFileSync(p,'utf8'));
@@ -709,7 +709,7 @@ jobs:
             set -euo pipefail
             report="/tmp/gitleaks-other.json"
             /tmp/gitleaks dir --redact --no-banner --exit-code 0 --report-format json --report-path "$report" .
-            node - "$report" <<'NODE'
+            node - "$report" \<<'NODE'
             const fs=require('fs');
             const p=process.argv[2];
             const rows=JSON.parse(fs.readFileSync(p,'utf8'));
