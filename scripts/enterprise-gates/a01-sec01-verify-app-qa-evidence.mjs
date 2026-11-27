@@ -12,8 +12,8 @@ const expectedNames = [
   'unauthenticated_profile_redirected',
   'bad_password_denied_in_real_browser',
   'real_browser_password_login',
-  'authenticated_private_profile_available',
   'authenticated_api_identity_distinguished',
+  'authenticated_private_profile_available',
   'signed_in_session_recovery_form_denied',
   'capture_session_cookies_in_memory_only',
   'real_browser_logout',
@@ -85,6 +85,9 @@ const knownFailureDetails = new Set([
   'valid_password_submit_disabled',
   'valid_password_submit_obscured',
   'valid_password_submit_action_failed',
+  'signed_api_identity_unavailable', 'profile_navigation_unavailable',
+  'profile_auth_upstream_unavailable', 'profile_session_redirected',
+  'profile_response_unavailable', 'profile_signout_control_unavailable',
 ]);
 const sameRun = evidence.schema === 'risck-sec01-next-app-qa-browser-proof-v1' &&
   evidence.execution === 'LOCAL_NEXT_APP_BROWSER_QA_AUTH' && evidence.source_sha === sha &&
