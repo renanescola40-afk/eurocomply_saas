@@ -2,7 +2,8 @@ import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/
 import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '@/server/ai-governance/system-payload';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { compensateAiSystemReassessmentAuditFailure } from '@/server/queries/ai-system-compensation';
-import { getAiSystem, listAiSystemHistory, updateAiSystem } from '@/server/queries/ai-systems';
+import { aiSystemPatch, getAiSystem, isQaInventory, listAiSystemHistory, updateAiSystem } from '@/server/queries/ai-systems';
+import { assertQaInventoryNoAdmin, mutateQaInventory, requireQaInventoryRole } from '@/server/queries/qa-inventory-transaction';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/security/api-guards';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -36,6 +37,7 @@ type AiSystemRouteParams = {
 
 export async function GET(_request: Request, { params }: AiSystemRouteParams) {
   try {
+    if (isQaInventory()) assertQaInventoryNoAdmin();
     const { id } = await params;
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
@@ -44,7 +46,7 @@ export async function GET(_request: Request, { params }: AiSystemRouteParams) {
       return noStoreJson({ error: 'organization_required' }, { status: 403 });
     }
 
-    const permission = await assertOrganizationPermission({
+    const permission = isQaInventory() ? { ok: true as const, role: await requireQaInventoryRole(user.id, organization.id, 'read_ai_governance') } : await assertOrganizationPermission({
       userId: user.id,
       organizationId: organization.id,
       permission: 'read_ai_governance',
@@ -71,6 +73,7 @@ export async function GET(_request: Request, { params }: AiSystemRouteParams) {
 
 export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
   try {
+    if (isQaInventory()) assertQaInventoryNoAdmin();
     const originDenied = assertTrustedOrigin(request);
     if (originDenied) return originDenied;
 
@@ -82,7 +85,7 @@ export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
       return noStoreJson({ error: 'organization_required' }, { status: 403 });
     }
 
-    const permission = await assertOrganizationPermission({
+    const permission = isQaInventory() ? { ok: true as const, role: await requireQaInventoryRole(user.id, organization.id, 'manage_ai_governance') } : await assertOrganizationPermission({
       userId: user.id,
       organizationId: organization.id,
       permission: 'manage_ai_governance',
@@ -113,7 +116,7 @@ export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
     });
     const result = classifyParsedAiSystemBody(body);
 
-    const updateResult = await updateAiSystem(id, organization.id, {
+    const updateInput = {
       reassessedBy: user.id,
       expectedUpdatedAt: existing.updated_at,
       name: body.name,
@@ -136,7 +139,28 @@ export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
       classificationSummary: result.classification.summary,
       obligations: result.classification.obligations,
       nextActions: result.classification.nextActions,
-    });
+    };
+
+    if (isQaInventory()) {
+      const transition = await mutateQaInventory({
+        organizationId: organization.id, actorUserId: user.id,
+        systemId: id, expectedUpdatedAt: existing.updated_at,
+        patch: aiSystemPatch(updateInput),
+        auditMetadata: (system) => ({
+          previousRiskLevel: existing.risk_level, riskLevel: system.risk_level,
+          previousLifecycleStatus: existing.lifecycle_status,
+          lifecycleStatus: system.lifecycle_status, actorRole: permission.role,
+        }),
+      });
+      if (transition.outcome === 'state_changed' || transition.outcome === 'not_found') {
+        return noStoreJson({ error: 'ai_system_state_changed' }, { status: 409 });
+      }
+      if (transition.outcome !== 'updated' || !transition.system) throw new Error('qa_inventory_reassess_invalid');
+      const history = await listAiSystemHistory(id, organization.id);
+      return noStoreJson({ system: transition.system, history, roleAssessment: result.roleAssessment });
+    }
+
+    const updateResult = await updateAiSystem(id, organization.id, updateInput);
 
     if (updateResult.status === 'conflict') {
       return noStoreJson({ error: 'ai_system_state_changed' }, { status: 409 });

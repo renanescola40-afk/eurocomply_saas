@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   assertOrganizationPermission: vi.fn(),
   assertTrustedOrigin: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
+  isQaInventory: vi.fn(),
   createAiSystem: vi.fn(),
   listAiSystems: vi.fn(),
   getAiSystem: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock('@/lib/security/rate-limit', () => ({
   buildRateLimitSubjectFromRequest: (_request: Request, subject = {}) => subject,
 }));
 vi.mock('@/server/queries/ai-systems', () => ({
+  isQaInventory: mocks.isQaInventory,
   createAiSystem: mocks.createAiSystem,
   listAiSystems: mocks.listAiSystems,
   getAiSystem: mocks.getAiSystem,
@@ -57,6 +59,7 @@ const validBody = {
 describe('AI systems API hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.isQaInventory.mockReturnValue(false);
     mocks.getCurrentUser.mockResolvedValue({ id: 'user_admin' });
     mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a', name: 'Org A' });
     mocks.assertOrganizationPermission.mockResolvedValue({ ok: true, role: 'admin' });

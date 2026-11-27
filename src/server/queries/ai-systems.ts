@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { AiActRiskLevel, AiRiskDomain, AiSystemRole, AiSystemStatus } from '@/server/ai-governance/classifier';
 import { ApiSecurityError } from '@/server/security/api-guards';
 
@@ -33,6 +34,10 @@ const AI_SYSTEM_COLUMNS = [
 
 const ATOMIC_CREATE_RPC = 'create_ai_system_atomic';
 const ATOMIC_REASSESSMENT_RPC = 'reassess_ai_system_atomic';
+
+export function isQaInventory() {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://zrxrrfbllsxtleyxjpsz.supabase.co';
+}
 
 export type AiSystemHistoryRecord = {
   id: string;
@@ -149,7 +154,7 @@ function firstAtomicReassessmentRow(value: unknown): AtomicReassessmentRow | nul
   return row as AtomicReassessmentRow;
 }
 
-function aiSystemPatch(input: Omit<CreateAiSystemInput, 'organizationId' | 'createdBy'>) {
+export function aiSystemPatch(input: Omit<CreateAiSystemInput, 'organizationId' | 'createdBy'>) {
   return {
     name: input.name,
     owner_team: input.ownerTeam ?? null,
@@ -178,7 +183,7 @@ export async function listAiSystems(
   organizationId: string,
   options: { requireComplete?: boolean } = {},
 ): Promise<AiSystemRecord[]> {
-  const supabase = createAdminClient();
+  const supabase = isQaInventory() ? await createServerSupabaseClient() : createAdminClient();
 
   const { data, error, count } = await supabase
     .from('ai_systems')
@@ -198,7 +203,7 @@ export async function listAiSystems(
 }
 
 export async function getAiSystem(systemId: string, organizationId: string): Promise<AiSystemRecord | null> {
-  const supabase = createAdminClient();
+  const supabase = isQaInventory() ? await createServerSupabaseClient() : createAdminClient();
 
   const { data, error } = await supabase
     .from('ai_systems')
@@ -216,7 +221,7 @@ export async function getAiSystem(systemId: string, organizationId: string): Pro
 }
 
 export async function listAiSystemHistory(systemId: string, organizationId: string): Promise<AiSystemHistoryRecord[]> {
-  const supabase = createAdminClient();
+  const supabase = isQaInventory() ? await createServerSupabaseClient() : createAdminClient();
 
   const { data, error } = await supabase
     .from('ai_system_history')
