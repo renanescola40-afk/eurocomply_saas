@@ -89,6 +89,7 @@ jobs:
           node --test tests/enterprise-evidence/sec01-signed-session-id-carry.test.mjs
           node --test tests/enterprise-evidence/sec01-v2-bootstrap-rpc-carry.test.mjs
           node --test tests/enterprise-evidence/sec01-qa-organization-sso-carry.test.mjs
+          node --test tests/enterprise-evidence/sec01-qa-inventory-transaction-carry.test.mjs
           node --test scripts/check-netlify-preview.test.mjs scripts/qa-environment-guard.test.mjs
           node --test tests/security/sec01-aal1-bootstrap-draft-contract.test.mjs
           node --test tests/billing/qa-stripe-test-ledger.test.mjs
