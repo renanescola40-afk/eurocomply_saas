@@ -4,7 +4,8 @@ import { randomUUID } from 'crypto';
 import { Client } from 'pg';
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { buildAuditChainRecord } from '@/server/security/audit-chain';
+import { buildAuditChainRecord, canonicalizeAuditEvent } from '@/server/security/audit-chain';
+import { signQaInventoryCall } from './qa-inventory-attestation';
 import { ApiSecurityError } from '@/server/security/api-guards';
 import type { AiSystemRecord } from '@/server/queries/ai-systems';
 import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
@@ -60,11 +61,15 @@ async function verifiedClaims(expectedUserId: string) {
     || current.user.id !== expectedUserId || claims.sub !== expectedUserId
     || claims.iss !== issuer || claims.role !== 'authenticated'
     || claims.aal !== 'aal2' || claims.is_anonymous !== false
+    || !(claims.aud === 'authenticated' || (Array.isArray(claims.aud) && claims.aud.includes('authenticated')))
+    || !Number.isFinite(claims.exp) || claims.exp <= Math.floor(Date.now() / 1000)
     || typeof claims.session_id !== 'string'
     || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claims.session_id)) {
     throw new ApiSecurityError({ code: 'permission_denied', message: 'Verified AAL2 session required.', status: 403 });
   }
-  return claims;
+  return { sub: claims.sub, iss: claims.iss, role: claims.role, aal: claims.aal,
+    is_anonymous: claims.is_anonymous, session_id: claims.session_id, aud: claims.aud,
+    exp: claims.exp, amr: claims.amr ?? [] };
 }
 
 export async function mutateQaInventory(input: {
@@ -79,25 +84,33 @@ export async function mutateQaInventory(input: {
   const claims = await verifiedClaims(input.actorUserId);
   const secret = process.env.AUDIT_CHAIN_SIGNING_SECRET;
   if (!secret?.trim()) throw new Error('qa_inventory_audit_signing_unavailable');
+  const attestationSecret = process.env.QA_INVENTORY_ATTESTATION_SECRET;
+  if (!attestationSecret || !/^[a-f0-9]{64}$/.test(attestationSecret) || attestationSecret === secret) {
+    throw new Error('qa_inventory_attestation_unavailable');
+  }
   const client = new Client({ connectionString, ssl: { rejectUnauthorized: true }, connectionTimeoutMillis: 5000 });
   try {
     await client.connect();
     await client.query('BEGIN');
     await client.query("SET LOCAL statement_timeout='15s'");
     await client.query("SET LOCAL lock_timeout='2s'");
-    const { rows: identity } = await client.query('SELECT current_user AS role, current_database() AS db');
+    const { rows: identity } = await client.query('SELECT current_user AS role, current_database() AS db, txid_current()::text AS txid, pg_backend_pid() AS pid');
     if (identity.length !== 1 || identity[0].role !== 'qa_inventory_writer' || identity[0].db !== 'postgres') {
       throw new Error('qa_inventory_role_mismatch');
     }
-    await client.query("SELECT set_config('request.jwt.claims',$1,true), set_config('request.jwt.claim.sub',$2,true)", [JSON.stringify(claims), input.actorUserId]);
+    const context = { transactionId: identity[0].txid as string, backendPid: identity[0].pid as number,
+      organizationId: input.organizationId, claims };
+    const attest = (operation: 'head' | 'mutate' | 'append', args: Record<string, unknown>) =>
+      signQaInventoryCall(attestationSecret, context, operation, args);
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [input.organizationId]);
     const { rows: heads } = await client.query<{ head: string | null }>(
-      'SELECT app_private.qa_inventory_audit_head($1::uuid) AS head', [input.organizationId],
+      'SELECT app_private.qa_inventory_audit_head($1::uuid,$2::text,$3::text) AS head', [input.organizationId, ...attest('head', {})],
     );
     if (heads.length !== 1) throw new Error('qa_inventory_head_missing');
     const { rows } = await client.query<{ transition: { outcome: string; system?: AiSystemRecord } }>(
-      'SELECT app_private.qa_inventory_mutate($1::uuid,$2::uuid,$3::timestamptz,$4::jsonb) AS transition',
-      [input.organizationId, input.systemId ?? null, input.expectedUpdatedAt ?? null, JSON.stringify(input.patch)],
+      'SELECT app_private.qa_inventory_mutate($1::uuid,$2::uuid,$3::text,$4::jsonb,$5::text,$6::text) AS transition',
+      [input.organizationId, input.systemId ?? null, input.expectedUpdatedAt ?? null, JSON.stringify(input.patch),
+        ...attest('mutate', { systemId: input.systemId ?? null, expectedUpdatedAt: input.expectedUpdatedAt ?? null, patch: input.patch })],
     );
     const transition = rows.length === 1 ? rows[0].transition : null;
     if (!transition || typeof transition.outcome !== 'string') throw new Error('qa_inventory_transition_invalid');
@@ -114,8 +127,9 @@ export async function mutateQaInventory(input: {
       metadata: input.auditMetadata(system), createdAt: new Date().toISOString(),
     }, heads[0].head);
     if (!event.signature) throw new Error('qa_inventory_audit_signing_unavailable');
-    await client.query('SELECT app_private.qa_inventory_append($1::uuid,$2::jsonb)', [input.organizationId,
-      JSON.stringify({ ...event, eventHash: event.eventHash, previousHash: event.previousHash })]);
+    const canonical = canonicalizeAuditEvent(event, event.previousHash);
+    await client.query('SELECT app_private.qa_inventory_append($1::uuid,$2::jsonb,$3::text,$4::text,$5::text)', [input.organizationId,
+      JSON.stringify(event), canonical, ...attest('append', { audit: event, canonical })]);
     await client.query('COMMIT');
     return { outcome: transition.outcome, system };
   } catch (error) {
