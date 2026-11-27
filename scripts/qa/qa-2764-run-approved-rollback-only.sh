@@ -42,7 +42,7 @@ set -e
 test "$rc" -eq 3
 grep -Fxq CAPTURE_FIRST_2764 "$work/capture-probe.log"
 grep -Fxq CAPTURE_SECOND_2764 "$work/capture-probe.log"
-! grep -Fxq MUST_NOT_RUN_2764 "$work/capture-probe.log"
+if grep -Fxq MUST_NOT_RUN_2764 "$work/capture-probe.log"; then echo "ON_ERROR_STOP probe failed"; exit 2; fi
 echo 'Capture and ON_ERROR_STOP verified.'
 cat > "$work/preflight.sql" <<'SQL'
 BEGIN READ ONLY;
