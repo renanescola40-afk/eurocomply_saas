@@ -14,6 +14,9 @@ BEGIN
     OR to_regprocedure('public.create_ai_system_atomic(uuid,uuid,jsonb)') IS NULL
     OR to_regprocedure('public.reassess_ai_system_atomic(uuid,uuid,timestamptz,uuid,jsonb)') IS NULL
     OR to_regprocedure('public.append_audit_event_chained(uuid,uuid,uuid,text,text,text,jsonb,timestamptz,text,text,text,text)') IS NULL
+    OR to_regprocedure('app_private.qa_inventory_audit_head(uuid)') IS NOT NULL
+    OR to_regprocedure('app_private.qa_inventory_mutate(uuid,uuid,timestamptz,jsonb)') IS NOT NULL
+    OR to_regprocedure('app_private.qa_inventory_append(uuid,jsonb)') IS NOT NULL
     OR to_regprocedure('app_private.qa_inventory_audit_head(uuid,text,text)') IS NOT NULL
     OR to_regprocedure('app_private.qa_inventory_mutate(uuid,uuid,text,jsonb,text,text)') IS NOT NULL
     OR to_regprocedure('app_private.qa_inventory_append(uuid,jsonb,text,text,text)') IS NOT NULL
@@ -249,6 +252,12 @@ BEGIN
   OR NOT has_function_privilege('qa_inventory_writer','app_private.qa_inventory_mutate(uuid,uuid,text,jsonb,text,text)','EXECUTE')
   OR NOT has_function_privilege('qa_inventory_writer','app_private.qa_inventory_append(uuid,jsonb,text,text,text)','EXECUTE')
   OR has_function_privilege('qa_inventory_writer','public.create_ai_system_atomic(uuid,uuid,jsonb)','EXECUTE')
+  OR has_function_privilege('qa_inventory_writer','public.reassess_ai_system_atomic(uuid,uuid,timestamptz,uuid,jsonb)','EXECUTE')
+  OR has_function_privilege('qa_inventory_writer','public.append_audit_event_chained(uuid,uuid,uuid,text,text,text,jsonb,timestamptz,text,text,text,text)','EXECUTE')
+  OR has_function_privilege('qa_inventory_writer','app_private.qa_require_ai_inventory_actor(uuid)','EXECUTE')
+  OR has_function_privilege('qa_inventory_writer','public.get_my_qa_organization_context()','EXECUTE')
+  OR has_table_privilege('qa_inventory_writer','public.ai_systems','SELECT,UPDATE,DELETE,TRUNCATE')
+  OR has_table_privilege('qa_inventory_writer','public.audit_events','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
   OR has_function_privilege('qa_inventory_writer','app_private.qa_inventory_verify_attestation(text,text,uuid,text,jsonb)','EXECUTE')
   OR has_table_privilege('qa_inventory_writer','vault.decrypted_secrets','SELECT')
   OR has_schema_privilege('qa_inventory_writer','vault','USAGE')
