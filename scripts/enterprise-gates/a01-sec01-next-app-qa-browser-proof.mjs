@@ -19,6 +19,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
+import { verifyQaSignedSessionId } from '../security/lib/qa-signed-session-id-proof.mjs';
 
 const QA_REF = 'zrxrrfbllsxtleyxjpsz';
 const QA_URL = 'https://' + QA_REF + '.supabase.co';
@@ -450,10 +451,67 @@ try {
   failureDetail = null;
 
   stage = 'authenticated_api_identity_distinguished';
+  // The current-organization RPC requires live AAL2 even for an empty
+  // membership result. A password-only AAL1 session is not sufficient.
+  // Enroll through the actual browser UI; never inject a session or use admin
+  // credentials to authenticate the application. The factor is disposable.
+  failureDetail = 'signed_api_mfa_enrollment_unavailable';
+  const { generateTotpCode } = await import('../security/run-step-up-mfa-runtime-validation.mjs');
+  await page.getByRole('button', { name: 'Set up authenticator app', exact: true }).click();
+  const manualKey = page.getByText(/^Manual key: [A-Z2-7]+=*$/i);
+  await manualKey.waitFor({ state: 'visible', timeout: 30000 });
+  const totpSecret = (await manualKey.textContent())?.replace(/^Manual key: /i, '').trim();
+  requireTrue(Boolean(totpSecret) && /^[A-Z2-7]+=*$/i.test(totpSecret), 'signed_api_mfa_enrollment_unavailable');
+
+  failureDetail = 'signed_api_mfa_verification_unavailable';
+  const remainingMs = 30000 - (Date.now() % 30000);
+  if (remainingMs < 6000) await delay(remainingMs + 200);
+  await page.getByRole('textbox', { name: 'Verification code' }).fill(generateTotpCode(totpSecret));
+  const mfaResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.origin === QA_URL &&
+      /^\/auth\/v1\/factors\/[0-9a-f-]+\/verify$/i.test(url.pathname) &&
+      response.request().method() === 'POST';
+  }, { timeout: 45000 }).catch(() => null);
+  await page.getByRole('button', { name: 'Verify MFA and continue', exact: true }).click({ noWaitAfter: true });
+  const mfaResponse = await mfaResponsePromise;
+  requireTrue(mfaResponse?.status() === 200, 'signed_api_mfa_verification_unavailable');
+
+  // Verify the provider-issued token in memory only, using the existing
+  // signature/issuer/expiry/session_id and same-user proof. No payload or
+  // token is written to evidence. The publishable key is sufficient.
+  failureDetail = 'signed_api_mfa_signed_session_unverified';
+  const { access_token: aal2Token } = await mfaResponse.json();
+  const identityClient = createClient(QA_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  requireTrue(await verifyQaSignedSessionId(identityClient.auth, aal2Token, userId, 'aal2'),
+    'signed_api_mfa_signed_session_unverified');
+
+  // Wait for the real browser SDK to replace the session cookie; never
+  // manufacture or inject an authenticated cookie. The protected API must
+  // still independently verify its own session and the AAL2 RPC result.
+  failureDetail = 'signed_api_mfa_cookie_not_updated';
+  let cookieUpdated = false;
+  for (let attempt = 0; attempt < 40 && !cookieUpdated; attempt++) {
+    const current = (await context.cookies(LOCAL_URL))
+      .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
+    cookieUpdated = current.length > 0 && (current.length !== loginSessionCookies.length ||
+      current.some((cookie) => !loginSessionCookies.some((prior) => prior.name === cookie.name && prior.value === cookie.value)));
+    if (!cookieUpdated) await delay(250);
+  }
+  requireTrue(cookieUpdated, 'signed_api_mfa_cookie_not_updated');
+
+  failureDetail = 'signed_api_identity_unavailable';
   const authApi = await context.request.get('/api/ai-systems', { failOnStatusCode: false });
   // The disposable user has NO organization or paid license; 403 is expected,
-  // and no AI-system records are read or written.
-  failureDetail = 'signed_api_identity_unavailable';
+  // and no AI-system records are read or written. A generic denial is NOT PASS.
+  const apiStatus = authApi.status();
+  failureDetail = apiStatus === 401 ? 'signed_api_http_401'
+    : apiStatus === 403 ? 'signed_api_http_403_unexpected_body'
+    : apiStatus === 500 ? 'signed_api_http_500'
+    : apiStatus === 503 ? 'signed_api_http_503'
+    : 'signed_api_http_unexpected';
   check(stage, await isApiAuthResult(authApi, 403, 'organization_required'));
   failureDetail = null;
 
