@@ -449,16 +449,27 @@ try {
   check(stage, loginSessionCookies.length > 0);
   failureDetail = null;
 
-  stage = 'authenticated_private_profile_available';
-  await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /^sign out$/i }).waitFor({ state: 'visible', timeout: 45000 });
-  check(stage, new URL(page.url()).pathname === '/en/profile');
-
   stage = 'authenticated_api_identity_distinguished';
   const authApi = await context.request.get('/api/ai-systems', { failOnStatusCode: false });
   // The disposable user has NO organization or paid license; 403 is expected,
   // and no AI-system records are read or written.
+  failureDetail = 'signed_api_identity_unavailable';
   check(stage, await isApiAuthResult(authApi, 403, 'organization_required'));
+  failureDetail = null;
+
+  stage = 'authenticated_private_profile_available';
+  failureDetail = 'profile_navigation_unavailable';
+  const profileResponse = await page.goto('/en/profile', { waitUntil: 'domcontentloaded' });
+  failureDetail = 'profile_auth_upstream_unavailable';
+  requireTrue(profileResponse?.status() !== 503, 'profile_auth_upstream_unavailable');
+  failureDetail = 'profile_session_redirected';
+  requireTrue(new URL(page.url()).pathname === '/en/profile', 'profile_session_redirected');
+  failureDetail = 'profile_response_unavailable';
+  requireTrue(profileResponse?.status() === 200, 'profile_response_unavailable');
+  failureDetail = 'profile_signout_control_unavailable';
+  await page.getByRole('button', { name: /^sign out$/i }).waitFor({ state: 'visible', timeout: 45000 });
+  check(stage, new URL(page.url()).pathname === '/en/profile');
+  failureDetail = null;
 
   // SEC-01 / PR #2738: a legitimate SIGNED_IN session must never act as
   // PASSWORD_RECOVERY provenance. Test the real browser and QA Auth session.

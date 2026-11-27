@@ -144,7 +144,7 @@ test('signed positive browser login preserves real QA provider proof and all dow
  const verifier=readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs','utf8');
  const testContract=readFileSync('tests/security/sec01-browser-bad-password-contract.test.ts','utf8');
  const start=runner.indexOf("  stage = 'real_browser_password_login';");
- const end=runner.indexOf("  stage = 'authenticated_private_profile_available';",start);
+ const end=runner.indexOf("  stage = 'authenticated_api_identity_distinguished';",start);
  assert.ok(start>0&&end>start);
  const positive=runner.slice(start,end);
  const expectedStages=[
