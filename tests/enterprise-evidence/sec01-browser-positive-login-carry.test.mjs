@@ -188,3 +188,26 @@ test('signed positive browser login preserves real QA provider proof and all dow
   assert.ok(testContract.includes(suffix),suffix);
  }
 });
+
+test('signed inventory API proof requires actual browser MFA AAL2 and retains strict organization denial',()=>{
+ const runner=readFileSync('scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs','utf8');
+ const verifier=readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs','utf8');
+ const stage=runner.split("stage = 'authenticated_api_identity_distinguished';")[1]?.split("stage = 'authenticated_private_profile_available';")[0];
+ assert.ok(stage);
+ for(const marker of [
+  "name: 'Set up authenticator app'", "name: 'Verification code'",
+  "name: 'Verify MFA and continue'", "mfaResponse?.status() === 200",
+  "verifyQaSignedSessionId(identityClient.auth, aal2Token, userId, 'aal2')",
+  "requireTrue(cookieUpdated, 'signed_api_mfa_cookie_not_updated')",
+  "isApiAuthResult(authApi, 403, 'organization_required')"
+ ]) assert.ok(stage.includes(marker),marker);
+ assert.ok(stage.indexOf("verifyQaSignedSessionId(")<stage.indexOf("context.request.get('/api/ai-systems'"));
+ assert.ok(stage.indexOf("requireTrue(cookieUpdated,")<stage.indexOf("context.request.get('/api/ai-systems'"));
+ assert.doesNotMatch(stage,/addCookies\(|setSession\(|force:\s*true|page\.route\(|console\./);
+ for(const code of ['signed_api_mfa_enrollment_unavailable','signed_api_mfa_verification_unavailable',
+  'signed_api_mfa_signed_session_unverified','signed_api_mfa_cookie_not_updated','signed_api_http_401',
+  'signed_api_http_403_unexpected_body','signed_api_http_500','signed_api_http_503','signed_api_http_unexpected']){
+  assert.ok(stage.includes("'"+code+"'"),code);
+  assert.ok(verifier.includes("'"+code+"'"),code);
+ }
+});
