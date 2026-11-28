@@ -18,6 +18,11 @@ on:
           - provider_mfa
           - bootstrap_rpc
           - app_browser
+      natural_expiry:
+        description: Optional natural JWT expiration proof (app_browser only; longer execution)
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -160,7 +165,7 @@ jobs:
     environment: QA-Supabase
     name: Validate isolated application browser and session lifecycle
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: ${{ inputs.natural_expiry && 95 || 25 }}
     steps:
       - name: Check out exact trusted source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -201,6 +206,7 @@ jobs:
         env:
           EXPECTED_SHA: ${{ inputs.release_sha }}
           SEC01_APP_EXECUTE: QA_ONLY_APP_BROWSER_PROOF
+          SEC01_APP_NATURAL_EXPIRY_PROOF: ${{ inputs.natural_expiry }}
           SEC01_QA_PROJECT_REF: zrxrrfbllsxtleyxjpsz
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_QA_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_QA_SUPABASE_ANON_KEY }}
