@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const path = 'artifacts/enterprise-sec01/next-app-browser-proof.json';
+const naturalExpiry = process.env.SEC01_APP_NATURAL_EXPIRY_PROOF === 'true';
+if (![undefined,'false','true'].includes(process.env.SEC01_APP_NATURAL_EXPIRY_PROOF)) process.exit(1);
 const expectedNames = [
   'unauthenticated_api_denied',
   'unauthenticated_profile_redirected',
@@ -50,6 +52,8 @@ const valid = expectedExit === 2 &&
   checksValid &&
   evidence.failure_stage === null &&
   evidence.qa_cleanup_verified === true &&
+  evidence.qa_cleanup_detail === 'cleanup_confirmed_user_not_found' &&
+  evidence.natural_expiry_proof === naturalExpiry &&
   evidence.emails_sent === 0 &&
   evidence.control === 'NOT_VERIFIED' &&
   evidence.gate === 'NOT_ACCEPTED' &&
@@ -61,6 +65,7 @@ const knownFailureStages = new Set([
   ...expectedNames, 'preflight', 'create_disposable_qa_user', 'launch_isolated_nextjs',
 ]);
 const knownFailureDetails = new Set([
+  ...["expiry_sdk_load_failed","expiry_sdk_version_mismatch","expiry_sdk_exports_unavailable","expiry_cookie_chunks_invalid","expiry_cookie_encoding_unsupported","expiry_cookie_parse_failed","expiry_cookie_session_invalid","expiry_cookie_roundtrip_mismatch","expiry_refresh_isolation_invalid","expiry_cookie_chunk_size_invalid","expiry_original_signature_unverified","expiry_wait_outside_bound","expiry_token_shape_invalid","expiry_clock_not_elapsed","expiry_provider_error_ambiguous","expiry_browser_session_changed_while_waiting","expiry_refreshed_signature_unverified","expiry_preexpiry_api_denied","expiry_preexpiry_profile_denied","expiry_invalid_signature_api_not_denied","expiry_invalid_signature_profile_not_denied","expiry_expired_api_not_denied","expiry_expired_profile_not_denied","expiry_refresh_api_not_authenticated","expiry_refresh_session_changed","expiry_refresh_cookie_not_rotated"],
   'expiry_cookie_capture_or_preexpiry_control_failed', 'expiry_invalid_signature_denial_failed',
   'expiry_provider_rejection_not_proven', 'expiry_application_denial_failed', 'expiry_real_refresh_cookie_contract_failed',
   'analytics_consent_decline_unavailable', 'analytics_consent_not_denied',
@@ -100,7 +105,8 @@ const knownFailureDetails = new Set([
 const sameRun = evidence.schema === 'risck-sec01-next-app-qa-browser-proof-v1' &&
   evidence.execution === 'LOCAL_NEXT_APP_BROWSER_QA_AUTH' && evidence.source_sha === sha &&
   (!process.env.CIRCLE_SHA1 || process.env.CIRCLE_SHA1 === sha) && evidence.qa_ref === 'zrxrrfbllsxtleyxjpsz';
-const observations = sameRun && Array.isArray(evidence.checks) &&
+const cleanupCodes = new Set(['cleanup_confirmed_user_not_found','cleanup_delete_failed','cleanup_absence_unproven','cleanup_lookup_ambiguous','cleanup_provider_exception','cleanup_user_identity_unavailable']);
+const observations = sameRun && evidence.natural_expiry_proof === naturalExpiry && Array.isArray(evidence.checks) &&
   evidence.checks.length <= expectedNames.length &&
   evidence.checks.every((check, index) => check?.name === expectedNames[index] && check.status === 'PASS')
   ? evidence.checks.length : 0;
@@ -113,7 +119,9 @@ console.log(JSON.stringify({
   observed_checks_passed: observations,
   failure_stage: sameRun && knownFailureStages.has(evidence.failure_stage) ? evidence.failure_stage : null,
   failure_detail: sameRun && knownFailureDetails.has(evidence.failure_detail) ? evidence.failure_detail : null,
-  cleanup_verified: sameRun && evidence.qa_cleanup_verified === true,
+  cleanup_verified: sameRun && evidence.qa_cleanup_verified === true && evidence.qa_cleanup_detail === 'cleanup_confirmed_user_not_found',
+  cleanup_detail: sameRun && cleanupCodes.has(evidence.qa_cleanup_detail) ? evidence.qa_cleanup_detail : null,
+  natural_expiry_proof: naturalExpiry,
   status: valid ? 'PROOF_VALIDATED_PARTIAL' : 'PROOF_FAILED',
   SEC01: 'NOT_VERIFIED',
   A01: 'NOT_ACCEPTED',

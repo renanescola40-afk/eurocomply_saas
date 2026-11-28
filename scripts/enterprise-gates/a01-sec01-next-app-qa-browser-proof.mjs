@@ -27,6 +27,14 @@ const LOCAL_URL = 'http://127.0.0.1:3101';
 const EXPECTED_BRANCH = 'main';
 const SCHEMA = 'risck-sec01-next-app-qa-browser-proof-v1';
 const checks = [];
+const naturalExpiry = process.env.SEC01_APP_NATURAL_EXPIRY_PROOF === 'true';
+const expiryFailureCodes = new Set(["expiry_sdk_load_failed","expiry_sdk_version_mismatch","expiry_sdk_exports_unavailable","expiry_cookie_chunks_invalid","expiry_cookie_encoding_unsupported","expiry_cookie_parse_failed","expiry_cookie_session_invalid","expiry_cookie_roundtrip_mismatch","expiry_refresh_isolation_invalid","expiry_cookie_chunk_size_invalid","expiry_original_signature_unverified","expiry_wait_outside_bound","expiry_token_shape_invalid","expiry_clock_not_elapsed","expiry_provider_error_ambiguous","expiry_browser_session_changed_while_waiting","expiry_refreshed_signature_unverified","expiry_preexpiry_api_denied","expiry_preexpiry_profile_denied","expiry_invalid_signature_api_not_denied","expiry_invalid_signature_profile_not_denied","expiry_expired_api_not_denied","expiry_expired_profile_not_denied","expiry_refresh_api_not_authenticated","expiry_refresh_session_changed","expiry_refresh_cookie_not_rotated"]);
+function classifyCleanup(deleted, lookup) {
+  if (!deleted || deleted.error !== null) return 'cleanup_delete_failed';
+  if (!lookup || !lookup.error || lookup.data?.user !== null) return 'cleanup_absence_unproven';
+  if (lookup.error.status !== 404 || lookup.error.code !== 'user_not_found') return 'cleanup_lookup_ambiguous';
+  return 'cleanup_confirmed_user_not_found';
+}
 let stage = 'preflight';
 
 function requireTrue(value, code) {
@@ -146,6 +154,7 @@ async function classifyRealSubmitFailure(button, prefix) {
 
 function ensureQaOnly() {
   requireTrue(process.env.SEC01_APP_EXECUTE === 'QA_ONLY_APP_BROWSER_PROOF', 'explicit_qa_app_flag_required');
+  requireTrue([undefined,'false','true'].includes(process.env.SEC01_APP_NATURAL_EXPIRY_PROOF),'expiry_mode_invalid');
   requireTrue(process.env.SEC01_QA_PROJECT_REF === QA_REF, 'approved_qa_ref_required');
   requireTrue(process.env.NEXT_PUBLIC_SUPABASE_URL === QA_URL, 'approved_qa_url_required');
   requireTrue(Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY), 'qa_publishable_key_required');
@@ -177,6 +186,7 @@ let browser = null;
 let context = null;
 let userId = null;
 let cleaned = false;
+let cleanupDetail = 'cleanup_user_identity_unavailable';
 let failedStage = null;
 let failureDetail = null;
 let outcome = 'FAIL';
@@ -545,43 +555,52 @@ try {
     .waitFor({ state: 'visible', timeout: 45000 });
 
 
-  if (process.env.SEC01_APP_NATURAL_EXPIRY_PROOF === 'true') {
+  if (naturalExpiry) {
+    stage = 'genuine_unexpired_cookie_without_refresh_accepted';
+    failureDetail = 'expiry_sdk_load_failed';
+    const { readFileSync } = await import('node:fs');
+    const ssr = await import('@supabase/ssr');
+    const expectedSdk = {'@supabase/ssr':'0.12.7','@supabase/supabase-js':'2.118.0','@supabase/auth-js':'2.118.0'};
+    const lock = JSON.parse(readFileSync(new URL('../../package-lock.json',import.meta.url),'utf8'));
+    for (const [name,version] of Object.entries(expectedSdk)) {
+      const installed=JSON.parse(readFileSync(new URL('../../node_modules/'+name+'/package.json',import.meta.url),'utf8'));
+      requireTrue(lock.packages['node_modules/'+name]?.version===version &&
+        installed.version===version,'expiry_sdk_version_mismatch');
+    }
+    const { createChunks, combineChunks, stringToBase64URL, stringFromBase64URL, MAX_CHUNK_SIZE } = ssr;
+    requireTrue([createChunks,combineChunks,stringToBase64URL,stringFromBase64URL].every(fn=>typeof fn==='function') &&
+      MAX_CHUNK_SIZE===3180,'expiry_sdk_exports_unavailable');
     const cookieName = 'sb-' + QA_REF + '-auth-token';
     const authCookies = async () => (await context.cookies(LOCAL_URL))
       .filter(c => c.name === cookieName || c.name.startsWith(cookieName + '.'));
-    function readBrowserSession(cookies) {
-      const ordered = [...cookies].sort((a,b) =>
-        Number(a.name.slice(cookieName.length + 1)) - Number(b.name.slice(cookieName.length + 1)));
-      requireTrue(ordered.length > 0 && (ordered.length === 1 && ordered[0].name === cookieName ||
-        ordered.every((c,i) => c.name === cookieName + '.' + i)), 'expiry_cookie_chunks_invalid');
-      const raw = ordered.map(c => c.value).join('');
-      requireTrue(raw.startsWith('base64-'), 'expiry_cookie_encoding_unsupported');
-      const session = JSON.parse(Buffer.from(raw.slice(7), 'base64url').toString('utf8'));
-      requireTrue(typeof session.access_token === 'string' &&
-        typeof session.refresh_token === 'string' && session.refresh_token.length > 0,
-        'expiry_cookie_session_invalid');
-      return { ordered, session };
+    async function readBrowserSession(cookies) {
+      const ordered=[...cookies].sort((a,b)=>Number(a.name.slice(cookieName.length+1))-Number(b.name.slice(cookieName.length+1)));
+      requireTrue(ordered.length>0 && (ordered.length===1 && ordered[0].name===cookieName ||
+        ordered.every((c,i)=>c.name===cookieName+'.'+i)),'expiry_cookie_chunks_invalid');
+      const raw=await combineChunks(cookieName,name=>ordered.find(c=>c.name===name)?.value);
+      requireTrue(typeof raw==='string' && /^base64-[A-Za-z0-9_-]+$/.test(raw),'expiry_cookie_encoding_unsupported');
+      let session;
+      try { session=JSON.parse(stringFromBase64URL(raw.slice(7))); }
+      catch { throw new Error('expiry_cookie_parse_failed'); }
+      requireTrue(session && typeof session.access_token==='string' && session.access_token.length>0 &&
+        typeof session.refresh_token==='string' && session.refresh_token.length>0,'expiry_cookie_session_invalid');
+      const canonical=createChunks(cookieName,'base64-'+stringToBase64URL(JSON.stringify(session)));
+      requireTrue(canonical.length===ordered.length &&
+        canonical.every((c,i)=>c.name===ordered[i].name && c.value===ordered[i].value),'expiry_cookie_roundtrip_mismatch');
+      return {ordered,session};
     }
-    function isolatedCookieHeader(snapshot, accessToken) {
-      // Negative-only isolation. Preserve the original access JWT except in
-      // the separately labelled invalid-signature test. Never use a real
-      // refresh token in these requests or mutate the live browser cookie jar.
-      const invalidRefresh = randomBytes(snapshot.session.refresh_token.length).toString('hex')
-        .slice(0,snapshot.session.refresh_token.length);
-      requireTrue(invalidRefresh !== snapshot.session.refresh_token,'expiry_refresh_isolation_invalid');
-      const encoded = 'base64-' + Buffer.from(JSON.stringify({
-        ...snapshot.session, access_token: accessToken, refresh_token: invalidRefresh,
-      })).toString('base64url');
-      let offset = 0;
-      const pairs = snapshot.ordered.map((c,i) => {
-        const end = i === snapshot.ordered.length - 1 ? encoded.length : offset + c.value.length;
-        const value = encoded.slice(offset,end);
-        offset = end;
-        requireTrue(value.length > 0 && value.length <= 3180,'expiry_cookie_chunk_size_invalid');
-        return c.name + '=' + value;
-      });
-      requireTrue(offset === encoded.length,'expiry_cookie_chunk_size_invalid');
-      return pairs.join('; ');
+    function isolatedCookieHeader(snapshot,accessToken) {
+      // Negative controls only: never change the live browser jar or the
+      // provider-issued access JWT except in the labelled invalid signature case.
+      const invalidRefresh=randomBytes(snapshot.session.refresh_token.length).toString('hex').slice(0,snapshot.session.refresh_token.length);
+      requireTrue(invalidRefresh!==snapshot.session.refresh_token,'expiry_refresh_isolation_invalid');
+      const encoded='base64-'+stringToBase64URL(JSON.stringify({
+        ...snapshot.session,access_token:accessToken,refresh_token:invalidRefresh,
+      }));
+      const chunks=createChunks(cookieName,encoded);
+      requireTrue(chunks.length>0 && chunks.every(c=>c.value.length>0 &&
+        encodeURIComponent(c.value).length<=MAX_CHUNK_SIZE),'expiry_cookie_chunk_size_invalid');
+      return chunks.map(c=>c.name+'='+c.value).join('; ');
     }
     async function isolatedGet(path,cookie) {
       return fetch(LOCAL_URL + path,{headers:{cookie},redirect:'manual',
@@ -603,7 +622,7 @@ try {
     // Unload the page so its browser SDK does not renew the access token
     // in the background. Retain the real browser cookie jar in memory.
     await page.goto('about:blank');
-    const captured = readBrowserSession(await authCookies());
+    const captured = await readBrowserSession(await authCookies());
     const originalToken = captured.session.access_token;
     requireTrue(await verifyQaSignedSessionId(identityClient.auth,originalToken,userId,'aal2'),
       'expiry_original_signature_unverified');
@@ -615,8 +634,9 @@ try {
     const beforeApi = await isolatedGet('/api/ai-systems',negativeCookie);
     const beforeProfile = await isolatedGet('/en/profile',negativeCookie);
     const profileText = await beforeProfile.text();
-    check(stage,await isolatedApi(beforeApi,403,'organization_required') &&
-      beforeProfile.status === 200 && profileText.includes('Workspace access unavailable'));
+    requireTrue(await isolatedApi(beforeApi,403,'organization_required'),'expiry_preexpiry_api_denied');
+    requireTrue(beforeProfile.status===200 && profileText.includes('Workspace access unavailable'),'expiry_preexpiry_profile_denied');
+    check(stage,true);
 
     stage = 'invalid_signature_cookie_denied';
     failureDetail = 'expiry_invalid_signature_denial_failed';
@@ -624,8 +644,9 @@ try {
     requireTrue(parts.length === 3 && parts[2].length > 0,'expiry_token_shape_invalid');
     parts[2] = (parts[2][0] === 'A' ? 'B' : 'A') + parts[2].slice(1);
     const tampered = isolatedCookieHeader(captured,parts.join('.'));
-    check(stage,await isolatedApi(await isolatedGet('/api/ai-systems',tampered),401,'unauthorized') &&
-      await isolatedProfileDenied(await isolatedGet('/en/profile',tampered)));
+    requireTrue(await isolatedApi(await isolatedGet('/api/ai-systems',tampered),401,'unauthorized'),'expiry_invalid_signature_api_not_denied');
+    requireTrue(await isolatedProfileDenied(await isolatedGet('/en/profile',tampered)),'expiry_invalid_signature_profile_not_denied');
+    check(stage,true);
 
     stage = 'genuine_access_jwt_naturally_expired_provider_denied';
     failureDetail = 'expiry_provider_rejection_not_proven';
@@ -635,31 +656,37 @@ try {
     requireTrue(Math.floor(Date.now()/1000) > exp,'expiry_clock_not_elapsed');
     const expired = await identityClient.auth.getUser(originalToken);
     const expiredError = expired.error;
-    check(stage,!expired.data?.user && [400,401,403].includes(expiredError?.status) &&
-      /expired|expiration/i.test(String(expiredError?.message || '')));
+    // Require explicit access-JWT expiry, not a session error, network error or generic 5xx.
+    requireTrue(expired.data?.user===null && expiredError?.name==='AuthApiError' &&
+      [400,401,403].includes(expiredError.status) && expiredError.code==='bad_jwt' &&
+      /\b(?:token|jwt|exp)\b.*\b(?:expired|expiration)\b|\bexpired\b.*\b(?:token|jwt)\b/i.test(String(expiredError.message||'')),
+      'expiry_provider_error_ambiguous');
+    check(stage,true);
 
     stage = 'expired_access_jwt_no_refresh_app_api_denied';
     failureDetail = 'expiry_application_denial_failed';
     // Exactly the same header accepted before the natural expiration.
-    check(stage,await isolatedApi(await isolatedGet('/api/ai-systems',negativeCookie),401,'unauthorized') &&
-      await isolatedProfileDenied(await isolatedGet('/en/profile',negativeCookie)));
+    requireTrue(await isolatedApi(await isolatedGet('/api/ai-systems',negativeCookie),401,'unauthorized'),'expiry_expired_api_not_denied');
+    requireTrue(await isolatedProfileDenied(await isolatedGet('/en/profile',negativeCookie)),'expiry_expired_profile_not_denied');
+    check(stage,true);
 
     stage = 'genuine_refresh_replaces_cookie_and_preserves_signed_session';
     failureDetail = 'expiry_real_refresh_cookie_contract_failed';
-    const retained = readBrowserSession(await authCookies());
+    const retained = await readBrowserSession(await authCookies());
     requireTrue(retained.session.access_token === originalToken &&
       retained.session.refresh_token === captured.session.refresh_token,'expiry_browser_session_changed_while_waiting');
     const refreshedApi = await context.request.get('/api/ai-systems',{failOnStatusCode:false});
-    const fresh = readBrowserSession(await authCookies());
+    const fresh = await readBrowserSession(await authCookies());
     const freshToken = fresh.session.access_token;
     requireTrue(freshToken !== originalToken &&
       await verifyQaSignedSessionId(identityClient.auth,freshToken,userId,'aal2'),'expiry_refreshed_signature_unverified');
     const newClaims = (await identityClient.auth.getClaims(freshToken)).data?.claims;
-    check(stage,await isApiAuthResult(refreshedApi,403,'organization_required') &&
-      newClaims?.session_id === originalClaims.session_id && newClaims?.exp > exp &&
-      fresh.ordered.some(c => !captured.ordered.some(old => old.name === c.name && old.value === c.value)));
+    requireTrue(await isApiAuthResult(refreshedApi,403,'organization_required'),'expiry_refresh_api_not_authenticated');
+    requireTrue(newClaims?.session_id===originalClaims.session_id && newClaims?.exp>exp,'expiry_refresh_session_changed');
+    requireTrue(fresh.ordered.some(c=>!captured.ordered.some(old=>old.name===c.name && old.value===c.value)),'expiry_refresh_cookie_not_rotated');
     await page.goto('/en/profile',{waitUntil:'domcontentloaded'});
     await page.getByRole('button',{name:/^sign out$/i}).waitFor({state:'visible',timeout:45000});
+    check(stage,true);
     failureDetail = null;
   }
 
@@ -706,8 +733,9 @@ try {
   check(stage, await page.locator('input[type="password"]').count() === 0);
 
   outcome = 'PARTIAL_APP_PASS';
-} catch {
+} catch (error) {
   failedStage = stage;
+  if (naturalExpiry && expiryFailureCodes.has(error?.message)) failureDetail = error.message;
   outcome = 'FAIL';
 } finally {
   if (context) await context.close().catch(() => {});
@@ -717,9 +745,11 @@ try {
     try {
       const deleted = await admin.auth.admin.deleteUser(userId);
       const lookup = await admin.auth.admin.getUserById(userId);
-      cleaned = !deleted.error && Boolean(lookup.error || !lookup.data.user);
+      cleanupDetail = classifyCleanup(deleted,lookup);
+      cleaned = cleanupDetail === 'cleanup_confirmed_user_not_found';
     } catch {
       cleaned = false;
+      cleanupDetail = 'cleanup_provider_exception';
     }
   }
   if (!cleaned) outcome = 'FAIL';
@@ -736,6 +766,8 @@ console.log(JSON.stringify({
   // recording auth credentials, token material, raw errors or network payloads.
   failure_detail: failedStage ? failureDetail : null,
   qa_cleanup_verified: cleaned,
+  qa_cleanup_detail: cleanupDetail,
+  natural_expiry_proof: naturalExpiry,
   emails_sent: 0,
   required_but_not_proven: [
     ...(checks.some(c => c.name === 'expired_access_jwt_no_refresh_app_api_denied' && c.status === 'PASS') ? [] : ['true_expired_signed_access_jwt_denial_at_app_and_api']),

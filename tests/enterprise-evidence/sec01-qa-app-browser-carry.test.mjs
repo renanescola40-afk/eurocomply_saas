@@ -176,3 +176,29 @@ test('QA app-browser proof is a protected manual choice, preserves provider lane
  assert.match(verifier,/SEC01: 'NOT_VERIFIED'/);
  assert.match(verifier,/A01: 'NOT_ACCEPTED'/);
 });
+
+test('optional natural expiry preserves fast mode and rejects ambiguous cleanup',()=>{
+ const workflow=readFileSync('.github/workflows/sec01-isolated-qa-mfa-provider.yml','utf8');
+ const runner=readFileSync('scripts/enterprise-gates/a01-sec01-next-app-qa-browser-proof.mjs','utf8');
+ const verifier=readFileSync('scripts/enterprise-gates/a01-sec01-verify-app-qa-evidence.mjs','utf8');
+ assert.match(workflow,/natural_expiry:\s*\n[\s\S]*?type: boolean\s*\n\s*default: false/);
+ assert.ok(workflow.includes('inputs.natural_expiry && 95 || 25'));
+ assert.match(runner,/if \(naturalExpiry\)/);
+ assert.match(runner,/createChunks, combineChunks, stringToBase64URL, stringFromBase64URL, MAX_CHUNK_SIZE/);
+ assert.match(runner,/installed\.version===version/);
+ assert.match(verifier,/evidence\.natural_expiry_proof === naturalExpiry/);
+ assert.match(verifier,/evidence\.qa_cleanup_detail === 'cleanup_confirmed_user_not_found'/);
+ const source=runner.match(/function classifyCleanup\(deleted, lookup\) \{[\s\S]*?\n\}/)?.[0];
+ assert.ok(source);
+ const classify=Function(source+'; return classifyCleanup;')();
+ const deleted={error:null},missing={data:{user:null},error:{status:404,code:'user_not_found'}};
+ assert.equal(classify(deleted,missing),'cleanup_confirmed_user_not_found');
+ for(const [d,l] of [
+   [null,missing],[{error:{status:500}},missing],[deleted,null],
+   [deleted,{data:{user:null},error:{status:404}}],[deleted,{data:{user:null},error:{status:500,code:'user_not_found'}}],
+   [deleted,{data:{user:null},error:{status:401,code:'user_not_found'}}],
+   [deleted,{data:{user:null},error:{status:404,code:'unexpected_failure'}}],
+   [deleted,{data:{user:{id:'fixture'}},error:missing.error}],
+   [deleted,{data:{user:null},error:null}],[deleted,{error:missing.error}],
+ ])assert.notEqual(classify(d,l),'cleanup_confirmed_user_not_found');
+});
