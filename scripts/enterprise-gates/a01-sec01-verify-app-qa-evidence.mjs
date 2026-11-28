@@ -15,6 +15,7 @@ const expectedNames = [
   'authenticated_api_identity_distinguished',
   'authenticated_private_profile_available',
   'signed_in_session_recovery_form_denied',
+  ...(process.env.SEC01_APP_NATURAL_EXPIRY_PROOF === 'true' ? ["genuine_unexpired_cookie_without_refresh_accepted","invalid_signature_cookie_denied","genuine_access_jwt_naturally_expired_provider_denied","expired_access_jwt_no_refresh_app_api_denied","genuine_refresh_replaces_cookie_and_preserves_signed_session"] : []),
   'capture_session_cookies_in_memory_only',
   'real_browser_logout',
   'after_logout_api_denied',
@@ -53,12 +54,15 @@ const valid = expectedExit === 2 &&
   evidence.control === 'NOT_VERIFIED' &&
   evidence.gate === 'NOT_ACCEPTED' &&
   Array.isArray(evidence.required_but_not_proven) &&
-  evidence.required_but_not_proven.includes(
-    'true_expired_signed_access_jwt_denial_at_app_and_api');
+  (process.env.SEC01_APP_NATURAL_EXPIRY_PROOF === 'true'
+    ? !evidence.required_but_not_proven.includes('true_expired_signed_access_jwt_denial_at_app_and_api')
+    : evidence.required_but_not_proven.includes('true_expired_signed_access_jwt_denial_at_app_and_api'));
 const knownFailureStages = new Set([
   ...expectedNames, 'preflight', 'create_disposable_qa_user', 'launch_isolated_nextjs',
 ]);
 const knownFailureDetails = new Set([
+  'expiry_cookie_capture_or_preexpiry_control_failed', 'expiry_invalid_signature_denial_failed',
+  'expiry_provider_rejection_not_proven', 'expiry_application_denial_failed', 'expiry_real_refresh_cookie_contract_failed',
   'analytics_consent_decline_unavailable', 'analytics_consent_not_denied',
   'password_form_hydration_unavailable',
   'password_form_email_input_unavailable', 'password_form_password_input_unavailable',

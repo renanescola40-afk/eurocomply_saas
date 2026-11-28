@@ -12,7 +12,7 @@
  * send account-recovery emails, and never persist identities, passwords,
  * cookies, access JWTs or refresh JWTs in logs or artifacts.
  *
- * This does NOT prove true expired signed JWT denial; no claim of SEC-01 PASS.
+ * Legacy mode does NOT prove true expired JWT denial; extended mode tests natural expiry. No claim of SEC-01 PASS.
  */
 import { randomBytes } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
@@ -544,6 +544,125 @@ try {
   await page.getByRole('button', { name: /^sign out$/i })
     .waitFor({ state: 'visible', timeout: 45000 });
 
+
+  if (process.env.SEC01_APP_NATURAL_EXPIRY_PROOF === 'true') {
+    const cookieName = 'sb-' + QA_REF + '-auth-token';
+    const authCookies = async () => (await context.cookies(LOCAL_URL))
+      .filter(c => c.name === cookieName || c.name.startsWith(cookieName + '.'));
+    function readBrowserSession(cookies) {
+      const ordered = [...cookies].sort((a,b) =>
+        Number(a.name.slice(cookieName.length + 1)) - Number(b.name.slice(cookieName.length + 1)));
+      requireTrue(ordered.length > 0 && (ordered.length === 1 && ordered[0].name === cookieName ||
+        ordered.every((c,i) => c.name === cookieName + '.' + i)), 'expiry_cookie_chunks_invalid');
+      const raw = ordered.map(c => c.value).join('');
+      requireTrue(raw.startsWith('base64-'), 'expiry_cookie_encoding_unsupported');
+      const session = JSON.parse(Buffer.from(raw.slice(7), 'base64url').toString('utf8'));
+      requireTrue(typeof session.access_token === 'string' &&
+        typeof session.refresh_token === 'string' && session.refresh_token.length > 0,
+        'expiry_cookie_session_invalid');
+      return { ordered, session };
+    }
+    function isolatedCookieHeader(snapshot, accessToken) {
+      // Negative-only isolation. Preserve the original access JWT except in
+      // the separately labelled invalid-signature test. Never use a real
+      // refresh token in these requests or mutate the live browser cookie jar.
+      const invalidRefresh = randomBytes(snapshot.session.refresh_token.length).toString('hex')
+        .slice(0,snapshot.session.refresh_token.length);
+      requireTrue(invalidRefresh !== snapshot.session.refresh_token,'expiry_refresh_isolation_invalid');
+      const encoded = 'base64-' + Buffer.from(JSON.stringify({
+        ...snapshot.session, access_token: accessToken, refresh_token: invalidRefresh,
+      })).toString('base64url');
+      let offset = 0;
+      const pairs = snapshot.ordered.map((c,i) => {
+        const end = i === snapshot.ordered.length - 1 ? encoded.length : offset + c.value.length;
+        const value = encoded.slice(offset,end);
+        offset = end;
+        requireTrue(value.length > 0 && value.length <= 3180,'expiry_cookie_chunk_size_invalid');
+        return c.name + '=' + value;
+      });
+      requireTrue(offset === encoded.length,'expiry_cookie_chunk_size_invalid');
+      return pairs.join('; ');
+    }
+    async function isolatedGet(path,cookie) {
+      return fetch(LOCAL_URL + path,{headers:{cookie},redirect:'manual',
+        signal:AbortSignal.timeout(60000)});
+    }
+    async function isolatedApi(response,status,error) {
+      return response.status === status && (await response.json().catch(() => null))?.error === error;
+    }
+    async function isolatedProfileDenied(response) {
+      const location = response.headers.get('location');
+      const redirected = [301,302,303,307,308].includes(response.status) && Boolean(location) &&
+        new URL(location,LOCAL_URL).origin === LOCAL_URL &&
+        isLoginPath(new URL(location,LOCAL_URL).toString());
+      await response.body?.cancel().catch(() => {});
+      return redirected;
+    }
+    stage = 'genuine_unexpired_cookie_without_refresh_accepted';
+    failureDetail = 'expiry_cookie_capture_or_preexpiry_control_failed';
+    // Unload the page so its browser SDK does not renew the access token
+    // in the background. Retain the real browser cookie jar in memory.
+    await page.goto('about:blank');
+    const captured = readBrowserSession(await authCookies());
+    const originalToken = captured.session.access_token;
+    requireTrue(await verifyQaSignedSessionId(identityClient.auth,originalToken,userId,'aal2'),
+      'expiry_original_signature_unverified');
+    const originalClaims = (await identityClient.auth.getClaims(originalToken)).data?.claims;
+    const exp = originalClaims?.exp;
+    requireTrue(Number.isSafeInteger(exp) && exp * 1000 - Date.now() > 120000 &&
+      exp * 1000 - Date.now() <= 70 * 60 * 1000,'expiry_wait_outside_bound');
+    const negativeCookie = isolatedCookieHeader(captured,originalToken);
+    const beforeApi = await isolatedGet('/api/ai-systems',negativeCookie);
+    const beforeProfile = await isolatedGet('/en/profile',negativeCookie);
+    const profileText = await beforeProfile.text();
+    check(stage,await isolatedApi(beforeApi,403,'organization_required') &&
+      beforeProfile.status === 200 && profileText.includes('Workspace access unavailable'));
+
+    stage = 'invalid_signature_cookie_denied';
+    failureDetail = 'expiry_invalid_signature_denial_failed';
+    const parts = originalToken.split('.');
+    requireTrue(parts.length === 3 && parts[2].length > 0,'expiry_token_shape_invalid');
+    parts[2] = (parts[2][0] === 'A' ? 'B' : 'A') + parts[2].slice(1);
+    const tampered = isolatedCookieHeader(captured,parts.join('.'));
+    check(stage,await isolatedApi(await isolatedGet('/api/ai-systems',tampered),401,'unauthorized') &&
+      await isolatedProfileDenied(await isolatedGet('/en/profile',tampered)));
+
+    stage = 'genuine_access_jwt_naturally_expired_provider_denied';
+    failureDetail = 'expiry_provider_rejection_not_proven';
+    // No revocation, forged expiration, clock manipulation or global TTL
+    // change. Wait for the actual verified signed exp plus bounded skew.
+    await delay(Math.max(0,exp * 1000 + 90000 - Date.now()));
+    requireTrue(Math.floor(Date.now()/1000) > exp,'expiry_clock_not_elapsed');
+    const expired = await identityClient.auth.getUser(originalToken);
+    const expiredError = expired.error;
+    check(stage,!expired.data?.user && [400,401,403].includes(expiredError?.status) &&
+      /expired|expiration/i.test(String(expiredError?.message || '')));
+
+    stage = 'expired_access_jwt_no_refresh_app_api_denied';
+    failureDetail = 'expiry_application_denial_failed';
+    // Exactly the same header accepted before the natural expiration.
+    check(stage,await isolatedApi(await isolatedGet('/api/ai-systems',negativeCookie),401,'unauthorized') &&
+      await isolatedProfileDenied(await isolatedGet('/en/profile',negativeCookie)));
+
+    stage = 'genuine_refresh_replaces_cookie_and_preserves_signed_session';
+    failureDetail = 'expiry_real_refresh_cookie_contract_failed';
+    const retained = readBrowserSession(await authCookies());
+    requireTrue(retained.session.access_token === originalToken &&
+      retained.session.refresh_token === captured.session.refresh_token,'expiry_browser_session_changed_while_waiting');
+    const refreshedApi = await context.request.get('/api/ai-systems',{failOnStatusCode:false});
+    const fresh = readBrowserSession(await authCookies());
+    const freshToken = fresh.session.access_token;
+    requireTrue(freshToken !== originalToken &&
+      await verifyQaSignedSessionId(identityClient.auth,freshToken,userId,'aal2'),'expiry_refreshed_signature_unverified');
+    const newClaims = (await identityClient.auth.getClaims(freshToken)).data?.claims;
+    check(stage,await isApiAuthResult(refreshedApi,403,'organization_required') &&
+      newClaims?.session_id === originalClaims.session_id && newClaims?.exp > exp &&
+      fresh.ordered.some(c => !captured.ordered.some(old => old.name === c.name && old.value === c.value)));
+    await page.goto('/en/profile',{waitUntil:'domcontentloaded'});
+    await page.getByRole('button',{name:/^sign out$/i}).waitFor({state:'visible',timeout:45000});
+    failureDetail = null;
+  }
+
   stage = 'capture_session_cookies_in_memory_only';
   const staleCookies = (await context.cookies(LOCAL_URL))
     .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'));
@@ -619,7 +738,7 @@ console.log(JSON.stringify({
   qa_cleanup_verified: cleaned,
   emails_sent: 0,
   required_but_not_proven: [
-    'true_expired_signed_access_jwt_denial_at_app_and_api',
+    ...(checks.some(c => c.name === 'expired_access_jwt_no_refresh_app_api_denied' && c.status === 'PASS') ? [] : ['true_expired_signed_access_jwt_denial_at_app_and_api']),
     'qualified_independent_review',
     'official_source_sha_and_ledger_acceptance',
   ],
